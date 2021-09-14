@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mutalyzer-algebra",
-    version="0.1.0",
+    version="0.2.0",
     description="A library and CLI for A Boolean Algebra for Genetic Variants.",
     url="https://github.com/mutalyzer/algebra",
     author="Mark Santcroos",
@@ -14,5 +14,5 @@ setup(
             "algebraist=algebra.cli:main",
         ],
     },
-    install_requires="normalizer @ git+ssh://git@github.com/mutalyzer/normalizer.git",
+    # install_requires="normalizer @ git+ssh://git@github.com/mutalyzer/normalizer.git",
 )
