@@ -1,4 +1,4 @@
-from algebraist.algebra import edit, build
+from algebra.algebra import edit, build
 
 
 def influence_interval(ref, obs):
