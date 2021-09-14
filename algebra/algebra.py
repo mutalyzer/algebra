@@ -8,7 +8,7 @@ class Node:
         self.child = []
 
     def __str__(self):
-        return f'{self.row, self.col}'
+        return f"{self.row, self.col}"
 
 
 def heur_func(reference, observed, row, col):
@@ -69,11 +69,21 @@ def edit(reference, observed):
                     graph[lcs_pos].append(Node(row, col))
                     lcs_len = max(lcs_len, lcs_pos + 1)
 
-            if (heur_func(reference, observed, row, col) < heur_func(reference, observed, row, col - 1) or
-                    (row > 0 and rows[row - 1] + offset > col and
-                     heur_func(reference, observed, row, col) < heur_func(reference, observed, row - 1, col)) or
-                    (row > 0 and rows[row - 1] + offset > col - 1 and
-                        reference[col - 1] == observed[row - 1])):
+            if (
+                heur_func(reference, observed, row, col)
+                < heur_func(reference, observed, row, col - 1)
+                or (
+                    row > 0
+                    and rows[row - 1] + offset > col
+                    and heur_func(reference, observed, row, col)
+                    < heur_func(reference, observed, row - 1, col)
+                )
+                or (
+                    row > 0
+                    and rows[row - 1] + offset > col - 1
+                    and reference[col - 1] == observed[row - 1]
+                )
+            ):
                 rows[row] += 1
                 cols[col] = max(cols[col] + offset, row + 1) - offset
                 col_end = max(col_end, col + 1)
@@ -101,11 +111,21 @@ def edit(reference, observed):
                     graph[lcs_pos].append(Node(row, col))
                     lcs_len = max(lcs_len, lcs_pos + 1)
 
-            if (heur_func(reference, observed, row, col) < heur_func(reference, observed, row - 1, col) or
-                    (col > 0 and cols[col - 1] + offset > row and
-                     heur_func(reference, observed, row, col) < heur_func(reference, observed, row, col - 1)) or
-                    (col > 0 and cols[col - 1] + offset > row - 1 and
-                        reference[col - 1] == observed[row - 1])):
+            if (
+                heur_func(reference, observed, row, col)
+                < heur_func(reference, observed, row - 1, col)
+                or (
+                    col > 0
+                    and cols[col - 1] + offset > row
+                    and heur_func(reference, observed, row, col)
+                    < heur_func(reference, observed, row, col - 1)
+                )
+                or (
+                    col > 0
+                    and cols[col - 1] + offset > row - 1
+                    and reference[col - 1] == observed[row - 1]
+                )
+            ):
                 cols[col] += 1
                 rows[row] = max(rows[row] + offset, col + 1) - offset
                 row_end = max(row_end, row + 1)
@@ -118,7 +138,10 @@ def edit(reference, observed):
 
         if row_start == row_end and col_start == col_end:
             if reference[col_end - 1] == observed[row_end - 1]:
-                lcs_pos = ((row_end + col_end) - (f - heur_func(reference, observed, row_end, col_end))) // 2 - 1
+                lcs_pos = (
+                    (row_end + col_end)
+                    - (f - heur_func(reference, observed, row_end, col_end))
+                ) // 2 - 1
                 graph[lcs_pos].append(Node(row_end, col_end))
                 lcs_len = max(lcs_len, lcs_pos + 1)
 
@@ -145,11 +168,11 @@ def manhattan(observed, row_start, col_start, row_end, col_end):
     ops = set()
 
     for col in range(col_start + 1, col_end):
-        ops.add((col, 'del'))
+        ops.add((col, "del"))
 
     for col in range(col_start, col_end):
         for row in range(row_start, row_end - 1):
-            ops.add((col, 'ins', observed[row]))
+            ops.add((col, "ins", observed[row]))
 
     return ops
 
@@ -163,7 +186,11 @@ def build(graph, reference, observed):
     # all nodes on the last level are reachable and they indicate the
     # end of the LCS
     for node in graph[len(graph) - 1]:
-        ops.update(manhattan(observed, node.row, node.col, len(observed) + 1, len(reference) + 1))
+        ops.update(
+            manhattan(
+                observed, node.row, node.col, len(observed) + 1, len(reference) + 1
+            )
+        )
         node.child = [None]
 
     # construct the LCSs from the last match to the first match
@@ -175,7 +202,9 @@ def build(graph, reference, observed):
             if len(node.child) > 0:
                 for prev in graph[level - 2]:
                     if prev.row < node.row and prev.col < node.col:
-                        ops.update(manhattan(observed, prev.row, prev.col, node.row, node.col))
+                        ops.update(
+                            manhattan(observed, prev.row, prev.col, node.row, node.col)
+                        )
                         prev.child.append(node)
                 idx += 1
             else:
@@ -193,7 +222,7 @@ def build(graph, reference, observed):
 
 def compare(reference, observed1, observed2, debug=False):
     if observed1 == observed2:
-        return 'equivalent', None, None
+        return "equivalent", None, None
 
     d1, g1 = edit(reference, observed1)
     d2, g2 = edit(reference, observed2)
@@ -202,29 +231,29 @@ def compare(reference, observed1, observed2, debug=False):
     d, _ = edit(observed1, observed2)
 
     if debug:
-        print(f'd1: {d1} d2: {d2} d:{d}')
+        print(f"d1: {d1} d2: {d2} d:{d}")
 
     if d1 + d2 == d:
-        return 'disjoint', None, None
+        return "disjoint", None, None
 
     if d2 - d1 == d:
-        return 'is_contained', None, None
+        return "is_contained", None, None
 
     if d1 - d2 == d:
-        return 'contains', None, None
+        return "contains", None, None
 
     ops1 = build(g1, reference, observed1)
     if debug:
-        print(f'ops1: {ops1}')
+        print(f"ops1: {ops1}")
     ops2 = build(g2, reference, observed2)
     if debug:
-        print(f'ops2: {ops2}')
+        print(f"ops2: {ops2}")
 
     if ops1.isdisjoint(ops2):
-        return 'disjoint', ops1, ops2
+        return "disjoint", ops1, ops2
 
-    return 'overlap', ops1, ops2
+    return "overlap", ops1, ops2
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(compare(sys.argv[1], sys.argv[2], sys.argv[3]))
