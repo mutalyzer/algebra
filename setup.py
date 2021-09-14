@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="mutalyzer-algebra",
-    version="0.0.1",
+    version="0.1.0",
     description="A library and CLI for A Boolean Algebra for Genetic Variants.",
     url="https://github.com/mutalyzer/algebra",
     author="Mark Santcroos",
