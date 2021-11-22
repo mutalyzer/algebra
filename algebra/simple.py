@@ -91,6 +91,33 @@ def traverse(ref, obs, d, i, j, path, sols):
     return count
 
 
+def print_matrix(matrix, reference, observed):
+    print('       ', end='')
+    for i in range(len(observed) + 1):
+        print(f'{i:2}', end='   ')
+    print('\n        .    ', end='')
+    for i in range(len(observed)):
+        print(f'{observed[i]}', end='    ')
+    print()
+
+    for row in range(len(reference) + 1):
+        if row == 0:
+            print(f'{row:2}  .  ', end='')
+        else:
+            print(f'{row:2}  {reference[row - 1]}  ', end='')
+
+        for col in range(len(observed) + 1):
+            if matrix[row][col] > -1:
+                if row > 0 and col > 0 and reference[row - 1] == observed[col - 1]:  # Match
+                    print('\033[91m', end='')
+                else:
+                    print('\033[96m', end='')
+                print(f'{matrix[row][col]:2}\033[0m', end='   ')
+            else:
+                print('     ', end='')
+        print()
+
+
 def compare(reference, lhs, rhs, debug=False):
     lhs_matrix = edit(reference, lhs)
     lhs_paths = []
