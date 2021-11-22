@@ -51,17 +51,17 @@ def edit(ref, obs):
     """Longest common subsequence edit distance.
     The traditional dynamic programming solution.
     """
-    d = [[None for i in range(len(ref) + 1)] for j in range(len(obs) + 1)]
+    d = [[None for i in range(len(obs) + 1)] for j in range(len(ref) + 1)]
 
     for i in range(len(ref) + 1):
-        d[0][i] = i
-
-    for i in range(len(obs) + 1):
         d[i][0] = i
 
-    for i in range(len(obs)):
-        for j in range(len(ref)):
-            if ref[j] == obs[i]:
+    for i in range(len(obs) + 1):
+        d[0][i] = i
+
+    for i in range(len(ref)):
+        for j in range(len(obs)):
+            if ref[i] == obs[j]:
                 d[i + 1][j + 1] = min(d[i][j + 1] + 1, d[i + 1][j] + 1, d[i][j])
             else:
                 d[i + 1][j + 1] = min(d[i][j + 1] + 1, d[i + 1][j] + 1)
@@ -75,16 +75,16 @@ def traverse(ref, obs, d, i, j, path, sols):
         return 1
 
     count = 0
-    if i > 0 and j > 0 and d[i][j] == d[i - 1][j - 1] and ref[j - 1] == obs[i - 1]:
+    if i > 0 and j > 0 and d[i][j] == d[i - 1][j - 1] and ref[i - 1] == obs[j - 1]:
         count += traverse(ref, obs, d, i - 1, j - 1, path, sols)
 
     if i > 0 and d[i][j] == d[i - 1][j] + 1:
-        path.append((j, "ins", obs[i - 1]))
+        path.append((i, "del"))
         count += traverse(ref, obs, d, i - 1, j, path, sols)
         path.pop()
 
     if j > 0 and d[i][j] == d[i][j - 1] + 1:
-        path.append((j, "del"))
+        path.append((i, "ins", obs[j - 1]))
         count += traverse(ref, obs, d, i, j - 1, path, sols)
         path.pop()
 
@@ -94,7 +94,7 @@ def traverse(ref, obs, d, i, j, path, sols):
 def compare(reference, lhs, rhs, debug=False):
     lhs_matrix = edit(reference, lhs)
     lhs_paths = []
-    traverse(reference, lhs, lhs_matrix, len(lhs), len(reference), [], lhs_paths)
+    traverse(reference, lhs, lhs_matrix, len(reference), len(lhs), [], lhs_paths)
     a = []
     for x in lhs_paths:
         for y in x:
@@ -106,7 +106,7 @@ def compare(reference, lhs, rhs, debug=False):
 
     rhs_matrix = edit(reference, rhs)
     rhs_paths = []
-    traverse(reference, rhs, rhs_matrix, len(rhs), len(reference), [], rhs_paths)
+    traverse(reference, rhs, rhs_matrix, len(reference), len(rhs), [], rhs_paths)
     a = []
     for x in rhs_paths:
         for y in x:
