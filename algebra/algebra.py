@@ -23,7 +23,7 @@ def heur_func(reference, observed, row, col):
     Returns: the minimal edit distance for the element at (row, col) to
              the end of both (reference and observed) strings.
     """
-    return abs((len(observed) - row) - (len(reference) - col))
+    return abs((len(reference) - row) - (len(observed) - col))
 
 
 def edit(reference, observed):
@@ -38,8 +38,8 @@ def edit(reference, observed):
     graph = [[] for _ in range(min(len(reference), len(observed)))]
     lcs_len = 0
 
-    rows = [1] + [-1] * len(observed)
-    cols = [1] + [-1] * len(reference)
+    rows = [1] + [-1] * len(reference)
+    cols = [1] + [-1] * len(observed)
 
     row_start = 0
     col_start = 0
@@ -52,12 +52,12 @@ def edit(reference, observed):
         for row in range(row_start, row_end):
             col = rows[row] + offset
 
-            if col > len(reference):
+            if col > len(observed):
                 if row == row_start:
                     row_start = row + 1
                 continue
 
-            if row > 0 and reference[col - 1] == observed[row - 1]:
+            if row > 0 and reference[row - 1] == observed[col - 1]:
                 if rows[row - 1] + offset > col - 1:
                     distance = f - heur_func(reference, observed, row, col)
                     lcs_pos = ((row + col) - distance) // 2 - 1
@@ -81,7 +81,7 @@ def edit(reference, observed):
                 or (
                     row > 0
                     and rows[row - 1] + offset > col - 1
-                    and reference[col - 1] == observed[row - 1]
+                    and reference[row - 1] == observed[col - 1]
                 )
             ):
                 rows[row] += 1
@@ -94,12 +94,12 @@ def edit(reference, observed):
         for col in range(col_start, col_end):
             row = cols[col] + offset
 
-            if row > len(observed):
+            if row > len(reference):
                 if col == col_start:
                     col_start = col + 1
                 continue
 
-            if col > 0 and reference[col - 1] == observed[row - 1]:
+            if col > 0 and reference[row - 1] == observed[col - 1]:
                 if cols[col - 1] + offset > row - 1:
                     distance = f - heur_func(reference, observed, row, col)
                     lcs_pos = ((row + col) - distance) // 2 - 1
@@ -123,7 +123,7 @@ def edit(reference, observed):
                 or (
                     col > 0
                     and cols[col - 1] + offset > row - 1
-                    and reference[col - 1] == observed[row - 1]
+                    and reference[row - 1] == observed[col - 1]
                 )
             ):
                 cols[col] += 1
@@ -133,11 +133,11 @@ def edit(reference, observed):
             elif col == col_start:
                 col_start = col + 1
 
-        if row_start > len(observed) and col_start > len(reference):
+        if row_start > len(reference) and col_start > len(observed):
             break
 
         if row_start == row_end and col_start == col_end:
-            if reference[col_end - 1] == observed[row_end - 1]:
+            if reference[row_end - 1] == observed[col_end - 1]:
                 lcs_pos = (
                     (row_end + col_end)
                     - (f - heur_func(reference, observed, row_end, col_end))
@@ -167,12 +167,12 @@ def edit(reference, observed):
 def manhattan(observed, row_start, col_start, row_end, col_end):
     ops = set()
 
-    for col in range(col_start + 1, col_end):
-        ops.add((col, "del"))
+    for row in range(row_start + 1, row_end):
+        ops.add((row, "del"))
 
-    for col in range(col_start, col_end):
-        for row in range(row_start, row_end - 1):
-            ops.add((col, "ins", observed[row]))
+    for row in range(row_start, row_end):
+        for col in range(col_start, col_end - 1):
+            ops.add((row, "ins", observed[col]))
 
     return ops
 
@@ -181,14 +181,14 @@ def build(graph, reference, observed):
     ops = set()
 
     if graph == []:
-        return manhattan(observed, 0, 0, len(observed) + 1, len(reference) + 1)
+        return manhattan(observed, 0, 0, len(reference) + 1, len(observed) + 1)
 
     # all nodes on the last level are reachable and they indicate the
     # end of the LCS
     for node in graph[len(graph) - 1]:
         ops.update(
             manhattan(
-                observed, node.row, node.col, len(observed) + 1, len(reference) + 1
+                observed, node.row, node.col, len(reference) + 1, len(observed) + 1
             )
         )
         node.child = [None]
