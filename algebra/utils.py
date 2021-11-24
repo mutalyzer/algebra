@@ -46,6 +46,9 @@ def print_matrix_tex(matrix, reference, observed, max_dist):
 
     print(f'\\hline')
 
+    rows = [-1] * (len(reference) + 1)
+    cols = [-1] * (len(observed) + 1)
+
     for row in range(len(reference) + 1):
         if row == 0:
             print(f'{str(row)} & \\texttt{{.}} & ', end='')
@@ -55,6 +58,8 @@ def print_matrix_tex(matrix, reference, observed, max_dist):
         tmp = []
         for col in range(len(observed) + 1):
             if matrix[row][col] <= max_dist or max_dist == 0:
+                rows[row] = max(rows[row], col)
+                cols[col] = max(cols[col], row)
                 if row > 0 and col > 0 and reference[row - 1] == observed[col - 1]:  # Match
                     tmp.append(f'\\circled{{{matrix[row][col]}}}')
                 else:
@@ -63,6 +68,8 @@ def print_matrix_tex(matrix, reference, observed, max_dist):
                 tmp.append('')
         print(' & '.join(tmp), end=' \\\\\n')
     print(f'\\end{{array}}')
+    print([e for e in rows if e >= 0])
+    print([e for e in cols if e >= 0])
 
 
 def print_tex(reference, observation, heur=False, max_dist=0):
