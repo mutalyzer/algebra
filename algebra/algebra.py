@@ -181,7 +181,7 @@ def build(graph, reference, observed):
     ops = set()
 
     if graph == []:
-        return manhattan(observed, 0, 0, len(reference) + 1, len(observed) + 1)
+        return manhattan(observed, 0, 0, len(reference) + 1, len(observed) + 1), graph
 
     # all nodes on the last level are reachable and they indicate the
     # end of the LCS
@@ -217,7 +217,7 @@ def build(graph, reference, observed):
     for node in graph[0]:
         ops.update(manhattan(observed, 0, 0, node.row, node.col))
 
-    return ops
+    return ops, graph
 
 
 def compare(reference, observed1, observed2, debug=False):
@@ -242,10 +242,10 @@ def compare(reference, observed1, observed2, debug=False):
     if d1 - d2 == d:
         return "contains", None, None
 
-    ops1 = build(g1, reference, observed1)
+    ops1, _ = build(g1, reference, observed1)
     if debug:
         print(f"ops1: {ops1}")
-    ops2 = build(g2, reference, observed2)
+    ops2, _ = build(g2, reference, observed2)
     if debug:
         print(f"ops2: {ops2}")
 
