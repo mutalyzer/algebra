@@ -1,4 +1,4 @@
-from .lcs.efficient import edit, graph
+from .lcs.efficient import edit, lcs_graph
 from .lcs.onp import edit as edit_fast
 
 
@@ -65,8 +65,8 @@ def compare(reference, lhs, rhs):
     if rhs_distance - lhs_distance == distance:
         return "is_contained"
 
-    lhs_graph = graph(reference, lhs, lhs_lcs)
-    rhs_graph = graph(reference, rhs, rhs_lcs)
+    lhs_graph = lcs_graph(reference, lhs, lhs_lcs)
+    rhs_graph = lcs_graph(reference, rhs, rhs_lcs)
 
     # FIXME: disjoint check
     return "overlap"
