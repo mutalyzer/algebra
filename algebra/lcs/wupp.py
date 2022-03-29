@@ -1,6 +1,6 @@
 def edit(reference, observed):
 
-    matrix = [[0 for _ in range(len(observed) + 1)]
+    matrix = [[None for _ in range(len(observed) + 1)]
               for _ in range(len(reference) + 1)]
 
     def func(idx):
@@ -17,29 +17,30 @@ def edit(reference, observed):
                     row <= len(reference) and
                     reference[row - 1] == observed[col - 1])):
                 print(row, col, reference[row - 1] == observed[col - 1])
-                matrix[row][col] = delta + 2 * it
+                matrix[row][col] = abs(delta) + 2 * it
                 row += 1
                 col += 1
 
             if col <= len(observed) and row <= len(reference):
-                matrix[row][col] = delta + 2 * it + 2
+                matrix[row][col] = abs(delta) + 2 * it + 2
 
             return row
         else:
             col = diagonals[idx + offset] + 1
             row = col - idx
+            print(f"row and col before while {row}, {col}")
 
             while (col < limit or
                    (col <= len(observed) and
                     row <= len(reference) and
                     reference[row - 1] == observed[col - 1])):
                 print(row, col, reference[row - 1] == observed[col - 1])
-                matrix[row][col] = delta + 2 * it
+                matrix[row][col] = abs(delta) + 2 * it
                 row += 1
                 col += 1
 
             if col <= len(observed) and row <= len(reference):
-                matrix[row][col] = delta + 2 * it + 2
+                matrix[row][col] = abs(delta) + 2 * it + 2
 
             return col
 
@@ -49,15 +50,22 @@ def edit(reference, observed):
 
     it = 0
 
-    while (diagonals[delta + offset] < len(observed) or
-           diagonals[delta + offset] < len(reference)):
+    done = False
+    while diagonals[delta + offset] <= max(len(observed), len(reference)):
         print(f"it: {it}")
 
-        for diag_idx in range(-it, delta):
+        if delta >= 0:
+            lower = range(-it, delta)
+            upper = range(delta + it, delta, -1)
+        else:
+            lower = range(delta - it, delta)
+            upper = range(it, delta, -1)
+
+        for diag_idx in lower:
             print(f"lower: {diag_idx}")
             diagonals[diag_idx + offset] = func(diag_idx)
 
-        for diag_idx in range(delta + it, delta, -1):
+        for diag_idx in upper:
             print(f"upper: {diag_idx}")
             diagonals[diag_idx + offset] = func(diag_idx)
 
@@ -66,6 +74,10 @@ def edit(reference, observed):
 
         it += 1
 
-    from pprint import pprint
-    pprint(matrix)
+    # from pprint import pprint
+    # pprint(matrix)
     print(diagonals)
+
+    print(f"it at end: {it}")
+
+    return abs(delta) + 2 * it - 2, matrix
