@@ -18,6 +18,8 @@ def edit(reference, observed):
         lcs_nodes[lcs_pos][(row, col)] = {"length": length + 1}
         return max(lcs_len, lcs_pos + 1)
 
+    matrix = [[None for _ in range(len(observed) + 1)]
+              for _ in range(len(reference) + 1)]
     f = heuristic(0, 0)
 
     lcs_nodes = [{} for _ in range(min(len(reference), len(observed)))]
@@ -45,8 +47,10 @@ def edit(reference, observed):
             if row > 0 and reference[row - 1] == observed[col - 1]:
                 if rows[row - 1] + offset > col - 1:
                     lcs_len = lcs_match(lcs_nodes, lcs_len, row, col, f)
+                    matrix[row][col] = f
                 elif row == row_start:
                     lcs_len = lcs_match(lcs_nodes, lcs_len, row, col, f + 2)
+                    matrix[row][col] = f + 2
 
             if (heuristic(row, col) < heuristic(row, col - 1) or
                     (row > 0 and rows[row - 1] + offset > col and heuristic(row, col) < heuristic(row - 1, col)) or
@@ -69,8 +73,10 @@ def edit(reference, observed):
             if col > 0 and reference[row - 1] == observed[col - 1]:
                 if cols[col - 1] + offset > row - 1:
                     lcs_len = lcs_match(lcs_nodes, lcs_len, row, col, f)
+                    matrix[row][col] = f
                 elif col == col_start:
                     lcs_len = lcs_match(lcs_nodes, lcs_len, row, col, f + 2)
+                    matrix[row][col] = f + 2
 
             if (heuristic(row, col) < heuristic(row - 1, col) or
                     (col > 0 and cols[col - 1] + offset > row and heuristic(row, col) < heuristic(row, col - 1)) or
@@ -88,6 +94,7 @@ def edit(reference, observed):
         if row_start == row_end and col_start == col_end:
             if reference[row_end - 1] == observed[col_end - 1]:
                 lcs_len = lcs_match(lcs_nodes, lcs_len, row_end, col_end, f)
+                matrix[row_end][col_end] = f
 
                 row_end += 1
                 col_end += 1
@@ -105,7 +112,7 @@ def edit(reference, observed):
             row_end += 1
             col_end += 1
 
-    return f, lcs_nodes[:lcs_len]
+    return f, lcs_nodes[:lcs_len], matrix
 
 
 def lcs_graph(reference, observed, lcs_nodes):
