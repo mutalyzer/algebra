@@ -49,7 +49,8 @@ def edit(reference, observed):
 
     it = 0
 
-    while diagonals[delta + offset] < len(observed):
+    while (diagonals[delta + offset] < len(observed) or
+           diagonals[delta + offset] < len(reference)):
         print(f"it: {it}")
 
         for diag_idx in range(-it, delta):
