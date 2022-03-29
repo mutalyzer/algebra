@@ -21,6 +21,9 @@ def edit(reference, observed):
                 row += 1
                 col += 1
 
+            if col <= len(observed) and row <= len(reference):
+                matrix[row][col] = delta + 2 * it + 2
+
             return row
         else:
             col = diagonals[idx + offset] + 1
@@ -35,8 +38,10 @@ def edit(reference, observed):
                 row += 1
                 col += 1
 
-            return col
+            if col <= len(observed) and row <= len(reference):
+                matrix[row][col] = delta + 2 * it + 2
 
+            return col
 
     diagonals = [0] * (len(reference) + len(observed) + 3)
     offset = len(reference) + 1
