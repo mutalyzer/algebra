@@ -12,10 +12,10 @@ def edit(reference, observed):
             col = row + idx
             print(f"row and col before while {row}, {col}")
 
-            while (row < limit or
-                   (col <= len(observed) and
-                    row <= len(reference) and
-                    reference[row - 1] == observed[col - 1])):
+            while (row <= len(reference) and
+                   col <= len(observed) and
+                   (row <= limit or reference[row - 1] == observed[col - 1])):
+
                 print(row, col, reference[row - 1] == observed[col - 1])
                 matrix[row][col] = abs(delta) + 2 * it
                 row += 1
@@ -24,16 +24,16 @@ def edit(reference, observed):
             if col <= len(observed) and row <= len(reference):
                 matrix[row][col] = abs(delta) + 2 * it + 2
 
-            return row
+            return min(row, len(reference))
         else:
             col = diagonals[idx + offset] + 1
             row = col - idx
             print(f"row and col before while {row}, {col}")
 
-            while (col < limit or
-                   (col <= len(observed) and
-                    row <= len(reference) and
-                    reference[row - 1] == observed[col - 1])):
+            while (row <= len(reference) and
+                   col <= len(observed) and
+                   (col <= limit or reference[row - 1] == observed[col - 1])):
+
                 print(row, col, reference[row - 1] == observed[col - 1])
                 matrix[row][col] = abs(delta) + 2 * it
                 row += 1
@@ -42,7 +42,7 @@ def edit(reference, observed):
             if col <= len(observed) and row <= len(reference):
                 matrix[row][col] = abs(delta) + 2 * it + 2
 
-            return col
+            return min(col, len(observed))
 
     diagonals = [0] * (len(reference) + len(observed) + 3)
     offset = len(reference) + 1
@@ -50,8 +50,8 @@ def edit(reference, observed):
 
     it = 0
 
-    done = False
-    while diagonals[delta + offset] <= max(len(observed), len(reference)):
+    #while diagonals[delta + offset] <= max(len(observed), len(reference)):
+    while True:
         print(f"it in while: {it}")
 
         if delta >= 0:
@@ -72,6 +72,15 @@ def edit(reference, observed):
         print(f"delta: {delta}")
         diagonals[delta + offset] = func(delta)
 
+        print(f"diagonals: {diagonals}")
+        import pprint
+        pprint.pprint(matrix, width=20)
+
+        if diagonals[delta+offset] > len(reference):
+            break
+        if diagonals[delta+offset] > len(observed):
+            break
+
         it += 1
 
     # from pprint import pprint
@@ -80,4 +89,4 @@ def edit(reference, observed):
 
     print(f"it at end: {it}")
 
-    return abs(delta) + 2 * it - 2, matrix
+    return abs(delta) + 2 * it, matrix
