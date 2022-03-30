@@ -52,7 +52,7 @@ def edit(reference, observed):
 
     done = False
     while diagonals[delta + offset] <= max(len(observed), len(reference)):
-        print(f"it: {it}")
+        print(f"it in while: {it}")
 
         if delta >= 0:
             lower = range(-it, delta)
