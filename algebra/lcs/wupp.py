@@ -14,16 +14,15 @@ def edit(reference, observed):
             col = row + idx
             end = max(diagonals[offset + idx - 1], diagonals[offset + idx + 1])
 
-        steps = 1
         print(f"    start at {row, col}")
         for _ in range(start, end):
             print(f"        implicit {row, col}")
             matrix[row + 1][col + 1] = abs(delta) + 2 * it
             row += 1
             col += 1
-            steps += 1
 
         print(f"    continue with {row, col}")
+        steps = end + 1
         while row < len(reference) and col < len(observed) and reference[row] == observed[col]:
             print(f"        match {row, col}")
             matrix[row + 1][col + 1] = abs(delta) + 2 * it
@@ -33,7 +32,7 @@ def edit(reference, observed):
 
         print(f"    last checked {row, col}")
         matrix[row + 1][col + 1] = abs(delta) + 2 * it + 2
-        return start + steps
+        return steps
 
     matrix = [[None for _ in range(len(observed) + 2)] for _ in range(len(reference) + 2)]
 
