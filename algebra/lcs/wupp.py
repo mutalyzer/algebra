@@ -18,31 +18,31 @@ def edit(reference, observed):
         print(f"    start at {row, col}")
         for _ in range(start, end):
             print(f"        implicit {row, col}")
-            matrix[row][col] = abs(delta) + 2 * it
+            matrix[row + 1][col + 1] = abs(delta) + 2 * it
             row += 1
             col += 1
             steps += 1
 
         print(f"    continue with {row, col}")
-        while row <= len(reference) and col <= len(observed) and reference[row - 1] == observed[col - 1]:
+        while row < len(reference) and col < len(observed) and reference[row] == observed[col]:
             print(f"        match {row, col}")
-            matrix[row][col] = abs(delta) + 2 * it
+            matrix[row + 1][col + 1] = abs(delta) + 2 * it
             row += 1
             col += 1
             steps += 1
 
         print(f"    last checked {row, col}")
-        matrix[row][col] = abs(delta) + 2 * it + 2
+        matrix[row + 1][col + 1] = abs(delta) + 2 * it + 2
         return start + steps
 
     matrix = [[None for _ in range(len(observed) + 2)] for _ in range(len(reference) + 2)]
 
     delta = len(observed) - len(reference)
     offset = len(reference) + 1
-    diagonals = [1] * (len(reference) + len(observed) + 3)
+    diagonals = [0] * (len(reference) + len(observed) + 3)
     it = 0
 
-    while diagonals[offset + delta] <= max(len(reference), len(observed)) - abs(delta) + 1:
+    while diagonals[offset + delta] <= max(len(reference), len(observed)) - abs(delta):
 
         if delta >= 0:
             lower = range(-it, delta)
