@@ -1,4 +1,5 @@
 import sys
+from algebra.lcs.onp import edit as edit_onp
 from algebra.lcs.wupp import edit as edit_test
 from algebra.lcs.efficient import edit as edit_gold
 from pprint import pprint
@@ -18,7 +19,7 @@ def compare(test, gold, f):
 
 def main():
     min_rand = 1
-    max_rand = 2
+    max_rand = 10
 
     if len(sys.argv) == 1:
         lhs = "".join(random.choice("ACGT") for _ in range(random.randint(min_rand, max_rand)))
@@ -31,13 +32,15 @@ def main():
 
     print(lhs, rhs)
 
+    if len(lhs) > len(rhs):
+        return 0
+
     dist_test, matrix_test = edit_test(lhs, rhs)
     dist_gold, _, matrix_gold = edit_gold(lhs, rhs)
-
     print(dist_test)
-    pprint(matrix_test)
+    # pprint(matrix_test)
     print(dist_gold)
-    pprint(matrix_gold)
+    # pprint(matrix_gold)
 
     assert dist_test == dist_gold
 
