@@ -1,92 +1,54 @@
 def edit(reference, observed):
-
-    matrix = [[None for _ in range(len(observed) + 1)]
-              for _ in range(len(reference) + 1)]
-
-    def func(idx):
-        limit = max(diagonals[idx + offset - 1], diagonals[idx + offset + 1])
-        print(f"limit: {limit}")
-
+    def extend(idx, start, end, value):
         if idx >= 0:
-            row = diagonals[idx + offset] + 1
+            row = start
             col = row + idx
-            print(f"row and col before while {row}, {col}")
-
-            while (row <= len(reference) and
-                   col <= len(observed) and
-                   (row <= limit or reference[row - 1] == observed[col - 1])):
-
-                print(row, col, reference[row - 1] == observed[col - 1])
-                matrix[row][col] = abs(delta) + 2 * it
-                row += 1
-                col += 1
-
-            if col <= len(observed) and row <= len(reference):
-                matrix[row][col] = abs(delta) + 2 * it + 2
-
-            return min(row, len(reference))
         else:
-            col = diagonals[idx + offset] + 1
+            col = start
             row = col - idx
-            print(f"row and col before while {row}, {col}")
 
-            while (row <= len(reference) and
-                   col <= len(observed) and
-                   (col <= limit or reference[row - 1] == observed[col - 1])):
+        steps = 1
+        print(f"    start at {row, col}")
+        for _ in range(start, end):
+            print(f"        implicit {row, col}")
+            matrix[row][col] = value
+            row += 1
+            col += 1
+            steps += 1
 
-                print(row, col, reference[row - 1] == observed[col - 1])
-                matrix[row][col] = abs(delta) + 2 * it
-                row += 1
-                col += 1
+        print(f"    continue with {row, col}")
+        while row <= len(reference) and col <= len(observed) and reference[row - 1] == observed[col - 1]:
+            print(f"        match {row, col}")
+            matrix[row][col] = value
+            row += 1
+            col += 1
+            steps += 1
 
-            if col <= len(observed) and row <= len(reference):
-                matrix[row][col] = abs(delta) + 2 * it + 2
+        print(f"    last checked {row, col}")
+        #matrix[row][col] = value + 2
+        return start + steps
 
-            return min(col, len(observed))
+    matrix = [[None for _ in range(len(observed) + 1)] for _ in range(len(reference) + 1)]
 
-    diagonals = [0] * (len(reference) + len(observed) + 3)
-    offset = len(reference) + 1
     delta = len(observed) - len(reference)
-
+    offset = len(reference) + 1
+    diagonals = [1] * (len(reference) + len(observed) + 3)
     it = 0
 
-    #while diagonals[delta + offset] <= max(len(observed), len(reference)):
-    while True:
-        print(f"it in while: {it}")
+    while diagonals[offset + delta] <= max(len(reference), len(observed)):
+        for idx in range(-it, delta):
+            print(f"extend diagonal {idx} (lower)")
+            diagonals[offset + idx] = extend(idx, diagonals[offset + idx], max(diagonals[offset + idx - 1] + 1, diagonals[offset + idx + 1]) - 1, abs(delta) + 2 * it)
+        for idx in range(delta + it, delta, -1):
+            print(f"extend diagonal {idx} (upper)")
+            diagonals[offset + idx] = extend(idx, diagonals[offset + idx], max(diagonals[offset + idx - 1], diagonals[offset + idx + 1] + 1) - 1, abs(delta) + 2 * it)
+        print(f"extend diagonal {delta} (delta)")
+        diagonals[offset + delta] = extend(delta, diagonals[offset + delta], max(diagonals[offset + delta - 1], diagonals[offset + delta + 1]) - delta, abs(delta) + 2 * it)
 
-        if delta >= 0:
-            lower = range(-it, delta)
-            upper = range(delta + it, delta, -1)
-        else:
-            lower = range(delta - it, delta)
-            upper = range(it, delta, -1)
-
-        for diag_idx in lower:
-            print(f"lower: {diag_idx}")
-            diagonals[diag_idx + offset] = func(diag_idx)
-
-        for diag_idx in upper:
-            print(f"upper: {diag_idx}")
-            diagonals[diag_idx + offset] = func(diag_idx)
-
-        print(f"delta: {delta}")
-        diagonals[delta + offset] = func(delta)
-
-        print(f"diagonals: {diagonals}")
-        import pprint
-        pprint.pprint(matrix, width=20)
-
-        if diagonals[delta+offset] > len(reference):
-            break
-        if diagonals[delta+offset] > len(observed):
-            break
+        for row in matrix:
+            print(row)
+        print(diagonals)
 
         it += 1
 
-    # from pprint import pprint
-    # pprint(matrix)
-    print(diagonals)
-
-    print(f"it at end: {it}")
-
-    return abs(delta) + 2 * it, matrix
+    return abs(delta) + 2 * (it - 1), matrix
