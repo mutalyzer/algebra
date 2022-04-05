@@ -32,9 +32,6 @@ def main():
 
     print(lhs, rhs)
 
-    if len(lhs) > len(rhs):
-        return 0
-
     dist_test, matrix_test = edit_test(lhs, rhs)
     dist_gold, _, matrix_gold = edit_gold(lhs, rhs)
     print(dist_test)
