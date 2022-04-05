@@ -42,11 +42,19 @@ def edit(reference, observed):
     diagonals = [1] * (len(reference) + len(observed) + 3)
     it = 0
 
-    while diagonals[offset + delta] <= len(observed) + 1 - delta:
-        for idx in range(-it, delta):
+    while diagonals[offset + delta] <= max(len(reference), len(observed)) - abs(delta) + 1:
+
+        if delta >= 0:
+            lower = range(-it, delta)
+            upper = range(delta + it, delta, -1)
+        else:
+            lower = range(delta - it, delta)
+            upper = range(it, delta, -1)
+
+        for idx in lower:
             print(f"extend diagonal {idx} (lower)")
             diagonals[offset + idx] = extend(idx)
-        for idx in range(delta + it, delta, -1):
+        for idx in upper:
             print(f"extend diagonal {idx} (upper)")
             diagonals[offset + idx] = extend(idx)
         print(f"extend diagonal {delta} (delta)")
