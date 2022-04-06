@@ -106,10 +106,36 @@ def edit(reference, observed):
 
 def lcs_graph(reference, observed, lcs_nodes):
 
+    def connect(child, potential):
+        print(f"pair: {child}, {potential}")
+
+        for child_offset in range(child['len'] - 1, -1, -1):
+            for pot_offset in range(potential['len'] - 1, -1, -1):
+                child_row = child['row'] + child_offset
+                child_col = child['col'] + child_offset
+                pot_row = potential['row'] + pot_offset
+                pot_col = potential['col'] + pot_offset
+                print(f"child offset: {child_offset} at {child_row, child_col}, potential offset: {pot_offset} at {pot_row, pot_col}")
+
+                if child_row > pot_row and child_col > pot_col:
+                    print(f"child dominates")
+
+                    var = Variant(child_row, len(reference), observed[child_col:child_col + child_offset]).to_hgvs(reference)
+
+                    if 'children' not in potential:
+                        potential['children'] = []
+                    else:
+                        print('parent already has children')
+                    potential['children'].append((child['row'], child['col']))
+                    break
+                else:
+                    print("child does not dominate")
+
     for node in lcs_nodes[-1]:
         print(node)
-        print(Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:]).to_hgvs(reference))
-        node['children'] = []
+        variant = Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:]).to_hgvs(reference)
+        print(variant)
+        node['children'] = [('Sink', variant)]
 
     print()
 
@@ -117,10 +143,20 @@ def lcs_graph(reference, observed, lcs_nodes):
         level = len(lcs_nodes) - idx - 1
         print(f"Entering level: {level}")
         for node in nodes:
-            if 'children' in node:
-                print(node)
-                for offset in range(node['len']):
-                    
+            if 'children' not in node:
+                print(f"Node {node} has no children")
+                continue
 
+            print(f'Node: {node}')
+            for offset in range(node['len']):
+                haystack_level = level - offset
+                print(f'Target level {haystack_level}')
+                for haystack in lcs_nodes[haystack_level]:
+                    if node == haystack:
+                        # Skip self
+                        continue
+                    connect(node, haystack)
+            print()
 
-
+    for level in lcs_nodes:
+        print(level)
