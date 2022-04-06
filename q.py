@@ -1,9 +1,10 @@
 import sys
 from algebra.lcs.onp import edit as edit_onp
-from algebra.lcs.wupp import edit as edit_test
+from algebra.lcs.wupp import edit as edit_test, lcs_graph
 from algebra.lcs.efficient import edit as edit_gold
 from pprint import pprint
 import random
+
 
 def compare(test, gold, f):
     assert len(test) == len(gold)
@@ -19,21 +20,21 @@ def compare(test, gold, f):
 
 def main():
     min_rand = 1
-    max_rand = 10
+    max_rand = 42
 
     if len(sys.argv) == 1:
-        lhs = "".join(random.choice("ACGT") for _ in range(random.randint(min_rand, max_rand)))
-        rhs = "".join(random.choice("ACGT") for _ in range(random.randint(min_rand, max_rand)))
+        reference = "".join(random.choice("ACGT") for _ in range(random.randint(min_rand, max_rand)))
+        observed = "".join(random.choice("ACGT") for _ in range(random.randint(min_rand, max_rand)))
     elif len(sys.argv) == 3:
-        lhs = sys.argv[1]
-        rhs = sys.argv[2]
+        reference = sys.argv[1]
+        observed = sys.argv[2]
     else:
         raise("usage")
 
-    print(lhs, rhs)
+    print(reference, observed)
 
-    dist_test, matrix_test = edit_test(lhs, rhs)
-    dist_gold, _, matrix_gold = edit_gold(lhs, rhs)
+    dist_test, matrix_test, lcs_nodes = edit_test(reference, observed)
+    dist_gold, _, matrix_gold = edit_gold(reference, observed)
     print(dist_test)
     # pprint(matrix_test)
     print(dist_gold)
@@ -42,6 +43,11 @@ def main():
     assert dist_test == dist_gold
 
     compare(matrix_test, matrix_gold, dist_test)
+
+    for level in lcs_nodes:
+        print(level)
+
+    lcs_graph(reference, observed, lcs_nodes)
 
 
 if __name__ == '__main__':

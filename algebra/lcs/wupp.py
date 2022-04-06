@@ -1,8 +1,12 @@
+from algebra.variants.variant import Variant
+
+
 def edit(reference, observed):
     def lcs_idx(row, col):
         return ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
 
     def extend(idx):
+        nonlocal max_lcs_pos
         start = diagonals[offset + idx]
         if idx > 0:
             row = start
@@ -32,7 +36,10 @@ def edit(reference, observed):
                 active = True
             elif active:
                 print(f"{match_row + 1, match_col + 1}, {row + 1, col + 1} match")
-                print('lcs pos', lcs_idx(row, col))
+                lcs_pos = lcs_idx(row, col)
+                max_lcs_pos = max(lcs_pos, max_lcs_pos)
+                print('lcs pos', lcs_pos)
+                lcs_nodes[lcs_pos].append({'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row})
                 active = False
             row += 1
             col += 1
@@ -52,13 +59,19 @@ def edit(reference, observed):
             steps += 1
         if active:
             print(f"{match_row + 1, match_col + 1}, {row + 1, col + 1} match")
-            print('lcs pos', lcs_idx(row, col))
+            lcs_pos = lcs_idx(row, col)
+            max_lcs_pos = max(lcs_pos, max_lcs_pos)
+            print('lcs pos', lcs_pos)
+            lcs_nodes[lcs_pos].append({'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row})
+
 
         # print(f"    last checked {row, col}")
         matrix[row + 1][col + 1] = abs(delta) + 2 * it + 2
         return steps
 
     matrix = [[None for _ in range(len(observed) + 2)] for _ in range(len(reference) + 2)]
+    lcs_nodes = [[] for _ in range(min(len(reference), len(observed)))]
+    max_lcs_pos = 0
 
     delta = len(observed) - len(reference)
     offset = len(reference) + 1
@@ -88,4 +101,26 @@ def edit(reference, observed):
 
         it += 1
 
-    return abs(delta) + 2 * (it - 1), [r[:-1] for r in matrix[:-1]]
+    return abs(delta) + 2 * (it - 1), [r[:-1] for r in matrix[:-1]], lcs_nodes[:max_lcs_pos + 1]
+
+
+def lcs_graph(reference, observed, lcs_nodes):
+
+    for node in lcs_nodes[-1]:
+        print(node)
+        print(Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:]).to_hgvs(reference))
+        node['children'] = []
+
+    print()
+
+    for idx, nodes in enumerate(lcs_nodes[::-1]):
+        level = len(lcs_nodes) - idx - 1
+        print(f"Entering level: {level}")
+        for node in nodes:
+            if 'children' in node:
+                print(node)
+                for offset in range(node['len']):
+                    
+
+
+
