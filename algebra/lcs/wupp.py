@@ -118,10 +118,9 @@ def lcs_graph(reference, observed, lcs_nodes):
         level = len(lcs_nodes) - idx - 1
         print(f"Entering level: {level}")
         print()
-        for node in nodes:
+        for node in nodes[:]:
             if 'children' not in node:
-                # TODO: remove?!
-                #     print(f"Node {node} has no children")
+                nodes.remove(node)
                 continue
 
             print(f'Node: {node}')
