@@ -109,7 +109,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     def connect(child, potential):
         print(f"pair: {child}, {potential}")
 
-        for child_offset in range(child['len'] - 1, -1, -1):
+        for child_offset in range(child['len']):
             for pot_offset in range(potential['len'] - 1, -1, -1):
                 child_row = child['row'] + child_offset
                 child_col = child['col'] + child_offset
@@ -130,6 +130,14 @@ def lcs_graph(reference, observed, lcs_nodes):
                     break
                 else:
                     print("child does not dominate")
+            else:
+                # only executed if the inner loop did not break
+                continue
+            # only executed if the inner loop DID break
+            # if child_offset == 0:
+            #     print("child offset is 0, break")
+            #     break
+
 
     for node in lcs_nodes[-1]:
         print(node)
@@ -143,12 +151,13 @@ def lcs_graph(reference, observed, lcs_nodes):
         level = len(lcs_nodes) - idx - 1
         print(f"Entering level: {level}")
         for node in nodes:
-            if 'children' not in node:
-                print(f"Node {node} has no children")
-                continue
+            # if 'children' not in node:
+            # TODO: remove?!
+            #     print(f"Node {node} has no children")
+            #     continue
 
             print(f'Node: {node}')
-            for offset in range(node['len']):
+            for offset in range(node['len'] + 1):
                 haystack_level = level - offset
                 print(f'Target level {haystack_level}')
                 for haystack in lcs_nodes[haystack_level]:
