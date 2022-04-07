@@ -106,39 +106,6 @@ def edit(reference, observed):
 
 def lcs_graph(reference, observed, lcs_nodes):
 
-    def connect(child, potential):
-        print(f"pair: {child}, {potential}")
-
-        for child_offset in range(child['len']):
-            for pot_offset in range(potential['len'] - 1, -1, -1):
-                child_row = child['row'] + child_offset
-                child_col = child['col'] + child_offset
-                pot_row = potential['row'] + pot_offset
-                pot_col = potential['col'] + pot_offset
-                print(f"child offset: {child_offset} at {child_row, child_col}, potential offset: {pot_offset} at {pot_row, pot_col}")
-
-                if child_row > pot_row and child_col > pot_col:
-                    print(f"child dominates")
-
-                    var = Variant(child_row, len(reference), observed[child_col:child_col + child_offset]).to_hgvs(reference)
-
-                    if 'children' not in potential:
-                        potential['children'] = []
-                    else:
-                        print('parent already has children')
-                    potential['children'].append((child['row'], child['col']))
-                    break
-                else:
-                    print("child does not dominate")
-            else:
-                # only executed if the inner loop did not break
-                continue
-            # only executed if the inner loop DID break
-            # if child_offset == 0:
-            #     print("child offset is 0, break")
-            #     break
-
-
     for node in lcs_nodes[-1]:
         print(node)
         variant = Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:]).to_hgvs(reference)
@@ -150,6 +117,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     for idx, nodes in enumerate(lcs_nodes[::-1]):
         level = len(lcs_nodes) - idx - 1
         print(f"Entering level: {level}")
+        print()
         for node in nodes:
             # if 'children' not in node:
             # TODO: remove?!
@@ -157,14 +125,27 @@ def lcs_graph(reference, observed, lcs_nodes):
             #     continue
 
             print(f'Node: {node}')
-            for offset in range(node['len'] + 1):
-                haystack_level = level - offset
-                print(f'Target level {haystack_level}')
-                for haystack in lcs_nodes[haystack_level]:
-                    if node == haystack:
-                        # Skip self
-                        continue
-                    connect(node, haystack)
+            for offset in range(node['len']):
+                child_row = node['row'] + node['len'] - 1 - offset
+                child_col = node['col'] + node['len'] - 1 - offset
+                print(f'offset: {offset} {child_row, child_col}')
+                # tgt_levels = list(range(level - offset, max(level - offset - 2, -1), -1))
+                max_tgt_lvl = level - offset
+                min_tgt_lvl = max(level - offset - 1, 0)
+
+                for tgt_level in range(max_tgt_lvl, min_tgt_lvl - 1, -1):
+                    print(f"Target level: {tgt_level}")
+                    for tgt_node in lcs_nodes[tgt_level]:
+                        if node == tgt_node:
+                            # Skip self
+                            continue
+                        print(tgt_node)
+                        for tgt_offset in range(tgt_node['len']):
+                            if tgt_level - tgt_offset < min_tgt_lvl:
+                                continue
+                            tgt_row = tgt_node['row'] + tgt_node['len'] - 1 - tgt_offset
+                            tgt_col = tgt_node['col'] + tgt_node['len'] - 1 - tgt_offset
+                            print(f'Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
             print()
 
     for level in lcs_nodes:
