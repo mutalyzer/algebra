@@ -119,10 +119,10 @@ def lcs_graph(reference, observed, lcs_nodes):
         print(f"Entering level: {level}")
         print()
         for node in nodes:
-            # if 'children' not in node:
-            # TODO: remove?!
-            #     print(f"Node {node} has no children")
-            #     continue
+            if 'children' not in node:
+                # TODO: remove?!
+                #     print(f"Node {node} has no children")
+                continue
 
             print(f'Node: {node}')
             for offset in range(node['len']):
@@ -132,20 +132,27 @@ def lcs_graph(reference, observed, lcs_nodes):
                 # tgt_levels = list(range(level - offset, max(level - offset - 2, -1), -1))
                 max_tgt_lvl = level - offset
                 min_tgt_lvl = max(level - offset - 1, 0)
+                print(f"    min/max target level: {min_tgt_lvl}/{max_tgt_lvl}")
 
                 for tgt_level in range(max_tgt_lvl, min_tgt_lvl - 1, -1):
-                    print(f"Target level: {tgt_level}")
+                    print(f"    Target level: {tgt_level}")
                     for tgt_node in lcs_nodes[tgt_level]:
                         if node == tgt_node:
                             # Skip self
                             continue
-                        print(tgt_node)
+                        print('         Target node:', tgt_node)
                         for tgt_offset in range(tgt_node['len']):
                             if tgt_level - tgt_offset < min_tgt_lvl:
+                                # TODO: fix in range
                                 continue
                             tgt_row = tgt_node['row'] + tgt_node['len'] - 1 - tgt_offset
                             tgt_col = tgt_node['col'] + tgt_node['len'] - 1 - tgt_offset
-                            print(f'Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
+                            print(f'            Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
+
+                            if child_row > tgt_row and child_col > tgt_col:
+                                if 'children' not in tgt_node:
+                                    tgt_node['children'] = []
+                                tgt_node['children'].append((node['row'], node['col']))
             print()
 
     for level in lcs_nodes:
