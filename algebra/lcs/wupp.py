@@ -128,7 +128,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                 child_row = node['row'] + node['len'] - 1 - offset
                 child_col = node['col'] + node['len'] - 1 - offset
                 print(f'offset: {offset} {child_row, child_col}')
-                # tgt_levels = list(range(level - offset, max(level - offset - 2, -1), -1))
                 max_tgt_lvl = level - offset
                 min_tgt_lvl = max(level - offset - 1, 0)
                 print(f"    min/max target level: {min_tgt_lvl}/{max_tgt_lvl}")
@@ -151,7 +150,8 @@ def lcs_graph(reference, observed, lcs_nodes):
                             if child_row > tgt_row and child_col > tgt_col:
                                 if 'children' not in tgt_node:
                                     tgt_node['children'] = []
-                                tgt_node['children'].append((node['row'], node['col']))
+                                variant = Variant(tgt_row, child_row - 1, observed[tgt_col:child_col - 1]).to_hgvs(reference)
+                                tgt_node['children'].append((node['row'], node['col'], variant))
             print()
 
     for level in lcs_nodes:
