@@ -1,12 +1,12 @@
 import sys
 from algebra.lcs.onp import edit as edit_onp
-from algebra.lcs.wupp import edit as edit_test, lcs_graph
-from algebra.lcs.efficient import edit as edit_gold
+from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test
+from algebra.lcs.efficient import edit as edit_gold, lcs_graph as graph_gold
 from pprint import pprint
 import random
 
 
-def compare(test, gold, f):
+def compare_matrix(test, gold, f):
     assert len(test) == len(gold)
     assert len(test[0]) == len(gold[0])
     row_len = len(test)
@@ -33,8 +33,8 @@ def main():
 
     print(reference, observed)
 
-    dist_test, matrix_test, lcs_nodes = edit_test(reference, observed)
-    dist_gold, _, matrix_gold = edit_gold(reference, observed)
+    dist_test, matrix_test, nodes_test = edit_test(reference, observed)
+    dist_gold, nodes_gold, matrix_gold = edit_gold(reference, observed)
     print(dist_test)
     # pprint(matrix_test)
     print(dist_gold)
@@ -42,12 +42,15 @@ def main():
 
     assert dist_test == dist_gold
 
-    compare(matrix_test, matrix_gold, dist_test)
+    compare_matrix(matrix_test, matrix_gold, dist_test)
 
-    for level in lcs_nodes:
+    for level in nodes_test:
         print(level)
 
-    lcs_graph(reference, observed, lcs_nodes)
+    graph_test(reference, observed, nodes_test)
+
+    # graph_gold(reference, observed, nodes_gold)
+
 
 
 if __name__ == '__main__':
