@@ -1,4 +1,4 @@
-from algebra.lcs.efficient import edit, lcs_graph
+from algebra.lcs.efficient import edit, build
 
 
 def main():
@@ -6,8 +6,10 @@ def main():
     observed = "CTTATAGCAT"
 
     distance, lcs_nodes = edit(reference, observed)
-    print(lcs_nodes)
-    graph = lcs_graph(reference, observed, lcs_nodes)
+    _, graph = build(lcs_nodes, reference, observed)
+
+    for level in graph:
+        print([str(node) for node in level])
 
 
 if __name__ == "__main__":
