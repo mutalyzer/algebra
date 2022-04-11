@@ -1,7 +1,8 @@
 import sys
 from algebra.lcs.onp import edit as edit_onp
-from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test
+from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test, traversal
 from algebra.lcs.efficient import edit as edit_gold, lcs_graph as graph_gold
+from algebra.variants.variant import to_hgvs
 from pprint import pprint
 import random
 
@@ -44,14 +45,16 @@ def main():
 
     compare_matrix(matrix_test, matrix_gold, dist_test)
 
+    print(nodes_test)
     for level in nodes_test:
         print(level)
 
-    graph_test(reference, observed, nodes_test)
+    graph = graph_test(reference, observed, nodes_test)
 
     # graph_gold(reference, observed, nodes_gold)
 
-
+    for path in traversal(reference, observed, graph):
+        print(to_hgvs(path, reference))
 
 if __name__ == '__main__':
     main()

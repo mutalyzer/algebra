@@ -113,8 +113,8 @@ def lcs_graph(reference, observed, lcs_nodes):
         graph[(0, 0)].append((sink, [Variant(0, len(reference), observed)]))
 
     for node in lcs_nodes[-1]:
-        variant = Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:]).to_hgvs(reference)
-        graph[(node["row"], node["col"])] = [(sink, variant)]
+        variant = Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:])
+        graph[(node["row"], node["col"])] = [(sink, [variant] if variant else [])]
 
     for idx, nodes in enumerate(lcs_nodes[::-1]):
         level = len(lcs_nodes) - idx - 1
@@ -135,8 +135,8 @@ def lcs_graph(reference, observed, lcs_nodes):
                 print(f"    min/max target level: {min_tgt_lvl}/{max_tgt_lvl}")
 
                 if (level - offset - 1) < 0:
-                    variant = Variant(0, child_row - 1, observed[:child_col - 1]).to_hgvs(reference)
-                    graph[(0, 0)].append(((node["row"], node["col"]), variant))
+                    variant = Variant(0, child_row - 1, observed[:child_col - 1])
+                    graph[(0, 0)].append(((node["row"], node["col"]), [variant] if variant else []))
 
                 for tgt_level in range(max_tgt_lvl, min_tgt_lvl - 1, -1):
                     print(f"    Target level: {tgt_level}")
@@ -158,12 +158,23 @@ def lcs_graph(reference, observed, lcs_nodes):
                             tgt_coor = tgt_node["row"], tgt_node["col"]
                             if tgt_coor not in graph:
                                 graph[tgt_coor] = []
-                            variant = Variant(tgt_row, child_row - 1, observed[tgt_col:child_col - 1]).to_hgvs(reference)
-                            graph[tgt_coor].append(((node["row"], node["col"]), variant))
+                            variant = Variant(tgt_row, child_row - 1, observed[tgt_col:child_col - 1])
+                            graph[tgt_coor].append(((node["row"], node["col"]), [variant]))
                             print(variant)
             print()
 
-    for node, values in reversed(graph.items()):
-        print(node, values)
-
     return graph
+
+
+def traversal(reference, observed, graph):
+
+    def traverse(node, path):
+        if node == (len(reference) + 1, len(observed) + 1):
+            yield path
+            return
+
+        for child, variant in graph[node]:
+            yield from traverse(child, path + variant)
+
+    yield from traverse((0, 0), [])
+
