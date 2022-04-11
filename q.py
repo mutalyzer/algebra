@@ -1,7 +1,7 @@
 import sys
 from algebra.lcs.onp import edit as edit_onp
 from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test, traversal
-from algebra.lcs.efficient import edit as edit_gold, build as graph_gold, traverse as traverse_gold
+from algebra.lcs.efficient import edit as edit_gold, build as graph_gold, traversal as traversal_gold
 from algebra.variants.variant import to_hgvs, Variant, patch
 from pprint import pprint
 import random
@@ -52,7 +52,7 @@ def main():
     graph = graph_test(reference, observed, nodes_test)
 
     print("test")
-    paths_test = list(traversal(reference, observed, graph, atomics=True))
+    paths_test = traversal(reference, observed, graph, atomics=True)
     # s = set()
     hgvs_test = []
     for path in paths_test:
@@ -70,7 +70,7 @@ def main():
 
     print("gold")
     _, lcs_graph_gold = graph_gold(nodes_gold, reference, observed)
-    paths_gold = traverse_gold(reference, observed, lcs_graph_gold, atomic=False)
+    paths_gold = traversal_gold(reference, observed, lcs_graph_gold, atomics=True)
     hgvs_gold = []
     for path in paths_gold:
         hgvs_gold.append(to_hgvs(path, reference))

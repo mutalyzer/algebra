@@ -5,7 +5,7 @@ def edit(reference, observed):
     def lcs_idx(row, col):
         return ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
 
-    def extend(idx):
+    def expand(idx):
         nonlocal max_lcs_pos
         start = diagonals[offset + idx]
         if idx > 0:
@@ -88,12 +88,12 @@ def edit(reference, observed):
     while diagonals[offset + delta] <= max(len(reference), len(observed)) - abs(delta):
         for idx in range(lower - it, delta):
             # print(f"extend diagonal {idx} (lower)")
-            diagonals[offset + idx] = extend(idx)
+            diagonals[offset + idx] = expand(idx)
         for idx in range(upper + it, delta, - 1):
             # print(f"extend diagonal {idx} (upper)")
-            diagonals[offset + idx] = extend(idx)
+            diagonals[offset + idx] = expand(idx)
         # print(f"extend diagonal {delta} (delta)")
-        diagonals[offset + delta] = extend(delta)
+        diagonals[offset + delta] = expand(delta)
 
         # for row in matrix:
         #     print(row)

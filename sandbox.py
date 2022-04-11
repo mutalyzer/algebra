@@ -14,7 +14,7 @@ def main():
     distance, lcs_nodes = edit(reference, observed)
     _, graph = build(lcs_nodes, reference, observed)
 
-    for path in traversal(reference, observed, graph, atomics=True):
+    for path in sorted(traversal(reference, observed, graph, atomics=True)):
         print(to_hgvs(path, reference))
 
 

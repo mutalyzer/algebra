@@ -72,7 +72,7 @@ class Variant:
                 c += 1
             if variant:
                 variants.append(variant)
-            yield variants
+            yield sorted(variants)
 
     def to_hgvs(self, reference=None, only_substitutions=True):
         if self.end - self.start == 0:
