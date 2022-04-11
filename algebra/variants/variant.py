@@ -1,3 +1,6 @@
+from itertools import combinations
+
+
 class Variant:
     def __init__(self, start, end, sequence=""):
         if not isinstance(start, int):
@@ -43,7 +46,33 @@ class Variant:
         return f"[{self.start},{self.end}/{self.sequence}]"
 
     def atomics(self):
-        pass
+        n = len(self)
+        k = len(self.sequence)
+
+        for combo in combinations(range(n), k):
+            variants = []
+
+            # All deletions
+            for i in range(self.start, self.end):
+                variants.append(Variant(i, i + 1))
+
+            # All insertions
+            c = 0
+            pos = self.start
+            variant = Variant(self.start, self.start)
+            for i in range(k):
+                if combo[i] > c:
+                    pos += combo[i] - c
+                    c = combo[i]
+                    if variant:
+                        variants.append(variant)
+                    variant = Variant(pos, pos, self.sequence[i])
+                else:
+                    variant.sequence += self.sequence[i]
+                c += 1
+            if variant:
+                variants.append(variant)
+            yield variants
 
     def to_hgvs(self, reference=None, only_substitutions=True):
         if self.end - self.start == 0:

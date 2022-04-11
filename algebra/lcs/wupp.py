@@ -166,7 +166,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     return graph
 
 
-def traversal(reference, observed, graph):
+def traversal(reference, observed, graph, atomics=False):
 
     def traverse(node, path):
         if node == (len(reference) + 1, len(observed) + 1):
@@ -174,7 +174,11 @@ def traversal(reference, observed, graph):
             return
 
         for child, variant in graph[node]:
-            yield from traverse(child, path + variant)
+            if atomics and len(variant) > 0:
+                for atomic in variant[0].atomics():
+                    yield from traverse(child, path + atomic)
+            else:
+                yield from traverse(child, path + variant)
 
     yield from traverse((0, 0), [])
 
