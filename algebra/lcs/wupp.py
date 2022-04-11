@@ -109,6 +109,9 @@ def lcs_graph(reference, observed, lcs_nodes):
     sink = (len(reference) + 1, len(observed) + 1)
     graph = {sink: [], (0, 0): []}
 
+    if lcs_nodes == [[]]:
+        graph[(0, 0)].append((sink, [Variant(0, len(reference), observed)]))
+
     for node in lcs_nodes[-1]:
         variant = Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:]).to_hgvs(reference)
         graph[(node["row"], node["col"])] = [(sink, variant)]
