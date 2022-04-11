@@ -218,99 +218,41 @@ def build(graph, reference, observed):
     return ops, graph
 
 
-def trivial(reference, observed):
-    return Variant(0, len(reference), observed)
-
-
-def traverse(reference, observed, graph, atomic=True):
-    def atomic_vars(from_row, to_row, from_col, to_col):
-        n = to_row - from_row + to_col - from_col
-        k = to_col - from_col
-        atomics = []
-        for combo in combinations(range(n), k):
-            c = 0
-            pos = from_row
-            variant = Variant(from_row, from_row)
-            variants = []
-            for i in range(from_row, to_row):
-                variants.append(Variant(i, i + 1))
-            for i in range(k):
-                if combo[i] > c:
-                    pos += combo[i] - c
-                    c = combo[i]
-                    if variant:
-                        variants.append(variant)
-                    variant = Variant(pos, pos, observed[from_col + i])
-                else:
-                    variant.sequence += observed[from_col + i]
-                c += 1
-            if variant:
-                variants.append(variant)
-            atomics.append(variants)
-        return atomics
-
-    def trav(row, col, node, path, paths, subst_range):
-        min_row, min_col, max_row, max_col = subst_range
-
-        if node is None:
-            variant = Variant(row, len(reference), observed[col:])
-            if variant:
-                subst_range[0:4] = [
-                    min(min_row, row),
-                    min(min_col, col),
-                    max(max_row, len(reference)),
-                    max(max_col, len(observed))
-                ]
-
-            if atomic:
-                atomics = atomic_vars(row, len(reference), col, len(observed))
-                for atom in reversed(atomics):
-                    paths.append(path + atom)
-                return len(atomics)
-
-            variants = [var for var in path + [variant] if var]
-            if len(variants) == 0:
-                return 0
-            paths.append(variants)
-            return 1
-
-        variant = Variant(row, node.row - 1, observed[col:node.col - 1])
-        if variant:
-            subst_range[0:4] = [
-                min(min_row, row),
-                min(min_col, col),
-                max(max_row, node.row - 1),
-                max(max_col, node.col - 1)
-            ]
-
-        if atomic:
-            atomics = atomic_vars(row, node.row - 1, col, node.col - 1)
-            count = 0
-            for atom in reversed(atomics):
-                for child in node.child:
-                    count += trav(node.row, node.col, child, path + atom, paths, subst_range)
-            return count
-
-        count = 0
+def traversal(reference, observed, graph, atomics=False):
+    def traverse(node, path):
         for child in node.child:
-            count += trav(node.row, node.col, child, path + [variant], paths, subst_range)
-        return count
+            if child is None:
+                variant = Variant(node.row, len(reference), observed[node.col:])
+                if variant:
+                    if atomics:
+                        for atomic in variant.atomics():
+                            yield path + atomic
+                    else:
+                        yield path + [variant]
+                else:
+                    yield path
+                return
+
+            variant = Variant(node.row, child.row - 1, observed[node.col:child.col - 1])
+            if variant:
+                if atomics:
+                    for atomic in variant.atomics():
+                        yield from traverse(child, path + atomic)
+                else:
+                    yield from traverse(child, path + [variant])
+            else:
+                yield from traverse(child, path)
 
     if graph == []:
-        if atomic:
-            return atomic_vars(0, len(reference), 0, len(observed)), trivial(reference, observed)
-        return [[trivial(reference, observed)]], trivial(reference, observed)
+        yield [Variant(0, len(reference), observed)]
+        return
 
-    paths = []
-    count = 0
-    subst_range = [len(reference) + 1, len(observed) + 1, 0, 0]
     for node in graph[0]:
-        count += trav(0, 0, node, [], paths, subst_range)
-
-    if count == 0:
-        return paths, Variant(0, 0)
-
-    min_row, min_col, max_row, max_col = subst_range
-    return paths # , Variant(min_row, max_row, observed[min_col:max_col])
-
-
+        variant = Variant(0, node.row - 1, observed[:node.col - 1])
+        if atomics and variant:
+            for atomic in variant.atomics():
+                yield from traverse(node, atomic)
+        elif variant:
+            yield from traverse(node, [variant])
+        else:
+            yield from traverse(node, [])
