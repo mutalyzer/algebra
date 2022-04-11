@@ -1,5 +1,4 @@
 from ..variants.variant import Variant
-from itertools import combinations
 
 
 class Node:
