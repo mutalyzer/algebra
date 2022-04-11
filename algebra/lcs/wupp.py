@@ -139,16 +139,20 @@ def lcs_graph(reference, observed, lcs_nodes):
                             # Skip self
                             continue
                         print('         Target node:', tgt_node)
-                        for tgt_offset in range(min(tgt_node['len'], tgt_level - min_tgt_lvl + 1)):
-                            tgt_row = tgt_node['row'] + tgt_node['len'] - 1 - tgt_offset
-                            tgt_col = tgt_node['col'] + tgt_node['len'] - 1 - tgt_offset
-                            print(f'            Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
 
-                            if child_row > tgt_row and child_col > tgt_col:
-                                if 'children' not in tgt_node:
-                                    tgt_node['children'] = []
-                                variant = Variant(tgt_row, child_row - 1, observed[tgt_col:child_col - 1]).to_hgvs(reference)
-                                tgt_node['children'].append((node['row'], node['col'], variant))
+                        tgt_offset = tgt_level - min_tgt_lvl
+                        if tgt_offset >= tgt_node["len"]:
+                            continue
+
+                        tgt_row = tgt_node['row'] + tgt_node['len'] - 1 - tgt_offset
+                        tgt_col = tgt_node['col'] + tgt_node['len'] - 1 - tgt_offset
+                        print(f'            Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
+
+                        if child_row > tgt_row and child_col > tgt_col:
+                            if 'children' not in tgt_node:
+                                tgt_node['children'] = []
+                            variant = Variant(tgt_row, child_row - 1, observed[tgt_col:child_col - 1]).to_hgvs(reference)
+                            tgt_node['children'].append((node['row'], node['col'], variant))
             print()
 
     for level in lcs_nodes:
