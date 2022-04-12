@@ -64,7 +64,6 @@ def edit(reference, observed):
             print('lcs pos', lcs_pos)
             lcs_nodes[lcs_pos].append({'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row})
 
-
         # print(f"    last checked {row, col}")
         matrix[row + 1][col + 1] = abs(delta) + 2 * it + 2
         return steps
@@ -181,4 +180,3 @@ def traversal(reference, observed, graph, atomics=False):
                 yield from traverse(child, path + variant)
 
     yield from traverse((0, 0), [])
-
