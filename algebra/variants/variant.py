@@ -51,10 +51,9 @@ class Variant:
 
         for combo in combinations(range(n), k):
             variants = []
-
             c = 0
             pos = self.start
-            variant = Variant(self.start, self.start)
+            variant = Variant(pos, pos)
             for i in range(k):
                 if combo[i] > c:
                     if variant:
@@ -67,10 +66,12 @@ class Variant:
                 else:
                     variant.sequence += self.sequence[i]
                 c += 1
+
             if variant:
                 variants.append(variant)
             for i in range(pos, self.end):
                 variants.append(Variant(i, i + 1))
+
             yield variants
 
     def to_hgvs(self, reference=None, only_substitutions=True):

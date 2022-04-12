@@ -1,4 +1,4 @@
-from algebra.variants.variant import Variant
+from ..variants.variant import Variant
 
 
 def edit(reference, observed):
@@ -166,7 +166,6 @@ def lcs_graph(reference, observed, lcs_nodes):
 
 
 def traversal(reference, observed, graph, atomics=False):
-
     def traverse(node, path):
         if node == (len(reference) + 1, len(observed) + 1):
             yield path
