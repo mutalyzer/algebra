@@ -129,8 +129,8 @@ def lcs_graph(reference, observed, lcs_nodes):
                 child_row = node['row'] + node['len'] - 1 - offset
                 child_col = node['col'] + node['len'] - 1 - offset
                 print(f'offset: {offset} {child_row, child_col}')
-                max_tgt_lvl = level
-                min_tgt_lvl = max(level - offset - 1, 0)
+                max_tgt_lvl = len(lcs_nodes) - 1
+                min_tgt_lvl = 0
                 print(f"    min/max target level: {min_tgt_lvl}/{max_tgt_lvl}")
 
                 if (level - offset - 1) < 0:
