@@ -116,7 +116,7 @@ def lcs_graph(reference, observed, lcs_nodes):
         graph[(0, 0)].append((sink, [Variant(0, len(reference), observed)]))
 
     for node in lcs_nodes[-1]:
-        variant = Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:])
+        variant = Variant(node["row"] + node["len"] - 1, len(reference), observed[node["col"] + node["len"] - 1:])
         graph[(node["row"], node["col"])] = [(sink, [variant] if variant else [])]
         print(variant.to_hgvs(reference))
 
@@ -124,13 +124,13 @@ def lcs_graph(reference, observed, lcs_nodes):
         level = len(lcs_nodes) - idx - 1
         print(f"Entering level: {level}")
 
-        print()
         for node in nodes[:]:
             if (node["row"], node["col"]) not in graph:
+                print(f"REMOVE {node}")
                 nodes.remove(node)
                 continue
 
-            print(f'Node: {node}')
+            print(f"Node: {node}")
 
             if level == 0:
                 variant = Variant(0, node["row"] - 1, observed[:node["col"] - 1])
@@ -138,16 +138,15 @@ def lcs_graph(reference, observed, lcs_nodes):
                 print(variant.to_hgvs(reference))
             else:
                 offset = node["len"] - (node["lcs_pos"] - level) - 1
-                print("offset", offset)
-                print("node", node["row"] + offset, node["col"] + offset)
+                print(f"    node {node['row'] + offset, node['col'] + offset} @ offset {offset}")
 
                 for target in lcs_nodes[level - 1]:
+                    # Skip self
                     if node == target:
-                        # Skip self
                         continue
-                    print(target)
+
                     target_offset = target["len"] - (target["lcs_pos"] - level + 1) - 1
-                    print("target", target["row"] + target_offset, target["col"] + target_offset)
+                    print(f"        target {target['row'] + target_offset, target['col'] + target_offset} @ offset {target_offset}")
 
                     node_row = node["row"] + offset
                     target_row = target["row"] + target_offset
@@ -162,19 +161,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                         variant = Variant(target_row, node_row - 1, observed[target_col:node_col - 1])
                         graph[target_coor].append(((node["row"], node["col"]), [variant]))
                         print(variant.to_hgvs(reference))
-
-    #
-    #                     tgt_row = tgt_node['row'] + tgt_node['len'] - 1 - tgt_offset
-    #                     tgt_col = tgt_node['col'] + tgt_node['len'] - 1 - tgt_offset
-    #                     print(f'            Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
-    #
-    #
-    #             if (level - offset - 1) < 0:
-    #                 variant = Variant(0, child_row - 1, observed[:child_col - 1])
-    #                 graph[(0, 0)].append(((node["row"], node["col"]), [variant] if variant else []))
-    #                 print(variant.to_hgvs(reference))
-    #
-    #         print()
 
     return graph
 
