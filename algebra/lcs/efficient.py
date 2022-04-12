@@ -243,7 +243,12 @@ def traversal(reference, observed, graph, atomics=False):
                 yield from traverse(child, path)
 
     if graph == []:
-        yield [Variant(0, len(reference), observed)]
+        variant = Variant(0, len(reference), observed)
+        if atomics:
+            for atomic in variant.atomics():
+                yield atomic
+        else:
+            yield [variant]
         return
 
     for node in graph[0]:
