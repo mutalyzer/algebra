@@ -39,7 +39,9 @@ def edit(reference, observed):
                 lcs_pos = lcs_idx(row, col)
                 max_lcs_pos = max(lcs_pos, max_lcs_pos)
                 print('lcs pos', lcs_pos)
-                lcs_nodes[lcs_pos].append({'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row})
+                node = {'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row, 'lcs_pos': lcs_pos}
+                for i in range(row - match_row):
+                    lcs_nodes[lcs_pos - i].append(node)
                 active = False
             row += 1
             col += 1
@@ -62,7 +64,9 @@ def edit(reference, observed):
             lcs_pos = lcs_idx(row, col)
             max_lcs_pos = max(lcs_pos, max_lcs_pos)
             print('lcs pos', lcs_pos)
-            lcs_nodes[lcs_pos].append({'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row})
+            node = {'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row, 'lcs_pos': lcs_pos}
+            for i in range(row - match_row):
+                lcs_nodes[lcs_pos - i].append(node)
 
         # print(f"    last checked {row, col}")
         matrix[row + 1][col + 1] = abs(delta) + 2 * it + 2
@@ -114,10 +118,12 @@ def lcs_graph(reference, observed, lcs_nodes):
     for node in lcs_nodes[-1]:
         variant = Variant(node['row'] + node['len'] - 1, len(reference), observed[node['col'] + node['len'] - 1:])
         graph[(node["row"], node["col"])] = [(sink, [variant] if variant else [])]
+        print(variant.to_hgvs(reference))
 
     for idx, nodes in enumerate(lcs_nodes[::-1]):
         level = len(lcs_nodes) - idx - 1
         print(f"Entering level: {level}")
+
         print()
         for node in nodes[:]:
             if (node["row"], node["col"]) not in graph:
@@ -125,44 +131,50 @@ def lcs_graph(reference, observed, lcs_nodes):
                 continue
 
             print(f'Node: {node}')
-            for offset in range(node['len']):
-                child_row = node['row'] + node['len'] - 1 - offset
-                child_col = node['col'] + node['len'] - 1 - offset
-                print(f'offset: {offset} {child_row, child_col}')
-                max_tgt_lvl = len(lcs_nodes) - 1
-                min_tgt_lvl = 0
-                print(f"    min/max target level: {min_tgt_lvl}/{max_tgt_lvl}")
 
-                for tgt_level in range(max_tgt_lvl, min_tgt_lvl - 1, -1):
-                    print(f"    Target level: {tgt_level}")
-                    for tgt_node in lcs_nodes[tgt_level]:
-                        if node == tgt_node:
-                            # Skip self
-                            continue
-                        print('         Target node:', tgt_node)
+            if level == 0:
+                variant = Variant(0, node["row"] - 1, observed[:node["col"] - 1])
+                graph[(0, 0)].append(((node["row"], node["col"]), [variant] if variant else []))
+                print(variant.to_hgvs(reference))
+            else:
+                offset = node["len"] - (node["lcs_pos"] - level) - 1
+                print("offset", offset)
+                print("node", node["row"] + offset, node["col"] + offset)
 
-                        tgt_offset = tgt_level - min_tgt_lvl
-                        if tgt_offset >= tgt_node["len"]:
-                            continue
+                for target in lcs_nodes[level - 1]:
+                    if node == target:
+                        # Skip self
+                        continue
+                    print(target)
+                    target_offset = target["len"] - (target["lcs_pos"] - level + 1) - 1
+                    print("target", target["row"] + target_offset, target["col"] + target_offset)
 
-                        tgt_row = tgt_node['row'] + tgt_node['len'] - 1 - tgt_offset
-                        tgt_col = tgt_node['col'] + tgt_node['len'] - 1 - tgt_offset
-                        print(f'            Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
+                    node_row = node["row"] + offset
+                    target_row = target["row"] + target_offset
 
-                        if child_row > tgt_row and child_col > tgt_col:
-                            tgt_coor = tgt_node["row"], tgt_node["col"]
-                            if tgt_coor not in graph:
-                                graph[tgt_coor] = []
-                            variant = Variant(tgt_row, child_row - 1, observed[tgt_col:child_col - 1])
-                            graph[tgt_coor].append(((node["row"], node["col"]), [variant]))
-                            print(variant.to_hgvs(reference))
+                    node_col = node["col"] + offset
+                    target_col = target["col"] + target_offset
 
-                if (level - offset - 1) < 0:
-                    variant = Variant(0, child_row - 1, observed[:child_col - 1])
-                    graph[(0, 0)].append(((node["row"], node["col"]), [variant] if variant else []))
-                    print(variant.to_hgvs(reference))
+                    if node_row > target_row and node_col > target_col:
+                        target_coor = target["row"], target["col"]
+                        if target_coor not in graph:
+                            graph[target_coor] = []
+                        variant = Variant(target_row, node_row - 1, observed[target_col:node_col - 1])
+                        graph[target_coor].append(((node["row"], node["col"]), [variant]))
+                        print(variant.to_hgvs(reference))
 
-            print()
+    #
+    #                     tgt_row = tgt_node['row'] + tgt_node['len'] - 1 - tgt_offset
+    #                     tgt_col = tgt_node['col'] + tgt_node['len'] - 1 - tgt_offset
+    #                     print(f'            Target offset: {tgt_offset} level: {tgt_level - tgt_offset} {tgt_row, tgt_col}')
+    #
+    #
+    #             if (level - offset - 1) < 0:
+    #                 variant = Variant(0, child_row - 1, observed[:child_col - 1])
+    #                 graph[(0, 0)].append(((node["row"], node["col"]), [variant] if variant else []))
+    #                 print(variant.to_hgvs(reference))
+    #
+    #         print()
 
     return graph
 
