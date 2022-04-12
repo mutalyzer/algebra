@@ -1,4 +1,4 @@
-from algebra.variants.variant import Variant, patch, to_hgvs
+from algebra.variants.variant import Variant, patch, to_hgvs, merge_cons
 import pytest
 
 
@@ -151,3 +151,23 @@ def test_patch(reference, variants, observed):
 ])
 def test_to_hgvs(reference, variants, hgvs):
     assert to_hgvs(variants, reference) == hgvs
+
+
+@pytest.mark.parametrize("variants, expected", [
+    ([Variant(0, 2, 'C'), Variant(4, 4, 'A')], [Variant(0, 2, 'C'), Variant(4, 4, 'A')]),
+    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A')], [Variant(0, 2), Variant(3, 3, 'CA')]),
+    ([Variant(3, 3, 'C'), Variant(3, 3, 'A')], [Variant(3, 3, 'CA')]),
+    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A'), Variant(4, 5)], [Variant(0, 2), Variant(3, 3, 'CA'), Variant(4, 5)]),
+    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A'), Variant(4, 5), Variant(6, 6, 'X'), Variant(6, 6, 'Y')],
+        [Variant(0, 2), Variant(3, 3, 'CA'), Variant(4, 5), Variant(6, 6, 'XY')]),
+    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A'), Variant(4, 5), Variant(6, 6, 'X')],
+        [Variant(0, 2), Variant(3, 3, 'CA'), Variant(4, 5), Variant(6, 6, 'X')]),
+    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(4, 4, 'A')],
+     [Variant(0, 2), Variant(3, 3, 'C'), Variant(4, 4, 'A')]),
+    ([Variant(1, 2), Variant(3, 4)], [Variant(1, 2), Variant(3, 4)]),
+    ([Variant(0, 0, 'T'), Variant(1, 1, 'A'), Variant(2, 3)], [Variant(0, 0, 'T'), Variant(1, 1, 'A'), Variant(2, 3)]),
+    ([], []),
+    ([Variant(1, 1, 'T'), Variant(1, 1, 'T'), Variant(2, 2, 'A')], [Variant(1, 1, 'TT'), Variant(2, 2, 'A')]),
+])
+def test_merge_cons(variants, expected):
+    assert merge_cons(variants) == expected

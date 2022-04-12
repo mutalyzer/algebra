@@ -127,7 +127,7 @@ def patch(reference, variants):
     return "".join(slice(reference, variants))
 
 
-def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=True):
+def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=True, sort=True):
     """
     """
     prefix = ""
@@ -140,4 +140,38 @@ def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=T
     if len(variants) == 1:
         return f"{prefix}{variants[0].to_hgvs(reference, only_substitutions)}"
 
-    return f"{prefix}[{';'.join([variant.to_hgvs(reference, only_substitutions) for variant in sorted(variants)])}]"
+    return f"{prefix}[{';'.join([variant.to_hgvs(reference, only_substitutions) for variant in (sorted(variants) if sort else variants)])}]"
+
+
+def merge_cons(variants):
+    def is_insertion(variant):
+        return variant.end == variant.start and len(variant.sequence) > 0
+
+    result = []
+
+    prev = Variant(0, 0)
+    ins = ''
+    for variant in variants:
+        if not is_insertion(prev) and is_insertion(variant):
+            ins = variant.sequence
+        elif is_insertion(prev) and is_insertion(variant):
+            if prev.start == variant.start:
+                ins += variant.sequence
+            else:
+                result.append(Variant(prev.start, prev.end, ins))
+                ins = variant.sequence
+        elif is_insertion(prev) and not is_insertion(variant):
+            result.append(Variant(prev.start, prev.end, ins))
+            result.append(variant)
+            ins = ''
+        else:
+            result.append(variant)
+
+        prev = variant
+
+    if ins:
+        result.append(Variant(prev.start, prev.end, ins))
+    elif variants and is_insertion(variant):
+        result.append(variant)
+
+    return result
