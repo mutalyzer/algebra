@@ -1,4 +1,5 @@
-from algebra.variants.variant import Variant, patch, to_hgvs, merge_cons
+from algebra.variants.variant import (Variant, patch, to_hgvs,
+                                      merge_co_insertions)
 import pytest
 
 
@@ -165,5 +166,5 @@ def test_to_hgvs(reference, variants, hgvs):
     ([], []),
     ([Variant(1, 1, "T"), Variant(1, 1, "T"), Variant(2, 2, "A")], [Variant(1, 1, "TT"), Variant(2, 2, "A")]),
 ])
-def test_merge_cons(variants, expected):
-    assert merge_cons(variants) == expected
+def test_merge_co_insertions(variants, expected):
+    assert merge_co_insertions(variants) == expected

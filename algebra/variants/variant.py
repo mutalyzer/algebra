@@ -143,14 +143,14 @@ def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=T
     return f"{prefix}[{';'.join([variant.to_hgvs(reference, only_substitutions) for variant in (sorted(variants) if sort else variants)])}]"
 
 
-def merge_cons(variants):
+def merge_co_insertions(variants):
     def is_insertion(variant):
         return variant.end == variant.start and len(variant.sequence) > 0
 
     result = []
 
     prev = Variant(0, 0)
-    ins = ''
+    ins = ""
     for variant in variants:
         if not is_insertion(prev) and is_insertion(variant):
             ins = variant.sequence
@@ -163,7 +163,7 @@ def merge_cons(variants):
         elif is_insertion(prev) and not is_insertion(variant):
             result.append(Variant(prev.start, prev.end, ins))
             result.append(variant)
-            ins = ''
+            ins = ""
         else:
             result.append(variant)
 

@@ -2,7 +2,7 @@ import sys
 from algebra.lcs.onp import edit as edit_onp
 from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test, traversal
 from algebra.lcs.efficient import edit as edit_gold, build as graph_gold, traversal as traversal_gold
-from algebra.variants.variant import to_hgvs, Variant, patch, merge_cons
+from algebra.variants.variant import to_hgvs, Variant, patch, merge_co_insertions
 from pprint import pprint
 import random
 
@@ -69,7 +69,7 @@ def main():
     # s = set()
     hgvs_test = []
     for path in paths_test:
-        var = merge_cons(path)
+        var = merge_co_insertions(path)
         # for v in path:
         #     print(v.to_hgvs(reference))
         print(to_hgvs(path, reference, sort=False))
