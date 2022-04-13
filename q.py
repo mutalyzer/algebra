@@ -65,18 +65,17 @@ def main():
     graph = graph_test(reference, observed, nodes_test)
     print(to_dot_test(reference, graph))
 
-
     paths_test = traversal(reference, observed, graph, atomics=True)
     # s = set()
     hgvs_test = []
     for path in paths_test:
-        var = merge_co_insertions(turbo_sort(path))
+        #var = merge_co_insertions(turbo_sort(path))
         # for v in path:
         #     print(v.to_hgvs(reference))
         # print(to_hgvs(path, reference, sort=False))
         # print(to_hgvs(var, reference, sort=False))
         # print()
-        hgvs_test.append(to_hgvs(var, reference, sort=False))
+        hgvs_test.append(to_hgvs(path, reference, sort=False))
         # s.add(hgvs)
     print(f"length {len(hgvs_test)}/{len(set(hgvs_test))}")
     for h in sorted(hgvs_test):
