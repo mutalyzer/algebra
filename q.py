@@ -19,6 +19,15 @@ def compare_matrix(test, gold, f):
                 assert gold[row][col] == test[row][col]
 
 
+def to_dot(reference, graph):
+    dot = "digraph {\n"
+    for node, edges in graph.items():
+        dot += f'    "{node[0]}_{node[1]}" [label="{node}"];\n'
+        for child, edge in edges:
+            dot += f'    "{node[0]}_{node[1]}" -> "{child[0]}_{child[1]}" [label="{to_hgvs(edge, reference, sequence_prefix=False)}"];\n'
+    return dot + "}"
+
+
 def main():
     min_rand = 10
     max_rand = 10
@@ -61,14 +70,8 @@ def main():
         print(level)
 
     graph = graph_test(reference, observed, nodes_test)
-    print("digraph {")
-    for node, edge_list in graph.items():
-        print(node)
-        for child, edge in edge_list:
-            # print(node, child, to_hgvs(edge, reference))
-            # us "0_0" -> "1_1" [label="="];
-            print(f'"{node[0]}_{node[1]}" -> "{child[0]}_{child[1]}" [label="{to_hgvs(edge, reference)}"];')
-    print("}")
+    print(to_dot(reference, graph))
+
 
     paths_test = traversal(reference, observed, graph, atomics=True)
     # s = set()
@@ -89,7 +92,6 @@ def main():
 
     # assert set(hgvs_test) == set(hgvs_gold)
     print(set(hgvs_test) - set(hgvs_gold))
-
 
 if __name__ == '__main__':
     main()
