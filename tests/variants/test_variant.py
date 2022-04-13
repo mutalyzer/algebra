@@ -18,11 +18,9 @@ def test_variant(args, expected):
     ((-1, 0), ValueError, "start must be greater than 0"),
 ])
 def test_variant_fail(args, exception, message):
-    try:
+    with pytest.raises(exception) as exc:
         Variant(*args)
-        assert False
-    except exception as exc:
-        assert str(exc) == message
+    assert str(exc.value) == message
 
 
 @pytest.mark.parametrize("variant", [
@@ -84,11 +82,9 @@ def test_variant_sort(lhs, rhs, expected):
     (Variant(4, 4, "C"), Variant(4, 4, "C"), ValueError, "variants overlap"),
 ])
 def test_variant_sort_fail(lhs, rhs, exception, message):
-    try:
+    with pytest.raises(exception) as exc:
         sorted([lhs, rhs])
-        assert False
-    except exception as exc:
-        assert str(exc) == message
+    assert str(exc.value) == message
 
 
 @pytest.mark.parametrize("variant, string", [
@@ -154,20 +150,20 @@ def test_to_hgvs(reference, variants, hgvs):
 
 
 @pytest.mark.parametrize("variants, expected", [
-    ([Variant(0, 2, 'C'), Variant(4, 4, 'A')], [Variant(0, 2, 'C'), Variant(4, 4, 'A')]),
-    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A')], [Variant(0, 2), Variant(3, 3, 'CA')]),
-    ([Variant(3, 3, 'C'), Variant(3, 3, 'A')], [Variant(3, 3, 'CA')]),
-    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A'), Variant(4, 5)], [Variant(0, 2), Variant(3, 3, 'CA'), Variant(4, 5)]),
-    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A'), Variant(4, 5), Variant(6, 6, 'X'), Variant(6, 6, 'Y')],
-        [Variant(0, 2), Variant(3, 3, 'CA'), Variant(4, 5), Variant(6, 6, 'XY')]),
-    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(3, 3, 'A'), Variant(4, 5), Variant(6, 6, 'X')],
-        [Variant(0, 2), Variant(3, 3, 'CA'), Variant(4, 5), Variant(6, 6, 'X')]),
-    ([Variant(0, 2), Variant(3, 3, 'C'), Variant(4, 4, 'A')],
-     [Variant(0, 2), Variant(3, 3, 'C'), Variant(4, 4, 'A')]),
+    ([Variant(0, 2, "C"), Variant(4, 4, "A")], [Variant(0, 2, "C"), Variant(4, 4, "A")]),
+    ([Variant(0, 2), Variant(3, 3, "C"), Variant(3, 3, "A")], [Variant(0, 2), Variant(3, 3, "CA")]),
+    ([Variant(3, 3, "C"), Variant(3, 3, "A")], [Variant(3, 3, "CA")]),
+    ([Variant(0, 2), Variant(3, 3, "C"), Variant(3, 3, "A"), Variant(4, 5)], [Variant(0, 2), Variant(3, 3, "CA"), Variant(4, 5)]),
+    ([Variant(0, 2), Variant(3, 3, "C"), Variant(3, 3, "A"), Variant(4, 5), Variant(6, 6, "X"), Variant(6, 6, "Y")],
+        [Variant(0, 2), Variant(3, 3, "CA"), Variant(4, 5), Variant(6, 6, "XY")]),
+    ([Variant(0, 2), Variant(3, 3, "C"), Variant(3, 3, "A"), Variant(4, 5), Variant(6, 6, "X")],
+        [Variant(0, 2), Variant(3, 3, "CA"), Variant(4, 5), Variant(6, 6, "X")]),
+    ([Variant(0, 2), Variant(3, 3, "C"), Variant(4, 4, "A")],
+     [Variant(0, 2), Variant(3, 3, "C"), Variant(4, 4, "A")]),
     ([Variant(1, 2), Variant(3, 4)], [Variant(1, 2), Variant(3, 4)]),
-    ([Variant(0, 0, 'T'), Variant(1, 1, 'A'), Variant(2, 3)], [Variant(0, 0, 'T'), Variant(1, 1, 'A'), Variant(2, 3)]),
+    ([Variant(0, 0, "T"), Variant(1, 1, "A"), Variant(2, 3)], [Variant(0, 0, "T"), Variant(1, 1, "A"), Variant(2, 3)]),
     ([], []),
-    ([Variant(1, 1, 'T'), Variant(1, 1, 'T'), Variant(2, 2, 'A')], [Variant(1, 1, 'TT'), Variant(2, 2, 'A')]),
+    ([Variant(1, 1, "T"), Variant(1, 1, "T"), Variant(2, 2, "A")], [Variant(1, 1, "TT"), Variant(2, 2, "A")]),
 ])
 def test_merge_cons(variants, expected):
     assert merge_cons(variants) == expected

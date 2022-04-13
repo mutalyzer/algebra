@@ -44,11 +44,9 @@ def test_hgvs_parser(expression, variants):
     ("3del;", ValueError, "expected end of expression at 4"),
 ])
 def test_hgvs_parser_fail(expression, exception, message):
-    try:
+    with pytest.raises(exception) as exc:
         Parser(expression).hgvs()
-        assert False
-    except exception as exc:
-        assert str(exc) == message
+    assert str(exc.value) == message
 
 
 @pytest.mark.parametrize("expression, variants", [
@@ -70,8 +68,6 @@ def test_spdi_parser(expression, variants):
     ("A:0:0::", ValueError, "expected end of expression at 6"),
 ])
 def test_spdi_parser_fail(expression, exception, message):
-    try:
+    with pytest.raises(exception) as exc:
         Parser(expression).spdi()
-        assert False
-    except exception as exc:
-        assert str(exc) == message
+    assert str(exc.value) == message
