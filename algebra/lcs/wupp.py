@@ -143,35 +143,42 @@ def lcs_graph(reference, observed, lcs_nodes):
                 for target in lcs_nodes[level - 1]:
                     offset = node["len"] - (node["lcs_pos"] - level) - 1
                     target_offset = target["len"] - (target["lcs_pos"] - level + 1) - 1
-                    # Skip self
-                    if node is target or (node["row"] + offset == target["row"] + target_offset + 1 and node["col"] + offset == target["col"] + target_offset + 1):
+
+                    if node is target or (node["row"] + offset == target["row"] + target_offset + 1 and
+                                          node["col"] + offset == target["col"] + target_offset + 1):
+                        # Skip self
                         continue
 
                     print(f"        node {node['row'] + offset, node['col'] + offset} @ offset {offset}")
                     print(f"        target {target['row'] + target_offset, target['col'] + target_offset} @ offset {target_offset}")
 
                     if node["row"] + offset > target["row"] + target_offset and node["col"] + offset > target["col"] + target_offset:
+
+                        # Need to split target node
                         if target_offset < target["len"] - 1:
                             print("SPLIT target")
                             split = {"row": target["row"] + target_offset + 1, "col": target["col"] + target_offset + 1, "len": target["len"] - target_offset - 1, "lcs_pos": target["lcs_pos"]}
-                            print(split)
+                            print("Split:", split)
                             target["len"] -= split["len"]
                             target["lcs_pos"] -= split["len"]
-                            print(target)
+                            print("Target:", target)
                             graph[(split["row"], split["col"])] = graph[(target["row"], target["col"])]
                             graph[(target["row"], target["col"])] = [((split["row"], split["col"]), [])]
 
+                        # Need to split self node
                         if offset > 0:
                             print("SPLIT node")
                             split = {"row": node["row"] + offset, "col": node["col"] + offset, "len": node["len"] - offset, "lcs_pos": node["lcs_pos"]}
-                            print(split)
+                            print("Split:", split)
                             node["len"] -= split["len"]
                             node["lcs_pos"] -= split["len"]
-                            offset = node["len"] - (node["lcs_pos"] - level)
-                            print(node)
+                            print("Node:", node)
                             graph[(split["row"], split["col"])] = graph[(node["row"], node["col"])]
                             graph[(node["row"], node["col"])] = [((split["row"], split["col"]), [])]
-                            node = split
+
+                            # node = split
+
+                            # offset = node["len"] - (node["lcs_pos"] - level)
 
                         target_coor = target["row"], target["col"]
                         if target_coor not in graph:
