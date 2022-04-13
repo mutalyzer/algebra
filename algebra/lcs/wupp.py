@@ -142,7 +142,7 @@ def lcs_graph(reference, observed, lcs_nodes):
 
                 for target in lcs_nodes[level - 1]:
                     # Skip self
-                    if node == target:
+                    if node is target:
                         continue
 
                     target_offset = target["len"] - (target["lcs_pos"] - level + 1) - 1
