@@ -134,6 +134,34 @@ def test_variant_to_spdi(reference, variant, spdi):
     assert variant.to_spdi(reference) == spdi
 
 
+@pytest.mark.parametrize("variant, atomics", [
+    (Variant(3, 6, "XYZ"), [
+        [Variant(3, 3, "XYZ"), Variant(3, 4), Variant(4, 5), Variant(5, 6)],
+        [Variant(3, 3, "XY"), Variant(3, 4), Variant(4, 4, "Z"), Variant(4, 5), Variant(5, 6)],
+        [Variant(3, 3, "XY"), Variant(3, 4), Variant(4, 5), Variant(5, 5, "Z"), Variant(5, 6)],
+        [Variant(3, 3, "XY"), Variant(3, 4), Variant(4, 5), Variant(5, 6), Variant(6, 6, "Z")],
+        [Variant(3, 3, "X"), Variant(3, 4), Variant(4, 4, "YZ"), Variant(4, 5), Variant(5, 6)],
+        [Variant(3, 3, "X"), Variant(3, 4), Variant(4, 4, "Y"), Variant(4, 5), Variant(5, 5, "Z"), Variant(5, 6)],
+        [Variant(3, 3, "X"), Variant(3, 4), Variant(4, 4, "Y"), Variant(4, 5), Variant(5, 6), Variant(6, 6, "Z")],
+        [Variant(3, 3, "X"), Variant(3, 4), Variant(4, 5), Variant(5, 5, "YZ"), Variant(5, 6)],
+        [Variant(3, 3, "X"), Variant(3, 4), Variant(4, 5), Variant(5, 5, "Y"), Variant(5, 6), Variant(6, 6, "Z")],
+        [Variant(3, 3, "X"), Variant(3, 4), Variant(4, 5), Variant(5, 6), Variant(6, 6, "YZ")],
+        [Variant(3, 4), Variant(4, 4, "XYZ"), Variant(4, 5), Variant(5, 6)],
+        [Variant(3, 4), Variant(4, 4, "XY"), Variant(4, 5), Variant(5, 5, "Z"), Variant(5, 6)],
+        [Variant(3, 4), Variant(4, 4, "XY"), Variant(4, 5), Variant(5, 6), Variant(6, 6, "Z")],
+        [Variant(3, 4), Variant(4, 4, "X"), Variant(4, 5), Variant(5, 5, "YZ"), Variant(5, 6)],
+        [Variant(3, 4), Variant(4, 4, "X"), Variant(4, 5), Variant(5, 5, "Y"), Variant(5, 6), Variant(6, 6, "Z")],
+        [Variant(3, 4), Variant(4, 4, "X"), Variant(4, 5), Variant(5, 6), Variant(6, 6, "YZ")],
+        [Variant(3, 4), Variant(4, 5), Variant(5, 5, "XYZ"), Variant(5, 6)],
+        [Variant(3, 4), Variant(4, 5), Variant(5, 5, "XY"), Variant(5, 6), Variant(6, 6, "Z")],
+        [Variant(3, 4), Variant(4, 5), Variant(5, 5, "X"), Variant(5, 6), Variant(6, 6, "YZ")],
+        [Variant(3, 4), Variant(4, 5), Variant(5, 6), Variant(6, 6, "XYZ")]
+    ]),
+])
+def test_variant_atomics(variant, atomics):
+    assert list(variant.atomics()) == atomics
+
+
 @pytest.mark.parametrize("reference, variants, observed", [
     ("ACCTGC", [Variant(1, 4, "CCC")], "ACCCGC"),
 ])
