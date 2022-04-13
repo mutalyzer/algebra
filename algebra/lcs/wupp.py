@@ -1,4 +1,4 @@
-from ..variants.variant import Variant
+from ..variants.variant import Variant, to_hgvs
 
 
 def edit(reference, observed):
@@ -184,3 +184,12 @@ def traversal(reference, observed, graph, atomics=False):
                 yield from traverse(child, path + variant)
 
     yield from traverse((0, 0), [])
+
+
+def to_dot(reference, graph):
+    dot = "digraph {\n"
+    for node, edges in graph.items():
+        dot += f'    "{node[0]}_{node[1]}" [label="{node}"];\n'
+        for child, edge in edges:
+            dot += f'    "{node[0]}_{node[1]}" -> "{child[0]}_{child[1]}" [label="{to_hgvs(edge, reference, sequence_prefix=False)}"];\n'
+    return dot + "}"

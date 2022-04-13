@@ -260,3 +260,26 @@ def traversal(reference, observed, graph, atomics=False):
             yield from traverse(node, [variant])
         else:
             yield from traverse(node, [])
+
+
+def to_dot(reference, observed, graph):
+    def to_edge(from_row, from_col, to_row, to_col):
+        return f'    "{from_row}_{from_col}" -> "{to_row + 1}_{to_col + 1}" [label="{Variant(from_row, to_row, observed[from_col:to_col]).to_hgvs(reference)}"];\n'
+
+    dot = 'digraph {\n'
+    dot += '    "0_0" [label="(0, 0)" shape="square"];\n'
+    dot += f'    "{len(reference) + 1}_{len(observed) + 1}" [label="{len(reference) + 1, len(observed) + 1}" shape="square"];\n'
+    if graph == []:
+        return dot + to_edge(0, 0, len(reference), len(observed)) + '}'
+
+    for idx, level in enumerate(graph):
+        for node in level:
+            dot += f'    "{node.row}_{node.col}" [label="{reference[node.row - 1]}\\n{node.row, node.col}"];\n'
+            if idx == 0:
+                dot += to_edge(0, 0, node.row - 1, node.col - 1)
+            for child in node.child:
+                if child is not None:
+                    dot += to_edge(node.row, node.col, child.row - 1, child.col - 1)
+            if idx == len(graph) - 1:
+                dot += to_edge(node.row, node.col, len(reference), len(observed))
+    return dot + '}'

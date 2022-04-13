@@ -1,7 +1,7 @@
 import sys
 from algebra.lcs.onp import edit as edit_onp
-from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test, traversal
-from algebra.lcs.efficient import edit as edit_gold, build as graph_gold, traversal as traversal_gold
+from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test, traversal, to_dot as to_dot_test
+from algebra.lcs.efficient import edit as edit_gold, build as graph_gold, traversal as traversal_gold, to_dot as to_dot_gold
 from algebra.variants.variant import to_hgvs, Variant, patch, merge_co_insertions, turbo_sort
 from pprint import pprint
 import random
@@ -17,15 +17,6 @@ def compare_matrix(test, gold, f):
         for col in range(col_len):
             if gold[row][col] is not None and gold[row][col] <= f:
                 assert gold[row][col] == test[row][col]
-
-
-def to_dot(reference, graph):
-    dot = "digraph {\n"
-    for node, edges in graph.items():
-        dot += f'    "{node[0]}_{node[1]}" [label="{node}"];\n'
-        for child, edge in edges:
-            dot += f'    "{node[0]}_{node[1]}" -> "{child[0]}_{child[1]}" [label="{to_hgvs(edge, reference, sequence_prefix=False)}"];\n'
-    return dot + "}"
 
 
 def main():
@@ -56,6 +47,8 @@ def main():
 
     print("gold")
     _, lcs_graph_gold = graph_gold(nodes_gold, reference, observed)
+    print(to_dot_gold(reference, observed, lcs_graph_gold))
+
     paths_gold = traversal_gold(reference, observed, lcs_graph_gold, atomics=True)
     hgvs_gold = []
     for path in paths_gold:
@@ -70,7 +63,7 @@ def main():
         print(level)
 
     graph = graph_test(reference, observed, nodes_test)
-    print(to_dot(reference, graph))
+    print(to_dot_test(reference, graph))
 
 
     paths_test = traversal(reference, observed, graph, atomics=True)
