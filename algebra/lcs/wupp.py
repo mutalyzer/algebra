@@ -156,10 +156,13 @@ def lcs_graph(reference, observed, lcs_nodes):
 
                     if node_row > target_row and node_col > target_col:
                         target_coor = target["row"], target["col"]
+                        # target_coor = target_row, target_col
                         if target_coor not in graph:
                             graph[target_coor] = []
                         variant = Variant(target_row, node_row - 1, observed[target_col:node_col - 1])
                         graph[target_coor].append(((node["row"], node["col"]), [variant]))
+                        # graph[target_coor].append(((node_row, node_col), [variant]))
+                        print(target_coor)
                         print(variant.to_hgvs(reference))
 
     return graph
@@ -168,10 +171,12 @@ def lcs_graph(reference, observed, lcs_nodes):
 def traversal(reference, observed, graph, atomics=False):
     def traverse(node, path):
         if node == (len(reference) + 1, len(observed) + 1):
+            # print("final", node)
             yield path
             return
 
         for child, variant in graph[node]:
+            # print("child", child)
             if atomics and len(variant) > 0:
                 for atomic in variant[0].atomics():
                     yield from traverse(child, path + atomic)

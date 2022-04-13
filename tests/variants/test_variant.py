@@ -193,6 +193,7 @@ def test_to_hgvs(reference, variants, hgvs):
     ([Variant(0, 0, "T"), Variant(1, 1, "A"), Variant(2, 3)], [Variant(0, 0, "T"), Variant(1, 1, "A"), Variant(2, 3)]),
     ([], []),
     ([Variant(1, 1, "T"), Variant(1, 1, "T"), Variant(2, 2, "A")], [Variant(1, 1, "TT"), Variant(2, 2, "A")]),
+    ([Variant(2, 2, "T"), Variant(1, 1, "T"), Variant(2, 2, "A")], [Variant(1, 1, "T"), Variant(2, 2, "TA")]),
 ])
 def test_merge_co_insertions(variants, expected):
     assert merge_co_insertions(variants) == expected

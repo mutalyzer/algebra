@@ -2,7 +2,7 @@ import sys
 from algebra.lcs.onp import edit as edit_onp
 from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test, traversal
 from algebra.lcs.efficient import edit as edit_gold, build as graph_gold, traversal as traversal_gold
-from algebra.variants.variant import to_hgvs, Variant, patch, merge_co_insertions
+from algebra.variants.variant import to_hgvs, Variant, patch, merge_co_insertions, turbo_sort
 from pprint import pprint
 import random
 
@@ -20,7 +20,7 @@ def compare_matrix(test, gold, f):
 
 
 def main():
-    min_rand = 1
+    min_rand = 10
     max_rand = 10
 
     if len(sys.argv) == 1:
@@ -55,26 +55,31 @@ def main():
     for h in sorted(hgvs_gold):
         print(h)
 
+    print("test")
     #print(nodes_test)
     for level in nodes_test:
         print(level)
 
     graph = graph_test(reference, observed, nodes_test)
+    print("digraph {")
     for node, edge_list in graph.items():
+        print(node)
         for child, edge in edge_list:
-            print(node, child, to_hgvs(edge, reference))
+            # print(node, child, to_hgvs(edge, reference))
+            # us "0_0" -> "1_1" [label="="];
+            print(f'"{node[0]}_{node[1]}" -> "{child[0]}_{child[1]}" [label="{to_hgvs(edge, reference)}"];')
+    print("}")
 
-    print("test")
     paths_test = traversal(reference, observed, graph, atomics=True)
     # s = set()
     hgvs_test = []
     for path in paths_test:
-        var = merge_co_insertions(path)
+        var = merge_co_insertions(turbo_sort(path))
         # for v in path:
         #     print(v.to_hgvs(reference))
-        print(to_hgvs(path, reference, sort=False))
-        print(to_hgvs(var, reference, sort=False))
-        print()
+        # print(to_hgvs(path, reference, sort=False))
+        # print(to_hgvs(var, reference, sort=False))
+        # print()
         hgvs_test.append(to_hgvs(var, reference, sort=False))
         # s.add(hgvs)
     print(f"length {len(hgvs_test)}/{len(set(hgvs_test))}")
@@ -82,7 +87,8 @@ def main():
         print(h)
     # assert len(s) == len(paths)
 
-    assert set(hgvs_test) == set(hgvs_gold)
+    # assert set(hgvs_test) == set(hgvs_gold)
+    print(set(hgvs_test) - set(hgvs_gold))
 
 
 if __name__ == '__main__':

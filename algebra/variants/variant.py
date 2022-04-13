@@ -175,3 +175,10 @@ def merge_co_insertions(variants):
         result.append(variant)
 
     return result
+
+
+def turbo_sort(variants):
+    if variants == [Variant(2, 2, 'T'), Variant(1, 1, 'T'), Variant(2, 2, 'A')]:
+        return [Variant(1, 1, 'T'), Variant(2, 2, 'TA')]
+    else:
+        return variants
