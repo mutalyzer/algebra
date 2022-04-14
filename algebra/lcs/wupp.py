@@ -115,14 +115,20 @@ def lcs_graph(reference, observed, lcs_nodes):
     # Connect source and sink when there are no nodes.
     if lcs_nodes == [[]]:
         graph[source] = [(sink, [Variant(0, len(reference), observed)])]
+        print(f"Linking {source} to {sink}")
         return graph
 
     # Connect all bottom nodes to the sink
     for node in lcs_nodes[-1]:
         variant = Variant(node["row"] + node["len"] - 1, len(reference), observed[node["col"] + node["len"] - 1:])
         graph[(node["row"], node["col"])] = [(sink, [variant] if variant else [])]
+        print(f"Linking {node['row'], node['col']} to {sink}")
 
     print(to_dot(reference, graph))
+    for i, l in enumerate(lcs_nodes):
+        print(i)
+        for d in l:
+            print(f"  {d}")
 
     graph[source] = []
     for idx, nodes in enumerate(lcs_nodes[:0:-1]):
@@ -138,6 +144,7 @@ def lcs_graph(reference, observed, lcs_nodes):
             for tgt in lcs_nodes[level - 1]:
                 node_offset = node["len"] - (node["lcs_pos"] - level) - 1
                 tgt_offset = tgt["len"] - (tgt["lcs_pos"] - level + 1) - 1
+
                 print(f"Node/target offsets: {node_offset}/{tgt_offset}")
 
                 print(f"Loop with node/target: {node['row'] + node_offset, node['col'] + node_offset} -> "
@@ -152,25 +159,52 @@ def lcs_graph(reference, observed, lcs_nodes):
                 print("Dest:", dest)
                 if tgt_offset < tgt["len"] - 1:
                     print("SPLIT target")
-                    split = (tgt["row"] + tgt_offset + 1, tgt["col"] + tgt_offset + 1)
-                    print("New split coordinates:", split)
+
+                    split_coor = (tgt["row"] + tgt_offset + 1, tgt["col"] + tgt_offset + 1)
+                    split = {"row": split_coor[0], "col": split_coor[1], "len": 1, "lcs_pos": tgt["lcs_pos"]}
+                    print("New split node:", split)
+
+                    # Swap nodes in lcs_nodes
+                    lcs_index = lcs_nodes[tgt['lcs_pos']].index(tgt)
+                    print(f"Changing node at lcs level {tgt['lcs_pos']} index {lcs_index} from {tgt} to {split}")
+                    lcs_nodes[tgt['lcs_pos']][lcs_index] = split
+
+                    # Amend old target node
                     tgt["lcs_pos"] -= tgt_offset
                     tgt["len"] -= tgt_offset
                     print("Remaining target node:", tgt)
-                    graph[split] = graph[(tgt["row"], tgt["col"])]
-                    graph[(tgt["row"], tgt["col"])] = [(split, [])]
+
+                    print(f"Assigning links from {tgt['row'], tgt['col']} to {split_coor}")
+                    graph[split_coor] = graph[(tgt["row"], tgt["col"])]
+
+                    print(f"Linking {tgt['row'], tgt['col']} to {split_coor}")
+                    graph[(tgt["row"], tgt["col"])] = [(split_coor, [])]
 
                 if node_offset > 0:
                     print("SPLIT node")
-                    split = (node["row"] + node_offset, node["col"] + node_offset)
-                    print("New split coordinates:", split)
+
+                    split_coor = (node["row"] + node_offset, node["col"] + node_offset)
+                    split = {"row": split_coor[0], "col": split_coor[1], "len": 1, "lcs_pos": tgt["lcs_pos"]}
+                    print("New split node:", split)
+
+                    # Swap nodes in lcs_nodes
+                    lcs_index = lcs_nodes[node['lcs_pos']].index(node)
+                    print(f"Changing node at lcs level {node['lcs_pos']} index {lcs_index} from {node} to {split}")
+                    lcs_nodes[node['lcs_pos']][lcs_index] = split
+
+                    # Amend old node
                     node["lcs_pos"] -= node_offset - 1
                     node["len"] -= node_offset - 1
                     print("Remaining node:", node)
-                    graph[split] = graph[(node["row"], node["col"])]
-                    graph[(node["row"], node["col"])] = [(split, [])]
+
+                    print(f"Assigning links from {node['row'], node['col']} to {split_coor}")
+                    graph[split_coor] = graph[(node["row"], node["col"])]
+
+                    print(f"Linking {node['row'], node['col']} to {split_coor}")
+                    graph[(node["row"], node["col"])] = [(split_coor, [])]
+
                     node_offset = 0
-                    dest = split
+                    dest = split_coor
 
                 print("EDGE")
                 variant = Variant(tgt["row"] + tgt_offset, dest[0] + node_offset - 1,
@@ -178,6 +212,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                 if (tgt["row"], tgt["col"]) not in graph:
                     graph[(tgt["row"], tgt["col"])] = []
                 graph[(tgt["row"], tgt["col"])].append((dest, [variant]))
+                print(f"Linking {tgt['row'], tgt['col']} to {dest}")
 
                 print(to_dot(reference, graph))
                 for i, l in enumerate(lcs_nodes):
@@ -190,6 +225,7 @@ def lcs_graph(reference, observed, lcs_nodes):
         if (node["row"], node["col"]) in graph:
             variant = Variant(0, node["row"] - 1, observed[:node["col"] - 1])
             graph[source].append(((node["row"], node["col"]), [variant] if variant else []))
+            print(f"Linking {source} to {node['row'], node['col']}")
 
     print(to_dot(reference, graph))
 
