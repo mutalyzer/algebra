@@ -112,10 +112,12 @@ def lcs_graph(reference, observed, lcs_nodes):
     graph = {sink: []}
 
     source = (0, 0)
+    # Connect source and sink when there are no nodes.
     if lcs_nodes == [[]]:
         graph[source] = [(sink, [Variant(0, len(reference), observed)])]
         return graph
 
+    # Connect all bottom nodes to the sink
     for node in lcs_nodes[-1]:
         variant = Variant(node["row"] + node["len"] - 1, len(reference), observed[node["col"] + node["len"] - 1:])
         graph[(node["row"], node["col"])] = [(sink, [variant] if variant else [])]
@@ -133,46 +135,53 @@ def lcs_graph(reference, observed, lcs_nodes):
                 nodes.remove(node)
 
         for node in nodes:
-            for target in lcs_nodes[level - 1]:
-                offset = node["len"] - (node["lcs_pos"] - level) - 1
-                target_offset = target["len"] - (target["lcs_pos"] - level + 1) - 1
+            for tgt in lcs_nodes[level - 1]:
+                node_offset = node["len"] - (node["lcs_pos"] - level) - 1
+                tgt_offset = tgt["len"] - (tgt["lcs_pos"] - level + 1) - 1
+                print(f"Node/target offsets: {node_offset}/{tgt_offset}")
 
-                if node["row"] + offset <= target["row"] + target_offset + 1 and node["col"] + offset <= target["col"] + target_offset + 1:
+                print(f"Loop with node/target: {node['row'] + node_offset, node['col'] + node_offset} -> "
+                      f"{tgt['row'] + tgt_offset, tgt['col'] + tgt_offset}")
+
+                if node["row"] + node_offset <= tgt["row"] + tgt_offset + 1 and \
+                        node["col"] + node_offset <= tgt["col"] + tgt_offset + 1:
+                    print("Skipping directly connected target")
                     continue
 
-                print(f"{node['row'] + offset, node['col'] + offset} -> {target['row'] + target_offset, target['col'] + target_offset}")
-
-                dest = (node['row'] + offset, node['col'] + offset)
-                if target_offset < target["len"] - 1:
+                dest = (node['row'] + node_offset, node['col'] + node_offset)
+                print("Dest:", dest)
+                if tgt_offset < tgt["len"] - 1:
                     print("SPLIT target")
-                    split = (target["row"] + target_offset + 1, target["col"] + target_offset + 1)
-                    print(split)
-                    target["lcs_pos"] -= target_offset
-                    target["len"] -= target_offset
-                    print(target)
-                    graph[split] = graph[(target["row"], target["col"])]
-                    graph[(target["row"], target["col"])] = [(split, [])]
+                    split = (tgt["row"] + tgt_offset + 1, tgt["col"] + tgt_offset + 1)
+                    print("New split coordinates:", split)
+                    tgt["lcs_pos"] -= tgt_offset
+                    tgt["len"] -= tgt_offset
+                    print("Remaining target node:", tgt)
+                    graph[split] = graph[(tgt["row"], tgt["col"])]
+                    graph[(tgt["row"], tgt["col"])] = [(split, [])]
 
-                if offset > 0:
+                if node_offset > 0:
                     print("SPLIT node")
-                    split = (node["row"] + offset, node["col"] + offset)
-                    print(split)
-                    node["lcs_pos"] -= offset - 1
-                    node["len"] -= offset - 1
-                    print(node)
+                    split = (node["row"] + node_offset, node["col"] + node_offset)
+                    print("New split coordinates:", split)
+                    node["lcs_pos"] -= node_offset - 1
+                    node["len"] -= node_offset - 1
+                    print("Remaining node:", node)
                     graph[split] = graph[(node["row"], node["col"])]
                     graph[(node["row"], node["col"])] = [(split, [])]
-                    offset = 0
+                    node_offset = 0
                     dest = split
 
                 print("EDGE")
-                variant = Variant(target["row"] + target_offset, dest[0] + offset - 1, observed[target["col"] + target_offset:dest[1] + offset - 1])
-                if (target["row"], target["col"]) not in graph:
-                    graph[(target["row"], target["col"])] = []
-                graph[(target["row"], target["col"])].append((dest, [variant]))
+                variant = Variant(tgt["row"] + tgt_offset, dest[0] + node_offset - 1,
+                                  observed[tgt["col"] + tgt_offset:dest[1] + node_offset - 1])
+                if (tgt["row"], tgt["col"]) not in graph:
+                    graph[(tgt["row"], tgt["col"])] = []
+                graph[(tgt["row"], tgt["col"])].append((dest, [variant]))
 
                 print(to_dot(reference, graph))
 
+    # Connect all top level nodes to the source
     for node in lcs_nodes[0]:
         if (node["row"], node["col"]) in graph:
             variant = Variant(0, node["row"] - 1, observed[:node["col"] - 1])
