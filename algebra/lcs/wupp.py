@@ -143,8 +143,9 @@ def lcs_graph(reference, observed, lcs_nodes):
                 print(f"Loop with node/target: {node['row'] + node_offset, node['col'] + node_offset} -> "
                       f"{tgt['row'] + tgt_offset, tgt['col'] + tgt_offset}")
 
-                if node["row"] + node_offset <= tgt["row"] + tgt_offset + 1 and \
-                        node["col"] + node_offset <= tgt["col"] + tgt_offset + 1:
+                if (node["row"] + node_offset <= tgt["row"] + tgt_offset + 1 and
+                        node["col"] + node_offset <= tgt["col"] + tgt_offset + 1):
+                    # FIXME: this message is false
                     print("Skipping directly connected target")
                     continue
 
@@ -168,6 +169,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                     graph[split] = graph[(node["row"], node["col"])]
                     graph[(node["row"], node["col"])] = [(split, [])]
                     node_offset = 0
+                    # FIXME: hardcoded len 1
                     node = {"row": split[0], "col": split[1], "len": 1, "lcs_pos": level}
 
                 print("EDGE")
