@@ -148,14 +148,12 @@ def lcs_graph(reference, observed, lcs_nodes):
                     print("Skipping directly connected target")
                     continue
 
-                dest = (node['row'] + node_offset, node['col'] + node_offset)
-                print("Dest:", dest)
                 if tgt_offset < tgt["len"] - 1:
                     print("SPLIT target")
                     split = (tgt["row"] + tgt_offset + 1, tgt["col"] + tgt_offset + 1)
                     print("New split coordinates:", split)
-                    tgt["lcs_pos"] -= tgt_offset
-                    tgt["len"] -= tgt_offset
+                    tgt["lcs_pos"] -= (level - tgt_offset)
+                    tgt["len"] -= (level - tgt_offset)
                     print("Remaining target node:", tgt)
                     graph[split] = graph[(tgt["row"], tgt["col"])]
                     graph[(tgt["row"], tgt["col"])] = [(split, [])]
@@ -164,20 +162,20 @@ def lcs_graph(reference, observed, lcs_nodes):
                     print("SPLIT node")
                     split = (node["row"] + node_offset, node["col"] + node_offset)
                     print("New split coordinates:", split)
-                    node["lcs_pos"] -= node_offset - 1
-                    node["len"] -= node_offset - 1
+                    node["lcs_pos"] -= (level - node_offset + 1)
+                    node["len"] -= (level - node_offset + 1)
                     print("Remaining node:", node)
                     graph[split] = graph[(node["row"], node["col"])]
                     graph[(node["row"], node["col"])] = [(split, [])]
                     node_offset = 0
-                    dest = split
+                    node = {"row": split[0], "col": split[1], "len": 1, "lcs_pos": level}
 
                 print("EDGE")
-                variant = Variant(tgt["row"] + tgt_offset, dest[0] + node_offset - 1,
-                                  observed[tgt["col"] + tgt_offset:dest[1] + node_offset - 1])
+                variant = Variant(tgt["row"] + tgt_offset, node["row"] + node_offset - 1,
+                                  observed[tgt["col"] + tgt_offset:node["col"] + node_offset - 1])
                 if (tgt["row"], tgt["col"]) not in graph:
                     graph[(tgt["row"], tgt["col"])] = []
-                graph[(tgt["row"], tgt["col"])].append((dest, [variant]))
+                graph[(tgt["row"], tgt["col"])].append(((node["row"], node["col"]), [variant]))
 
                 print(to_dot(reference, graph))
 
