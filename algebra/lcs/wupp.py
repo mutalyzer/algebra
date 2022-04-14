@@ -180,6 +180,10 @@ def lcs_graph(reference, observed, lcs_nodes):
                 graph[(tgt["row"], tgt["col"])].append((dest, [variant]))
 
                 print(to_dot(reference, graph))
+                for i, l in enumerate(lcs_nodes):
+                    print(i)
+                    for d in l:
+                        print(f"  {d}")
 
     # Connect all top level nodes to the source
     for node in lcs_nodes[0]:
