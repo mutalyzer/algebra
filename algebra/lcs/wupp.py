@@ -147,14 +147,6 @@ def lcs_graph(reference, observed, lcs_nodes):
 
                     print(f"{node['row'] + offset, node['col'] + offset} -> {target['row'] + target_offset, target['col'] + target_offset}")
 
-                    if target_offset < target["len"] - 1:
-                        print("SPLIT target")
-                        split = target["row"] + target_offset + 1, target["col"] + target_offset + 1
-                        target["lcs_pos"] = lcs_pos - 1
-                        target["len"] = target_offset + 1
-                        graph[split] = graph[(target["row"], target["col"])]
-                        graph[(target["row"], target["col"])] = [(split, [])]
-
                     if offset > 0:
                         print("SPLIT node")
                         split = node["row"] + offset, node["col"] + offset
@@ -178,8 +170,6 @@ def lcs_graph(reference, observed, lcs_nodes):
         if (node["row"], node["col"]) in graph:
             variant = Variant(0, node["row"] - 1, observed[:node["col"] - 1])
             graph[source].append(((node["row"], node["col"]), [variant] if variant else []))
-        else:
-            print(f"SKIP {node['row'], node['col']}")
 
     return graph
 
