@@ -184,18 +184,6 @@ def lcs_graph(reference, observed, lcs_nodes):
     return graph
 
 
-
-#                 print("EDGE")
-#                 variant = Variant(tgt["row"] + tgt_offset, node["row"] + node_offset - 1,
-#                                   observed[tgt["col"] + tgt_offset:node["col"] + node_offset - 1])
-#                 if (tgt["row"], tgt["col"]) not in graph:
-#                     graph[(tgt["row"], tgt["col"])] = []
-#                 graph[(tgt["row"], tgt["col"])].append(((node["row"], node["col"]), [variant]))
-
-#                 print(to_dot(reference, graph))
-
-
-
 def traversal(reference, observed, graph, atomics=False):
     def traverse(node, path):
         if node == (len(reference) + 1, len(observed) + 1):
