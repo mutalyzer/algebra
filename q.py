@@ -61,7 +61,7 @@ def main():
     for path in paths_test:
         hgvs_test.add(to_hgvs(path, reference))
 
-    assert len(paths_gold) == len(paths_test)
+    assert len(list(paths_gold)) == len(list(paths_test))
     assert hgvs_gold == hgvs_test
 
     # print(set(hgvs_test) - set(hgvs_gold))
