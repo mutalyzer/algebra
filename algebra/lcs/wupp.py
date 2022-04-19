@@ -1,6 +1,13 @@
 from ..variants.variant import Variant, to_hgvs
 
 
+class Node:
+    def __init__(self, row, col, len):
+        self.row = row
+        self.col = col
+        self.len = len
+
+
 def edit(reference, observed):
     def lcs_idx(row, col):
         return ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
@@ -39,7 +46,7 @@ def edit(reference, observed):
                 lcs_pos = lcs_idx(row, col)
                 max_lcs_pos = max(lcs_pos, max_lcs_pos)
                 print('lcs pos', lcs_pos)
-                lcs_nodes[lcs_pos].append({'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row})
+                lcs_nodes[lcs_pos].append(Node(match_row + 1, match_col + 1, row - match_row))
                 active = False
             row += 1
             col += 1
@@ -62,7 +69,7 @@ def edit(reference, observed):
             lcs_pos = lcs_idx(row, col)
             max_lcs_pos = max(lcs_pos, max_lcs_pos)
             print('lcs pos', lcs_pos)
-            lcs_nodes[lcs_pos].append({'row': match_row + 1, 'col': match_col + 1, 'len': row - match_row})
+            lcs_nodes[lcs_pos].append(Node(match_row + 1, match_col + 1, row - match_row))
 
         # print(f"    last checked {row, col}")
         matrix[row + 1][col + 1] = abs(delta) + 2 * it + 2
@@ -107,15 +114,18 @@ def lcs_graph(reference, observed, lcs_nodes):
     sink = len(reference) + 1, len(observed) + 1
     graph = {sink: []}
 
+    for level in lcs_nodes:
+        print(level)
+
     source = 0, 0
     if lcs_nodes == [[]]:
         graph[source] = [(sink, [Variant(0, len(reference), observed)])]
         return graph
 
     for node in lcs_nodes[-1]:
-        offset = node["len"] - 1
-        variant = Variant(node["row"] + offset, len(reference), observed[node["col"] + offset:])
-        graph[(node["row"], node["col"])] = [(sink, [variant] if variant else [])]
+        offset = node.len - 1
+        variant = Variant(node.row + offset, len(reference), observed[node.col + offset:])
+        graph[(node.row, node.col)] = [(sink, [variant] if variant else [])]
 
     print(to_dot(reference, graph))
 
@@ -126,76 +136,76 @@ def lcs_graph(reference, observed, lcs_nodes):
         while len(nodes) > 0:
             node = nodes.pop(0)
 
-            if (node["row"], node["col"]) not in graph:
+            if (node.row, node.col) not in graph:
                 continue
 
-            offset = node["len"] - 1
+            offset = node.len - 1
 
             for prev in nodes:
-                if prev["len"] <= 1:
+                if prev.len <= 1:
                     continue
 
-                prev_offset = prev["len"] - 2
+                prev_offset = prev.len - 2
 
-                if node["row"] + offset > prev["row"] + prev_offset and node["col"] + offset > prev["col"] + prev_offset:
-                    print(f"S{node['row'] + offset, node['col'] + offset} vs {prev['row'] + prev_offset, prev['col'] + prev_offset}")
+                if node.row + offset > prev.row + prev_offset and node.col + offset > prev.col + prev_offset:
+                    print(f"S{node.row + offset, node.col + offset} vs {prev.row + prev_offset, prev.col + prev_offset}")
 
                     if offset > 0:
-                        split = {"row": node["row"] + offset, "col": node["col"] + offset, "len": 1}
+                        split = Node(node.row + offset, node.col + offset, 1)
                         print(f"SPLIT: {split}")
-                        graph[(split["row"], split["col"])] = graph[(node["row"], node["col"])]
-                        graph[(node["row"], node["col"])] = [((split["row"], split["col"]), [])]
-                        node["len"] -= 1
-                        lcs_nodes[lcs_pos - 1].insert(0, node)
+                        graph[(split.row, split.col)] = graph[(node.row, node.col)]
+                        graph[(node.row, node.col)] = [((split.row, split.col), [])]
+                        node.len -= 1
+                        lcs_nodes[lcs_pos - 1].append(node)
                         offset = 0
                         node = split
 
-                    variant = Variant(prev["row"] + prev_offset, node["row"] + offset - 1, observed[prev["col"] + prev_offset:node["col"] + offset - 1])
+                    variant = Variant(prev.row + prev_offset, node.row + offset - 1, observed[prev.col + prev_offset:node.col + offset - 1])
                     print(variant.to_hgvs(reference))
-                    if (prev["row"], prev["col"]) not in graph:
-                        graph[(prev["row"], prev["col"])] = []
-                    graph[(prev["row"], prev["col"])].append(((node["row"], node["col"]), [variant]))
+                    if (prev.row, prev.col) not in graph:
+                        graph[(prev.row, prev.col)] = []
+                    graph[(prev.row, prev.col)].append(((node.row, node.col), [variant]))
 
                     print(to_dot(reference, graph))
 
             for prev in list(lcs_nodes[lcs_pos - 1]):
-                prev_offset = prev["len"] - 1
+                prev_offset = prev.len - 1
 
-                if node["row"] + offset > prev["row"] + prev_offset and node["col"] + offset > prev["col"] + prev_offset:
-                    if node["row"] + offset == prev["row"] + prev_offset + 1 and node["col"] + offset == prev["col"] + prev_offset + 1:
+                if node.row + offset > prev.row + prev_offset and node.col + offset > prev.col + prev_offset:
+                    if node.row + offset == prev.row + prev_offset + 1 and node.col + offset == prev.col + prev_offset + 1:
                         continue
 
-                    print(f"P{node['row'] + offset, node['col'] + offset} vs {prev['row'] + prev_offset, prev['col'] + prev_offset}")
+                    print(f"P{node.row + offset, node.col + offset} vs {prev.row + prev_offset, prev.col + prev_offset}")
 
                     if offset > 0:
-                        split = {"row": node["row"] + offset, "col": node["col"] + offset, "len": 1}
+                        split = Node(node.row + offset,  node.col + offset, 1)
                         print(f"SPLIT: {split}")
-                        graph[(split["row"], split["col"])] = graph[(node["row"], node["col"])]
-                        graph[(node["row"], node["col"])] = [((split["row"], split["col"]), [])]
-                        node["len"] -= 1
-                        lcs_nodes[lcs_pos - 1].insert(0, node)
+                        graph[(split.row, split.col)] = graph[(node.row, node.col)]
+                        graph[(node.row, node.col)] = [((split.row, split.col), [])]
+                        node.len -= 1
+                        lcs_nodes[lcs_pos - 1].append(node)
                         offset = 0
                         node = split
 
-                    variant = Variant(prev["row"] + prev_offset, node["row"] + offset - 1, observed[prev["col"] + prev_offset:node["col"] + offset - 1])
+                    variant = Variant(prev.row + prev_offset, node.row + offset - 1, observed[prev.col + prev_offset:node.col + offset - 1])
                     print(variant.to_hgvs(reference))
-                    if (prev["row"], prev["col"]) not in graph:
-                        graph[(prev["row"], prev["col"])] = []
-                    graph[(prev["row"], prev["col"])].append(((node["row"], node["col"]), [variant]))
+                    if (prev.row, prev.col) not in graph:
+                        graph[(prev.row, prev.col)] = []
+                    graph[(prev.row, prev.col)].append(((node.row, node.col), [variant]))
 
                     print(to_dot(reference, graph))
 
-            if node["len"] > 1:
-                node["len"] -= 1
+            if node.len > 1:
+                node.len -= 1
                 lcs_nodes[lcs_pos - 1].insert(0, node)
 
             for level in lcs_nodes:
                 print(level)
 
     for node in lcs_nodes[0]:
-        if (node["row"], node["col"]) in graph:
-            variant = Variant(0, node["row"] - 1, observed[:node["col"] - 1])
-            graph[source].append(((node["row"], node["col"]), [variant] if variant else []))
+        if (node.row, node.col) in graph:
+            variant = Variant(0, node.row - 1, observed[:node.col - 1])
+            graph[source].append(((node.row, node.col), [variant] if variant else []))
 
     return graph
 
