@@ -48,15 +48,21 @@ def main():
     print("gold")
     _, lcs_graph_gold = graph_gold(nodes_gold, reference, observed)
     print(to_dot_gold(reference, observed, lcs_graph_gold))
-    paths_gold = list(traversal_gold(reference, observed, lcs_graph_gold, atomics=True))
+    paths_gold = traversal_gold(reference, observed, lcs_graph_gold, atomics=True)
+    hgvs_gold = set()
+    for path in paths_gold:
+        hgvs_gold.add(to_hgvs(path, reference))
 
     print("test")
     graph = graph_test(reference, observed, nodes_test)
     print(to_dot_test(reference, graph))
-    paths_test = list(traversal(reference, observed, graph, atomics=True))
+    paths_test = traversal(reference, observed, graph, atomics=True)
+    hgvs_test = set()
+    for path in paths_test:
+        hgvs_test.add(to_hgvs(path, reference))
 
     assert len(paths_gold) == len(paths_test)
-    assert set(paths_gold) == set(paths_test)
+    assert hgvs_gold == hgvs_test
 
     # print(set(hgvs_test) - set(hgvs_gold))
     # print(set(hgvs_gold) - set(hgvs_test))
