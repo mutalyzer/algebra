@@ -150,30 +150,20 @@ def lcs_graph(reference, observed, lcs_nodes):
 
                 if node["row"] + offset > prev["row"] + prev_offset and node["col"] + offset > prev["col"] + prev_offset:
                     print(f"{node['row'] + offset, node['col'] + offset} vs {prev['row'] + prev_offset, prev['col'] + prev_offset}")
+                    variant = Variant(prev["row"] + prev_offset, node["row"] + offset - 1, observed[prev["col"] + prev_offset:node["col"] + offset - 1])
+                    print(variant.to_hgvs(reference))
+                    if (prev["row"], prev["col"]) not in graph:
+                        graph[(prev["row"], prev["col"])] = []
+                    graph[(prev["row"], prev["col"])].append(((node["row"], node["col"]), [variant]))
 
-                    if offset > 0:
-                        print("SPLIT")
-                        split = node["row"] + offset, node["col"] + offset
-                        graph[split] = graph[(node["row"], node["col"])]
-                        graph[(node["row"], node["col"])] = [(split, [])]
-                        variant = Variant(prev["row"] + prev_offset, split[0] - 1, observed[prev["col"] + prev_offset:split[1] - 1])
-                        print(variant.to_hgvs(reference))
-                        if (prev["row"], prev["col"]) not in graph:
-                            graph[(prev["row"], prev["col"])] = []
-                        graph[(prev["row"], prev["col"])].append((split, [variant]))
-                    else:
-                        variant = Variant(prev["row"] + prev_offset, node["row"] + offset - 1, observed[prev["col"] + prev_offset:node["col"] + offset - 1])
-                        print(variant.to_hgvs(reference))
-                        if (prev["row"], prev["col"]) not in graph:
-                            graph[(prev["row"], prev["col"])] = []
-                        graph[(prev["row"], prev["col"])].append(((node["row"], node["col"]), [variant]))
+            print(to_dot(reference, graph))
 
             if node["len"] > 1:
                 node["len"] -= 1
-                lcs_nodes[lcs_pos - 1].append(node)
+                lcs_nodes[lcs_pos - 1].insert(0, node)
 
-        print(to_dot(reference, graph))
-        print(lcs_nodes)
+            for level in lcs_nodes:
+                print(level)
 
     for node in lcs_nodes[0]:
         if (node["row"], node["col"]) in graph:
