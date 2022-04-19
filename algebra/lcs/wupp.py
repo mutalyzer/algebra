@@ -108,7 +108,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     graph = {sink: []}
 
     source = 0, 0
-    if lcs_graph == [[]]:
+    if lcs_nodes == [[]]:
         graph[source] = [(sink, [Variant(0, len(reference), observed)])]
         return graph
 
