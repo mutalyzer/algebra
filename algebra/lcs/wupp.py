@@ -2,10 +2,22 @@ from ..variants.variant import Variant, to_hgvs
 
 
 class Node:
-    def __init__(self, row, col, len):
+    def __init__(self, row, col, len=0):
         self.row = row
         self.col = col
         self.len = len
+
+        self.edges = []
+
+        # TODO: init?!
+        self.incoming = 0
+        self.outgoing = 0
+
+        self.internal = []
+
+    def __repr__(self):
+        # return f"{self.row, self.col, self.len, self.incoming, [(a, to_hgvs(b)) for a,b in self.edges]}"
+        return f"{self.row, self.col, self.len, self.incoming, len(self.edges)}"
 
 
 def edit(reference, observed):
@@ -111,125 +123,177 @@ def edit(reference, observed):
 
 
 def lcs_graph(reference, observed, lcs_nodes):
-    sink = len(reference) + 1, len(observed) + 1
-    graph = {sink: []}
+    sink = Node(len(reference) + 1, len(observed) + 1)
 
     for level in lcs_nodes:
-        print(level)
+        print('level', level)
 
-    source = 0, 0
+    source = Node(0, 0)
     if lcs_nodes == [[]]:
-        graph[source] = [(sink, [Variant(0, len(reference), observed)])]
-        return graph
+        source.edges = [(sink, [Variant(0, len(reference), observed)])]
+        return source
 
     for node in lcs_nodes[-1]:
         offset = node.len - 1
         variant = Variant(node.row + offset, len(reference), observed[node.col + offset:])
-        graph[(node.row, node.col)] = [(sink, [variant] if variant else [])]
+        node.edges = [(sink, [variant] if variant else [])]
 
-    print(to_dot(reference, graph))
-
-    graph[source] = []
     for idx, nodes in enumerate(lcs_nodes[:0:-1]):
         lcs_pos = len(lcs_nodes) - idx - 1
 
         while len(nodes) > 0:
             node = nodes.pop(0)
 
-            if (node.row, node.col) not in graph:
+            if not node.edges and not node.internal:
                 continue
 
             offset = node.len - 1
 
-            for prev in nodes:
-                if prev.len <= 1:
+            for pred in nodes:
+                if pred.len <= 1:
                     continue
 
-                prev_offset = prev.len - 2
+                pred_offset = pred.len - 2
 
-                if node.row + offset > prev.row + prev_offset and node.col + offset > prev.col + prev_offset:
-                    print(f"S{node.row + offset, node.col + offset} vs {prev.row + prev_offset, prev.col + prev_offset}")
+                if node.row + offset > pred.row + pred_offset and node.col + offset > pred.col + pred_offset:
+                    print(f"S{node.row + offset, node.col + offset} vs {pred.row + pred_offset, pred.col + pred_offset}")
 
-                    if offset > 0:
-                        split = Node(node.row + offset, node.col + offset, 1)
-                        print(f"SPLIT: {split}")
-                        graph[(split.row, split.col)] = graph[(node.row, node.col)]
-                        graph[(node.row, node.col)] = [((split.row, split.col), [])]
-                        node.len -= 1
-                        lcs_nodes[lcs_pos - 1].append(node)
-                        offset = 0
-                        node = split
-
-                    variant = Variant(prev.row + prev_offset, node.row + offset - 1, observed[prev.col + prev_offset:node.col + offset - 1])
+                    variant = Variant(pred.row + pred_offset, node.row + offset - 1, observed[pred.col + pred_offset:node.col + offset - 1])
                     print(variant.to_hgvs(reference))
-                    if (prev.row, prev.col) not in graph:
-                        graph[(prev.row, prev.col)] = []
-                    graph[(prev.row, prev.col)].append(((node.row, node.col), [variant]))
 
-                    print(to_dot(reference, graph))
+                    if pred.incoming == lcs_pos:
+                        print(f"Split incoming {pred}")
 
-            for prev in list(lcs_nodes[lcs_pos - 1]):
-                prev_offset = prev.len - 1
+                        split = Node(pred.row, pred.col, pred.len - 1)
 
-                if node.row + offset > prev.row + prev_offset and node.col + offset > prev.col + prev_offset:
-                    if node.row + offset == prev.row + prev_offset + 1 and node.col + offset == prev.col + prev_offset + 1:
-                        continue
+                        pred.row += pred_offset + 1
+                        pred.col += pred_offset + 1
 
-                    print(f"P{node.row + offset, node.col + offset} vs {prev.row + prev_offset, prev.col + prev_offset}")
+                        split.internal = [(pred, [])]
 
-                    if offset > 0:
-                        split = Node(node.row + offset,  node.col + offset, 1)
-                        print(f"SPLIT: {split}")
-                        graph[(split.row, split.col)] = graph[(node.row, node.col)]
-                        graph[(node.row, node.col)] = [((split.row, split.col), [])]
-                        node.len -= 1
-                        lcs_nodes[lcs_pos - 1].append(node)
-                        offset = 0
-                        node = split
+                        lcs_nodes[lcs_pos - 1].append(split)
 
-                    variant = Variant(prev.row + prev_offset, node.row + offset - 1, observed[prev.col + prev_offset:node.col + offset - 1])
+                        pred = split
+
+                    if node.outgoing == lcs_pos:
+                        print(f"Split outgoing: {node}")
+
+                        split = Node(node.row, node.col, node.len - 1)
+                        split.edges = node.edges
+
+                        split.internal = [(node, [])]
+                        lcs_nodes[lcs_pos - 1].append(split)
+
+                        pred.edges.append((node, [variant]))
+
+                        node.row += offset
+                        node.col += offset
+                        node.len = 1
+                        node.edges = []
+
+                        break
+
+                    else:
+
+                        pred.edges.append((node, [variant]))
+                        node.incoming = lcs_pos
+                        pred.outgoing = lcs_pos
+
+
+            for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
+                pred_offset = pred.len - 1
+
+                if node.row + offset > pred.row + pred_offset and node.col + offset > pred.col + pred_offset:
+
+                    print(f"P{node.row + offset, node.col + offset} vs {pred.row + pred_offset, pred.col + pred_offset}")
+
+                    variant = Variant(pred.row + pred_offset, node.row + offset - 1, observed[pred.col + pred_offset:node.col + offset - 1])
                     print(variant.to_hgvs(reference))
-                    if (prev.row, prev.col) not in graph:
-                        graph[(prev.row, prev.col)] = []
-                    graph[(prev.row, prev.col)].append(((node.row, node.col), [variant]))
 
-                    print(to_dot(reference, graph))
+                    if pred.incoming == lcs_pos:
+                        print(f"Split incoming {pred}")
+
+                        split = Node(pred.row, pred.col, pred.len)
+
+                        pred.row += pred_offset + 1
+                        pred.col += pred_offset + 1
+
+                        split.internal = [(pred, [])]
+
+                        lcs_nodes[lcs_pos - 1][pred_idx] = split
+
+                        pred = split
+
+                    if node.outgoing == lcs_pos:
+                        print(f"Split outgoing: {node}")
+
+                        split = Node(node.row, node.col, node.len - 1)
+                        split.edges = node.edges
+
+                        split.internal = [(node, [])]
+                        lcs_nodes[lcs_pos - 1].append(split)
+
+                        pred.edges.append((node, [variant]))
+
+                        node.row += offset
+                        node.col += offset
+                        node.len = 1
+                        node.edges = []
+
+                        break
+
+                    else:
+
+                        pred.edges.append((node, [variant]))
+                        node.incoming = lcs_pos
+                        pred.outgoing = lcs_pos
 
             if node.len > 1:
                 node.len -= 1
-                lcs_nodes[lcs_pos - 1].insert(0, node)
+                lcs_nodes[lcs_pos - 1].append(node)
 
-            for level in lcs_nodes:
-                print(level)
+            print(level,)
+            for l_idx, level in enumerate(lcs_nodes):
+                print(l_idx)
+                for l in level:
+                    print('  ', l)
 
     for node in lcs_nodes[0]:
-        if (node.row, node.col) in graph:
+        if node.edges:
             variant = Variant(0, node.row - 1, observed[:node.col - 1])
-            graph[source].append(((node.row, node.col), [variant] if variant else []))
+            # graph[source].append(((node.row, node.col), [variant] if variant else []))
+            source.edges.append((node, [variant] if variant else []))
 
-    return graph
+    return source
 
 
-def traversal(reference, observed, graph, atomics=False):
+def traversal(reference, observed, source, atomics=False):
     def traverse(node, path):
-        if node == (len(reference) + 1, len(observed) + 1):
+        if not node.edges and not node.internal:
             yield path
             return
 
-        for child, variant in graph[node]:
+        for succ, variant in node.edges + node.internal:
             if atomics and len(variant) > 0:
                 for atomic in variant[0].atomics():
-                    yield from traverse(child, path + atomic)
+                    yield from traverse(succ, path + atomic)
             else:
-                yield from traverse(child, path + variant)
+                yield from traverse(succ, path + variant)
 
-    yield from traverse((0, 0), [])
+    yield from traverse(source, [])
 
 
-def to_dot(reference, graph):
+def to_dot(reference, source):
     dot = "digraph {\n"
-    for node, edges in graph.items():
-        dot += f'    "{node[0]}_{node[1]}" [label="{node}"];\n'
-        for child, edge in edges:
-            dot += f'    "{node[0]}_{node[1]}" -> "{child[0]}_{child[1]}" [label="{to_hgvs(edge, reference, sequence_prefix=False)}"];\n'
+    queue = [source]
+    visited = [source]
+    while queue:
+        node = queue.pop(0)
+        dot += f'    "{node.row}_{node.col}" [label="{node.row, node.col}"];\n'
+        for succ, variant in node.edges + node.internal:
+            dot += f'    "{node.row}_{node.col}" -> "{succ.row}_{succ.col}" [label="{to_hgvs(variant, reference, sequence_prefix=False)}"];\n'
+            if succ not in visited:
+                visited.append(succ)
+                queue.append(succ)
+
     return dot + "}"

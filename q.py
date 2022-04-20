@@ -20,8 +20,8 @@ def compare_matrix(test, gold, f):
 
 
 def main():
-    min_rand = 3
-    max_rand = 5
+    min_rand = 1
+    max_rand = 15
 
     if len(sys.argv) == 1:
         reference = "".join(random.choice("ACGT") for _ in range(random.randint(min_rand, max_rand)))
@@ -52,20 +52,26 @@ def main():
     hgvs_gold = set()
     for path in paths_gold:
         hgvs_gold.add(to_hgvs(path, reference))
+    print(hgvs_gold)
+    print(len(hgvs_gold))
 
     print("test")
     graph = graph_test(reference, observed, nodes_test)
+    print(graph)
     print(to_dot_test(reference, graph))
     paths_test = traversal(reference, observed, graph, atomics=True)
     hgvs_test = set()
     for path in paths_test:
         hgvs_test.add(to_hgvs(path, reference))
+    print(hgvs_test)
+    print(len(hgvs_test))
 
-    assert len(list(paths_gold)) == len(list(paths_test))
-    assert hgvs_gold == hgvs_test
 
-    # print(set(hgvs_test) - set(hgvs_gold))
-    # print(set(hgvs_gold) - set(hgvs_test))
+    # assert len(list(paths_gold)) == len(list(paths_test))
+    # assert hgvs_gold == hgvs_test
+
+    print(set(hgvs_test) - set(hgvs_gold))
+    print(set(hgvs_gold) - set(hgvs_test))
 
 
 if __name__ == '__main__':
