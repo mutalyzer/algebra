@@ -2,7 +2,7 @@ import sys
 from algebra.lcs.onp import edit as edit_onp
 from algebra.lcs.wupp import edit as edit_test, lcs_graph as graph_test, traversal, to_dot as to_dot_test
 from algebra.lcs.efficient import edit as edit_gold, build as graph_gold, traversal as traversal_gold, to_dot as to_dot_gold
-from algebra.variants.variant import to_hgvs, Variant, patch, merge_co_insertions
+from algebra.variants.variant import to_hgvs, Variant, patch
 from pprint import pprint
 import random
 

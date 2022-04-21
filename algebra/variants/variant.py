@@ -42,7 +42,7 @@ class Variant:
 
         return self.start < other.start or self.end < other.end
 
-    def __str__(self):
+    def __repr__(self):
         return f"[{self.start},{self.end}/{self.sequence}]"
 
     def atomics(self):
@@ -141,37 +141,3 @@ def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=T
         return f"{prefix}{variants[0].to_hgvs(reference, only_substitutions)}"
 
     return f"{prefix}[{';'.join([variant.to_hgvs(reference, only_substitutions) for variant in (sorted(variants) if sort else variants)])}]"
-
-
-def merge_co_insertions(variants):
-    def is_insertion(variant):
-        return variant.end == variant.start and len(variant.sequence) > 0
-
-    result = []
-
-    prev = Variant(0, 0)
-    ins = ""
-    for variant in variants:
-        if not is_insertion(prev) and is_insertion(variant):
-            ins = variant.sequence
-        elif is_insertion(prev) and is_insertion(variant):
-            if prev.start == variant.start:
-                ins += variant.sequence
-            else:
-                result.append(Variant(prev.start, prev.end, ins))
-                ins = variant.sequence
-        elif is_insertion(prev) and not is_insertion(variant):
-            result.append(Variant(prev.start, prev.end, ins))
-            result.append(variant)
-            ins = ""
-        else:
-            result.append(variant)
-
-        prev = variant
-
-    if ins:
-        result.append(Variant(prev.start, prev.end, ins))
-    elif variants and is_insertion(variant):
-        result.append(variant)
-
-    return result

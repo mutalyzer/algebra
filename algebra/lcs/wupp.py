@@ -227,7 +227,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     return source
 
 
-def traversal(reference, observed, source, atomics=False):
+def traversal(reference, observed, root, atomics=False):
     def traverse(node, path):
         if not node.edges:
             yield path
@@ -240,20 +240,20 @@ def traversal(reference, observed, source, atomics=False):
             else:
                 yield from traverse(succ, path + variant)
 
-    yield from traverse(source, [])
+    yield from traverse(root, [])
 
 
-def to_dot(reference, source):
-    dot = "digraph {\n"
-    queue = [source]
-    visited = [source]
-    while queue:
-        node = queue.pop(0)
-        dot += f'    "{node.row}_{node.col}" [label="{node.row, node.col}"];\n'
-        for succ, variant in node.edges:
-            dot += f'    "{node.row}_{node.col}" -> "{succ.row}_{succ.col}" [label="{to_hgvs(variant, reference, sequence_prefix=False)}"];\n'
-            if succ not in visited:
-                visited.append(succ)
-                queue.append(succ)
+def to_dot(reference, root):
+    def nodes_and_edges():
+        queue = [root]
+        visited = [root]
+        while queue:
+            node = queue.pop(0)
+            yield f'"{node.row}_{node.col}" [label="{node.row, node.col}"];'
+            for succ, variant in node.edges:
+                yield f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}" [label="{to_hgvs(variant, reference, sequence_prefix=False)}"];'
+                if succ not in visited:
+                    visited.append(succ)
+                    queue.append(succ)
 
-    return dot + "}"
+    return "digraph {\n    " + "\n    ".join(nodes_and_edges()) + "\n}"
