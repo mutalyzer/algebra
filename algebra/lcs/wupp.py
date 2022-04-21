@@ -203,11 +203,10 @@ def lcs_graph(reference, observed, lcs_nodes):
                         node.outgoing = 0
                         offset = 0
                         lcs_nodes[lcs_pos - 1].append(split)
-                        pred.edges.append((node, [variant]))
-                    else:
-                        pred.edges.append((node, [variant]))
-                        node.incoming = lcs_pos
-                        pred.outgoing = lcs_pos
+
+                    pred.edges.append((node, [variant]))
+                    node.incoming = lcs_pos
+                    pred.outgoing = lcs_pos
 
             node.edges += node.pre_edges
             node.pre_edges = []
