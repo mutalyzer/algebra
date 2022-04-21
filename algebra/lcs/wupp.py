@@ -124,7 +124,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     sink = Node(len(reference) + 1, len(observed) + 1)
 
     for level in lcs_nodes:
-        print('level', level)
+        print(level)
 
     source = Node(0, 0)
     if lcs_nodes == [[]]:
@@ -174,6 +174,8 @@ def lcs_graph(reference, observed, lcs_nodes):
                 pred_offset = pred.len - 1
 
                 if node.row + offset > pred.row + pred_offset and node.col + offset > pred.col + pred_offset:
+                    if node.row + offset == pred.row + pred_offset + 1 and node.col + offset == pred.col + pred_offset + 1:
+                        continue
 
                     print(f"P{node.row + offset, node.col + offset} <- {pred.row + pred_offset, pred.col + pred_offset}")
 
@@ -198,13 +200,14 @@ def lcs_graph(reference, observed, lcs_nodes):
                         node.col += offset
                         node.len = 1
                         node.pre_edges = []
+                        node.outgoing = 0
+                        offset = 0
                         lcs_nodes[lcs_pos - 1].append(split)
                         pred.edges.append((node, [variant]))
-                        break
-
-                    pred.edges.append((node, [variant]))
-                    node.incoming = lcs_pos
-                    pred.outgoing = lcs_pos
+                    else:
+                        pred.edges.append((node, [variant]))
+                        node.incoming = lcs_pos
+                        pred.outgoing = lcs_pos
 
             node.edges += node.pre_edges
             node.pre_edges = []
