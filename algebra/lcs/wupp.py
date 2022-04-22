@@ -169,7 +169,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                     node.incoming = lcs_pos
                     pred.outgoing = lcs_pos
 
-
             for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 pred_offset = pred.len - 1
 
@@ -195,7 +194,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                     if node.outgoing == lcs_pos:
                         print(f"Split outgoing: {node}")
                         split = Node(node.row, node.col, node.len - 1)
-                        split.pre_edges = node.pre_edges + [(node, [])]
+                        split.edges = node.pre_edges + [(node, [])]
                         node.row += offset
                         node.col += offset
                         node.len = 1
