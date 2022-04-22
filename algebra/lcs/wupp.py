@@ -12,7 +12,6 @@ class Node:
 
         # TODO: init?!
         self.incoming = 0
-        self.outgoing = 0
 
     def __repr__(self):
         return f"{self.row, self.col, self.len}"
@@ -159,15 +158,8 @@ def lcs_graph(reference, observed, lcs_nodes):
                     variant = Variant(pred.row + pred_offset, node.row + offset - 1, observed[pred.col + pred_offset:node.col + offset - 1])
                     print(variant.to_hgvs(reference))
 
-                    if pred.incoming == lcs_pos:
-                        print(f"Split incoming {pred}")
-
-                    if node.outgoing == lcs_pos:
-                        print(f"Split outgoing: {node}")
-
                     pred.pre_edges.append((node, [variant]))
                     node.incoming = lcs_pos
-                    pred.outgoing = lcs_pos
 
             for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 pred_offset = pred.len - 1
@@ -191,7 +183,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                         lcs_nodes[lcs_pos - 1][pred_idx] = split
                         pred = split
 
-                    if node.outgoing == lcs_pos:
+                    if node.pre_edges:
                         print(f"Split outgoing: {node}")
                         split = Node(node.row, node.col, node.len - 1)
                         split.edges = node.pre_edges + [(node, [])]
@@ -199,13 +191,11 @@ def lcs_graph(reference, observed, lcs_nodes):
                         node.col += offset
                         node.len = 1
                         node.pre_edges = []
-                        node.outgoing = 0
                         offset = 0
                         lcs_nodes[lcs_pos - 1].append(split)
 
                     pred.edges.append((node, [variant]))
                     node.incoming = lcs_pos
-                    pred.outgoing = lcs_pos
 
             node.edges += node.pre_edges
             node.pre_edges = []
@@ -218,7 +208,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                 print(level)
 
     for node in lcs_nodes[0]:
-        node.edges += node.pre_edges
         if node.edges:
             variant = Variant(0, node.row - 1, observed[:node.col - 1])
             source.edges.append((node, [variant] if variant else []))
