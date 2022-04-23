@@ -41,7 +41,6 @@ def main():
 
     print("test")
     graph = graph_test(reference, observed, nodes_test)
-    print(graph)
     print(to_dot_test(reference, graph))
     paths_test = traversal(reference, observed, graph, atomics=True)
     hgvs_test = set()
