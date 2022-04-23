@@ -18,9 +18,6 @@ class Node:
 
 
 def edit(reference, observed):
-    def lcs_idx(row, col):
-        return ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
-
     def expand(idx):
         nonlocal max_lcs_pos
         start = diagonals[offset + idx]
@@ -47,7 +44,7 @@ def edit(reference, observed):
                     match_col = col
                 active = True
             elif active:
-                lcs_pos = lcs_idx(row, col)
+                lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
                 max_lcs_pos = max(lcs_pos, max_lcs_pos)
                 lcs_nodes[lcs_pos].append(Node(match_row + 1, match_col + 1, row - match_row))
                 active = False
@@ -64,7 +61,7 @@ def edit(reference, observed):
             col += 1
             steps += 1
         if active:
-            lcs_pos = lcs_idx(row, col)
+            lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
             max_lcs_pos = max(lcs_pos, max_lcs_pos)
             lcs_nodes[lcs_pos].append(Node(match_row + 1, match_col + 1, row - match_row))
 
@@ -101,9 +98,6 @@ def edit(reference, observed):
 def lcs_graph(reference, observed, lcs_nodes):
     sink = Node(len(reference) + 1, len(observed) + 1)
 
-    for level in lcs_nodes:
-        print(level)
-
     source = Node(0, 0)
     if lcs_nodes == [[]]:
         source.edges = [(sink, [Variant(0, len(reference), observed)])]
@@ -117,7 +111,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     for idx, nodes in enumerate(lcs_nodes[:0:-1]):
         lcs_pos = len(lcs_nodes) - idx - 1
 
-        while len(nodes) > 0:
+        while nodes:
             node = nodes.pop(0)
 
             if not node.edges and not node.pre_edges:
@@ -182,9 +176,6 @@ def lcs_graph(reference, observed, lcs_nodes):
             if node.len > 1:
                 node.len -= 1
                 lcs_nodes[lcs_pos - 1].append(node)
-
-            for level in lcs_nodes:
-                print(level)
 
     for node in lcs_nodes[0]:
         if node.edges:
