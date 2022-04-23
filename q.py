@@ -7,18 +7,6 @@ from pprint import pprint
 import random
 
 
-def compare_matrix(test, gold, f):
-    assert len(test) == len(gold)
-    assert len(test[0]) == len(gold[0])
-    row_len = len(test)
-    col_len = len(test[0])
-
-    for row in range(row_len):
-        for col in range(col_len):
-            if gold[row][col] is not None and gold[row][col] <= f:
-                assert gold[row][col] == test[row][col]
-
-
 def main():
     min_rand = 1
     max_rand = 15
@@ -36,14 +24,10 @@ def main():
 
     dist_gold, nodes_gold = edit_gold(reference, observed)
     print(dist_gold)
-    dist_test, matrix_test, nodes_test = edit_test(reference, observed)
+    dist_test, nodes_test = edit_test(reference, observed)
     print(dist_test)
-    # pprint(matrix_test)
-    # pprint(matrix_gold)
 
     assert dist_test == dist_gold
-
-    # compare_matrix(matrix_test, matrix_gold, dist_test)
 
     print("gold")
     _, lcs_graph_gold = graph_gold(nodes_gold, reference, observed)
