@@ -66,9 +66,8 @@ def main():
     print(hgvs_test)
     print(len(hgvs_test))
 
-
-    # assert len(list(paths_gold)) == len(list(paths_test))
-    # assert hgvs_gold == hgvs_test
+    assert len(list(paths_gold)) == len(list(paths_test))
+    assert hgvs_gold == hgvs_test
 
     print(set(hgvs_test) - set(hgvs_gold))
     print(set(hgvs_gold) - set(hgvs_test))
