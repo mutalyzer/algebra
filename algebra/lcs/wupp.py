@@ -158,6 +158,7 @@ def lcs_graph(reference, observed, lcs_nodes):
 
                     variant = Variant(pred.row + pred_offset, node.row + offset - 1, observed[pred.col + pred_offset:node.col + offset - 1])
                     pred.pre_edges.append((node, [variant]))
+                    node.incoming = lcs_pos
 
             node.edges += node.pre_edges
             node.pre_edges = []
