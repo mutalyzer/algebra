@@ -2,17 +2,17 @@ from ..variants.variant import Variant, to_hgvs
 
 
 class Node:
-    def __init__(self, row, col, len=0):
+    def __init__(self, row, col, length=0):
         self.row = row
         self.col = col
-        self.len = len
+        self.length = length
 
         self.edges = []
         self.pre_edges = []
         self.incoming = 0
 
     def __repr__(self):
-        return f"{self.row, self.col, self.len}"
+        return f"{self.row, self.col, self.length}"
 
 
 def edit(reference, observed):
@@ -102,7 +102,7 @@ def lcs_graph(reference, observed, lcs_nodes):
         return source
 
     for node in lcs_nodes[-1]:
-        offset = node.len - 1
+        offset = node.length - 1
         variant = Variant(node.row + offset, len(reference), observed[node.col + offset:])
         node.edges = [(sink, [variant] if variant else [])]
 
@@ -114,24 +114,24 @@ def lcs_graph(reference, observed, lcs_nodes):
             if not node.edges and not node.pre_edges:
                 continue
 
-            offset = node.len - 1
+            offset = node.length - 1
             for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
-                pred_offset = pred.len - 1
+                pred_offset = pred.length - 1
                 if node.row + offset > pred.row + pred_offset and node.col + offset > pred.col + pred_offset:
                     if pred.incoming == lcs_pos:
-                        split = Node(pred.row, pred.col, pred.len)
+                        split = Node(pred.row, pred.col, pred.length)
                         pred.row += pred_offset + 1
                         pred.col += pred_offset + 1
-                        pred.len = 1
+                        pred.length = 1
                         split.edges = [(pred, [])]
                         lcs_nodes[lcs_pos - 1][pred_idx] = split
                         pred = split
                     elif node.pre_edges:
-                        split = Node(node.row, node.col, node.len - 1)
+                        split = Node(node.row, node.col, node.length - 1)
                         split.edges = node.pre_edges + [(node, [])]
                         node.row += offset
                         node.col += offset
-                        node.len = 1
+                        node.length = 1
                         node.pre_edges = []
                         offset = 0
                         lcs_nodes[lcs_pos - 1].append(split)
@@ -141,17 +141,17 @@ def lcs_graph(reference, observed, lcs_nodes):
                     node.incoming = lcs_pos
 
             for pred in nodes:
-                if pred.len <= 1:
+                if pred.length <= 1:
                     continue
 
-                pred_offset = pred.len - 2
+                pred_offset = pred.length - 2
                 if node.row + offset > pred.row + pred_offset and node.col + offset > pred.col + pred_offset:
                     if node.pre_edges:
-                        split = Node(node.row, node.col, node.len - 1)
+                        split = Node(node.row, node.col, node.length - 1)
                         split.edges = node.pre_edges + [(node, [])]
                         node.row += offset
                         node.col += offset
-                        node.len = 1
+                        node.length = 1
                         node.pre_edges = []
                         offset = 0
                         lcs_nodes[lcs_pos - 1].append(split)
@@ -163,8 +163,8 @@ def lcs_graph(reference, observed, lcs_nodes):
             node.edges += node.pre_edges
             node.pre_edges = []
 
-            if node.len > 1:
-                node.len -= 1
+            if node.length > 1:
+                node.length -= 1
                 lcs_nodes[lcs_pos - 1].append(node)
 
     for node in lcs_nodes[0]:
