@@ -97,14 +97,21 @@ def lcs_graph(reference, observed, lcs_nodes):
     sink = Node(len(reference) + 1, len(observed) + 1)
 
     source = Node(0, 0)
-    if lcs_nodes == [[]]:
-        source.edges = [(sink, [Variant(0, len(reference), observed)])]
-        return source
+    edges = []
+    if not lcs_nodes or lcs_nodes == [[]]:
+        variant = Variant(0, len(reference), observed)
+        source.edges = [(sink, [variant])]
+        edges.append(variant)
+        return source, edges
 
     for node in lcs_nodes[-1]:
         offset = node.length
         variant = Variant(node.row + offset - 1, len(reference), observed[node.col + offset - 1:])
-        node.edges = [(sink, [variant] if variant else [])]
+        if variant:
+            node.edges = [(sink, [variant])]
+            edges.append(variant)
+        else:
+            node.edges = [(sink, [])]
 
     for idx, nodes in enumerate(lcs_nodes[:0:-1]):
         lcs_pos = len(lcs_nodes) - idx - 1
@@ -138,6 +145,7 @@ def lcs_graph(reference, observed, lcs_nodes):
 
                     variant = Variant(pred.row + pred_offset - 1, node.row + offset - 1, observed[pred.col + pred_offset - 1:node.col + offset - 1])
                     pred.edges.append((node, [variant]))
+                    edges.append(variant)
                     node.incoming = lcs_pos
 
             for pred in nodes:
@@ -158,6 +166,7 @@ def lcs_graph(reference, observed, lcs_nodes):
 
                     variant = Variant(pred.row + pred_offset - 1, node.row + offset - 1, observed[pred.col + pred_offset - 1:node.col + offset - 1])
                     pred.pre_edges.append((node, [variant]))
+                    edges.append(variant)
                     node.incoming = lcs_pos
 
             node.edges += node.pre_edges
@@ -170,9 +179,13 @@ def lcs_graph(reference, observed, lcs_nodes):
     for node in lcs_nodes[0]:
         if node.edges:
             variant = Variant(0, node.row - 1, observed[:node.col - 1])
-            source.edges.append((node, [variant] if variant else []))
+            if variant:
+                source.edges.append((node, [variant]))
+                edges.append(variant)
+            else:
+                source.edges.append((node, []))
 
-    return source
+    return source, edges
 
 
 def traversal(root, atomics=False):
