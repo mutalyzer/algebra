@@ -182,7 +182,7 @@ def traversal(reference, observed, root, atomics=False):
             return
 
         for succ, variant in node.edges:
-            if atomics and len(variant) > 0:
+            if atomics and variant:
                 for atomic in variant[0].atomics():
                     yield from traverse(succ, path + atomic)
             else:
