@@ -102,8 +102,8 @@ def lcs_graph(reference, observed, lcs_nodes):
         return source
 
     for node in lcs_nodes[-1]:
-        offset = node.length - 1
-        variant = Variant(node.row + offset, len(reference), observed[node.col + offset:])
+        offset = node.length
+        variant = Variant(node.row + offset - 1, len(reference), observed[node.col + offset - 1:])
         node.edges = [(sink, [variant] if variant else [])]
 
     for idx, nodes in enumerate(lcs_nodes[:0:-1]):
@@ -116,12 +116,12 @@ def lcs_graph(reference, observed, lcs_nodes):
 
             offset = node.length - 1
             for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
-                pred_offset = pred.length - 1
-                if node.row + offset > pred.row + pred_offset and node.col + offset > pred.col + pred_offset:
+                pred_offset = pred.length
+                if node.row + offset >= pred.row + pred_offset and node.col + offset >= pred.col + pred_offset:
                     if pred.incoming == lcs_pos:
                         split = Node(pred.row, pred.col, pred.length)
-                        pred.row += pred_offset + 1
-                        pred.col += pred_offset + 1
+                        pred.row += pred_offset
+                        pred.col += pred_offset
                         pred.length = 1
                         split.edges = [(pred, [])]
                         lcs_nodes[lcs_pos - 1][pred_idx] = split
@@ -136,7 +136,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                         offset = 0
                         lcs_nodes[lcs_pos - 1].append(split)
 
-                    variant = Variant(pred.row + pred_offset, node.row + offset - 1, observed[pred.col + pred_offset:node.col + offset - 1])
+                    variant = Variant(pred.row + pred_offset - 1, node.row + offset - 1, observed[pred.col + pred_offset - 1:node.col + offset - 1])
                     pred.edges.append((node, [variant]))
                     node.incoming = lcs_pos
 
@@ -144,8 +144,8 @@ def lcs_graph(reference, observed, lcs_nodes):
                 if pred.length <= 1:
                     continue
 
-                pred_offset = pred.length - 2
-                if node.row + offset > pred.row + pred_offset and node.col + offset > pred.col + pred_offset:
+                pred_offset = pred.length - 1
+                if node.row + offset >= pred.row + pred_offset and node.col + offset >= pred.col + pred_offset:
                     if node.pre_edges:
                         split = Node(node.row, node.col, node.length - 1)
                         split.edges = node.pre_edges + [(node, [])]
@@ -156,7 +156,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                         offset = 0
                         lcs_nodes[lcs_pos - 1].append(split)
 
-                    variant = Variant(pred.row + pred_offset, node.row + offset - 1, observed[pred.col + pred_offset:node.col + offset - 1])
+                    variant = Variant(pred.row + pred_offset - 1, node.row + offset - 1, observed[pred.col + pred_offset - 1:node.col + offset - 1])
                     pred.pre_edges.append((node, [variant]))
                     node.incoming = lcs_pos
 
