@@ -6,7 +6,7 @@ import sys
 
 
 def main():
-    min_rand = 1
+    min_rand = 0
     max_rand = 15
 
     if len(sys.argv) == 1:
