@@ -31,7 +31,7 @@ def main():
     paths_gold = traversal_gold(reference, observed, lcs_graph_gold, atomics=True)
     hgvs_gold = set()
     for path in paths_gold:
-        hgvs_gold.add(to_hgvs(path, reference))
+        hgvs_gold.add(to_hgvs(path, reference, sort=False))
     #print(hgvs_gold)
     print(len(hgvs_gold))
 
@@ -41,7 +41,7 @@ def main():
     paths_test = traversal(graph, atomics=True)
     hgvs_test = set()
     for path in paths_test:
-        hgvs_test.add(to_hgvs(path, reference))
+        hgvs_test.add(to_hgvs(path, reference, sort=False))
     #print(hgvs_test)
     print(len(hgvs_test))
 
