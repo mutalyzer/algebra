@@ -27,7 +27,7 @@ def main():
 
     print("gold")
     _, lcs_graph_gold = graph_gold(nodes_gold, reference, observed)
-    print(to_dot_gold(reference, observed, lcs_graph_gold))
+    # print(to_dot_gold(reference, observed, lcs_graph_gold))
     paths_gold = traversal_gold(reference, observed, lcs_graph_gold, atomics=True)
     hgvs_gold = set()
     for path in paths_gold:
@@ -36,8 +36,8 @@ def main():
     print(len(hgvs_gold))
 
     print("test")
-    graph = graph_test(reference, observed, nodes_test)
-    print(to_dot_test(reference, graph))
+    graph, edges = graph_test(reference, observed, nodes_test)
+    # print(to_dot_test(reference, graph))
     paths_test = traversal(graph, atomics=True)
     hgvs_test = set()
     for path in paths_test:
