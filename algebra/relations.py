@@ -1,6 +1,7 @@
-from .lcs.efficient import edit, build
-from .lcs.onp import edit as edit_fast
 from enum import Enum
+from .variants.variant import Variant
+from .lcs.wupp import edit, lcs_graph
+from .lcs.onp import edit as edit_distance_only
 
 
 class Relation(Enum):
@@ -11,14 +12,41 @@ class Relation(Enum):
     DISJOINT = "disjoint"
 
 
+def ops_set(reference, observed, lcs_nodes):
+    def explode(variant):
+        for pos in range(variant.start, variant.end):
+            yield Variant(pos, pos + 1)
+        for pos in range(variant.start, variant.end + 1):
+            for symbol in variant.sequence:
+                yield Variant(pos, pos, symbol)
+
+    _, edges = lcs_graph(reference, observed, lcs_nodes)
+
+    ops = set()
+    for edge in edges:
+        ops.update(explode(edge))
+
+    return ops
+
+
 def are_equivalent(reference, lhs, rhs):
     return lhs == rhs
 
 
+def contains(reference, lhs, rhs):
+    return (lhs != rhs and
+            edit_distance_only(reference, lhs) - edit_distance_only(reference, rhs) == edit_distance_only(lhs, rhs))
+
+
+def is_contained(reference, lhs, rhs):
+    return (lhs != rhs and
+            edit_distance_only(reference, rhs) - edit_distance_only(reference, lhs) == edit_distance_only(lhs, rhs))
+
+
 def are_disjoint(reference, lhs, rhs):
-    lhs_distance, lhs_lcs = edit(reference, lhs)
-    rhs_distance, rhs_lcs = edit(reference, rhs)
-    distance = edit_fast(lhs, rhs)
+    lhs_distance, lhs_lcs_nodes = edit(reference, lhs)
+    rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
+    distance = edit_distance_only(lhs, rhs)
 
     if (lhs == rhs or
             lhs_distance - rhs_distance == distance or
@@ -28,8 +56,8 @@ def are_disjoint(reference, lhs, rhs):
     if lhs_distance + rhs_distance == distance:
         return True
 
-    lhs_ops, lhs_graph = build(lhs_lcs, reference, lhs)
-    rhs_ops, rhs_graph = build(rhs_lcs, reference, rhs)
+    lhs_ops = ops_set(reference, lhs, lhs_lcs_nodes)
+    rhs_ops = ops_set(reference, rhs, rhs_lcs_nodes)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return True
@@ -37,20 +65,10 @@ def are_disjoint(reference, lhs, rhs):
     return False
 
 
-def contains(reference, lhs, rhs):
-    return (lhs != rhs and
-            edit_fast(reference, lhs) - edit_fast(reference, rhs) == edit_fast(lhs, rhs))
-
-
-def is_contained(reference, lhs, rhs):
-    return (lhs != rhs and
-            edit_fast(reference, rhs) - edit_fast(reference, lhs) == edit_fast(lhs, rhs))
-
-
 def have_overlap(reference, lhs, rhs):
     lhs_distance, lhs_lcs = edit(reference, lhs)
     rhs_distance, rhs_lcs = edit(reference, rhs)
-    distance = edit_fast(lhs, rhs)
+    distance = edit_distance_only(lhs, rhs)
 
     if (lhs == rhs or
             lhs_distance - rhs_distance == distance or
@@ -58,8 +76,8 @@ def have_overlap(reference, lhs, rhs):
             lhs_distance + rhs_distance == distance):
         return False
 
-    lhs_ops, lhs_graph = build(lhs_lcs, reference, lhs)
-    rhs_ops, rhs_graph = build(rhs_lcs, reference, rhs)
+    lhs_ops = ops_set(reference, lhs, lhs_lcs_nodes)
+    rhs_ops = ops_set(reference, rhs, rhs_lcs_nodes)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return True
@@ -71,9 +89,9 @@ def compare(reference, lhs, rhs):
     if lhs == rhs:
         return Relation.EQUIVALENT
 
-    lhs_distance, lhs_lcs = edit(reference, lhs)
-    rhs_distance, rhs_lcs = edit(reference, rhs)
-    distance = edit_fast(lhs, rhs)
+    lhs_distance, lhs_lcs_nodes = edit(reference, lhs)
+    rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
+    distance = edit_distance_only(lhs, rhs)
 
     if lhs_distance + rhs_distance == distance:
         return Relation.DISJOINT
@@ -84,8 +102,8 @@ def compare(reference, lhs, rhs):
     if rhs_distance - lhs_distance == distance:
         return Relation.IS_CONTAINED
 
-    lhs_ops, lhs_graph = build(lhs_lcs, reference, lhs)
-    rhs_ops, rhs_graph = build(rhs_lcs, reference, rhs)
+    lhs_ops = ops_set(reference, lhs, lhs_lcs_nodes)
+    rhs_ops = ops_set(reference, rhs, rhs_lcs_nodes)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return Relation.DISJOINT
