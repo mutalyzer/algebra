@@ -42,7 +42,7 @@ def main():
     print("test")
     graph = graph_test(reference, observed, nodes_test)
     print(to_dot_test(reference, graph))
-    paths_test = traversal(reference, observed, graph, atomics=True)
+    paths_test = traversal(graph, atomics=True)
     hgvs_test = set()
     for path in paths_test:
         hgvs_test.add(to_hgvs(path, reference))

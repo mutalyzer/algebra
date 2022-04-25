@@ -175,7 +175,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     return source
 
 
-def traversal(reference, observed, root, atomics=False):
+def traversal(root, atomics=False):
     def traverse(node, path):
         if not node.edges:
             yield path
