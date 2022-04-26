@@ -1,7 +1,7 @@
 from itertools import product
 import sys
 from algebra.lcs.wupp import edit, lcs_graph, traversal, to_dot
-from algebra.relations import Relation, disjoint_variants, ops_set
+from algebra.relations import disjoint_variants, ops_set
 from algebra.utils import random_sequence
 
 
@@ -41,9 +41,9 @@ def compare(reference, lhs, rhs):
 
 def main():
     if len(sys.argv) < 4:
-        reference = random_sequence(15)
-        lhs = random_sequence(15)
-        rhs = random_sequence(15)
+        reference = random_sequence(5, weights=[2, 2, 1, 1])
+        lhs = random_sequence(5, weights=[1, 2, 2, 1])
+        rhs = random_sequence(5, weights=[2, 1, 1, 2])
     else:
         reference = sys.argv[1]
         lhs = sys.argv[2]
