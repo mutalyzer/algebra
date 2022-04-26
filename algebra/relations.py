@@ -14,10 +14,10 @@ class Relation(Enum):
 
 def disjoint_variants(lhs, rhs):
     if lhs.start < rhs.end and rhs.start < lhs.end and lhs.start < lhs.end and rhs.start < rhs.end:
-        print("deletion overlap:", lhs, rhs)
         return False
-    print(lhs, rhs)
-    return lhs.start != rhs.start or set(lhs.sequence).isdisjoint(set(rhs.sequence))
+    if lhs.start == rhs.end or lhs.end == rhs.start:
+        return set(lhs.sequence).isdisjoint(set(rhs.sequence))
+    return True
 
 
 def ops_set(edges):
