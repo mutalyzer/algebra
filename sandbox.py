@@ -1,42 +1,30 @@
 import sys
-from algebra.lcs.efficient import edit as edit_old, build, traversal as traversal_old
-from algebra.lcs.wupp import edit as edit_new, lcs_graph, traversal as traversal_new
+from algebra.lcs.wupp import edit, lcs_graph, traversal
 from algebra.relations import disjoint_variants, ops_set
-from algebra.variants.variant import Variant, to_hgvs
+from algebra.utils import random_sequence
 
 
 def main():
-    if len(sys.argv) < 3:
-        reference = "CATATATCG"
-        observed = "CTTATAGCAT"
+    if len(sys.argv) < 4:
+        reference = random_sequence(15)
+        lhs = random_sequence(15)
+        rhs = random_sequence(15)
     else:
         reference = sys.argv[1]
-        observed = sys.argv[2]
+        lhs = sys.argv[2]
+        rhs = sys.argv[3]
 
-    distance_old, lcs_nodes_old = edit_old(reference, observed)
-    ops_old, graph_old = build(lcs_nodes_old, reference, observed)
+    print(reference, lhs, rhs)
 
-    hgvs = set()
-    for op in ops_old:
-        if op[1] == "ins":
-            variant = Variant(op[0], op[0], op[2])
-        else:
-            variant = Variant(op[0] - 1, op[0])
-        hgvs.add(variant.to_hgvs())
+    lhs_distance, lhs_lcs_nodes = edit(reference, lhs)
+    rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
 
-    print(sorted(hgvs))
-    print(len(hgvs))
+    lhs_root, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
+    rhs_root, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    distance_new, lcs_nodes_new = edit_new(reference, observed)
-    graph_new, edges = lcs_graph(reference, observed, lcs_nodes_new)
-    ops_new = ops_set(edges)
+    print({var.to_hgvs(reference) for var in ops_set(lhs_edges)})
+    print({var.to_hgvs(reference) for var in ops_set(rhs_edges)})
 
-    print(f"ops new ({len(ops_new)})", ops_new)
-    print(f"edges ({len(edges)})", edges)
-    for i in range(len(edges)):
-        for j in range(i, len(edges)):
-            if not disjoint_variants(edges[i], edges[j]):
-                print(edges[i].to_hgvs(reference), edges[j].to_hgvs(reference))
 
 
 if __name__ == "__main__":
