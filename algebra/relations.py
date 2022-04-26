@@ -112,8 +112,8 @@ def compare(reference, lhs, rhs):
     if rhs_distance - lhs_distance == distance:
         return Relation.IS_CONTAINED
 
-    _, lhs_edges = lcs_graph(reference, observed, lhs_lcs_nodes)
-    _, rhs_edges = lcs_graph(reference, observed, rhs_lcs_nodes)
+    _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
+    _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
     lhs_ops = ops_set(lhs_edges)
     rhs_ops = ops_set(rhs_edges)
