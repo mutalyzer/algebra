@@ -35,7 +35,8 @@ def main():
     print(edges)
     for i in range(len(edges)):
         for j in range(i, len(edges)):
-            print(edges[i].to_hgvs(reference), edges[j].to_hgvs(reference), disjoint_variants(edges[i], edges[j]))
+            if not disjoint_variants(edges[i], edges[j]):
+                print(edges[i].to_hgvs(reference), edges[j].to_hgvs(reference))
 
 
 if __name__ == "__main__":

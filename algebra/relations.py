@@ -15,7 +15,7 @@ class Relation(Enum):
 def disjoint_variants(lhs, rhs):
     if lhs.start < rhs.end and rhs.start < lhs.end:
         return False
-    return set(lhs.sequence).isdisjoint(set(rhs.sequence))
+    return lhs.start != rhs.start or set(lhs.sequence).isdisjoint(set(rhs.sequence))
 
 
 def ops_set(reference, observed, lcs_nodes):
