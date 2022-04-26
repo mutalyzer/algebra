@@ -2,6 +2,7 @@ from enum import Enum
 from .lcs.onp import edit as edit_distance_only
 from .lcs.wupp import edit, lcs_graph
 from .variants.variant import Variant
+from itertools import product
 
 
 class Relation(Enum):
@@ -62,8 +63,8 @@ def are_disjoint(reference, lhs, rhs):
     if lhs_distance + rhs_distance == distance:
         return True
 
-    _, lhs_edges = lcs_graph(reference, observed, lhs_lcs_nodes)
-    _, rhs_edges = lcs_graph(reference, observed, rhs_lcs_nodes)
+    _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
+    _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
     lhs_ops = ops_set(lhs_edges)
     rhs_ops = ops_set(rhs_edges)
@@ -85,8 +86,8 @@ def have_overlap(reference, lhs, rhs):
             lhs_distance + rhs_distance == distance):
         return False
 
-    _, lhs_edges = lcs_graph(reference, observed, lhs_lcs_nodes)
-    _, rhs_edges = lcs_graph(reference, observed, rhs_lcs_nodes)
+    _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
+    _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
     lhs_ops = ops_set(lhs_edges)
     rhs_ops = ops_set(rhs_edges)
@@ -117,6 +118,16 @@ def compare(reference, lhs, rhs):
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
+    # for x, y in product(lhs_edges, rhs_edges):
+    #     print(x)
+    #     print(y)
+    #     if not disjoint_variants(x, y):
+    #         print("overlap")
+    #         return Relation.OVERLAP
+    #
+    # print("disjoint")
+    # return Relation.DISJOINT
+
     lhs_ops = ops_set(lhs_edges)
     rhs_ops = ops_set(rhs_edges)
 
@@ -124,3 +135,5 @@ def compare(reference, lhs, rhs):
         return Relation.DISJOINT
 
     return Relation.OVERLAP
+
+
