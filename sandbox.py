@@ -8,6 +8,7 @@ from algebra.utils import random_sequence
 def are_disjoint(lhs, rhs):
     for lhs_variant, rhs_variant in product(lhs, rhs):
         if not disjoint_variants(lhs_variant, rhs_variant):
+            print(lhs_variant.to_hgvs(), rhs_variant.to_hgvs())
             return False
     return True
 
@@ -22,7 +23,7 @@ def main():
         lhs = sys.argv[2]
         rhs = sys.argv[3]
 
-    print(reference, lhs, rhs)
+    print(f'"{reference}" "{lhs}" "{rhs}"')
 
     lhs_distance, lhs_lcs_nodes = edit(reference, lhs)
     rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
