@@ -1,6 +1,6 @@
+import pytest
 from algebra.variants.parser import Parser
 from algebra.variants.variant import Variant
-import pytest
 
 
 @pytest.mark.parametrize("expression, variants", [

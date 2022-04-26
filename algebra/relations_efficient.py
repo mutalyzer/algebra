@@ -1,6 +1,6 @@
 from .lcs.efficient import edit, build
 from .lcs.onp import edit as edit_distance_only
-from .relations import Relation, are_equivalent, contains, is_contained
+from .relations import Relation
 
 
 def are_disjoint(reference, lhs, rhs):

@@ -1,7 +1,7 @@
 from enum import Enum
-from .variants.variant import Variant
-from .lcs.wupp import edit, lcs_graph
 from .lcs.onp import edit as edit_distance_only
+from .lcs.wupp import edit, lcs_graph
+from .variants.variant import Variant
 
 
 class Relation(Enum):
@@ -10,6 +10,12 @@ class Relation(Enum):
     IS_CONTAINED = "is_contained"
     OVERLAP = "overlap"
     DISJOINT = "disjoint"
+
+
+def disjoint_variants(lhs, rhs):
+    if lhs.start < rhs.end and rhs.start < lhs.end:
+        return False
+    return set(lhs.sequence).isdisjoint(set(rhs.sequence))
 
 
 def ops_set(reference, observed, lcs_nodes):
@@ -66,8 +72,8 @@ def are_disjoint(reference, lhs, rhs):
 
 
 def have_overlap(reference, lhs, rhs):
-    lhs_distance, lhs_lcs = edit(reference, lhs)
-    rhs_distance, rhs_lcs = edit(reference, rhs)
+    lhs_distance, lhs_lcs_nodes = edit(reference, lhs)
+    rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
     if (lhs == rhs or

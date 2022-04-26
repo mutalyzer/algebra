@@ -1,5 +1,5 @@
-from algebra.variants.variant import Variant, patch, to_hgvs
 import pytest
+from algebra.variants.variant import Variant, patch, to_hgvs
 
 
 @pytest.mark.parametrize("args, expected", [
