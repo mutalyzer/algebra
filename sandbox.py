@@ -1,7 +1,15 @@
+from itertools import product
 import sys
-from algebra.lcs.wupp import edit, lcs_graph, traversal
+from algebra.lcs.wupp import edit, lcs_graph, traversal, to_dot
 from algebra.relations import disjoint_variants, ops_set
 from algebra.utils import random_sequence
+
+
+def are_disjoint(lhs, rhs):
+    for lhs_variant, rhs_variant in product(lhs, rhs):
+        if not disjoint_variants(lhs_variant, rhs_variant):
+            return False
+    return True
 
 
 def main():
@@ -22,9 +30,20 @@ def main():
     lhs_root, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     rhs_root, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    print({var.to_hgvs(reference) for var in ops_set(lhs_edges)})
-    print({var.to_hgvs(reference) for var in ops_set(rhs_edges)})
+    print(to_dot(reference, lhs_root))
+    print(to_dot(reference, rhs_root))
 
+    print(sorted([variant.to_hgvs(reference) for variant in lhs_edges]))
+    print(sorted([variant.to_hgvs(reference) for variant in rhs_edges]))
+
+    lhs_ops = ops_set(lhs_edges)
+    rhs_ops = ops_set(rhs_edges)
+
+    print(sorted({variant.to_hgvs(reference) for variant in lhs_ops}))
+    print(sorted({variant.to_hgvs(reference) for variant in rhs_ops}))
+
+    print(lhs_ops.isdisjoint(rhs_ops))
+    print(are_disjoint(lhs_edges, rhs_edges))
 
 
 if __name__ == "__main__":
