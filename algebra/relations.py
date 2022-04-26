@@ -18,15 +18,13 @@ def disjoint_variants(lhs, rhs):
     return lhs.start != rhs.start or set(lhs.sequence).isdisjoint(set(rhs.sequence))
 
 
-def ops_set(reference, observed, lcs_nodes):
+def ops_set(edges):
     def explode(variant):
         for pos in range(variant.start, variant.end):
             yield Variant(pos, pos + 1)
         for pos in range(variant.start, variant.end + 1):
             for symbol in variant.sequence:
                 yield Variant(pos, pos, symbol)
-
-    _, edges = lcs_graph(reference, observed, lcs_nodes)
 
     ops = set()
     for edge in edges:
@@ -62,8 +60,11 @@ def are_disjoint(reference, lhs, rhs):
     if lhs_distance + rhs_distance == distance:
         return True
 
-    lhs_ops = ops_set(reference, lhs, lhs_lcs_nodes)
-    rhs_ops = ops_set(reference, rhs, rhs_lcs_nodes)
+    _, lhs_edges = lcs_graph(reference, observed, lhs_lcs_nodes)
+    _, rhs_edges = lcs_graph(reference, observed, rhs_lcs_nodes)
+
+    lhs_ops = ops_set(lhs_edges)
+    rhs_ops = ops_set(rhs_edges)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return True
@@ -82,8 +83,11 @@ def have_overlap(reference, lhs, rhs):
             lhs_distance + rhs_distance == distance):
         return False
 
-    lhs_ops = ops_set(reference, lhs, lhs_lcs_nodes)
-    rhs_ops = ops_set(reference, rhs, rhs_lcs_nodes)
+    _, lhs_edges = lcs_graph(reference, observed, lhs_lcs_nodes)
+    _, rhs_edges = lcs_graph(reference, observed, rhs_lcs_nodes)
+
+    lhs_ops = ops_set(lhs_edges)
+    rhs_ops = ops_set(rhs_edges)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return True
@@ -108,8 +112,11 @@ def compare(reference, lhs, rhs):
     if rhs_distance - lhs_distance == distance:
         return Relation.IS_CONTAINED
 
-    lhs_ops = ops_set(reference, lhs, lhs_lcs_nodes)
-    rhs_ops = ops_set(reference, rhs, rhs_lcs_nodes)
+    _, lhs_edges = lcs_graph(reference, observed, lhs_lcs_nodes)
+    _, rhs_edges = lcs_graph(reference, observed, rhs_lcs_nodes)
+
+    lhs_ops = ops_set(lhs_edges)
+    rhs_ops = ops_set(rhs_edges)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return Relation.DISJOINT

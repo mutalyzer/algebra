@@ -1,7 +1,7 @@
 import sys
 from algebra.lcs.efficient import edit as edit_old, build, traversal as traversal_old
 from algebra.lcs.wupp import edit as edit_new, lcs_graph, traversal as traversal_new
-from algebra.relations import disjoint_variants
+from algebra.relations import disjoint_variants, ops_set
 from algebra.variants.variant import Variant, to_hgvs
 
 
@@ -28,11 +28,11 @@ def main():
     print(len(hgvs))
 
     distance_new, lcs_nodes_new = edit_new(reference, observed)
-    #ops_new = ops_set(reference, observed, lcs_nodes_new)
     graph_new, edges = lcs_graph(reference, observed, lcs_nodes_new)
+    ops_new = ops_set(edges)
 
-    #print(ops_new)
-    print(edges)
+    print(f"ops new ({len(ops_new)})", ops_new)
+    print(f"edges ({len(edges)})", edges)
     for i in range(len(edges)):
         for j in range(i, len(edges)):
             if not disjoint_variants(edges[i], edges[j]):
