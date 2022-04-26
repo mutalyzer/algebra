@@ -1,8 +1,8 @@
 from enum import Enum
+from itertools import product
 from .lcs.onp import edit as edit_distance_only
 from .lcs.wupp import edit, lcs_graph
 from .variants.variant import Variant
-from itertools import product
 
 
 class Relation(Enum):
@@ -135,5 +135,3 @@ def compare(reference, lhs, rhs):
         return Relation.DISJOINT
 
     return Relation.OVERLAP
-
-
