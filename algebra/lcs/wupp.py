@@ -97,13 +97,12 @@ def lcs_graph(reference, observed, lcs_nodes):
     sink = Node(len(reference) + 1, len(observed) + 1)
 
     source = Node(0, 0)
-    edges = []
     if not lcs_nodes or lcs_nodes == [[]]:
         variant = Variant(0, len(reference), observed)
         source.edges = [(sink, [variant])]
-        edges.append(variant)
-        return source, edges
+        return source, [variant]
 
+    edges = []
     for node in lcs_nodes[-1]:
         offset = node.length
         variant = Variant(node.row + offset - 1, len(reference), observed[node.col + offset - 1:])

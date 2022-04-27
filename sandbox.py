@@ -39,14 +39,16 @@ def compare(reference, lhs, rhs):
     print(to_dot(reference, lhs_root))
     print(to_dot(reference, rhs_root))
 
-    print(sorted([variant.to_hgvs(reference) for variant in lhs_edges]))
-    print(sorted([variant.to_hgvs(reference) for variant in rhs_edges]))
-
     lhs_ops = ops_set(lhs_edges)
     rhs_ops = ops_set(rhs_edges)
 
     print(sorted({variant.to_hgvs(reference) for variant in lhs_ops}))
     print(sorted({variant.to_hgvs(reference) for variant in rhs_ops}))
+
+    print("EDGES")
+    print([variant.to_hgvs(reference) for variant in lhs_edges])
+    print([variant.to_hgvs(reference) for variant in rhs_edges])
+    print("-----")
 
     print(lhs_ops.isdisjoint(rhs_ops))
     print(are_disjoint(lhs_edges, rhs_edges))

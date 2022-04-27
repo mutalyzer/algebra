@@ -121,7 +121,7 @@ def patch(reference, variants):
         Returns:
             An observed sequence
     """
-    def slice(reference, variants):
+    def slices(reference, variants):
         start = 0
 
         for variant in sorted(variants):
@@ -131,7 +131,7 @@ def patch(reference, variants):
         if len(reference[start:]) > 0:
             yield reference[start:]
 
-    return "".join(slice(reference, variants))
+    return "".join(slices(reference, variants))
 
 
 def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=True, sort=True):

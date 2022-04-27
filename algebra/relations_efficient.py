@@ -4,20 +4,22 @@ from .relations import Relation
 
 
 def are_disjoint(reference, lhs, rhs):
+    if lhs == rhs:
+        return False
+
     lhs_distance, lhs_lcs = edit(reference, lhs)
     rhs_distance, rhs_lcs = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
-    if (lhs == rhs or
-            lhs_distance - rhs_distance == distance or
+    if (lhs_distance - rhs_distance == distance or
             rhs_distance - lhs_distance == distance):
         return False
 
     if lhs_distance + rhs_distance == distance:
         return True
 
-    lhs_ops, lhs_graph = build(lhs_lcs, reference, lhs)
-    rhs_ops, rhs_graph = build(rhs_lcs, reference, rhs)
+    lhs_ops, _ = build(lhs_lcs, reference, lhs)
+    rhs_ops, _ = build(rhs_lcs, reference, rhs)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return True
@@ -26,18 +28,20 @@ def are_disjoint(reference, lhs, rhs):
 
 
 def have_overlap(reference, lhs, rhs):
+    if lhs == rhs:
+        return False
+
     lhs_distance, lhs_lcs = edit(reference, lhs)
     rhs_distance, rhs_lcs = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
-    if (lhs == rhs or
-            lhs_distance - rhs_distance == distance or
+    if (lhs_distance - rhs_distance == distance or
             rhs_distance - lhs_distance == distance or
             lhs_distance + rhs_distance == distance):
         return False
 
-    lhs_ops, lhs_graph = build(lhs_lcs, reference, lhs)
-    rhs_ops, rhs_graph = build(rhs_lcs, reference, rhs)
+    lhs_ops, _ = build(lhs_lcs, reference, lhs)
+    rhs_ops, _ = build(rhs_lcs, reference, rhs)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return True
@@ -62,8 +66,8 @@ def compare(reference, lhs, rhs):
     if rhs_distance - lhs_distance == distance:
         return Relation.IS_CONTAINED
 
-    lhs_ops, lhs_graph = build(lhs_lcs, reference, lhs)
-    rhs_ops, rhs_graph = build(rhs_lcs, reference, rhs)
+    lhs_ops, _ = build(lhs_lcs, reference, lhs)
+    rhs_ops, _ = build(rhs_lcs, reference, rhs)
 
     if lhs_ops.isdisjoint(rhs_ops):
         return Relation.DISJOINT
