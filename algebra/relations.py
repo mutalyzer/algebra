@@ -118,14 +118,6 @@ def compare(reference, lhs, rhs):
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    # lhs_ops = ops_set(lhs_edges)
-    # rhs_ops = ops_set(rhs_edges)
-    #
-    # if lhs_ops.isdisjoint(rhs_ops):
-    #     return Relation.DISJOINT
-    #
-    # return Relation.OVERLAP
-
     for lhs_edge, rhs_edge in product(lhs_edges, rhs_edges):
         if not disjoint_variants(lhs_edge, rhs_edge):
             return Relation.OVERLAP
