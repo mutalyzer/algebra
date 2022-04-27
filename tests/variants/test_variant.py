@@ -96,6 +96,17 @@ def test_variant_string(variant, string):
     assert str(variant) == string
 
 
+@pytest.mark.parametrize("lhs, rhs, expected", [
+    (Variant(0, 1), Variant(4, 5), True),
+    (Variant(0, 0, "T"), Variant(4, 5, "T"), True),
+    (Variant(0, 0, "T"), Variant(0, 1, "T"), False),
+    (Variant(0, 5), Variant(2, 3), False),
+    (Variant(0, 0, "C"), Variant(0, 1, "T"), True),
+])
+def test_variant_is_disjoint(lhs, rhs, expected):
+    assert lhs.is_disjoint(rhs) == rhs.is_disjoint(lhs) == expected
+
+
 @pytest.mark.parametrize("variant, hgvs", [
     (Variant(0, 0), "="),
     (Variant(5, 5), "="),

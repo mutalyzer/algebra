@@ -2,7 +2,6 @@ from enum import Enum
 from itertools import product
 from .lcs.onp import edit as edit_distance_only
 from .lcs.wupp import edit, lcs_graph
-from .variants.variant import Variant
 
 
 class Relation(Enum):
@@ -11,14 +10,6 @@ class Relation(Enum):
     IS_CONTAINED = "is_contained"
     OVERLAP = "overlap"
     DISJOINT = "disjoint"
-
-
-def disjoint_variants(lhs, rhs):
-    if lhs.start < rhs.end and rhs.start < lhs.end and lhs.start < lhs.end and rhs.start < rhs.end:
-        return False
-    if lhs.start <= rhs.end and rhs.start <= lhs.end:
-        return set(lhs.sequence).isdisjoint(set(rhs.sequence))
-    return True
 
 
 def are_equivalent(reference, lhs, rhs):
@@ -51,8 +42,8 @@ def are_disjoint(reference, lhs, rhs):
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    for lhs_edge, rhs_edge in product(lhs_edges, rhs_edges):
-        if not disjoint_variants(lhs_edge, rhs_edge):
+    for lhs_variant, rhs_variant in product(lhs_edges, rhs_edges):
+        if not lhs_variant.is_disjoint(rhs_variant):
             return False
 
     return True
@@ -72,8 +63,8 @@ def have_overlap(reference, lhs, rhs):
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    for lhs_edge, rhs_edge in product(lhs_edges, rhs_edges):
-        if not disjoint_variants(lhs_edge, rhs_edge):
+    for lhs_variant, rhs_variant in product(lhs_edges, rhs_edges):
+        if not lhs_variant.is_disjoint(rhs_variant):
             return True
 
     return False
@@ -99,8 +90,8 @@ def compare(reference, lhs, rhs):
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    for lhs_edge, rhs_edge in product(lhs_edges, rhs_edges):
-        if not disjoint_variants(lhs_edge, rhs_edge):
+    for lhs_variant, rhs_variant in product(lhs_edges, rhs_edges):
+        if not lhs_variant.is_disjoint(rhs_variant):
             return Relation.OVERLAP
 
     return Relation.DISJOINT

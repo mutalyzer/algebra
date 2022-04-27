@@ -74,6 +74,13 @@ class Variant:
 
             yield variants
 
+    def is_disjoint(self, other):
+        if (self.start < other.end and other.start < self.end and
+                self.start < self.end and other.start < other.end):
+            return False
+        return (self.start > other.end or other.start > self.end or
+                set(self.sequence).isdisjoint(set(other.sequence)))
+
     def to_hgvs(self, reference=None, only_substitutions=True):
         if self.end - self.start == 0:
             if len(self.sequence) == 0:
