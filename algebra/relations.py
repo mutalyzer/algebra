@@ -21,21 +21,6 @@ def disjoint_variants(lhs, rhs):
     return True
 
 
-def ops_set(edges):
-    def explode(variant):
-        for pos in range(variant.start, variant.end):
-            yield Variant(pos, pos + 1)
-        for pos in range(variant.start, variant.end + 1):
-            for symbol in variant.sequence:
-                yield Variant(pos, pos, symbol)
-
-    ops = set()
-    for edge in edges:
-        ops.update(explode(edge))
-
-    return ops
-
-
 def are_equivalent(reference, lhs, rhs):
     return lhs == rhs
 
@@ -66,13 +51,11 @@ def are_disjoint(reference, lhs, rhs):
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    lhs_ops = ops_set(lhs_edges)
-    rhs_ops = ops_set(rhs_edges)
+    for lhs_edge, rhs_edge in product(lhs_edges, rhs_edges):
+        if not disjoint_variants(lhs_edge, rhs_edge):
+            return False
 
-    if lhs_ops.isdisjoint(rhs_ops):
-        return True
-
-    return False
+    return True
 
 
 def have_overlap(reference, lhs, rhs):
@@ -89,11 +72,9 @@ def have_overlap(reference, lhs, rhs):
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
 
-    lhs_ops = ops_set(lhs_edges)
-    rhs_ops = ops_set(rhs_edges)
-
-    if lhs_ops.isdisjoint(rhs_ops):
-        return True
+    for lhs_edge, rhs_edge in product(lhs_edges, rhs_edges):
+        if not disjoint_variants(lhs_edge, rhs_edge):
+            return True
 
     return False
 
