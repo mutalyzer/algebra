@@ -1,15 +1,8 @@
 from itertools import product
 import sys
-from algebra.lcs.wupp import edit, lcs_graph, to_dot
+from algebra.lcs.wupp import edit, lcs_graph
 from algebra.utils import random_sequence
 from algebra.variants.variant import Variant
-
-
-def are_disjoint(lhs, rhs):
-    for lhs_variant, rhs_variant in product(lhs, rhs):
-        if not lhs_variant.is_disjoint(rhs_variant):
-            return False
-    return True
 
 
 def collapse(variants):
@@ -20,9 +13,10 @@ def collapse(variants):
         if variant.start < variant.end and len(variant.sequence) == 0:
             if variant.start <= deletion.end:
                 deletion.end = variant.end
-            elif deletion:
-                collapsed.append(deletion)
-                deletion = Variant(variant.start, variant.start)
+            else:
+                if deletion:
+                    collapsed.append(deletion)
+                deletion = variant
         else:
             if insertion is not None and variant.start >= insertion.start and variant.start < insertion.end:
                 insertion.sequence = "".join(set(insertion.sequence) | set(variant.sequence))
@@ -30,7 +24,7 @@ def collapse(variants):
             else:
                 if insertion:
                     collapsed.append(insertion)
-                insertion = variant
+                insertion = Variant(variant.start, variant.end, "".join(set(variant.sequence)))
     if deletion:
         collapsed.append(deletion)
     if insertion:
@@ -54,63 +48,36 @@ def ops_set(edges):
     return ops
 
 
-def compare(reference, lhs, rhs):
-    print(f'"{reference}" "{lhs}" "{rhs}"')
+def check(reference, observed):
+    _, lcs_nodes = edit(reference, observed)
+    _, edges = lcs_graph(reference, observed, lcs_nodes)
 
-    lhs_distance, lhs_lcs_nodes = edit(reference, lhs)
-    rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
+    print("EDGES:", [variant.to_hgvs(reference) for variant in sorted(edges, key=lambda v: (v.start, v.end, len(v.sequence)))])
 
-    lhs_root, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
-    rhs_root, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
+    collapsed_edges = collapse(edges)
+    print("COLL :", [variant.to_hgvs(reference) for variant in sorted(collapsed_edges, key=lambda v: (v.start, v.end, len(v.sequence)))])
 
-    print(to_dot(reference, lhs_root))
-    print(to_dot(reference, rhs_root))
+    ops = ops_set(edges)
+    collapsed_ops = ops_set(collapsed_edges)
 
-    lhs_ops = ops_set(lhs_edges)
-    rhs_ops = ops_set(rhs_edges)
+    print("OPS  :", [variant.to_hgvs(reference) for variant in sorted(ops, key=lambda v: (v.start, v.end, len(v.sequence)))])
 
-    print(sorted({variant.to_hgvs(reference) for variant in lhs_ops}))
-    print(sorted({variant.to_hgvs(reference) for variant in rhs_ops}))
+    print(ops - collapsed_ops)
+    print(collapsed_ops - ops)
 
-    print("EDGES")
-    print([variant.to_hgvs(reference) for variant in sorted(lhs_edges, key=lambda v: (v.start, v.end))])
-    print([variant.to_hgvs(reference) for variant in sorted(rhs_edges, key=lambda v: (v.start, v.end))])
-    print("-----")
-
-    print("COLLAPSED")
-    print([variant.to_hgvs(reference) for variant in collapse(lhs_edges)])
-    print([variant.to_hgvs(reference) for variant in collapse(rhs_edges)])
-    print("-----")
-
-    lhs_collapsed_ops = ops_set(collapse(lhs_edges))
-    rhs_collapsed_ops = ops_set(collapse(rhs_edges))
-
-    print(rhs_collapsed_ops - rhs_ops)
-    print(rhs_ops - rhs_collapsed_ops)
-
-    assert lhs_collapsed_ops == lhs_ops
-    assert rhs_collapsed_ops == rhs_ops
-
-    print(sorted({variant.to_hgvs(reference) for variant in lhs_collapsed_ops}))
-    print(sorted({variant.to_hgvs(reference) for variant in rhs_collapsed_ops}))
-
-    print(lhs_ops.isdisjoint(rhs_ops))
-    print(are_disjoint(lhs_edges, rhs_edges))
-
-    assert lhs_ops.isdisjoint(rhs_ops) == are_disjoint(lhs_edges, rhs_edges)
+    assert ops == collapsed_ops
 
 
 def main():
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         reference = random_sequence(15)
-        lhs = random_sequence(15)
-        rhs = random_sequence(15)
+        observed = random_sequence(15)
     else:
         reference = sys.argv[1]
-        lhs = sys.argv[2]
-        rhs = sys.argv[3]
+        observed = sys.argv[2]
 
-    compare(reference, lhs, rhs)
+    print(f'"{reference}" "{observed}"')
+    check(reference, observed)
 
 
 if __name__ == "__main__":
