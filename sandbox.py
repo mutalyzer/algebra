@@ -1,15 +1,30 @@
 from itertools import product
 import sys
-from algebra.lcs.wupp import edit, lcs_graph, traversal, to_dot
-from algebra.relations import disjoint_variants, ops_set
+from algebra.lcs.wupp import edit, lcs_graph, to_dot
 from algebra.utils import random_sequence
+from algebra.variants.variant import Variant
 
 
 def are_disjoint(lhs, rhs):
     for lhs_variant, rhs_variant in product(lhs, rhs):
-        if not disjoint_variants(lhs_variant, rhs_variant):
+        if not lhs_variant.is_disjoint(rhs_variant):
             return False
     return True
+
+
+def ops_set(edges):
+    def explode(variant):
+        for pos in range(variant.start, variant.end):
+            yield Variant(pos, pos + 1)
+        for pos in range(variant.start, variant.end + 1):
+            for symbol in variant.sequence:
+                yield Variant(pos, pos, symbol)
+
+    ops = set()
+    for edge in edges:
+        ops.update(explode(edge))
+
+    return ops
 
 
 def compare(reference, lhs, rhs):
