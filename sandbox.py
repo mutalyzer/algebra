@@ -12,6 +12,33 @@ def are_disjoint(lhs, rhs):
     return True
 
 
+def collapse(variants):
+    collapsed = []
+    deletion = Variant(0, 0)
+    insertion = None
+    for variant in sorted(variants, key=lambda v: (v.start, v.end, len(v.sequence))):
+        if variant.start < variant.end and len(variant.sequence) == 0:
+            if variant.start <= deletion.end:
+                deletion.end = variant.end
+            elif deletion:
+                collapsed.append(deletion)
+                deletion = Variant(variant.start, variant.start)
+        else:
+            if insertion is not None and variant.start >= insertion.start and variant.start < insertion.end:
+                insertion.sequence = "".join(set(insertion.sequence) | set(variant.sequence))
+                insertion.end = max(insertion.end, variant.end)
+            else:
+                if insertion:
+                    collapsed.append(insertion)
+                insertion = variant
+    if deletion:
+        collapsed.append(deletion)
+    if insertion:
+        collapsed.append(insertion)
+
+    return collapsed
+
+
 def ops_set(edges):
     def explode(variant):
         for pos in range(variant.start, variant.end):
@@ -46,9 +73,26 @@ def compare(reference, lhs, rhs):
     print(sorted({variant.to_hgvs(reference) for variant in rhs_ops}))
 
     print("EDGES")
-    print([variant.to_hgvs(reference) for variant in lhs_edges])
-    print([variant.to_hgvs(reference) for variant in rhs_edges])
+    print([variant.to_hgvs(reference) for variant in sorted(lhs_edges, key=lambda v: (v.start, v.end))])
+    print([variant.to_hgvs(reference) for variant in sorted(rhs_edges, key=lambda v: (v.start, v.end))])
     print("-----")
+
+    print("COLLAPSED")
+    print([variant.to_hgvs(reference) for variant in collapse(lhs_edges)])
+    print([variant.to_hgvs(reference) for variant in collapse(rhs_edges)])
+    print("-----")
+
+    lhs_collapsed_ops = ops_set(collapse(lhs_edges))
+    rhs_collapsed_ops = ops_set(collapse(rhs_edges))
+
+    print(rhs_collapsed_ops - rhs_ops)
+    print(rhs_ops - rhs_collapsed_ops)
+
+    assert lhs_collapsed_ops == lhs_ops
+    assert rhs_collapsed_ops == rhs_ops
+
+    print(sorted({variant.to_hgvs(reference) for variant in lhs_collapsed_ops}))
+    print(sorted({variant.to_hgvs(reference) for variant in rhs_collapsed_ops}))
 
     print(lhs_ops.isdisjoint(rhs_ops))
     print(are_disjoint(lhs_edges, rhs_edges))
