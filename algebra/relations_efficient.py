@@ -11,12 +11,12 @@ def are_disjoint(reference, lhs, rhs):
     rhs_distance, rhs_lcs = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
+    if lhs_distance + rhs_distance == distance:
+        return True
+
     if (lhs_distance - rhs_distance == distance or
             rhs_distance - lhs_distance == distance):
         return False
-
-    if lhs_distance + rhs_distance == distance:
-        return True
 
     lhs_ops, _ = build(lhs_lcs, reference, lhs)
     rhs_ops, _ = build(rhs_lcs, reference, rhs)
@@ -35,9 +35,9 @@ def have_overlap(reference, lhs, rhs):
     rhs_distance, rhs_lcs = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
-    if (lhs_distance - rhs_distance == distance or
-            rhs_distance - lhs_distance == distance or
-            lhs_distance + rhs_distance == distance):
+    if (lhs_distance + rhs_distance == distance or
+            lhs_distance - rhs_distance == distance or
+            rhs_distance - lhs_distance == distance):
         return False
 
     lhs_ops, _ = build(lhs_lcs, reference, lhs)

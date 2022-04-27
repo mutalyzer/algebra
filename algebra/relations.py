@@ -17,13 +17,31 @@ def are_equivalent(_reference, lhs, rhs):
 
 
 def contains(reference, lhs, rhs):
-    return (lhs != rhs and
-            edit_distance_only(reference, lhs) - edit_distance_only(reference, rhs) == edit_distance_only(lhs, rhs))
+    if lhs == rhs:
+        return False
+
+    lhs_distance = edit_distance_only(reference, lhs)
+    rhs_distance = edit_distance_only(reference, rhs)
+    distance = edit_distance_only(lhs, rhs)
+
+    if lhs_distance + rhs_distance == distance:
+        return False
+
+    return lhs_distance - rhs_distance == distance
 
 
 def is_contained(reference, lhs, rhs):
-    return (lhs != rhs and
-            edit_distance_only(reference, rhs) - edit_distance_only(reference, lhs) == edit_distance_only(lhs, rhs))
+    if lhs == rhs:
+        return False
+
+    lhs_distance = edit_distance_only(reference, lhs)
+    rhs_distance = edit_distance_only(reference, rhs)
+    distance = edit_distance_only(lhs, rhs)
+
+    if lhs_distance + rhs_distance == distance:
+        return False
+
+    return rhs_distance - lhs_distance == distance
 
 
 def are_disjoint(reference, lhs, rhs):
@@ -34,12 +52,12 @@ def are_disjoint(reference, lhs, rhs):
     rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
+    if lhs_distance + rhs_distance == distance:
+        return True
+
     if (lhs_distance - rhs_distance == distance or
             rhs_distance - lhs_distance == distance):
         return False
-
-    if lhs_distance + rhs_distance == distance:
-        return True
 
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
     _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
@@ -59,9 +77,9 @@ def have_overlap(reference, lhs, rhs):
     rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
-    if (lhs_distance - rhs_distance == distance or
-            rhs_distance - lhs_distance == distance or
-            lhs_distance + rhs_distance == distance):
+    if (lhs_distance + rhs_distance == distance or
+            lhs_distance - rhs_distance == distance or
+            rhs_distance - lhs_distance == distance):
         return False
 
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
