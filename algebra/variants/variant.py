@@ -46,15 +46,12 @@ class Variant:
         return f"[{self.start},{self.end}/{self.sequence}]"
 
     def atomics(self):
-        n = len(self)
-        k = len(self.sequence)
-
-        for combo in combinations(range(n), k):
+        for combo in combinations(range(len(self)), len(self.sequence)):
             variants = []
             c = 0
             pos = self.start
             variant = Variant(pos, pos)
-            for i in range(k):
+            for i in range(len(self.sequence)):
                 if combo[i] > c:
                     if variant:
                         variants.append(variant)
