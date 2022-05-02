@@ -18,6 +18,7 @@ from algebra.variants.variant import Variant
     ("5>G", [Variant(4, 5, "G")]),
     ("[3del]", [Variant(2, 3)]),
     ("[3del;3_4insT]", [Variant(2, 3), Variant(3, 3, "T")]),
+    ("3_4A[4]", [Variant(2, 4, "AAAA")]),
 ])
 def test_hgvs_parser(expression, variants):
     assert Parser(expression).hgvs() == variants
@@ -35,7 +36,12 @@ def test_hgvs_parser(expression, variants):
     ("3insA", ValueError, "invalid inserted range at 4"),
     ("3_5insA", ValueError, "invalid inserted range at 6"),
     ("3_4ins", ValueError, "unexpected end of expression"),
-    ("10_12", ValueError, "invalid variant at 5"),
+    ("10_12", ValueError, "unexpected end of expression"),
+    ("10_12[", ValueError, "expected nucleotide at 5"),
+    ("10_12A", ValueError, "expected '[' at 6"),
+    ("10_12A[", ValueError, "unexpected end of expression"),
+    ("10_12A[A", ValueError, "expected digit at 7"),
+    ("10_12A[1", ValueError, "expected ']' at 8"),
     ("123", ValueError, "expected '>' at 3"),
     ("=3", ValueError, "expected end of expression at 1"),
     ("3=", ValueError, "expected '>' at 1"),

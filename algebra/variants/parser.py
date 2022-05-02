@@ -83,7 +83,13 @@ class Parser:
             return Variant(start + 1, start + 1, self._match_sequence())
 
         if end is not None:
-            raise ValueError(f"invalid variant at {self.pos}")
+            repeat_unit = self._match_sequence()
+            if not self._match("["):
+                raise ValueError(f"expected '[' at {self.pos}")
+            repeat_number = self._match_number()
+            if not self._match("]"):
+                raise ValueError(f"expected ']' at {self.pos}")
+            return Variant(start, end, repeat_number * repeat_unit)
 
         try:
             self._match_nucleotide()
