@@ -2,7 +2,7 @@ import sys
 from algebra.lcs.wupp import edit, lcs_graph, to_dot, traversal
 from algebra.utils import random_sequence, random_variants
 from algebra.variants.parser import Parser
-from algebra.variants.variant import patch, to_hgvs
+from algebra.variants.variant import Variant, patch, to_hgvs
 
 
 def reduce(reference, root):
@@ -25,10 +25,15 @@ def reduce(reference, root):
 
             length = len(out_variant[0]) if len(out_variant) else 0
             if length in successors:
-                if succ in [x for x, _ in successors[length]]:
-                    # repeat
-                    pass
-                else:
+                found = False
+                for idx, value in enumerate(successors[length]):
+                    if succ == value[0]:
+                        variant = Variant(min(value[1][0].start, out_variant[0].start), max(value[1][0].end, out_variant[0].end), value[1][0].sequence)
+                        successors[length][idx] = (succ, [variant])
+                        print("repeat", variant)
+                        found = True
+                        break
+                if not found:
                     successors[length].append((succ, out_variant))
             else:
                 successors[length] = [(succ, out_variant)]
