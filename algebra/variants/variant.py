@@ -11,7 +11,7 @@ class Variant:
             raise TypeError("sequence must be a string")
 
         if start < 0:
-            raise ValueError("start must be greater than 0")
+            raise ValueError("start must be greater or equal to 0")
         if start > end:
             raise ValueError("start must not be after end")
 

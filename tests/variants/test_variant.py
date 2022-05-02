@@ -15,7 +15,7 @@ def test_variant(args, expected):
     ((1, "2", 3), TypeError, "end must be an integer"),
     ((1, 2, 3), TypeError, "sequence must be a string"),
     ((2, 1, "A"), ValueError, "start must not be after end"),
-    ((-1, 0), ValueError, "start must be greater than 0"),
+    ((-1, 0), ValueError, "start must be greater or equal to 0"),
 ])
 def test_variant_fail(args, exception, message):
     with pytest.raises(exception) as exc:
