@@ -209,14 +209,14 @@ def traversal(root, atomics=False):
 def to_dot(reference, root):
     def nodes_and_edges():
         queue = [root]
-        visited = [root]
+        visited = {root}
         while queue:
             node = queue.pop(0)
             yield f'"{node.row}_{node.col}" [label="{node.row, node.col}"];'
             for succ, variant in node.edges:
                 yield f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}" [label="{to_hgvs(variant, reference, sequence_prefix=False)}"];'
                 if succ not in visited:
-                    visited.append(succ)
+                    visited.add(succ)
                     queue.append(succ)
 
     return "digraph {\n    " + "\n    ".join(nodes_and_edges()) + "\n}"
