@@ -15,7 +15,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "algebra=algebra.cli:main",
+            "algebra=algebra.__main__:main",
         ],
     },
 )

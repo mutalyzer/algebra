@@ -1,9 +1,9 @@
 import argparse
-from .lcs.all_lcs import edit, lcs_graph, traversal, to_dot
-from .relations import compare
-from .utils import random_sequence, random_variants
-from .variants.parser import Parser
-from .variants.variant import patch, to_hgvs
+from algebra.lcs.all_lcs import edit, lcs_graph, traversal, to_dot
+from algebra.relations import compare
+from algebra.utils import random_sequence, random_variants
+from algebra.variants.parser import Parser
+from algebra.variants.variant import patch, to_hgvs
 
 
 def main():
