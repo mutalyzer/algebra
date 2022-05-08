@@ -51,7 +51,7 @@ def edit(reference, observed):
     Returns
     -------
     int
-        The simple edit distance
+        The simple edit distance.
     list
         A collection of LCS nodes in order to construct the LCS graph.
 
@@ -144,7 +144,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     Returns
     -------
     `_Node` (opaque data type)
-        The root of the LCS graph
+        The root of the LCS graph.
     list
         A list of edges (variants) in the LCS graph.
 
