@@ -17,7 +17,7 @@ Use pip to install from the Python Package Index (PyPI).
 python -m pip install mutalyzer-algebra
 ```
 
-Or directly from github for development (after cloning in an active
+Or directly from GitHub for development (after cloning in an active
 virtual environment).
 
 ```bash
