@@ -1,3 +1,17 @@
+"""Relation class and functions to compare variants.
+
+Calculate the relation between two variants using the definitions
+from [1]_. Variants are given as observed sequences (alleles), i.e., a
+list of variants applied to some reference sequence. Both variants
+subject to the same reference sequence.
+
+References
+----------
+[1] Jonathan K. Vis, Mark Santcroos, Walter A. Kosters and
+Jeroen F.J. Laros, A Boolean Algebra for Genetic Variants, 2021.
+"""
+
+
 from enum import Enum
 from itertools import product
 from .lcs.all_lcs import edit, lcs_graph
@@ -5,6 +19,7 @@ from .lcs.onp import edit as edit_distance_only
 
 
 class Relation(Enum):
+    """Relation enum."""
     EQUIVALENT = "equivalent"
     CONTAINS = "contains"
     IS_CONTAINED = "is_contained"
@@ -13,10 +28,12 @@ class Relation(Enum):
 
 
 def are_equivalent(_reference, lhs, rhs):
+    """Check if two variants are equivalent."""
     return lhs == rhs
 
 
 def contains(reference, lhs, rhs):
+    """Check if `lhs` contains `rhs`."""
     if lhs == rhs:
         return False
 
@@ -31,6 +48,7 @@ def contains(reference, lhs, rhs):
 
 
 def is_contained(reference, lhs, rhs):
+    """Check if `lhs` is contained in `rhs`."""
     if lhs == rhs:
         return False
 
@@ -45,6 +63,7 @@ def is_contained(reference, lhs, rhs):
 
 
 def are_disjoint(reference, lhs, rhs):
+    """Check if two variants are disjoint."""
     if lhs == rhs:
         return False
 
@@ -69,6 +88,7 @@ def are_disjoint(reference, lhs, rhs):
 
 
 def have_overlap(reference, lhs, rhs):
+    """Check if two variants overlap."""
     if lhs == rhs:
         return False
 
@@ -90,6 +110,23 @@ def have_overlap(reference, lhs, rhs):
 
 
 def compare(reference, lhs, rhs):
+    """Compare two variants.
+
+    Parameters
+    ----------
+    reference : str
+        The reference sequence.
+    lhs : str
+        The variant (as observed sequence) on the left-hand side.
+    rhs : str
+        The variant on the right-hand side.
+
+    Returns
+    -------
+    `Relation`
+        The relation between the two variants.
+    """
+
     if lhs == rhs:
         return Relation.EQUIVALENT
 

@@ -1,7 +1,30 @@
+"""An efficient method of calculating all Longest Common Substring (LCS)
+alignments. This method builds upon [1]_ by creating a compressed LCS
+graph in two phases.
+
+Phase 1 (`edit`) calculates the simple edit distance and a collection of
+LCS nodes.
+Phase 2 (`lcs_graph`) creates a directed acyclic (multi) graph of the LCS
+nodes. Every path in this graph is a unique and distinct embedding of an
+LCS.
+
+See Also
+--------
+algebra.lcs.onp : Calculates only the simple edit distance.
+
+References
+----------
+[1] Sun Wu, Udi Manber, Gene Myers, Webb Miller, An O(NP) sequence
+comparison algorithm, Information Processing Letters, 35(6), 1990:317-323.
+"""
+
+
 from ..variants.variant import Variant, to_hgvs
 
 
 class _Node:
+    """Node class for internal use only."""
+
     def __init__(self, row, col, length=0):
         self.row = row
         self.col = col
@@ -22,6 +45,21 @@ class _Node:
 
 
 def edit(reference, observed):
+    """Calculate the simple edit distance between two strings and
+    construct a collection of LCS nodes.
+
+    Returns
+    -------
+    int
+        The simple edit distance
+    list
+        A collection of LCS nodes in order to construct the LCS graph.
+
+    See Also
+    --------
+    `lcs_graph` : Constructs the LCS graph from LCS nodes.
+    """
+
     def expand(idx):
         nonlocal max_lcs_pos
         start = diagonals[offset + idx]
@@ -100,6 +138,22 @@ def edit(reference, observed):
 
 
 def lcs_graph(reference, observed, lcs_nodes):
+    """Construct the compressed LCS graph. `lcs_nodes` is destroyed during
+    this process.
+
+    Returns
+    -------
+    `_Node` (opaque data type)
+        The root of the LCS graph
+    list
+        A list of edges (variants) in the LCS graph.
+
+    See Also
+    --------
+    `edit` : Calculates the LCS nodes.
+    `traversal` : Traverses the LS graph.
+    """
+
     sink = _Node(len(reference) + 1, len(observed) + 1)
 
     source = _Node(0, 0)
@@ -197,6 +251,24 @@ def lcs_graph(reference, observed, lcs_nodes):
 
 
 def traversal(root, atomics=False):
+    """Traverse the LCS graph.
+
+    Parameters
+    ----------
+    atomics : bool, optional
+        If set to `True` the variants are represented using separate
+        deletions and insertions.
+
+    Yields
+    ------
+    list
+        A list of variants representing an LCS alignment.
+
+    See Also
+    --------
+    `lcs_graph` : Constructs the LCS graph.
+    """
+
     def traverse(node, path):
         if not node.edges:
             yield path
@@ -213,7 +285,10 @@ def traversal(root, atomics=False):
 
 
 def to_dot(reference, root):
+    """The LCS graph in Graphviz DOT format."""
+
     def nodes_and_edges():
+        # breadth-first traversal
         queue = [root]
         visited = {root}
         while queue:

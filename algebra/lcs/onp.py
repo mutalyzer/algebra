@@ -1,7 +1,24 @@
+"""Calculate the simple edit distance.
+
+Calculates the simple edit distance by calculating a Longest Common
+Subsequence alignment [1]_. The implementation is adapted from [2]_. This
+method is useful when only the simple edit distance is needed (not an or
+all alignments).
+
+See Also
+--------
+algebra.lcs.all_lcs : Calculates all LCS alignments.
+
+References
+----------
+[1] Sun Wu, Udi Manber, Gene Myers, Webb Miller, An O(NP) sequence
+comparison algorithm, Information Processing Letters, 35(6), 1990:317-323.
+[2] https://github.com/cubicdaiya/onp/blob/master/python/onp.py.
+"""
+
+
 def edit(a, b):
-    """Longest Common Subsequence (LCS) edit distance
-    Based on 'An O(NP) Sequence Comparison Algorithm' by Sun Wu, Udi Manber and Gene Myers
-    """
+    """Calculate the simple edit distance between two strings."""
     def snake(m, n, k, pp, ppp):
         y = max(pp, ppp)
         x = y - k

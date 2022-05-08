@@ -1,8 +1,35 @@
+"""A hand-crafted recursive descent parser for (simple) genomic variants.
+
+Parses (simple) genomic variants in HGVS [1]_ or SPDI [2]_ format.
+
+See Also
+--------
+algebra.variants.variant : The variant class.
+
+References
+----------
+[1] https://varnomen.hgvs.org/.
+[2] Holmes JB, Moyer E, Phan L, Maglott D, Kattman B. SPDI: data model
+for variants and applications at NCBI. Bioinformatics.
+2020 Mar 1;36(6):1902-1907.
+"""
+
+
 from .variant import Variant
 
 
 class Parser:
+    """Parser class."""
+
     def __init__(self, expression):
+        """Create a parser for an `expression`.
+
+        Raises
+        ------
+        TypeError
+            If `expression` is not a string.
+        """
+
         if not isinstance(expression, str):
             raise TypeError("expression must be a string")
 
@@ -100,6 +127,23 @@ class Parser:
         return Variant(start, start + 1, self._match_nucleotide())
 
     def hgvs(self):
+        """Parse an expression as HGVS.
+
+        Only simple (deletions, insertions, substitutions,
+        deletion/insertions and repeats) are supported in a genomic
+        coordinate system.
+
+        Raises
+        ------
+        ValueError
+            If a syntax (or a simple sematic) error occurs.
+
+        Returns
+        -------
+        list
+            A list of variants (allele).
+        """
+
         if self._match("="):
             if not self.pos == len(self.expression):
                 raise ValueError(f"expected end of expression at {self.pos}")
@@ -119,6 +163,19 @@ class Parser:
         return variants
 
     def spdi(self):
+        """Parse an expression as SPDI.
+
+        Raises
+        ------
+        ValueError
+            If a syntax error occurs.
+
+        Returns
+        -------
+        `Variant`
+            The variant.
+        """
+
         self._match_sequence()
         if not self._match(":"):
             raise ValueError(f"expected ':' at {self.pos}")

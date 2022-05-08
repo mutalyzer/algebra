@@ -1,3 +1,6 @@
+"""Utility functions for random sequences and variants."""
+
+
 import random
 from .variants.variant import Variant
 
@@ -6,10 +9,54 @@ DNA_NUCLEOTIDES = "ACGT"
 
 
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):
+    """Create a random sequence.
+
+    Parameters
+    ----------
+    max_length : int
+        The maximal length of the sequence.
+    min_length : int, optional
+        The minimal length of the sequence (default: 0).
+
+    Other Parameters
+    ----------------
+    alphabet : str or iterable, optional
+        The symbols in the alphabet (default: `ACGT`).
+    weights : list or None, optional
+        A list of weights giving the relative frequency of the symbols.
+
+    Returns:
+        A random sequence.
+    """
+
     return "".join(random.choices(alphabet, weights=weights, k=random.randint(min_length, max_length)))
 
 
 def random_variants(reference, p=None, mu_deletion=1, mu_insertion=1):
+    """Create a random list of non-overlapping variants (allele).
+
+    Parameters
+    ----------
+    reference : str
+        The reference sequence.
+    p : float, optional
+        The change per symbol of a variant (default: `1 / len(reference`).
+
+    Other Parameters
+    ----------------
+    mu_deletion : float, optional
+        The exponential mean length of a deletion (default: 1). Should be
+        non-zero.
+    mu_insertion : float, optional
+        The exponential mean length of an insertion (default: 1). Should
+        be non-zero.
+
+    Returns
+    -------
+    list
+        A list of variants.
+    """
+
     if p is None:
         p = 1 / len(reference)
 

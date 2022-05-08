@@ -1,8 +1,44 @@
+"""Variant class and related functions.
+
+Variants are represented as deletion/insertions. The deleted part is
+given as a zero-based half-open interval with regard to some reference
+sequence (not stored together with a variant). The insertion is a
+sequence (string) of inserted symbols.
+
+See Also
+--------
+algebra.variants.parser : To construct variants from HGVS and SPDI
+representations.
+"""
+
+
 from itertools import combinations
 
 
 class Variant:
+    """Variant class for deletion/insertions."""
+
     def __init__(self, start, end, sequence=""):
+        """Create a variant.
+
+        Parameters
+        ----------
+        start : int
+            The start position (included) of the deleted part (zero-based).
+        end : int
+            The end position (not included) of the deleted part.
+        sequence : str, optional
+            The inserted sequence.
+
+        Raises
+        ------
+        TypeError
+            If the parameters are not of the correct type.
+        ValueError
+            If the interval [`start`, `end`) is invalid, e.g.,
+            `start` > `end`.
+        """
+
         if not isinstance(start, int):
             raise TypeError("start must be an integer")
         if not isinstance(end, int):
@@ -43,9 +79,20 @@ class Variant:
         return self.start < other.start or self.end < other.end
 
     def __repr__(self):
-        return f"[{self.start},{self.end}/{self.sequence}]"
+        return f"<{self.start},{self.end}/{self.sequence}>"
 
     def atomics(self):
+        """Generate all atomic representations.
+
+        Generates all alternative representations for a deletion/insertion
+        by using separate deletions and insertions.
+
+        Yields
+        ------
+        list
+            A list of variants representing the original variant.
+        """
+
         for combo in combinations(range(len(self)), len(self.sequence)):
             variants = []
             c = 0
@@ -72,6 +119,8 @@ class Variant:
             yield variants
 
     def is_disjoint(self, other):
+        """Check if two variants are disjoint, i.e., no common deletion or
+        insertion."""
         if (self.start < other.end and other.start < self.end and
                 self.start < self.end and other.start < other.end):
             return False
@@ -79,6 +128,23 @@ class Variant:
                 set(self.sequence).isdisjoint(set(other.sequence)))
 
     def to_hgvs(self, reference=None, only_substitutions=True):
+        """The variant representation in HGVS [1]_.
+
+        Parameters
+        ----------
+        reference : str or None, optional
+            The reference sequence for the variant. Substitutions (3A>T)
+            include the deleted nucleotide in HGVS. If omitted deleted
+            symbols will not be filled in.
+        only_substitutions : bool, optional
+            By default only includes deleted nucleotides for HGVS
+            substitutions. If set to `False` all deleted symbols will be
+            filled in.
+
+        References
+        ----------
+        [1] https://varnomen.hgvs.org/.
+        """
         if self.end - self.start == 0:
             if len(self.sequence) == 0:
                 return "="
@@ -104,20 +170,40 @@ class Variant:
         return f"{self.start + 1}_{self.end}del{deleted}ins{self.sequence}"
 
     def to_spdi(self, reference):
+        """The variant representation in SPDI [1]_.
+
+        References
+        ----------
+        [1] Holmes JB, Moyer E, Phan L, Maglott D, Kattman B.
+        SPDI: data model for variants and applications at NCBI.
+        Bioinformatics. 2020 Mar 1;36(6):1902-1907.
+        """
         return (f"{reference}:{self.start}:{self.end - self.start}:"
                 f"{self.sequence}")
 
 
 def patch(reference, variants):
-    """Apply a list of variants to a reference sequence
+    """Apply a list of variants to a reference sequence to obtain an
+    observed sequence.
 
-        Parameters:
-            reference (str):
-            variants (list):
+    Parameters
+    ----------
+    reference : str
+        The reference sequence to which the `variants` are applied.
+    variants : list
+        A list of variants.
 
-        Returns:
-            An observed sequence
+    Raises
+    ------
+    ValueError
+        If variants are overlapping.
+
+    Returns
+    -------
+    str
+        The observed sequence.
     """
+
     def slices(reference, variants):
         start = 0
 
@@ -132,8 +218,35 @@ def patch(reference, variants):
 
 
 def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=True, sort=True):
+    """An allele representation of a list of variants in HGVS [1]_.
+
+    Parameters
+    ----------
+    variants : list
+        A list of variants.
+    reference : str or None, optional
+        The reference sequence.
+
+    Other Parameters
+    ----------------
+    only_substitutions : bool, optional
+        Deleted symbols are filled in only for HGVS substitutions by default.
+    sequence_prefix : bool, optional
+        Prefix the allele description with the reference sequence
+        (not RefSeq ID).
+    sort : bool, optional
+        The `variants` are sorted by default. Disable if already sorted.
+
+    Returns
+    -------
+    str
+        The allele representation in HGVS.
+
+    References
+    ----------
+    [1] https://varnomen.hgvs.org/recommendations/DNA/variant/alleles/.
     """
-    """
+
     prefix = ""
     if reference is not None and sequence_prefix:
         prefix = f"{reference}:g."

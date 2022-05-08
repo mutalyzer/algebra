@@ -1,3 +1,10 @@
+"""Entry point for the Algebra package.
+
+Provides a command-line interface to interact with variants and determine
+their relations.
+"""
+
+
 import argparse
 from algebra.lcs.all_lcs import edit, lcs_graph, traversal, to_dot
 from algebra.relations import compare
@@ -7,6 +14,7 @@ from algebra.variants.variant import patch, to_hgvs
 
 
 def main():
+    """Command-line interface."""
     parser = argparse.ArgumentParser(description="A Boolean Algebra for Genetic Variants")
     parser.add_argument("--random-min", type=int, help="minimum length for random sequences")
     parser.add_argument("--random-max", type=int, default=1_000, help="maximum length for random sequences")
@@ -74,9 +82,11 @@ def main():
         if args.lhs:
             lhs = args.lhs
         elif args.lhs_hgvs:
-            lhs = Parser(args.lhs_hgvs).hgvs()
+            variants = Parser(args.lhs_hgvs).hgvs()
+            lhs = patch(reference, variants)
         elif args.lhs_spdi:
-            lhs = Parser(args.lhs_spdi).spdi()
+            variants = Parser(args.lhs_spdi).spdi()
+            lhs = patch(reference, variants)
         elif args.lhs_file:
             with open(args.lhs_file, encoding="utf-8") as file:
                 lhs = file.read().strip()
@@ -88,9 +98,11 @@ def main():
         if args.rhs:
             rhs = args.rhs
         elif args.rhs_hgvs:
-            rhs = Parser(args.rhs_hgvs).hgvs()
+            variants = Parser(args.rhs_hgvs).hgvs()
+            rhs = patch(reference, variants)
         elif args.rhs_spdi:
-            rhs = Parser(args.rhs_spdi).spdi()
+            variants = Parser(args.rhs_spdi).spdi()
+            rhs = patch(reference, variants)
         elif args.rhs_file:
             with open(args.rhs_file, encoding="utf-8") as file:
                 rhs = file.read().strip()
