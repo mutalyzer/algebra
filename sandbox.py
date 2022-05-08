@@ -1,5 +1,5 @@
 import sys
-from algebra.lcs.wupp import edit, lcs_graph, to_dot, traversal
+from algebra.lcs.all_lcs import edit, lcs_graph, to_dot, traversal
 from algebra.utils import random_sequence, random_variants
 from algebra.variants.parser import Parser
 from algebra.variants.variant import Variant, patch, to_hgvs
@@ -14,7 +14,7 @@ def reduce(reference, root):
         visited.add(node)
         print("pop", node)
         if not node.edges:
-            #dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference, sequence_prefix=False)}"];\n'
+            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference, sequence_prefix=False)}"];\n'
             continue
 
         successors = {}

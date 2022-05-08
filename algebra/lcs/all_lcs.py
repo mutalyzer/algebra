@@ -1,7 +1,7 @@
 from ..variants.variant import Variant, to_hgvs
 
 
-class Node:
+class _Node:
     def __init__(self, row, col, length=0):
         self.row = row
         self.col = col
@@ -10,6 +10,12 @@ class Node:
         self.edges = []
         self.pre_edges = []
         self.incoming = 0
+
+    def __eq__(self, other):
+        return self.row == other.row and self.col == other.col and self.length == other.length
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def __repr__(self):
         return f"{self.row, self.col, self.length}"
@@ -32,36 +38,36 @@ def edit(reference, observed):
             col = row + idx
             end = max(diagonals[offset + idx - 1], diagonals[offset + idx + 1])
 
-        active = False
+        matching = False
         match_row = 0
         match_col = 0
         for _ in range(start, end):
             if reference[row] == observed[col]:
-                if not active:
+                if not matching:
                     match_row = row
                     match_col = col
-                active = True
-            elif active:
+                matching = True
+            elif matching:
                 lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
                 max_lcs_pos = max(lcs_pos, max_lcs_pos)
-                lcs_nodes[lcs_pos].append(Node(match_row + 1, match_col + 1, row - match_row))
-                active = False
+                lcs_nodes[lcs_pos].append(_Node(match_row + 1, match_col + 1, row - match_row))
+                matching = False
             row += 1
             col += 1
 
         steps = end + 1
-        if not active:
+        if not matching:
             match_row = row
             match_col = col
         while row < len(reference) and col < len(observed) and reference[row] == observed[col]:
-            active = True
+            matching = True
             row += 1
             col += 1
             steps += 1
-        if active:
+        if matching:
             lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
             max_lcs_pos = max(lcs_pos, max_lcs_pos)
-            lcs_nodes[lcs_pos].append(Node(match_row + 1, match_col + 1, row - match_row))
+            lcs_nodes[lcs_pos].append(_Node(match_row + 1, match_col + 1, row - match_row))
 
         return steps
 
@@ -94,9 +100,9 @@ def edit(reference, observed):
 
 
 def lcs_graph(reference, observed, lcs_nodes):
-    sink = Node(len(reference) + 1, len(observed) + 1)
+    sink = _Node(len(reference) + 1, len(observed) + 1)
 
-    source = Node(0, 0)
+    source = _Node(0, 0)
     if not lcs_nodes or lcs_nodes == [[]]:
         variant = Variant(0, len(reference), observed)
         source.edges = [(sink, [variant])]
@@ -128,7 +134,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                 pred_offset = pred.length - 1
                 if node.row + offset >= pred.row + pred_offset and node.col + offset >= pred.col + pred_offset:
                     if node.pre_edges:
-                        split = Node(node.row, node.col, node.length - 1)
+                        split = _Node(node.row, node.col, node.length - 1)
                         split.edges = node.pre_edges + [(node, [])]
                         node.row += offset
                         node.col += offset
@@ -149,7 +155,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                         continue
 
                     if pred.incoming == lcs_pos:
-                        split = Node(pred.row, pred.col, pred.length)
+                        split = _Node(pred.row, pred.col, pred.length)
                         pred.row += pred_offset
                         pred.col += pred_offset
                         pred.length = 1
@@ -157,7 +163,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                         lcs_nodes[lcs_pos - 1][pred_idx] = split
                         pred = split
                     elif node.pre_edges:
-                        split = Node(node.row, node.col, node.length - 1)
+                        split = _Node(node.row, node.col, node.length - 1)
                         split.edges = node.pre_edges + [(node, [])]
                         node.row += offset
                         node.col += offset

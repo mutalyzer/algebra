@@ -1,7 +1,7 @@
 from enum import Enum
 from itertools import product
+from .lcs.all_lcs import edit, lcs_graph
 from .lcs.onp import edit as edit_distance_only
-from .lcs.wupp import edit, lcs_graph
 
 
 class Relation(Enum):
@@ -55,8 +55,7 @@ def are_disjoint(reference, lhs, rhs):
     if lhs_distance + rhs_distance == distance:
         return True
 
-    if (lhs_distance - rhs_distance == distance or
-            rhs_distance - lhs_distance == distance):
+    if distance == abs(lhs_distance - rhs_distance):
         return False
 
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
@@ -77,9 +76,7 @@ def have_overlap(reference, lhs, rhs):
     rhs_distance, rhs_lcs_nodes = edit(reference, rhs)
     distance = edit_distance_only(lhs, rhs)
 
-    if (lhs_distance + rhs_distance == distance or
-            lhs_distance - rhs_distance == distance or
-            rhs_distance - lhs_distance == distance):
+    if distance in (lhs_distance + rhs_distance, abs(lhs_distance - rhs_distance)):
         return False
 
     _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
