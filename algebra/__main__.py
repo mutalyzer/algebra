@@ -69,9 +69,9 @@ def main():
     if not args.random_min:
         args.random_min = args.random_max
 
-    if args.reference:
+    if args.reference is not None:
         reference = args.reference
-    elif args.reference_file:
+    elif args.reference_file is not None:
         with open(args.reference_file, encoding="utf-8") as file:
             reference = file.read().strip()
     elif args.reference_random:
@@ -79,15 +79,15 @@ def main():
         print(reference)
 
     if args.command == "compare":
-        if args.lhs:
+        if args.lhs is not None:
             lhs = args.lhs
-        elif args.lhs_hgvs:
+        elif args.lhs_hgvs is not None:
             variants = Parser(args.lhs_hgvs).hgvs()
             lhs = patch(reference, variants)
-        elif args.lhs_spdi:
+        elif args.lhs_spdi is not None:
             variants = Parser(args.lhs_spdi).spdi()
             lhs = patch(reference, variants)
-        elif args.lhs_file:
+        elif args.lhs_file is not None:
             with open(args.lhs_file, encoding="utf-8") as file:
                 lhs = file.read().strip()
         elif args.lhs_random:
@@ -95,15 +95,15 @@ def main():
             print(to_hgvs(variants, reference, sequence_prefix=False))
             lhs = patch(reference, variants)
 
-        if args.rhs:
+        if args.rhs is not None:
             rhs = args.rhs
-        elif args.rhs_hgvs:
+        elif args.rhs_hgvs is not None:
             variants = Parser(args.rhs_hgvs).hgvs()
             rhs = patch(reference, variants)
-        elif args.rhs_spdi:
+        elif args.rhs_spdi is not None:
             variants = Parser(args.rhs_spdi).spdi()
             rhs = patch(reference, variants)
-        elif args.rhs_file:
+        elif args.rhs_file is not None:
             with open(args.rhs_file, encoding="utf-8") as file:
                 rhs = file.read().strip()
         elif args.rhs_random:
@@ -114,15 +114,15 @@ def main():
         print(compare(reference, lhs, rhs))
 
     elif args.command == "extract":
-        if args.observed:
+        if args.observed is not None:
             observed = args.observed
-        elif args.observed_hgvs:
+        elif args.observed_hgvs is not None:
             variants = Parser(args.observed_hgvs).hgvs()
             observed = patch(reference, variants)
-        elif args.observed_spdi:
+        elif args.observed_spdi is not None:
             variants = Parser(args.observed_spdi).spdi()
             observed = patch(reference, variants)
-        elif args.observed_file:
+        elif args.observed_file is not None:
             with open(args.observed_file, encoding="utf-8") as file:
                 observed = file.read().strip()
         elif args.observed_random:
@@ -141,9 +141,9 @@ def main():
                 print(to_hgvs(variants, reference, sequence_prefix=False))
 
     elif args.command == "patch":
-        if args.hgvs:
+        if args.hgvs is not None:
             variants = Parser(args.hgvs).hgvs()
-        elif args.spdi:
+        elif args.spdi is not None:
             variants = Parser(args.spdi).spdi()
         elif args.random_variant:
             variants = list(random_variants(reference, args.random_p))
