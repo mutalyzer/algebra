@@ -6,7 +6,7 @@ Phase 1 (`edit`) calculates the simple edit distance and a collection of
 LCS nodes.
 Phase 2 (`lcs_graph`) creates a directed acyclic (multi) graph of the LCS
 nodes. Every path in this graph is a unique and distinct embedding of an
-LCS.
+LCS and consequently a unique variant representation.
 
 See Also
 --------
@@ -14,8 +14,9 @@ algebra.lcs.onp : Calculates only the simple edit distance.
 
 References
 ----------
-[1] Sun Wu, Udi Manber, Gene Myers, Webb Miller, An O(NP) sequence
-comparison algorithm, Information Processing Letters, 35(6), 1990:317-323.
+[1] S. Wu, U. Manber, G. Myers and W. Miller. "An O(NP) Sequence
+Comparison Algorithm". In: Information Processing Letters, 35.6 (1990),
+pp. 317-323.
 """
 
 
@@ -23,7 +24,9 @@ from ..variants.variant import Variant, to_hgvs
 
 
 class _Node:
-    """Node class for internal use only."""
+    """Node class for (stretches of) matching symbols.
+    FOR INTERNAL USE ONLY.
+    """
 
     def __init__(self, row, col, length=0):
         self.row = row
@@ -38,7 +41,7 @@ class _Node:
         return self.row == other.row and self.col == other.col and self.length == other.length
 
     def __hash__(self):
-        return hash(repr(self))
+        return hash((self.row, self.col, self.length))
 
     def __repr__(self):
         return f"{self.row, self.col, self.length}"
@@ -152,6 +155,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     --------
     `edit` : Calculates the LCS nodes.
     `traversal` : Traverses the LS graph.
+    `to_dot` : Graphviz DOT format.
     """
 
     sink = _Node(len(reference) + 1, len(observed) + 1)
@@ -262,7 +266,7 @@ def traversal(root, atomics=False):
     Yields
     ------
     list
-        A list of variants representing an LCS alignment.
+        A sorted list of variants representing an LCS alignment.
 
     See Also
     --------
@@ -270,6 +274,7 @@ def traversal(root, atomics=False):
     """
 
     def traverse(node, path):
+        # depth-first traversal
         if not node.edges:
             yield path
             return

@@ -9,9 +9,9 @@ algebra.variants.variant : The variant class.
 References
 ----------
 [1] https://varnomen.hgvs.org/.
-[2] Holmes JB, Moyer E, Phan L, Maglott D, Kattman B. SPDI: data model
-for variants and applications at NCBI. Bioinformatics.
-2020 Mar 1;36(6):1902-1907.
+[2] J.B. Holmes, E. Moyer, L. Phan, D. Maglott and B. Kattman. "SPDI:
+data model for variants and applications at NCBI".
+In: Bioinformatics 36.6 (2019), pp. 1902-1907.
 """
 
 
@@ -141,7 +141,7 @@ class Parser:
         Returns
         -------
         list
-            A list of variants (allele).
+            A sorted list of variants (allele).
         """
 
         if self._match("="):
@@ -160,7 +160,7 @@ class Parser:
 
         if not self.pos == len(self.expression):
             raise ValueError(f"expected end of expression at {self.pos}")
-        return variants
+        return sorted(variants)
 
     def spdi(self):
         """Parse an expression as SPDI.

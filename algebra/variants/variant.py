@@ -90,7 +90,7 @@ class Variant:
         Yields
         ------
         list
-            A list of variants representing the original variant.
+            A sorted list of variants.
         """
 
         for combo in combinations(range(len(self)), len(self.sequence)):
@@ -174,15 +174,15 @@ class Variant:
 
         References
         ----------
-        [1] Holmes JB, Moyer E, Phan L, Maglott D, Kattman B.
-        SPDI: data model for variants and applications at NCBI.
-        Bioinformatics. 2020 Mar 1;36(6):1902-1907.
+        [1] J.B. Holmes, E. Moyer, L. Phan, D. Maglott and B. Kattman. "SPDI:
+        data model for variants and applications at NCBI".
+        In: Bioinformatics 36.6 (2019), pp. 1902-1907.
         """
         return (f"{reference}:{self.start}:{self.end - self.start}:"
                 f"{self.sequence}")
 
 
-def patch(reference, variants):
+def patch(reference, variants, sort=True):
     """Apply a list of variants to a reference sequence to obtain an
     observed sequence.
 
@@ -192,6 +192,11 @@ def patch(reference, variants):
         The reference sequence to which the `variants` are applied.
     variants : list
         A list of variants.
+
+    Other Parameters
+    ----------------
+    sort : bool, optional
+        The `variants` are sorted by default. Disable if already sorted.
 
     Raises
     ------
@@ -207,7 +212,7 @@ def patch(reference, variants):
     def slices(reference, variants):
         start = 0
 
-        for variant in sorted(variants):
+        for variant in (sorted(variants) if sort else variants):
             yield reference[start:variant.start] + variant.sequence
             start = variant.end
 

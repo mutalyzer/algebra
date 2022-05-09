@@ -21,7 +21,7 @@ def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=
     Other Parameters
     ----------------
     alphabet : str or iterable, optional
-        The symbols in the alphabet (default: `ACGT`).
+        The symbols in the alphabet (default: `"ACGT"`).
     weights : list or None, optional
         A list of weights giving the relative frequency of the symbols.
 
@@ -54,7 +54,7 @@ def random_variants(reference, p=None, mu_deletion=1, mu_insertion=1):
     Returns
     -------
     list
-        A list of variants.
+        A sorted list of variants.
     """
 
     if p is None:

@@ -7,15 +7,16 @@ subject to the same reference sequence.
 
 References
 ----------
-[1] Jonathan K. Vis, Mark Santcroos, Walter A. Kosters and
-Jeroen F.J. Laros, A Boolean Algebra for Genetic Variants, 2021.
+[1] J.K. Vis, M.A. Santcroos, W.A. Kosters and J.F.J. Laros.
+"A Boolean Algebra for Genetic Variants".
+In: arXiv preprint 2112.14494 (2021).
 """
 
 
 from enum import Enum
 from itertools import product
 from .lcs.all_lcs import edit, lcs_graph
-from .lcs.onp import edit as edit_distance_only
+from .lcs.distance_only import edit as edit_distance_only
 
 
 class Relation(Enum):

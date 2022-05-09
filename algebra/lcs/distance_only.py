@@ -11,8 +11,9 @@ algebra.lcs.all_lcs : Calculates all LCS alignments.
 
 References
 ----------
-[1] Sun Wu, Udi Manber, Gene Myers, Webb Miller, An O(NP) sequence
-comparison algorithm, Information Processing Letters, 35(6), 1990:317-323.
+[1] S. Wu, U. Manber, G. Myers and W. Miller. "An O(NP) Sequence
+Comparison Algorithm". In: Information Processing Letters, 35.6 (1990),
+pp. 317-323.
 [2] https://github.com/cubicdaiya/onp/blob/master/python/onp.py.
 """
 
