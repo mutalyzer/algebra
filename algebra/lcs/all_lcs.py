@@ -141,8 +141,8 @@ def edit(reference, observed):
 
 
 def lcs_graph(reference, observed, lcs_nodes):
-    """Construct the compressed LCS graph. `lcs_nodes` is destroyed during
-    this process.
+    """Construct the compressed LCS graph. `lcs_nodes` is destroyed
+    during this process.
 
     Returns
     -------
@@ -151,7 +151,8 @@ def lcs_graph(reference, observed, lcs_nodes):
     list
         A list of edges (variants) in the LCS graph.
     `Variant`
-        Maximal variant. Start and end can be used to determine influence interval.
+        Maximal variant. `start` and `end` can be used to determine
+        influence interval.
 
     See Also
     --------
