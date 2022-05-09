@@ -138,7 +138,7 @@ def main():
         if args.dot:
             print(to_dot(reference, root))
         if args.max_variant:
-            print(max_variant.to_hgvs(reference))
+            print(max_variant, max_variant.to_hgvs(reference))
         if True or args.all:
             for variants in traversal(root, args.atomics):
                 print(to_hgvs(variants, reference, sequence_prefix=False))

@@ -260,10 +260,12 @@ def lcs_graph(reference, observed, lcs_nodes):
                 source.edges.append((node, [variant]))
                 edges.append(variant)
                 min_node = _Node(0, 0)
+                print("source", min_node, node)
             else:
                 source.edges.append((node, []))
                 min_node.row = min(min_node.row, node.row)
                 min_node.col = min(min_node.col, node.col)
+                print("no source", min_node, node)
 
     return source, edges, Variant(min_node.row, max_node.row - 1, observed[min_node.col:max_node.col - 1])
 
