@@ -71,6 +71,7 @@ def test_lcs_graph(reference, observed, expected_edges):
     ("", "A", Variant(0, 0, "A")),
     ("A", "", Variant(0, 1)),
     ("ACCCA", "ACCA", Variant(1, 4, "CC")),
+    ("AACCT", "AACGT", Variant(2, 4, "CG")),
 ])
 def test_lcs_graph_max_variant(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
