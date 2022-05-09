@@ -150,6 +150,8 @@ def lcs_graph(reference, observed, lcs_nodes):
         The root of the LCS graph.
     list
         A list of edges (variants) in the LCS graph.
+    `Variant`
+        Maximal variant. Start and end can be used to determine influence interval.
 
     See Also
     --------
@@ -159,22 +161,30 @@ def lcs_graph(reference, observed, lcs_nodes):
     """
 
     sink = _Node(len(reference) + 1, len(observed) + 1)
-
     source = _Node(0, 0)
+
+    if reference == observed:
+        source.edges = [(sink, [])]
+        return source, [], Variant(0, 0)
+
     if not lcs_nodes or lcs_nodes == [[]]:
         variant = Variant(0, len(reference), observed)
         source.edges = [(sink, [variant])]
-        return source, [variant]
+        return source, [variant], variant
 
     edges = []
+    max_node = _Node(0, 0)
     for node in lcs_nodes[-1]:
         offset = node.length
         variant = Variant(node.row + offset - 1, len(reference), observed[node.col + offset - 1:])
         if variant:
             node.edges = [(sink, [variant])]
             edges.append(variant)
+            max_node = _Node(len(reference) + 1, len(observed) + 1)
         else:
             node.edges = [(sink, [])]
+            max_node.row = max(max_node.row, node.row + offset - 1)
+            max_node.col = max(max_node.col, node.col + offset - 1)
 
     for idx, nodes in enumerate(lcs_nodes[:0:-1]):
         lcs_pos = len(lcs_nodes) - idx - 1
@@ -242,16 +252,20 @@ def lcs_graph(reference, observed, lcs_nodes):
                 node.length -= 1
                 lcs_nodes[lcs_pos - 1].append(node)
 
+    min_node = _Node(len(reference) + 1, len(observed) + 1)
     for node in lcs_nodes[0]:
         if node.edges:
             variant = Variant(0, node.row - 1, observed[:node.col - 1])
             if variant:
                 source.edges.append((node, [variant]))
                 edges.append(variant)
+                min_node = _Node(0, 0)
             else:
                 source.edges.append((node, []))
+                min_node.row = min(min_node.row, node.row)
+                min_node.col = min(min_node.col, node.col)
 
-    return source, edges
+    return source, edges, Variant(min_node.row, max_node.row - 1, observed[min_node.col:max_node.col - 1])
 
 
 def traversal(root, atomics=False):

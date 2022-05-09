@@ -49,6 +49,7 @@ def main():
     extract_parser.add_argument("--atomics", action="store_true", help="only deletions and insertions")
     extract_parser.add_argument("--distance", action="store_true", help="output simple edit distance")
     extract_parser.add_argument("--dot", action="store_true", help="output Graphviz DOT")
+    extract_parser.add_argument("--max-variant", action="store_true", help="output maximal variant")
 
     observed_group = extract_parser.add_mutually_exclusive_group(required=True)
     observed_group.add_argument("--observed", type=str, help="an observed sequence as string")
@@ -130,12 +131,14 @@ def main():
             print(observed)
 
         distance, lcs_nodes = edit(reference, observed)
-        root, _ = lcs_graph(reference, observed, lcs_nodes)
+        root, _, max_variant = lcs_graph(reference, observed, lcs_nodes)
 
         if args.distance:
             print(distance)
         if args.dot:
             print(to_dot(reference, root))
+        if args.max_variant:
+            print(max_variant.to_hgvs(reference))
         if True or args.all:
             for variants in traversal(root, args.atomics):
                 print(to_hgvs(variants, reference, sequence_prefix=False))

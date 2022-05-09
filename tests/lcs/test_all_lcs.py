@@ -26,7 +26,7 @@ def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
 
 
 @pytest.mark.parametrize("reference, observed, expected_edges", [
-    ("", "", [Variant(0, 0)]),
+    ("", "", []),
     ("TTAATTGACA", "CTACTGAGTT", [
         Variant(8, 10, "GTT"), Variant(10, 10, "GTT"), Variant(6, 10),
         Variant(7, 9), Variant(5, 6), Variant(3, 4, "G"), Variant(4, 4, "G"),
@@ -61,12 +61,25 @@ def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
 ])
 def test_lcs_graph(reference, observed, expected_edges):
     _, lcs_nodes = edit(reference, observed)
-    _, edges = lcs_graph(reference, observed, lcs_nodes)
+    _, edges, _ = lcs_graph(reference, observed, lcs_nodes)
     assert edges == expected_edges
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [
-    ("", "", [[Variant(0, 0)]]),
+    ("", "", Variant(0, 0)),
+    ("A", "C", Variant(0, 1, "C")),
+    ("", "A", Variant(0, 0, "A")),
+    ("A", "", Variant(0, 1)),
+    ("ACCCA", "ACCA", Variant(1, 4, "CC")),
+])
+def test_lcs_graph_max_variant(reference, observed, expected_variant):
+    _, lcs_nodes = edit(reference, observed)
+    _, _, variant = lcs_graph(reference, observed, lcs_nodes)
+    assert variant == expected_variant
+
+
+@pytest.mark.parametrize("reference, observed, expected_variant", [
+    ("", "", [[]]),
     ("TTT", "TATTTT", [
         [Variant(1, 1, "A"), Variant(3, 3, "TT")],
         [Variant(1, 1, "A"), Variant(2, 2, "T"), Variant(3, 3, "T")],
@@ -82,7 +95,7 @@ def test_lcs_graph(reference, observed, expected_edges):
 ])
 def test_traversal(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
-    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    root, _, _ = lcs_graph(reference, observed, lcs_nodes)
     assert list(traversal(root)) == expected_variant
 
 
@@ -103,5 +116,5 @@ def test_traversal(reference, observed, expected_variant):
 ])
 def test_traversal_atomics(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
-    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    root, _, _ = lcs_graph(reference, observed, lcs_nodes)
     assert list(traversal(root, atomics=True)) == expected_variant
