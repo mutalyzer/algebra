@@ -1,4 +1,4 @@
-"""An efficient method of calculating all Longest Common Substring (LCS)
+"""An efficient method of calculating all Longest Common Subsequence (LCS)
 alignments. This method builds upon [1]_ by creating a compressed LCS
 graph in two phases.
 

@@ -1,9 +1,9 @@
 """Calculate the simple edit distance.
 
 Calculates the simple edit distance by calculating a Longest Common
-Subsequence alignment [1]_. The implementation is adapted from [2]_. This
-method is useful when only the simple edit distance is needed (not an or
-all alignments).
+Subsequence (LCS) alignment [1]_. The implementation is adapted from [2]_.
+This method is useful when only the simple edit distance is needed (not
+an or all alignments).
 
 See Also
 --------
