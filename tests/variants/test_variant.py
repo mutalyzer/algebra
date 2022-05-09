@@ -88,9 +88,9 @@ def test_variant_sort_fail(lhs, rhs, exception, message):
 
 
 @pytest.mark.parametrize("variant, string", [
-    (Variant(0, 0), "<0,0/>"),
-    (Variant(0, 0, "TTT"), "<0,0/TTT>"),
-    (Variant(0, 1, "T"), "<0,1/T>"),
+    (Variant(0, 0), '"0:0/"'),
+    (Variant(0, 0, "TTT"), '"0:0/TTT"'),
+    (Variant(0, 1, "T"), '"0:1/T"'),
 ])
 def test_variant_string(variant, string):
     assert str(variant) == string
