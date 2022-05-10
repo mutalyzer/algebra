@@ -272,6 +272,8 @@ def lcs_graph(reference, observed, lcs_nodes):
                 source.edges.append((node, [variant]))
                 edges.append(variant)
                 min_node = _Node(1, 1)
+                if node.row > max_node.row:
+                    max_node = _Node(node.row, node.col)
             else:
                 source.edges.append((node, []))
 
