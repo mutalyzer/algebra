@@ -21,7 +21,7 @@ pp. 317-323.
 
 
 from operator import attrgetter
-from ..variants.variant import Variant, to_hgvs
+from ..variants import Variant, to_hgvs
 
 
 class _Node:

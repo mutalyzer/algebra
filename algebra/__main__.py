@@ -6,11 +6,10 @@ their relations.
 
 
 import argparse
-from algebra.lcs.all_lcs import edit, lcs_graph, maximal_variant, traversal, to_dot
-from algebra.relations import compare
-from algebra.utils import random_sequence, random_variants
-from algebra.variants.parser import Parser
-from algebra.variants.variant import patch, to_hgvs
+from . import compare
+from .lcs import edit, lcs_graph, maximal_variant, traversal, to_dot
+from .utils import random_sequence, random_variants
+from .variants import Parser, patch, to_hgvs
 
 
 def main():

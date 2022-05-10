@@ -48,9 +48,8 @@ algebra --reference "AAAAA" compare --lhs-hgvs "1_2insTA" --rhs-hgvs "2_3insT"
 Or as a Python package.
 
 ```python
-from algebra.relations import compare
-from algebra.variants.parser import Parser
-from algebra.variants.variant import patch
+from algebra import compare
+from algebra.variants import Parser, patch
 
 reference = "AAAAA"
 lhs = patch(reference, Parser("1_2insTA").hgvs())

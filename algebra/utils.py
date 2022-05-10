@@ -2,7 +2,7 @@
 
 
 import random
-from .variants.variant import Variant
+from .variants import Variant
 
 
 DNA_NUCLEOTIDES = "ACGT"

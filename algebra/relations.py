@@ -15,8 +15,7 @@ In: arXiv preprint 2112.14494 (2021).
 
 from enum import Enum
 from itertools import product
-from .lcs.all_lcs import edit, lcs_graph
-from .lcs.distance_only import edit as edit_distance_only
+from .lcs import edit, edit_distance_only, lcs_graph
 
 
 class Relation(Enum):

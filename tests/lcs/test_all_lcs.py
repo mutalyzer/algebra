@@ -1,6 +1,7 @@
 import pytest
-from algebra.lcs.all_lcs import _Node, edit, lcs_graph, maximal_variant, traversal
-from algebra.variants.variant import Variant
+from algebra.lcs import edit, lcs_graph, maximal_variant, traversal
+from algebra.lcs.all_lcs import _Node
+from algebra.variants import Variant
 
 
 @pytest.mark.parametrize("reference, observed, expected_distance, expected_lcs_nodes", [
