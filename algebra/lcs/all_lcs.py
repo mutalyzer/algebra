@@ -183,6 +183,7 @@ def lcs_graph(reference, observed, lcs_nodes):
             node.edges = [(sink, [variant])]
             edges.append(variant)
             max_node = _Node(len(reference) + 1, len(observed) + 1)
+            min_node = _Node(node.row + offset, node.col + offset)
         else:
             node.edges = [(sink, [])]
 
@@ -220,6 +221,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                         max_node = _Node(node.row + offset - 1, node.col + offset)
                     if pred.row + pred_offset < min_node.row:
                         min_node = _Node(pred.row + pred_offset - 1, pred.col + pred_offset)
+                        print("min_node", min_node)
 
             for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 pred_offset = pred.length
@@ -254,6 +256,7 @@ def lcs_graph(reference, observed, lcs_nodes):
                         max_node = _Node(node.row + offset, node.col + offset)
                     if pred.row + pred_offset < min_node.row:
                         min_node = _Node(pred.row + pred_offset, pred.col + pred_offset)
+                        print("min_node", min_node)
 
             node.edges += node.pre_edges
             node.pre_edges = []
@@ -272,6 +275,7 @@ def lcs_graph(reference, observed, lcs_nodes):
             else:
                 source.edges.append((node, []))
 
+    print(min_node, max_node)
     return source, edges, Variant(min_node.row - 1, max_node.row - 1, observed[min_node.col - 1:max_node.col - 1])
 
 
