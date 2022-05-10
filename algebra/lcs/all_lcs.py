@@ -262,12 +262,14 @@ def lcs_graph(reference, observed, lcs_nodes):
     return source, edges
 
 
-def maximal_variant(reference, observed, edges):
-    if not edges:
+def maximal_variant(reference, observed, variants):
+    """Calculate the maximal spanning variant for a collection of variants."""
+
+    if not variants:
         return Variant(0, 0)
 
-    start = min(edges, key=attrgetter("start")).start
-    end = max(edges, key=attrgetter("end")).end
+    start = min(variants, key=attrgetter("start")).start
+    end = max(variants, key=attrgetter("end")).end
     return Variant(start, end, observed[start:len(observed) - (len(reference) - end)])
 
 
