@@ -1,18 +1,21 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
 
 setup(
-    name="mutalyzer-algebra",
-    version="0.2.0",
-    description="A library and CLI for A Boolean Algebra for Genetic Variants.",
-    url="https://github.com/mutalyzer/algebra",
-    author="Mark Santcroos",
-    author_email="m.a.santcroos@lumc.nl",
+    name="algebra",
+    version="1.0.1",
     license="MIT",
     packages=find_packages(),
+    extras_require={
+        "dev": [
+            "coverage",
+            "flake8",
+            "pytest",
+        ]
+    },
     entry_points={
         "console_scripts": [
-            "algebraist=algebra.cli:main",
+            "algebra=algebra.__main__:main",
         ],
     },
-    # install_requires="normalizer @ git+ssh://git@github.com/mutalyzer/normalizer.git",
 )

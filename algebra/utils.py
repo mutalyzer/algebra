@@ -1,82 +1,86 @@
-from normalizer.description import Description
-from normalizer.reference import get_reference_model
-from algebra.algebra import heur_func
-from algebra.simple import edit
+"""Utility functions for random sequences and variants."""
 
 
-def ref2seq(ref):
-    r = get_reference_model(ref)
-    return r["sequence"]["seq"]
+import random
+from .variants import Variant
 
 
-def hgvs2ref(hgvs):
-    d = Description(hgvs, stop_on_error=True)
-    d.normalize()
-    return d.references[d.input_model["reference"]["id"]]["sequence"]["seq"]
+DNA_NUCLEOTIDES = "ACGT"
 
 
-def hgvs2obs(hgvs):
-    d = Description(hgvs, stop_on_error=True)
-    d.normalize()
-    return d.references["observed"]["sequence"]["seq"]
+def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):
+    """Create a random sequence.
+
+    Parameters
+    ----------
+    max_length : int
+        The maximal length of the sequence.
+    min_length : int, optional
+        The minimal length of the sequence (default: 0).
+
+    Other Parameters
+    ----------------
+    alphabet : str or iterable, optional
+        The symbols in the alphabet (default: `"ACGT"`).
+    weights : list or None, optional
+        A list of weights giving the relative frequency of the symbols.
+
+    Returns:
+        A random sequence.
+    """
+
+    return "".join(random.choices(alphabet, weights=weights, k=random.randint(min_length, max_length)))
 
 
-def overlay_heuristic(reference, observed, matrix):
-    for i in range(len(reference) + 1):
-        for j in range(len(observed) + 1):
-            matrix[i][j] += heur_func(reference, observed, i, j)
+def random_variants(reference, p=None, mu_deletion=1, mu_insertion=1):
+    """Create a random list of non-overlapping variants (allele).
 
-    return matrix
+    Parameters
+    ----------
+    reference : str
+        The reference sequence.
+    p : float, optional
+        The change per symbol of a variant (default: `1 / len(reference`).
 
+    Other Parameters
+    ----------------
+    mu_deletion : float, optional
+        The exponential mean length of a deletion (default: 1). Should be
+        non-zero.
+    mu_insertion : float, optional
+        The exponential mean length of an insertion (default: 1). Should
+        be non-zero.
 
-def print_matrix_tex(matrix, reference, observed, max_dist):
+    Returns
+    -------
+    list
+        A sorted list of variants.
+    """
 
-    print(f'\\begin{{array}}{{rc|{"c" * (len(observed) + 1)}}}')
+    if p is None:
+        p = 1 / len(reference)
 
-    print('\\renewcommand*{\\arraystretch}{1.2}')
+    pos = 0
+    while pos < len(reference):
+        len_del = 0
+        if random.random() <= p:
+            len_del = int(random.expovariate(1 / mu_deletion))
+            if pos + len_del > len(reference):
+                len_del = len(reference) - pos
+            len_ins = int(random.expovariate(1 / mu_insertion))
 
-    tmp = ' & '.join(f'\\phantom{{\\circled{{{str(i)}}}}}' for i in range(len(observed) + 1))
-    print(f' & & {tmp} \\\\')
+            if len_del == len_ins == 0:
+                len_del = 1
+                len_ins = 1
 
-    tmp = ' & '.join(f'{str(i)}' for i in range(len(observed) + 1))
-    print(f' & & {tmp} \\\\')
+            del_seq = reference[pos:pos + len_del]
+            ins_seq = ""
 
-    tmp = ' & '.join(f'\\texttt{{{ch}}}' for ch in observed)
-    print(f' & & \\texttt{{.}} & {tmp} \\\\')
+            if len_ins > 0:
+                ins_seq = "".join(random.choice(DNA_NUCLEOTIDES.replace(ch, "")) for ch in del_seq)
+                if len_ins > len(ins_seq):
+                    ins_seq += "".join(random.choices(DNA_NUCLEOTIDES, k=len_ins - len(ins_seq)))
 
-    print(f'\\hline')
+            yield Variant(pos, pos + len_del, ins_seq)
 
-    rows = [-1] * (len(reference) + 1)
-    cols = [-1] * (len(observed) + 1)
-
-    for row in range(len(reference) + 1):
-        if row == 0:
-            print(f'{str(row)} & \\texttt{{.}} & ', end='')
-        else:
-            print(f'{str(row)} & \\texttt{{{reference[row - 1]}}} & ', end='')
-
-        tmp = []
-        for col in range(len(observed) + 1):
-            if matrix[row][col] <= max_dist or max_dist == 0:
-                rows[row] = max(rows[row], col)
-                cols[col] = max(cols[col], row)
-                if row > 0 and col > 0 and reference[row - 1] == observed[col - 1]:  # Match
-                    tmp.append(f'\\circled{{{matrix[row][col]}}}')
-                else:
-                    tmp.append(f'{matrix[row][col]}')
-            else:
-                tmp.append('')
-        print(' & '.join(tmp), end=' \\\\\n')
-    print(f'\\end{{array}}')
-    print([e for e in rows if e >= 0])
-    print([e for e in cols if e >= 0])
-
-
-def print_tex(reference, observation, heur=False, max_dist=0):
-    matrix = edit(reference, observation)
-
-    if not heur:
-        print_matrix_tex(matrix, reference, observation, max_dist)
-    else:
-        heur_matrix = overlay_heuristic(reference, observation, matrix)
-        print_matrix_tex(heur_matrix, reference, observation, max_dist)
+        pos += len_del + 1
