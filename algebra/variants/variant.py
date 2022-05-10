@@ -56,6 +56,7 @@ class Variant:
         self.sequence = sequence
 
     def __bool__(self):
+        """Check for empty (=) variants."""
         return self.end - self.start > 0 or len(self.sequence) > 0
 
     def __eq__(self, other):
