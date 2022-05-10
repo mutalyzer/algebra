@@ -20,6 +20,7 @@ pp. 317-323.
 """
 
 
+from operator import attrgetter
 from ..variants.variant import Variant, to_hgvs
 
 
@@ -166,24 +167,20 @@ def lcs_graph(reference, observed, lcs_nodes):
 
     if reference == observed:
         source.edges = [(sink, [])]
-        return source, [], Variant(0, 0)
+        return source, []
 
     if not lcs_nodes or lcs_nodes == [[]]:
         variant = Variant(0, len(reference), observed)
         source.edges = [(sink, [variant])]
-        return source, [variant], variant
+        return source, [variant]
 
     edges = []
-    min_node = _Node(len(reference) + 1, len(observed) + 1)
-    max_node = _Node(1, 1)
     for node in lcs_nodes[-1]:
         offset = node.length
         variant = Variant(node.row + offset - 1, len(reference), observed[node.col + offset - 1:])
         if variant:
             node.edges = [(sink, [variant])]
             edges.append(variant)
-            max_node = _Node(len(reference) + 1, len(observed) + 1)
-            min_node = _Node(node.row + offset, node.col + offset)
         else:
             node.edges = [(sink, [])]
 
@@ -217,12 +214,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                     edges.append(variant)
                     node.incoming = lcs_pos
 
-                    if node.row + offset > max_node.row:
-                        max_node = _Node(node.row + offset - 1, node.col + offset)
-                    if pred.row + pred_offset < min_node.row:
-                        min_node = _Node(pred.row + pred_offset - 1, pred.col + pred_offset)
-                        print("min_node", min_node)
-
             for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 pred_offset = pred.length
                 if node.row + offset >= pred.row + pred_offset and node.col + offset >= pred.col + pred_offset:
@@ -252,12 +243,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                     edges.append(variant)
                     node.incoming = lcs_pos
 
-                    if node.row + offset > max_node.row:
-                        max_node = _Node(node.row + offset, node.col + offset)
-                    if pred.row + pred_offset < min_node.row:
-                        min_node = _Node(pred.row + pred_offset, pred.col + pred_offset)
-                        print("min_node", min_node)
-
             node.edges += node.pre_edges
             node.pre_edges = []
 
@@ -271,14 +256,19 @@ def lcs_graph(reference, observed, lcs_nodes):
             if variant:
                 source.edges.append((node, [variant]))
                 edges.append(variant)
-                min_node = _Node(1, 1)
-                if node.row > max_node.row:
-                    max_node = _Node(node.row, node.col)
             else:
                 source.edges.append((node, []))
 
-    print(min_node, max_node)
-    return source, edges, Variant(min_node.row - 1, max_node.row - 1, observed[min_node.col - 1:max_node.col - 1])
+    return source, edges
+
+
+def maximal_variant(reference, observed, edges):
+    if not edges:
+        return Variant(0, 0)
+
+    start = min(edges, key=attrgetter("start")).start
+    end = max(edges, key=attrgetter("end")).end
+    return Variant(start, end, observed[start:len(observed) - (len(reference) - end)])
 
 
 def traversal(root, atomics=False):

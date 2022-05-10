@@ -6,7 +6,7 @@ their relations.
 
 
 import argparse
-from algebra.lcs.all_lcs import edit, lcs_graph, traversal, to_dot
+from algebra.lcs.all_lcs import edit, lcs_graph, maximal_variant, traversal, to_dot
 from algebra.relations import compare
 from algebra.utils import random_sequence, random_variants
 from algebra.variants.parser import Parser
@@ -139,13 +139,14 @@ def main():
             print(observed)
 
         distance, lcs_nodes = edit(reference, observed)
-        root, _, max_variant = lcs_graph(reference, observed, lcs_nodes)
+        root, edges = lcs_graph(reference, observed, lcs_nodes)
 
         if args.distance:
             print(distance)
         if args.dot:
             print(to_dot(reference, root))
         if args.max_variant:
+            max_variant = maximal_variant(reference, observed, edges)
             print(max_variant, max_variant.to_hgvs(reference))
         if True or args.all:
             for variants in traversal(root, args.atomics):

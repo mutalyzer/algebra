@@ -1,5 +1,5 @@
 import pytest
-from algebra.lcs.all_lcs import _Node, edit, lcs_graph, traversal
+from algebra.lcs.all_lcs import _Node, edit, lcs_graph, maximal_variant, traversal
 from algebra.variants.variant import Variant
 
 
@@ -61,7 +61,7 @@ def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
 ])
 def test_lcs_graph(reference, observed, expected_edges):
     _, lcs_nodes = edit(reference, observed)
-    _, edges, _ = lcs_graph(reference, observed, lcs_nodes)
+    _, edges = lcs_graph(reference, observed, lcs_nodes)
     assert edges == expected_edges
 
 
@@ -75,8 +75,8 @@ def test_lcs_graph(reference, observed, expected_edges):
 ])
 def test_lcs_graph_max_variant(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
-    _, _, variant = lcs_graph(reference, observed, lcs_nodes)
-    assert variant == expected_variant
+    _, edges = lcs_graph(reference, observed, lcs_nodes)
+    assert maximal_variant(reference, observed, edges) == expected_variant
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [
@@ -96,7 +96,7 @@ def test_lcs_graph_max_variant(reference, observed, expected_variant):
 ])
 def test_traversal(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
-    root, _, _ = lcs_graph(reference, observed, lcs_nodes)
+    root, _ = lcs_graph(reference, observed, lcs_nodes)
     assert list(traversal(root)) == expected_variant
 
 
@@ -117,5 +117,5 @@ def test_traversal(reference, observed, expected_variant):
 ])
 def test_traversal_atomics(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
-    root, _, _ = lcs_graph(reference, observed, lcs_nodes)
+    root, _ = lcs_graph(reference, observed, lcs_nodes)
     assert list(traversal(root, atomics=True)) == expected_variant
