@@ -151,9 +151,6 @@ def lcs_graph(reference, observed, lcs_nodes):
         The root of the LCS graph.
     list
         A list of edges (variants) in the LCS graph.
-    `Variant`
-        Maximal variant. `start` and `end` can be used to determine
-        influence interval.
 
     See Also
     --------
