@@ -2,9 +2,11 @@ from setuptools import find_packages, setup
 
 
 setup(
-    name="algebra",
-    version="1.0.1",
+    name="mutalyzer-algebra",
+    version="1.0.2",
     license="MIT",
+    author='Jonathan Vis, Mark Santcroos',
+    author_email='j.k.vis@lumc.nl, m.a.santcroos@lumc.nl',
     packages=find_packages(),
     extras_require={
         "dev": [
