@@ -264,7 +264,6 @@ def lcs_graph(reference, observed, lcs_nodes):
 
 def maximal_variant(reference, observed, variants):
     """Calculate the maximal spanning variant for a collection of variants."""
-
     if not variants:
         return Variant(0, 0)
 
