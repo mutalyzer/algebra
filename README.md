@@ -1,5 +1,5 @@
-algebra
-=======
+mutalyzer-algebra
+=================
 A Boolean Algebra for Genetic Variants  
 
 A set of Boolean relations: equivalence; containment, i.e., either a
