@@ -89,6 +89,24 @@ class Parser:
             if start >= end - 1:
                 raise ValueError(f"invalid range at {self.pos}")
 
+        if self._match("dup"):
+            if end is None:
+                end = start + 1
+            duplicated = None
+            try:
+                duplicated = self._match_sequence()
+            except ValueError:
+                pass
+
+            if duplicated is not None:
+                if len(duplicated) != end - start:
+                    raise ValueError(f"inconsistent duplicated length at {self.pos}")
+                return Variant(end, end, duplicated)
+            raise NotImplementedError
+
+        if self._match("inv"):
+            raise NotImplementedError
+
         if self._match("del"):
             if end is None:
                 end = start + 1
@@ -137,6 +155,8 @@ class Parser:
         ------
         ValueError
             If a syntax (or a simple sematic) error occurs.
+        NotImplementedError
+            If a syntax construct is not supported.
 
         Returns
         -------
@@ -160,6 +180,7 @@ class Parser:
 
         if not self.pos == len(self.expression):
             raise ValueError(f"expected end of expression at {self.pos}")
+        self.pos = 0
         return sorted(variants)
 
     def spdi(self):
@@ -202,4 +223,5 @@ class Parser:
             pass
         if not self.pos == len(self.expression):
             raise ValueError(f"expected end of expression at {self.pos}")
+        self.pos = 0
         return [Variant(position, position + length, inserted)]

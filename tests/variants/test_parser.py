@@ -19,6 +19,7 @@ from algebra.variants.variant import Variant
     ("[3del]", [Variant(2, 3)]),
     ("[3del;3_4insT]", [Variant(2, 3), Variant(3, 3, "T")]),
     ("3_4A[4]", [Variant(2, 4, "AAAA")]),
+    ("4dupT", [Variant(4, 4, "T")]),
 ])
 def test_hgvs_parser(expression, variants):
     assert Parser(expression).hgvs() == variants
@@ -48,6 +49,9 @@ def test_hgvs_parser(expression, variants):
     ("[3del", ValueError, "expected ']' at 5"),
     ("[3del;", ValueError, "unexpected end of expression"),
     ("3del;", ValueError, "expected end of expression at 4"),
+    ("4dupTT", ValueError, "inconsistent duplicated length at 6"),
+    ("4dup", NotImplementedError, ""),
+    ("4inv", NotImplementedError, ""),
 ])
 def test_hgvs_parser_fail(expression, exception, message):
     with pytest.raises(exception) as exc:
