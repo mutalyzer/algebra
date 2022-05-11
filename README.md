@@ -62,8 +62,6 @@ compare(reference, lhs, rhs)
 See Also
 --------
 
-A web interface with integration with [Mutalyzer](https://github.com/mutalyzer).
-
-[Mutalyzer Algebra](https://v3.mutalyzer.nl/algebra)
+A web interface with integration with [Mutalyzer](https://github.com/mutalyzer): [Mutalyzer Algebra](https://v3.mutalyzer.nl/algebra)
 
 [Mutalyzer Algebra on PyPI](https://pypi.org/project/mutalyzer-algebra/)
