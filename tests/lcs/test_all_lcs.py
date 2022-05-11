@@ -67,17 +67,27 @@ def test_lcs_graph(reference, observed, expected_edges):
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [
-    ("", "", Variant(0, 0)),
     ("A", "C", Variant(0, 1, "C")),
     ("", "A", Variant(0, 0, "A")),
     ("A", "", Variant(0, 1)),
     ("ACCCA", "ACCA", Variant(1, 4, "CC")),
     ("AACCT", "AACGT", Variant(2, 4, "CG")),
 ])
-def test_lcs_graph_max_variant(reference, observed, expected_variant):
+def test_max_variant(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
     _, edges = lcs_graph(reference, observed, lcs_nodes)
     assert maximal_variant(reference, observed, edges) == expected_variant
+
+
+@pytest.mark.parametrize("reference, observed, exception, message", [
+    ("", "", ValueError, "No variants"),
+])
+def test_max_variant_fail(reference, observed, exception, message):
+    _, lcs_nodes = edit(reference, observed)
+    _, edges = lcs_graph(reference, observed, lcs_nodes)
+    with pytest.raises(exception) as exc:
+        maximal_variant(reference, observed, edges)
+    assert str(exc.value) == message
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [
