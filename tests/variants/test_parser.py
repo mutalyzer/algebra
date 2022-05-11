@@ -19,6 +19,7 @@ from algebra.variants import Parser, Variant
     ("[3del;3_4insT]", [Variant(2, 3), Variant(3, 3, "T")]),
     ("3_4A[4]", [Variant(2, 4, "AAAA")]),
     ("4dupT", [Variant(4, 4, "T")]),
+    ("0_1insT", [Variant(0, 0, "T")]),
 ])
 def test_hgvs_parser(expression, variants):
     assert Parser(expression).hgvs() == variants
@@ -27,7 +28,7 @@ def test_hgvs_parser(expression, variants):
 @pytest.mark.parametrize("expression, exception, message", [
     (None, TypeError, "expression must be a string"),
     ("", ValueError, "unexpected end of expression"),
-    ("0del", ValueError, "invalid position at 1"),
+    ("0del", ValueError, "start must be greater or equal to 0"),
     ("del", ValueError, "expected digit at 0"),
     ("3_3del", ValueError, "invalid range at 3"),
     ("4_3del", ValueError, "invalid range at 3"),

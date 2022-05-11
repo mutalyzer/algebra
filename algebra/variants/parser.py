@@ -79,10 +79,7 @@ class Parser:
                 return self.expression[start:self.pos]
 
     def _match_variant(self):
-        start = self._match_number()
-        if start == 0:
-            raise ValueError(f"invalid position at {self.pos}")
-        start -= 1
+        start = self._match_number() - 1
         end = None
         if self._match("_"):
             end = self._match_number()
