@@ -1,5 +1,5 @@
 import sys
-from algebra.lcs import edit, lcs_graph, to_dot, traversal
+from algebra.lcs import edit, lcs_graph, to_dot
 from algebra.utils import random_sequence, random_variants
 from algebra.variants import Parser, Variant, patch, to_hgvs
 
