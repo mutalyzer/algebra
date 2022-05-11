@@ -7,7 +7,7 @@ their relations.
 
 import argparse
 from . import compare
-from .lcs import edit, lcs_graph, maximal_variant, traversal, to_dot
+from .lcs import edit, lcs_graph, maximal_variant, to_dot, traversal
 from .utils import random_sequence, random_variants
 from .variants import Parser, patch, to_hgvs
 
