@@ -39,7 +39,8 @@ class _Node:
         self.incoming = 0
 
     def __eq__(self, other):
-        return self.row == other.row and self.col == other.col and self.length == other.length
+        return (self.row == other.row and self.col == other.col and
+                self.length == other.length)
 
     def __hash__(self):
         return hash((self.row, self.col, self.length))
@@ -313,18 +314,17 @@ def traversal(root, atomics=False):
 
 def to_dot(reference, root):
     """The LCS graph in Graphviz DOT format."""
-
-    def nodes_and_edges():
+    def traverse():
         # breadth-first traversal
-        queue = [root]
         visited = {root}
+        queue = [root]
         while queue:
             node = queue.pop(0)
-            yield f'"{node.row}_{node.col}" [label="{node.row, node.col}"];'
             for succ, variant in node.edges:
-                yield f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}" [label="{to_hgvs(variant, reference, sequence_prefix=False)}"];'
+                yield (f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}"'
+                       f' [label="{to_hgvs(variant, reference)}"];')
                 if succ not in visited:
                     visited.add(succ)
                     queue.append(succ)
 
-    return "digraph {\n    " + "\n    ".join(nodes_and_edges()) + "\n}"
+    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"

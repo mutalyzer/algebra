@@ -185,4 +185,4 @@ def test_patch(reference, variants, observed):
     ("ACCTGC", [Variant(3, 4, "C"), Variant(4, 5, "T")], "ACCTGC:g.[4T>C;5G>T]"),
 ])
 def test_to_hgvs(reference, variants, hgvs):
-    assert to_hgvs(variants, reference) == hgvs
+    assert to_hgvs(variants, reference, sequence_prefix=True) == hgvs
