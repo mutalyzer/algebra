@@ -20,6 +20,8 @@ from algebra.variants import Parser, Variant
     ("3_4A[4]", [Variant(2, 4, "AAAA")]),
     ("4dupT", [Variant(4, 4, "T")]),
     ("0_1insT", [Variant(0, 0, "T")]),
+    ("3=", []),
+    ("[1=;2=;3=]", []),
 ])
 def test_hgvs_parser(expression, variants):
     assert Parser(expression).hgvs() == variants
@@ -43,9 +45,8 @@ def test_hgvs_parser(expression, variants):
     ("10_12A[", ValueError, "unexpected end of expression"),
     ("10_12A[A", ValueError, "expected digit at 7"),
     ("10_12A[1", ValueError, "expected ']' at 8"),
-    ("123", ValueError, "expected '>' at 3"),
+    ("123", ValueError, "expected '>' or '=' at 3"),
     ("=3", ValueError, "expected end of expression at 1"),
-    ("3=", ValueError, "expected '>' at 1"),
     ("[3del", ValueError, "expected ']' at 5"),
     ("[3del;", ValueError, "unexpected end of expression"),
     ("3del;", ValueError, "expected end of expression at 4"),
@@ -56,6 +57,27 @@ def test_hgvs_parser(expression, variants):
 def test_hgvs_parser_fail(expression, exception, message):
     with pytest.raises(exception) as exc:
         Parser(expression).hgvs()
+    assert str(exc.value) == message
+
+
+@pytest.mark.parametrize("expression, variants", [
+    ("NG_008376.4:g.=", []),
+    ("NG_008376.4:g.3del", [Variant(2, 3)]),
+])
+def test_hgvs_parser_with_reference(expression, variants):
+    assert Parser(expression).hgvs(skip_reference=True) == variants
+
+
+@pytest.mark.parametrize("expression, exception, message", [
+    ("3del", ValueError, "expected 'g.' at 4"),
+    ("g.3del", ValueError, "expected 'g.' at 6"),
+    ("NG_008376.4:", ValueError, "expected 'g.' at 12"),
+    ("NG_008376.4:3del", ValueError, "expected 'g.' at 12"),
+    ("NG_008376.4:g.", ValueError, "unexpected end of expression"),
+])
+def test_hgvs_parser_with_reference_fail(expression, exception, message):
+    with pytest.raises(exception) as exc:
+        Parser(expression).hgvs(skip_reference=True)
     assert str(exc.value) == message
 
 
