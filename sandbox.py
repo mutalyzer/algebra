@@ -60,7 +60,7 @@ def main():
 
     distance, lcs_nodes = edit(reference, observed)
 
-    print(to_hgvs(variants, reference))
+    print(to_hgvs(variants, reference, sequence_prefix=True))
     print(distance)
     print(sum([len(level) for level in lcs_nodes]))
 
