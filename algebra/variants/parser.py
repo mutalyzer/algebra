@@ -140,16 +140,24 @@ class Parser:
             self._match_nucleotide()
         except ValueError:
             pass
+        if self._match("="):
+            return Variant(start, start)
+
         if not self._match(">"):
             raise ValueError(f"expected '>' at {self.pos}")
         return Variant(start, start + 1, self._match_nucleotide())
 
-    def hgvs(self):
+    def hgvs(self, skip_reference=False):
         """Parse an expression as HGVS.
 
         Only simple (deletions, insertions, substitutions,
         deletion/insertions and repeats) are supported in a genomic
         coordinate system.
+
+        Parameters
+        ----------
+        skip_reference : bool, optional
+            Skips a reference sequence identifier and coordinate system.
 
         Raises
         ------
@@ -164,19 +172,32 @@ class Parser:
             A sorted list of variants (allele).
         """
 
+        if skip_reference:
+            while self.pos < len(self.expression) and not self._match(":"):
+                self.pos += 1
+            if not self._match("g."):
+                raise ValueError(f"expected 'g.' at {self.pos}")
+
         if self._match("="):
             if not self.pos == len(self.expression):
                 raise ValueError(f"expected end of expression at {self.pos}")
             return []
 
+        variants = []
         if self._match("["):
-            variants = [self._match_variant()]
+            variant = self._match_variant()
+            if variant:
+                variants.append(variant)
             while self._match(";"):
-                variants.append(self._match_variant())
+                variant = self._match_variant()
+                if variant:
+                    variants.append(variant)
             if not self._match("]"):
                 raise ValueError(f"expected ']' at {self.pos}")
         else:
-            variants = [self._match_variant()]
+            variant = self._match_variant()
+            if variant:
+                variants.append(variant)
 
         if not self.pos == len(self.expression):
             raise ValueError(f"expected end of expression at {self.pos}")
