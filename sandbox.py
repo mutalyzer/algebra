@@ -5,15 +5,15 @@ from algebra.variants import Parser, Variant, patch, to_hgvs
 
 
 def reduce(reference, root):
-    queue = [(root, None, None)]
     visited = set()
+    queue = [(root, None, None)]
     dot = "digraph {\n"
     while queue:
         node, parent, in_variant = queue.pop(0)
         visited.add(node)
         print("pop", node)
         if not node.edges:
-            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference, sequence_prefix=False)}"];\n'
+            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference)}"];\n'
             continue
 
         successors = {}
@@ -43,7 +43,7 @@ def reduce(reference, root):
                 print("push", succ)
 
         if parent and successors:
-            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference, sequence_prefix=False)}"];\n'
+            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference)}"];\n'
 
     return dot + "}"
 
