@@ -99,7 +99,7 @@ class Variant:
             c = 0
             pos = self.start
             variant = Variant(pos, pos)
-            for i in range(len(self.sequence)):
+            for i, _ in enumerate(self.sequence):
                 if combo[i] > c:
                     if variant:
                         variants.append(variant)
@@ -223,7 +223,7 @@ def patch(reference, variants, sort=True):
     return "".join(slices(reference, variants))
 
 
-def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=True, sort=True):
+def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=False, sort=True):
     """An allele representation of a list of variants in HGVS [1]_.
 
     Parameters

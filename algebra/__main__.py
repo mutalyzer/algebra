@@ -32,16 +32,16 @@ def main():
 
     lhs_group = compare_parser.add_mutually_exclusive_group()
     lhs_group.add_argument("--lhs", type=str, help="an observed sequence as string (lhs)")
-    lhs_group.add_argument("--lhs-hgvs", type=str, help="an HGVS variant (lhs)")
-    lhs_group.add_argument("--lhs-spdi", type=str, help="a SPDI variant (lhs)")
+    lhs_group.add_argument("--lhs-hgvs", type=str, help="a variant in HGVS (lhs)")
+    lhs_group.add_argument("--lhs-spdi", type=str, help="a variant in SPDI (lhs)")
     lhs_group.add_argument("--lhs-file", type=str, help="an observed sequence from a file (lhs)")
     lhs_group.add_argument("--lhs-random-variant", action="store_true", help="a random variant")
     lhs_group.add_argument("--lhs-random-sequence", action="store_true", help="a random sequence (default)")
 
     rhs_group = compare_parser.add_mutually_exclusive_group()
     rhs_group.add_argument("--rhs", type=str, help="an observed sequence as string (rhs)")
-    rhs_group.add_argument("--rhs-hgvs", type=str, help="an HGVS variant (rhs)")
-    rhs_group.add_argument("--rhs-spdi", type=str, help="a SPDI variant (rhs)")
+    rhs_group.add_argument("--rhs-hgvs", type=str, help="a variant in HGVS (rhs)")
+    rhs_group.add_argument("--rhs-spdi", type=str, help="a variant in SPDI (rhs)")
     rhs_group.add_argument("--rhs-file", type=str, help="an observed sequence from a file (rhs)")
     rhs_group.add_argument("--rhs-random-variant", action="store_true", help="a random variant")
     rhs_group.add_argument("--rhs-random-sequence", action="store_true", help="a random sequence (default)")
@@ -55,8 +55,8 @@ def main():
 
     observed_group = extract_parser.add_mutually_exclusive_group()
     observed_group.add_argument("--observed", type=str, help="an observed sequence as string")
-    observed_group.add_argument("--observed-hgvs", type=str, help="an HGVS variant")
-    observed_group.add_argument("--observed-spdi", type=str, help="a SPDI variant")
+    observed_group.add_argument("--observed-hgvs", type=str, help="a variant in HGVS")
+    observed_group.add_argument("--observed-spdi", type=str, help="a variant in SPDI")
     observed_group.add_argument("--observed-file", type=str, help="an observed sequence from a file")
     observed_group.add_argument("--observed-random-variant", action="store_true", help="a random variant")
     observed_group.add_argument("--observed-random-sequence", action="store_true", help="a random sequence (default)")
@@ -95,7 +95,7 @@ def main():
         elif args.lhs_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             lhs = patch(reference, variants)
-            print(to_hgvs(variants, reference, sequence_prefix=False))
+            print(to_hgvs(variants, reference))
         else:  # args.lhs_random_sequence:
             lhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
             print(lhs)
@@ -112,7 +112,7 @@ def main():
         elif args.rhs_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             rhs = patch(reference, variants)
-            print(to_hgvs(variants, reference, sequence_prefix=False))
+            print(to_hgvs(variants, reference))
         else:  # args.rhs_random_sequence
             rhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
             print(rhs)
@@ -132,7 +132,7 @@ def main():
         elif args.observed_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             observed = patch(reference, variants)
-            print(to_hgvs(variants, reference, sequence_prefix=False))
+            print(to_hgvs(variants, reference))
         else:  # args.observed_random_sequence
             observed = random_sequence(args.random_sequence_max, args.random_sequence_min)
             print(observed)
@@ -149,7 +149,7 @@ def main():
             print(max_variant.to_hgvs(reference))
         if True or args.all:
             for variants in traversal(root, args.atomics):
-                print(to_hgvs(variants, reference, sequence_prefix=False))
+                print(to_hgvs(variants, reference))
 
     elif args.command == "patch":
         if args.hgvs is not None:
@@ -158,7 +158,7 @@ def main():
             variants = Parser(args.spdi).spdi()
         else:  # args.random_variant
             variants = list(random_variants(reference, args.random_variant_p))
-            print(to_hgvs(variants, reference, sequence_prefix=False))
+            print(to_hgvs(variants, reference))
 
         print(patch(reference, variants))
 
