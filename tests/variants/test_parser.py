@@ -45,7 +45,7 @@ def test_hgvs_parser(expression, variants):
     ("10_12A[", ValueError, "unexpected end of expression"),
     ("10_12A[A", ValueError, "expected digit at 7"),
     ("10_12A[1", ValueError, "expected ']' at 8"),
-    ("123", ValueError, "expected '>' or '=' at 3"),
+    ("123", ValueError, "expected '>' at 3"),
     ("=3", ValueError, "expected end of expression at 1"),
     ("[3del", ValueError, "expected ']' at 5"),
     ("[3del;", ValueError, "unexpected end of expression"),
