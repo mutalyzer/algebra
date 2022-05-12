@@ -2,10 +2,7 @@
 
 
 import random
-from .variants import Variant
-
-
-DNA_NUCLEOTIDES = "ACGT"
+from .variants import DNA_NUCLEOTIDES, Variant
 
 
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):

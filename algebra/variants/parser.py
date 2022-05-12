@@ -18,6 +18,9 @@ In: Bioinformatics 36.6 (2019), pp. 1902-1907.
 from .variant import Variant
 
 
+DNA_NUCLEOTIDES = "ACGT"
+
+
 class Parser:
     """Parser class."""
 
@@ -55,7 +58,7 @@ class Parser:
     def _match_nucleotide(self):
         if self.pos >= len(self.expression):
             raise ValueError("unexpected end of expression")
-        if not self.expression[self.pos] in "ACGT":
+        if not self.expression[self.pos] in DNA_NUCLEOTIDES:
             raise ValueError(f"expected nucleotide at {self.pos}")
 
         self.pos += 1
