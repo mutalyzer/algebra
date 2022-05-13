@@ -21,6 +21,11 @@ from .variant import Variant
 DNA_NUCLEOTIDES = "ACGT"
 
 
+def reverse_complement(sequence):
+    """The reverse complement of a sequence."""
+    return sequence.translate(sequence.maketrans(DNA_NUCLEOTIDES, DNA_NUCLEOTIDES[::-1]))[::-1]
+
+
 class Parser:
     """Parser class."""
 
@@ -81,7 +86,7 @@ class Parser:
             except ValueError:
                 return self.expression[start:self.pos]
 
-    def _match_variant(self):
+    def _match_variant(self, reference):
         start = self._match_number() - 1
         end = None
         if self._match("_"):
@@ -101,11 +106,22 @@ class Parser:
             if duplicated is not None:
                 if len(duplicated) != end - start:
                     raise ValueError(f"inconsistent duplicated length at {self.pos}")
-                return Variant(end, end, duplicated)
-            raise NotImplementedError
+            if reference is None:
+                raise NotImplementedError("duplications without the reference context are not supported")
+            if start < 0 or len(reference) < end:
+                raise ValueError("invalid range in reference")
+
+            return Variant(end, end, reference[start:end])
 
         if self._match("inv"):
-            raise NotImplementedError
+            if end is None:
+                end = start + 1
+            if reference is None:
+                raise NotImplementedError("inversions without the reference context are not supported")
+            if len(reference) < end:
+                raise ValueError("invalid range in reference")
+
+            return Variant(start, end, reverse_complement(reference[start:end]))
 
         if self._match("del"):
             if end is None:
@@ -136,18 +152,25 @@ class Parser:
                 raise ValueError(f"expected ']' at {self.pos}")
             return Variant(start, end, repeat_number * repeat_unit)
 
+        sequence = None
         try:
-            self._match_nucleotide()
+            sequence = self._match_sequence()
         except ValueError:
             pass
         if self._match("="):
             return Variant(start, start)
+        if sequence is not None and self._match("["):
+            # this is PharmVars HGVS repeat notation
+            repeat_number = self._match_number()
+            if not self._match("]"):
+                raise ValueError(f"expected ']' at {self.pos}")
+            return Variant(start + len(sequence), start + len(sequence), sequence * (repeat_number - 1))
 
         if not self._match(">"):
             raise ValueError(f"expected '>' at {self.pos}")
-        return Variant(start, start + 1, self._match_nucleotide())
+        return Variant(start, start + 1, self._match_sequence())
 
-    def hgvs(self, skip_reference=False):
+    def hgvs(self, reference=None, skip_reference=False):
         """Parse an expression as HGVS.
 
         Only simple (deletions, insertions, substitutions,
@@ -156,6 +179,9 @@ class Parser:
 
         Parameters
         ----------
+        reference : str or None, optional
+            The reference sequence useful for handling inversions and/or
+            duplications.
         skip_reference : bool, optional
             Skips a reference sequence identifier and coordinate system.
 
@@ -185,17 +211,17 @@ class Parser:
 
         variants = []
         if self._match("["):
-            variant = self._match_variant()
+            variant = self._match_variant(reference)
             if variant:
                 variants.append(variant)
             while self._match(";"):
-                variant = self._match_variant()
+                variant = self._match_variant(reference)
                 if variant:
                     variants.append(variant)
             if not self._match("]"):
                 raise ValueError(f"expected ']' at {self.pos}")
         else:
-            variant = self._match_variant()
+            variant = self._match_variant(reference)
             if variant:
                 variants.append(variant)
 
