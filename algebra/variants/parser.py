@@ -144,6 +144,7 @@ class Parser:
             return Variant(start + 1, start + 1, self._match_sequence())
 
         if end is not None:
+            # new HGVS-style repeat notation
             repeat_unit = self._match_sequence()
             if not self._match("["):
                 raise ValueError(f"expected '[' at {self.pos}")
@@ -160,11 +161,19 @@ class Parser:
         if self._match("="):
             return Variant(start, start)
         if sequence is not None and self._match("["):
-            # this is PharmVars HGVS repeat notation
+            # dbSNP HGVS repeat notation
+            if reference is None:
+                raise NotImplementedError("dbSNP repeats without reference context are not supported")
             repeat_number = self._match_number()
             if not self._match("]"):
                 raise ValueError(f"expected ']' at {self.pos}")
-            return Variant(start + len(sequence), start + len(sequence), sequence * (repeat_number - 1))
+            found = 0
+            while reference[start + found * len(sequence):start + (found + 1) * len(sequence)] == sequence:
+                found += 1
+            if found == 0:
+                raise ValueError(f"'{sequence}' not found in reference at {start}")
+
+            return Variant(start, start + found * len(sequence), sequence * repeat_number)
 
         if not self._match(">"):
             raise ValueError(f"expected '>' at {self.pos}")

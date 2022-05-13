@@ -21,7 +21,6 @@ from algebra.variants import Parser, Variant, reverse_complement
     ("0_1insT", [Variant(0, 0, "T")]),
     ("3=", []),
     ("[1=;2=;3=]", []),
-    ("6875TTTCGCCCC[3]", [Variant(6883, 6883, "TTTCGCCCCTTTCGCCCC")]),
 ])
 def test_hgvs_parser(expression, variants):
     assert Parser(expression).hgvs() == variants
@@ -53,7 +52,7 @@ def test_hgvs_parser(expression, variants):
     ("4dupTT", ValueError, "inconsistent duplicated length at 6"),
     ("4dup", NotImplementedError, "duplications without the reference context are not supported"),
     ("4inv", NotImplementedError, "inversions without the reference context are not supported"),
-    ("6875TTTCGCCCC[3", ValueError, "expected ']' at 15"),
+    ("6875TTTCGCCCC[3", NotImplementedError, "dbSNP repeats without reference context are not supported"),
 ])
 def test_hgvs_parser_fail(expression, exception, message):
     with pytest.raises(exception) as exc:
@@ -87,6 +86,7 @@ def test_hgvs_parser_with_prefix_fail(expression, exception, message):
     ("ACCGGGTTTT", "1_10inv", [Variant(0, 10, "AAAACCCGGT")]),
     ("ACCGGGTTTT", "1dup", [Variant(1, 1, "A")]),
     ("ACCGGGTTTT", "1_2dup", [Variant(2, 2, "AC")]),
+    ("TTGAGAGAGATT", "3GA[3]", [Variant(2, 10, "GAGAGA")]),
 ])
 def test_hgvs_parser_with_reference(reference, expression, variants):
     assert Parser(expression).hgvs(reference=reference) == variants
@@ -96,6 +96,8 @@ def test_hgvs_parser_with_reference(reference, expression, variants):
     ("ACCGGGTTTT", "1_11inv", ValueError, "invalid range in reference"),
     ("ACCGGGTTTT", "11dup", ValueError, "invalid range in reference"),
     ("ACCGGGTTTT", "0_1dup", ValueError, "invalid range in reference"),
+    ("TTGAGAGAGATT", "3GA[3", ValueError, "expected ']' at 5"),
+    ("TTGAGAGAGATT", "3AG[3]", ValueError, "'AG' not found in reference at 2"),
 ])
 def test_hgvs_parser_with_reference_fail(reference, expression, exception, message):
     with pytest.raises(exception) as exc:
