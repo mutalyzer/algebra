@@ -5,6 +5,11 @@ import random
 from .variants import DNA_NUCLEOTIDES, Variant
 
 
+def fasta_sequence(file):
+    """Read a sequence from (FASTA) file."""
+    return "".join([line.strip() if not line.startswith(">") else "" for line in file.readlines()])
+
+
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):
     """Create a random sequence.
 

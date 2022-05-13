@@ -8,7 +8,7 @@ their relations.
 import argparse
 from . import compare
 from .lcs import edit, lcs_graph, maximal_variant, to_dot, traversal
-from .utils import random_sequence, random_variants
+from .utils import fasta_sequence, random_sequence, random_variants
 from .variants import Parser, patch, to_hgvs
 
 
@@ -77,7 +77,7 @@ def main():
         reference = args.reference
     elif args.reference_file is not None:
         with open(args.reference_file, encoding="utf-8") as file:
-            reference = file.read().strip()
+            reference = fasta_sequence(file)
     else:  # args.reference_random_sequence
         reference = random_sequence(args.random_sequence_max, args.random_sequence_min)
         print(reference)
@@ -86,12 +86,12 @@ def main():
         if args.lhs is not None:
             lhs = args.lhs
         elif args.lhs_hgvs is not None:
-            lhs = patch(reference, Parser(args.lhs_hgvs).hgvs())
+            lhs = patch(reference, Parser(args.lhs_hgvs).hgvs(reference))
         elif args.lhs_spdi is not None:
             lhs = patch(reference, Parser(args.lhs_spdi).spdi())
         elif args.lhs_file is not None:
             with open(args.lhs_file, encoding="utf-8") as file:
-                lhs = file.read().strip()
+                lhs = fasta_sequence(file)
         elif args.lhs_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             lhs = patch(reference, variants)
@@ -103,12 +103,12 @@ def main():
         if args.rhs is not None:
             rhs = args.rhs
         elif args.rhs_hgvs is not None:
-            rhs = patch(reference, Parser(args.rhs_hgvs).hgvs())
+            rhs = patch(reference, Parser(args.rhs_hgvs).hgvs(reference))
         elif args.rhs_spdi is not None:
             rhs = patch(reference, Parser(args.rhs_spdi).spdi())
         elif args.rhs_file is not None:
             with open(args.rhs_file, encoding="utf-8") as file:
-                rhs = file.read().strip()
+                rhs = fasta_sequence(file)
         elif args.rhs_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             rhs = patch(reference, variants)
@@ -123,12 +123,12 @@ def main():
         if args.observed is not None:
             observed = args.observed
         elif args.observed_hgvs is not None:
-            observed = patch(reference, Parser(args.observed_hgvs).hgvs())
+            observed = patch(reference, Parser(args.observed_hgvs).hgvs(reference))
         elif args.observed_spdi is not None:
             observed = patch(reference, Parser(args.observed_spdi).spdi())
         elif args.observed_file is not None:
             with open(args.observed_file, encoding="utf-8") as file:
-                observed = file.read().strip()
+                observed = fasta_sequence(file)
         elif args.observed_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             observed = patch(reference, variants)
@@ -153,7 +153,7 @@ def main():
 
     elif args.command == "patch":
         if args.hgvs is not None:
-            variants = Parser(args.hgvs).hgvs()
+            variants = Parser(args.hgvs).hgvs(reference)
         elif args.spdi is not None:
             variants = Parser(args.spdi).spdi()
         else:  # args.random_variant
