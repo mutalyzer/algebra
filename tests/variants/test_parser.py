@@ -1,5 +1,5 @@
 import pytest
-from algebra.variants import Parser, Variant
+from algebra.variants import Parser, Variant, reverse_complement
 
 
 @pytest.mark.parametrize("expression, variants", [
@@ -18,10 +18,10 @@ from algebra.variants import Parser, Variant
     ("[3del]", [Variant(2, 3)]),
     ("[3del;3_4insT]", [Variant(2, 3), Variant(3, 3, "T")]),
     ("3_4A[4]", [Variant(2, 4, "AAAA")]),
-    ("4dupT", [Variant(4, 4, "T")]),
     ("0_1insT", [Variant(0, 0, "T")]),
     ("3=", []),
     ("[1=;2=;3=]", []),
+    ("6875TTTCGCCCC[3]", [Variant(6883, 6883, "TTTCGCCCCTTTCGCCCC")]),
 ])
 def test_hgvs_parser(expression, variants):
     assert Parser(expression).hgvs() == variants
@@ -51,8 +51,9 @@ def test_hgvs_parser(expression, variants):
     ("[3del;", ValueError, "unexpected end of expression"),
     ("3del;", ValueError, "expected end of expression at 4"),
     ("4dupTT", ValueError, "inconsistent duplicated length at 6"),
-    ("4dup", NotImplementedError, ""),
-    ("4inv", NotImplementedError, ""),
+    ("4dup", NotImplementedError, "duplications without the reference context are not supported"),
+    ("4inv", NotImplementedError, "inversions without the reference context are not supported"),
+    ("6875TTTCGCCCC[3", ValueError, "expected ']' at 15"),
 ])
 def test_hgvs_parser_fail(expression, exception, message):
     with pytest.raises(exception) as exc:
@@ -64,7 +65,7 @@ def test_hgvs_parser_fail(expression, exception, message):
     ("NG_008376.4:g.=", []),
     ("NG_008376.4:g.3del", [Variant(2, 3)]),
 ])
-def test_hgvs_parser_with_reference(expression, variants):
+def test_hgvs_parser_with_prefix(expression, variants):
     assert Parser(expression).hgvs(skip_reference=True) == variants
 
 
@@ -75,9 +76,30 @@ def test_hgvs_parser_with_reference(expression, variants):
     ("NG_008376.4:3del", ValueError, "expected 'g.' at 12"),
     ("NG_008376.4:g.", ValueError, "unexpected end of expression"),
 ])
-def test_hgvs_parser_with_reference_fail(expression, exception, message):
+def test_hgvs_parser_with_prefix_fail(expression, exception, message):
     with pytest.raises(exception) as exc:
         Parser(expression).hgvs(skip_reference=True)
+    assert str(exc.value) == message
+
+
+@pytest.mark.parametrize("reference, expression, variants", [
+    ("ACCGGGTTTT", "1inv", [Variant(0, 1, "T")]),
+    ("ACCGGGTTTT", "1_10inv", [Variant(0, 10, "AAAACCCGGT")]),
+    ("ACCGGGTTTT", "1dup", [Variant(1, 1, "A")]),
+    ("ACCGGGTTTT", "1_2dup", [Variant(2, 2, "AC")]),
+])
+def test_hgvs_parser_with_reference(reference, expression, variants):
+    assert Parser(expression).hgvs(reference=reference) == variants
+
+
+@pytest.mark.parametrize("reference, expression, exception, message", [
+    ("ACCGGGTTTT", "1_11inv", ValueError, "invalid range in reference"),
+    ("ACCGGGTTTT", "11dup", ValueError, "invalid range in reference"),
+    ("ACCGGGTTTT", "0_1dup", ValueError, "invalid range in reference"),
+])
+def test_hgvs_parser_with_reference_fail(reference, expression, exception, message):
+    with pytest.raises(exception) as exc:
+        Parser(expression).hgvs(reference=reference)
     assert str(exc.value) == message
 
 
@@ -103,3 +125,13 @@ def test_spdi_parser_fail(expression, exception, message):
     with pytest.raises(exception) as exc:
         Parser(expression).spdi()
     assert str(exc.value) == message
+
+
+@pytest.mark.parametrize("sequence, expected", [
+    ("", ""),
+    ("A", "T"),
+    ("ACGT", "ACGT"),
+    ("ACCGGGTTTT", "AAAACCCGGT"),
+])
+def test_reverse_complement(sequence, expected):
+    assert reverse_complement(sequence) == expected
