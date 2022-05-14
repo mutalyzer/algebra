@@ -103,13 +103,16 @@ class Parser:
             except ValueError:
                 pass
 
+            if reference is None:
+                raise NotImplementedError("duplications without the reference context are not supported")
             if duplicated is not None:
                 if len(duplicated) != end - start:
                     raise ValueError(f"inconsistent duplicated length at {self.pos}")
-            if reference is None:
-                raise NotImplementedError("duplications without the reference context are not supported")
+
             if start < 0 or len(reference) < end:
                 raise ValueError("invalid range in reference")
+            if duplicated is not None and reference[start:end] != duplicated:
+                raise ValueError(f"'{duplicated}' not found in reference at {start}")
 
             return Variant(end, end, reference[start:end])
 
@@ -132,8 +135,12 @@ class Parser:
             except ValueError:
                 pass
 
-            if deleted is not None and len(deleted) != end - start:
-                raise ValueError(f"inconsistent deleted length at {self.pos}")
+            if deleted is not None:
+                if len(deleted) != end - start:
+                    raise ValueError(f"inconsistent deleted length at {self.pos}")
+                if reference is not None and reference[start:end] != deleted:
+                    raise ValueError(f"'{deleted}' not found in reference at {start}")
+
             if self._match("ins"):
                 return Variant(start, end, self._match_sequence())
             return Variant(start, end)
@@ -158,6 +165,10 @@ class Parser:
             sequence = self._match_sequence()
         except ValueError:
             pass
+        if (reference is not None and sequence is not None and
+                reference[start:start + len(sequence)] != sequence):
+            raise ValueError(f"'{sequence}' not found in reference at {start}")
+
         if self._match("="):
             return Variant(start, start)
         if sequence is not None and self._match("["):
@@ -170,8 +181,6 @@ class Parser:
             found = 0
             while reference[start + found * len(sequence):start + (found + 1) * len(sequence)] == sequence:
                 found += 1
-            if found == 0:
-                raise ValueError(f"'{sequence}' not found in reference at {start}")
 
             return Variant(start, start + found * len(sequence), sequence * repeat_number)
 

@@ -49,7 +49,6 @@ def test_hgvs_parser(expression, variants):
     ("[3del", ValueError, "expected ']' at 5"),
     ("[3del;", ValueError, "unexpected end of expression"),
     ("3del;", ValueError, "expected end of expression at 4"),
-    ("4dupTT", ValueError, "inconsistent duplicated length at 6"),
     ("4dup", NotImplementedError, "duplications without the reference context are not supported"),
     ("4inv", NotImplementedError, "inversions without the reference context are not supported"),
     ("6875TTTCGCCCC[3", NotImplementedError, "dbSNP repeats without reference context are not supported"),
@@ -87,9 +86,10 @@ def test_hgvs_parser_with_prefix_fail(expression, exception, message):
     ("ACCGGGTTTT", "1dup", [Variant(1, 1, "A")]),
     ("ACCGGGTTTT", "1_2dup", [Variant(2, 2, "AC")]),
     ("TTGAGAGAGATT", "3GA[3]", [Variant(2, 10, "GAGAGA")]),
+    ("AAA", "1delA", [Variant(0, 1)]),
 ])
 def test_hgvs_parser_with_reference(reference, expression, variants):
-    assert Parser(expression).hgvs(reference=reference) == variants
+    assert Parser(expression).hgvs(reference) == variants
 
 
 @pytest.mark.parametrize("reference, expression, exception, message", [
@@ -98,10 +98,13 @@ def test_hgvs_parser_with_reference(reference, expression, variants):
     ("ACCGGGTTTT", "0_1dup", ValueError, "invalid range in reference"),
     ("TTGAGAGAGATT", "3GA[3", ValueError, "expected ']' at 5"),
     ("TTGAGAGAGATT", "3AG[3]", ValueError, "'AG' not found in reference at 2"),
+    ("AAAAAA", "4dupTT", ValueError, "inconsistent duplicated length at 6"),
+    ("AAAAAA", "4dupT", ValueError, "'T' not found in reference at 3"),
+    ("AAA", "1delT", ValueError, "'T' not found in reference at 0"),
 ])
 def test_hgvs_parser_with_reference_fail(reference, expression, exception, message):
     with pytest.raises(exception) as exc:
-        Parser(expression).hgvs(reference=reference)
+        Parser(expression).hgvs(reference)
     assert str(exc.value) == message
 
 
