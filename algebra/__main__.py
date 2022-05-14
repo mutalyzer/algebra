@@ -77,7 +77,7 @@ def main():
         reference = args.reference
     elif args.reference_file is not None:
         with open(args.reference_file, encoding="utf-8") as file:
-            reference = fasta_sequence(file)
+            reference = fasta_sequence(file.readlines())
     else:  # args.reference_random_sequence
         reference = random_sequence(args.random_sequence_max, args.random_sequence_min)
         print(reference)
@@ -91,7 +91,7 @@ def main():
             lhs = patch(reference, Parser(args.lhs_spdi).spdi())
         elif args.lhs_file is not None:
             with open(args.lhs_file, encoding="utf-8") as file:
-                lhs = fasta_sequence(file)
+                lhs = fasta_sequence(file.readlines())
         elif args.lhs_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             lhs = patch(reference, variants)
@@ -108,7 +108,7 @@ def main():
             rhs = patch(reference, Parser(args.rhs_spdi).spdi())
         elif args.rhs_file is not None:
             with open(args.rhs_file, encoding="utf-8") as file:
-                rhs = fasta_sequence(file)
+                rhs = fasta_sequence(file.readlines())
         elif args.rhs_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             rhs = patch(reference, variants)
@@ -128,7 +128,7 @@ def main():
             observed = patch(reference, Parser(args.observed_spdi).spdi())
         elif args.observed_file is not None:
             with open(args.observed_file, encoding="utf-8") as file:
-                observed = fasta_sequence(file)
+                observed = fasta_sequence(file.readlines())
         elif args.observed_random_variant:
             variants = list(random_variants(reference, args.random_variant_p))
             observed = patch(reference, variants)
