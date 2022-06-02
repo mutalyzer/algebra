@@ -139,7 +139,7 @@ class Variant:
     def reverse_complement(self, end):
         """The reverse complement of this variant."""
         return Variant(end - self.end - 1, end - self.start - 1,
-                   reverse_complement(self.sequence))
+                       reverse_complement(self.sequence))
 
     def to_hgvs(self, reference=None, only_substitutions=True):
         """The variant representation in HGVS [1]_.
