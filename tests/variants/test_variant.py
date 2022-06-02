@@ -172,6 +172,13 @@ def test_variant_atomics(variant, atomics):
     assert list(variant.atomics()) == atomics
 
 
+@pytest.mark.parametrize("variant, end, expected", [
+    (Variant(7, 8, "G"), 10, Variant(1, 2, "C")),
+])
+def test_variant_reverse_complement(variant, end, expected):
+    assert variant.reverse_complement(end) == expected
+
+
 @pytest.mark.parametrize("reference, variants, observed", [
     ("ACCTGC", [Variant(1, 4, "CCC")], "ACCCGC"),
 ])

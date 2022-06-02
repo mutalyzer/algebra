@@ -15,15 +15,7 @@ In: Bioinformatics 36.6 (2019), pp. 1902-1907.
 """
 
 
-from .variant import Variant
-
-
-DNA_NUCLEOTIDES = "ACGT"
-
-
-def reverse_complement(sequence):
-    """The reverse complement of a sequence."""
-    return sequence.translate(sequence.maketrans(DNA_NUCLEOTIDES, DNA_NUCLEOTIDES[::-1]))[::-1]
+from .variant import DNA_NUCLEOTIDES, Variant, reverse_complement
 
 
 class Parser:
