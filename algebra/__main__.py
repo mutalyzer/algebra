@@ -146,7 +146,7 @@ def main():
             print(to_dot(reference, root))
         if args.max_variant:
             max_variant = maximal_variant(reference, observed, edges)
-            print(max_variant.to_hgvs(reference))
+            print(max_variant.to_hgvs(reference), max_variant)
         if True or args.all:
             for variants in traversal(root, args.atomics):
                 print(to_hgvs(variants, reference))
