@@ -1,8 +1,8 @@
 """Variant model and parser."""
 
 
-from .parser import DNA_NUCLEOTIDES, Parser, reverse_complement
-from .variant import Variant, patch, to_hgvs
+from .parser import Parser
+from .variant import DNA_NUCLEOTIDES, Variant, patch, reverse_complement, to_hgvs
 
 
 __all__ = [

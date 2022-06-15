@@ -15,6 +15,14 @@ representations.
 from itertools import combinations
 
 
+DNA_NUCLEOTIDES = "ACGT"
+
+
+def reverse_complement(sequence):
+    """The reverse complement of a sequence."""
+    return sequence.translate(sequence.maketrans(DNA_NUCLEOTIDES, DNA_NUCLEOTIDES[::-1]))[::-1]
+
+
 class Variant:
     """Variant class for deletion/insertions."""
 
@@ -127,6 +135,11 @@ class Variant:
             return False
         return (self.start > other.end or other.start > self.end or
                 set(self.sequence).isdisjoint(set(other.sequence)))
+
+    def reverse_complement(self, end):
+        """The reverse complement of this variant."""
+        return Variant(end - self.end - 1, end - self.start - 1,
+                       reverse_complement(self.sequence))
 
     def to_hgvs(self, reference=None, only_substitutions=True):
         """The variant representation in HGVS [1]_.

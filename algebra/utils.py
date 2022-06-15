@@ -1,8 +1,20 @@
-"""Utility functions for random sequences and variants."""
+"""Utility functions for sequences and variants."""
 
 
 import random
 from .variants import DNA_NUCLEOTIDES, Variant
+
+
+def fasta_sequence(lines):
+    """Create a single sequence from (FASTA) lines."""
+    return "".join([line.strip() if not line.startswith(">") else "" for line in lines])
+
+
+def vcf_variant(line):
+    """Create a variant from a (simple) VCF line."""
+    _, position, _,  deleted, inserted, *_ = line.split()
+    start = int(position) - 1
+    return Variant(start, start + len(deleted), inserted)
 
 
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):

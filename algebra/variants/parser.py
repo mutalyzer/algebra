@@ -15,15 +15,7 @@ In: Bioinformatics 36.6 (2019), pp. 1902-1907.
 """
 
 
-from .variant import Variant
-
-
-DNA_NUCLEOTIDES = "ACGT"
-
-
-def reverse_complement(sequence):
-    """The reverse complement of a sequence."""
-    return sequence.translate(sequence.maketrans(DNA_NUCLEOTIDES, DNA_NUCLEOTIDES[::-1]))[::-1]
+from .variant import DNA_NUCLEOTIDES, Variant, reverse_complement
 
 
 class Parser:
@@ -103,13 +95,16 @@ class Parser:
             except ValueError:
                 pass
 
+            if reference is None:
+                raise NotImplementedError("duplications without the reference context are not supported")
             if duplicated is not None:
                 if len(duplicated) != end - start:
                     raise ValueError(f"inconsistent duplicated length at {self.pos}")
-            if reference is None:
-                raise NotImplementedError("duplications without the reference context are not supported")
+
             if start < 0 or len(reference) < end:
                 raise ValueError("invalid range in reference")
+            if duplicated is not None and reference[start:end] != duplicated:
+                raise ValueError(f"'{duplicated}' not found in reference at {start}")
 
             return Variant(end, end, reference[start:end])
 
@@ -132,8 +127,12 @@ class Parser:
             except ValueError:
                 pass
 
-            if deleted is not None and len(deleted) != end - start:
-                raise ValueError(f"inconsistent deleted length at {self.pos}")
+            if deleted is not None:
+                if len(deleted) != end - start:
+                    raise ValueError(f"inconsistent deleted length at {self.pos}")
+                if reference is not None and reference[start:end] != deleted:
+                    raise ValueError(f"'{deleted}' not found in reference at {start}")
+
             if self._match("ins"):
                 return Variant(start, end, self._match_sequence())
             return Variant(start, end)
@@ -144,6 +143,7 @@ class Parser:
             return Variant(start + 1, start + 1, self._match_sequence())
 
         if end is not None:
+            # new HGVS-style repeat notation
             repeat_unit = self._match_sequence()
             if not self._match("["):
                 raise ValueError(f"expected '[' at {self.pos}")
@@ -157,14 +157,24 @@ class Parser:
             sequence = self._match_sequence()
         except ValueError:
             pass
+        if (reference is not None and sequence is not None and
+                reference[start:start + len(sequence)] != sequence):
+            raise ValueError(f"'{sequence}' not found in reference at {start}")
+
         if self._match("="):
             return Variant(start, start)
         if sequence is not None and self._match("["):
-            # this is PharmVars HGVS repeat notation
+            # dbSNP HGVS repeat notation
+            if reference is None:
+                raise NotImplementedError("dbSNP repeats without reference context are not supported")
             repeat_number = self._match_number()
             if not self._match("]"):
                 raise ValueError(f"expected ']' at {self.pos}")
-            return Variant(start + len(sequence), start + len(sequence), sequence * (repeat_number - 1))
+            found = 0
+            while reference[start + found * len(sequence):start + (found + 1) * len(sequence)] == sequence:
+                found += 1
+
+            return Variant(start, start + found * len(sequence), sequence * repeat_number)
 
         if not self._match(">"):
             raise ValueError(f"expected '>' at {self.pos}")
