@@ -2,108 +2,204 @@ import sys
 from copy import deepcopy
 
 from algebra.lcs import edit, lcs_graph, to_dot
-from algebra.lcs.all_lcs import _Node
+from algebra.lcs.all_lcs import _Node, traversal
 from algebra.utils import random_sequence, random_variants
 from algebra.variants import Parser, Variant, patch, to_hgvs
+from mutalyzer.description_extractor import description_extractor
 
 
-def reduce(reference, root):
-    def _node(n):
-        if (n.row, n.col) not in new:
-            new[(n.row, n.col)] = _Node(n.row, n.col, n.length)
-        return new[(n.row, n.col)]
+def reduce(root):
+    distances = {root: {"distance": 0, "parents": set()}}
 
-    def _add(p, c, v):
-        p_n = _node(p)
-        c_n = _node(c)
-        for edge in p_n.edges:
-            if edge[1] == v:
-                print("already in")
-                return
-        print("added")
-        p_n.edges.append((c_n, deepcopy(v)))
+    queue = [(0, root)]
+    visited = {}
+    while len(queue) > 0:
+        current_distance, current_node = queue.pop(0)
+        # print(current_node, len(queue))
 
-    print("\n--- reduce\n")
-
-    visited = set()
-
-    new = {}
-
-    queue = [(root, None, None)]
-    dot = "digraph {\n"
-    while queue:
-        node, parent, in_variant = queue.pop(0)
-        visited.add(node)
-        print("- pop", node, parent, in_variant)
-        if not node.edges:
-            print("   - to be added:", parent, node)
-            _add(parent, node, in_variant)
-            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference)}"];\n'
+        if current_node in visited:
             continue
 
-        successors = {}
-        for succ, out_variant in node.edges:
-            if succ in visited:
-                successors = {}
-                continue
+        if current_distance > distances[current_node]["distance"]:
+            continue
 
-            length = len(out_variant[0]) if len(out_variant) else 0
-            if length in successors:
-                found = False
-                for idx, value in enumerate(successors[length]):
-                    if succ == value[0]:
-                        # variant = Variant(min(value[1][0].start, out_variant[0].start), max(value[1][0].end, out_variant[0].end), value[1][0].sequence)
-                        # successors[length][idx] = (succ, [variant])
-                        print("  - repeat", variant)
-                        found = True
-                        break
-                if not found:
-                    successors[length].append((succ, out_variant))
+        for child, edge in current_node.edges:
+            if edge:
+                distance = current_distance + 1
             else:
-                successors[length] = [(succ, out_variant)]
+                distance = current_distance
 
-        for _, edges in sorted(successors.items(), reverse=True):
-            for succ, variant in edges:
-                queue.append((succ, node, variant))
-                print("  - push", succ, node, variant)
+            if distances.get(child) is None or distance < distances[child]["distance"]:
+                distances[child] = {"distance": distance, "parents": {current_node}}
+                queue.append((distance, child))
+            elif distance == distances[child]["distance"]:
+                distances[child]["parents"].add(current_node)
+                queue.append((distance, child))
+    # print("---")
+    sink = root
+    while sink.edges:
+        sink = sink.edges[0][0]
+    # print("---")
+    # print(sink)
+    # for d in distances:
+    #     print(d, distances[d])
+        # new_nodes_set.update(distances[d]["parents"])
 
-        if parent and successors:
-            print("   - to be added:", parent, node)
-            _add(parent, node, in_variant)
-            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference)}"];\n'
+    new = {}
+    nodes = [sink]
+    visited = set()
+    while nodes:
+        node = nodes.pop(0)
+        if node in visited:
+            continue
+        visited.add(node)
+        # print("current:", node)
+        if node not in new:
+            # print(" added node:", node)
+            new[node] = _Node(node.row, node.col, node.length)
+        for p in distances[node]["parents"]:
+            if p not in new:
+                new[p] = _Node(p.row, p.col, p.length)
+            #     print(" added node:", p)
+            # print("  ", p.edges)
+            for c, v in p.edges:
+                if c == node:
+                    new[p].edges.append((new[c], deepcopy(v)))
+                    # print("  - edge:", p, c)
+        extend = set(distances[node]["parents"]) - visited
+        nodes.extend(extend)
+    #     print("extend with:", extend)
+    #     print(nodes)
+    #     print()
+    # print(new)
+    for n in new:
+        if n.row == 0 and n.col == 0:
+            new_root = new[n]
+    # print(new_root)
 
-    return dot + "}", new[(root.row, root.col)]
+    return new_root
+
+
+def compare():
+    INTERESTING = [
+        ("CAAA", "A"),
+        ("GCG", "GGCGATTCTT"),
+        ("CAAGA", "GTCAA"),
+        ("CAAGA", "CAA"),
+        ("ACCCC", "CCAC"),
+        ("TCT", "TCCTCCT"),
+        ("CTCTTG", "CTCTCTTG"),
+        ("CACCT", "CAGGG"),
+        ("CACCTAA", "CAGGGAA"),
+        ("AAGTT", "TCAGT"),
+        ("CGCCC", "AGCCT"),
+        ("ATATC", "AATTC"),
+        ("ACCGA", "TCCGT"),
+        ("GCACT", "ACTAC"),
+        ("GCACT", "ACTAC"),
+        ("CATAA", "ATTCA"),
+        ("ACTAC", "TACCG"),
+        ("TCCAT", "CACCT"),
+        ("GACCT", "GCGCC"),
+        ("AACGACT", "AGGTACG"),
+    ]
+
+    for reference, observed in INTERESTING:
+        print("\n------")
+        print(reference, observed)
+        distance, lcs_nodes = edit(reference, observed)
+        root, _ = lcs_graph(reference, observed, lcs_nodes)
+        reduced_dot, reduced_root = reduce(reference, root)
+        new = [to_hgvs(path, reference) for path in traversal(reduced_root)]
+        old = description_extractor(reference, observed)
+        if len(new) > 1:
+            print(" - Multiple options")
+        else:
+            print(" - One option")
+        if old not in new:
+            print(" - NOT IN")
+            print(to_dot(reference, reduced_root))
+            print("  -", new)
+            print("  -", old)
+
+
+def middle_equal():
+    # CATATAGT "[4_5del;7delinsGA]"
+    # CTAA TTA - with equals inside
+    i = 0
+    while True:
+        reference = random_sequence(20, 20)
+        variants = list(
+            random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7)
+        )
+
+        observed = patch(reference, variants)
+        i += 1
+        print(i, reference, observed)
+
+        distance, lcs_nodes = edit(reference, observed)
+        root, _ = lcs_graph(reference, observed, lcs_nodes)
+
+        for path in traversal(root):
+            hgvs = [to_hgvs([v], reference) for v in path]
+            for v in hgvs:
+                if v == "=":
+                    print(reference, observed)
+                    return
+
+
+def check():
+    i = 0
+    while True:
+        reference = random_sequence(30, 30)
+        variants = list(random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7))
+        observed = patch(reference, variants)
+        i += 1
+        print(i, reference, observed)
+        distance, lcs_nodes = edit(reference, observed)
+        root, _ = lcs_graph(reference, observed, lcs_nodes)
+        reduced_root = reduce(root)
+        v_n = set([len(x) for x in traversal(reduced_root)])
+        print(v_n)
+
+        if len(v_n) > 1:
+            print("error")
+            break
 
 
 def main():
     # CATATAGT "[4_5del;7delinsGA]"
+    # CTAA TTA - with equals inside
     if len(sys.argv) < 3:
         reference = random_sequence(100, 100)
         variants = list(
-            random_variants(reference, p=0.02, mu_deletion=1.5, mu_insertion=1.7)
+                    random_variants(reference, p=0.02, mu_deletion=1.5,
+                                     mu_insertion=1.7)
         )
+        observed = patch(reference, variants)
     else:
         reference = sys.argv[1]
-        variants = Parser(sys.argv[2]).hgvs()
-
-    observed = patch(reference, variants)
+        if "[" in sys.argv[2]:
+            variants = Parser(sys.argv[2]).hgvs()
+            observed = patch(reference, variants)
+        else:
+            observed = sys.argv[2]
 
     distance, lcs_nodes = edit(reference, observed)
 
-    print(to_hgvs(variants, reference, sequence_prefix=True))
-    print(distance)
-    print(sum([len(level) for level in lcs_nodes]))
-
     root, _ = lcs_graph(reference, observed, lcs_nodes)
 
-    print(to_dot(reference, root))
-    print("-----")
-    reduced_dot, reduced_root = reduce(reference, root)
-    print("-----")
-    print(reduced_dot)
-    print("-----")
-    print(to_dot(reference, reduced_root))
+    print("----")
+    open("raw.dot", "w").write(to_dot(reference, root))
+    print("----")
+    reduced_root = reduce(root)
+    open("reduced.dot", "w").write(to_dot(reference, reduced_root))
+    print("----")
+    # print(set([len(x) for x in traversal(root)]))
+    print(set([len(x) for x in traversal(reduced_root)]))
 
 
 if __name__ == "__main__":
     main()
+    # check()
+
