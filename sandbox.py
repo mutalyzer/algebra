@@ -210,9 +210,30 @@ def check_set():
         print(status[variant])
 
 
+def rm_equals(root):
+    visited = {root}
+    queue = [root]
+    redirect = {}
+    while queue:
+        node = queue.pop(0)
+        print("visit:", node)
+        empty_children = [i for i, (child, variant) in enumerate(node.edges) if not variant]
+        # node.edges = [(succ, variant) in node.edges for succ, variant in node.edges if not variant]
+        print(empty_children)
+        for succ, variant in node.edges:
+            if not variant:
+                print("empty", node, succ)
+                # redirect[succ] = node
+                # node.edges.extend(succ.edges)
+            if succ not in visited:
+                visited.add(succ)
+                queue.append(succ)
+
+
 def main(reference, obs):
     # CATATAGT "[4_5del;7delinsGA]"
     # CTAA TTA - with equals inside
+    # CTAACG TTACC - with equals inside
     if "[" in obs:
         variants = Parser(obs).hgvs()
         observed = patch(reference, variants)
@@ -231,8 +252,8 @@ def main(reference, obs):
     # reduced_root = reduce(reduced_root)
     open("reduced.dot", "w").write(to_dot(reference, reduced_root))
     print("----")
-    print(set([len(x) for x in traversal(root)]))
-    print(set([len(x) for x in traversal(reduced_root)]))
+    # print(set([len(x) for x in traversal(root)]))
+    # print(set([len(x) for x in traversal(reduced_root)]))
 
     # for d in traversal(reduced_root):
     #     print(to_hgvs(d, reference))
@@ -241,7 +262,9 @@ def main(reference, obs):
     dot_reduced = to_dot(reference, reduced_root, extra="r", cluster="cluster_1")
     d = "digraph {\n    " + "\n    " + dot_raw + "\n" + dot_reduced + "}"
     src = graphviz.Source(d)
-    src.view()
+    # src.view()
+    rm_equals(reduced_root)
+    print(to_dot(reference, reduced_root))
 
 
 if __name__ == "__main__":
