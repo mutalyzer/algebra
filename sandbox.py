@@ -1,25 +1,23 @@
-import sys
+import argparse
+import time
 from copy import deepcopy
+
+import graphviz
+from mutalyzer.description_extractor import description_extractor
 
 from algebra.lcs import edit, lcs_graph, to_dot
 from algebra.lcs.all_lcs import _Node, traversal
 from algebra.utils import random_sequence, random_variants
 from algebra.variants import Parser, Variant, patch, to_hgvs
-from mutalyzer.description_extractor import description_extractor
 
 
 def reduce(root):
     distances = {root: {"distance": 0, "parents": set()}}
 
     queue = [(0, root)]
-    visited = {}
     while len(queue) > 0:
         current_distance, current_node = queue.pop(0)
         # print(current_node, len(queue))
-
-        if current_node in visited:
-            continue
-
         if current_distance > distances[current_node]["distance"]:
             continue
 
@@ -31,10 +29,13 @@ def reduce(root):
 
             if distances.get(child) is None or distance < distances[child]["distance"]:
                 distances[child] = {"distance": distance, "parents": {current_node}}
+                # print("- update distance: ", child, distance)
                 queue.append((distance, child))
             elif distance == distances[child]["distance"]:
                 distances[child]["parents"].add(current_node)
+                # print("- add distance: ", child, distance)
                 queue.append((distance, child))
+
     # print("---")
     sink = root
     while sink.edges:
@@ -43,7 +44,6 @@ def reduce(root):
     # print(sink)
     # for d in distances:
     #     print(d, distances[d])
-        # new_nodes_set.update(distances[d]["parents"])
 
     new = {}
     nodes = [sink]
@@ -148,44 +148,79 @@ def middle_equal():
                     return
 
 
-def check():
+def check(max_length, min_length, p, mu_deletion, mu_insertion):
     i = 0
     while True:
-        reference = random_sequence(30, 30)
-        variants = list(random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7))
+        reference = random_sequence(max_length, min_length)
+        # variants = list(random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7))
+        variants = list(
+            random_variants(
+                reference, p=p, mu_deletion=mu_deletion, mu_insertion=mu_insertion
+            )
+        )
         observed = patch(reference, variants)
         i += 1
         print(i, reference, observed)
         distance, lcs_nodes = edit(reference, observed)
+        print("distance:", distance)
+        root, _ = lcs_graph(reference, observed, lcs_nodes)
+        t_s = time.time()
+        reduced_root = reduce(root)
+        t = time.time() - t_s
+        v_n = set([len(x) for x in traversal(reduced_root)])
+        print(v_n, t)
+
+        if len(v_n) > 1:
+            print("error")
+            break
+
+        if t > 1:
+            print("longer than expected")
+            break
+
+
+def check_set():
+    status = {}
+    variants = [
+        "GCCC TTCGCGCCCCT",
+        "CATCA ATAATCTCAA",
+        "TCCTT CGCTCTATCCCT",
+        "ATTTT AGGTTAGATTTGGATTGT",
+        "CGGGAACTTA TTACGCCGGGCGCTTA",
+        "TCTCAACGAG AGTTCACAAATCGAA",
+        "AGGAACGACCCGAAAGATTCTGGGAAACGGAGCGTCTCTA ATCACCAGGTCCAGAAGGTTGACCAGGTAGTAGCCGGGATTCTGGATTTTTCCGATC",
+    ]
+    for variant in variants:
+        reference = variant.split()[0]
+        observed = variant.split()[1]
+        print(reference, observed)
+        distance, lcs_nodes = edit(reference, observed)
+        print("distance:", distance)
         root, _ = lcs_graph(reference, observed, lcs_nodes)
         reduced_root = reduce(root)
         v_n = set([len(x) for x in traversal(reduced_root)])
         print(v_n)
 
         if len(v_n) > 1:
-            print("error")
-            break
+            status[variant] = "error"
+        else:
+            status[variant] = "OK"
+    for variant in status:
+        print(variant)
+        print(status[variant])
 
 
-def main():
+def main(reference, obs):
     # CATATAGT "[4_5del;7delinsGA]"
     # CTAA TTA - with equals inside
-    if len(sys.argv) < 3:
-        reference = random_sequence(100, 100)
-        variants = list(
-                    random_variants(reference, p=0.02, mu_deletion=1.5,
-                                     mu_insertion=1.7)
-        )
+    if "[" in obs:
+        variants = Parser(obs).hgvs()
         observed = patch(reference, variants)
     else:
-        reference = sys.argv[1]
-        if "[" in sys.argv[2]:
-            variants = Parser(sys.argv[2]).hgvs()
-            observed = patch(reference, variants)
-        else:
-            observed = sys.argv[2]
+        observed = obs
 
     distance, lcs_nodes = edit(reference, observed)
+    print("distance:", distance)
 
     root, _ = lcs_graph(reference, observed, lcs_nodes)
 
@@ -193,13 +228,50 @@ def main():
     open("raw.dot", "w").write(to_dot(reference, root))
     print("----")
     reduced_root = reduce(root)
+    # reduced_root = reduce(reduced_root)
     open("reduced.dot", "w").write(to_dot(reference, reduced_root))
     print("----")
-    # print(set([len(x) for x in traversal(root)]))
+    print(set([len(x) for x in traversal(root)]))
     print(set([len(x) for x in traversal(reduced_root)]))
+
+    # for d in traversal(reduced_root):
+    #     print(to_hgvs(d, reference))
+
+    dot_raw = to_dot(reference, root, cluster="cluster_0")
+    dot_reduced = to_dot(reference, reduced_root, extra="r", cluster="cluster_1")
+    d = "digraph {\n    " + "\n    " + dot_raw + "\n" + dot_reduced + "}"
+    src = graphviz.Source(d)
+    src.view()
 
 
 if __name__ == "__main__":
-    main()
-    # check()
+    parser = argparse.ArgumentParser(description="extractor sandbox")
+    commands = parser.add_subparsers(dest="command", required=True, help="Commands")
 
+    main_parser = commands.add_parser("main")
+    main_parser.add_argument("reference", help="reference sequence")
+    main_parser.add_argument("observed", help="observed sequence / [variants]")
+
+    check_parser = commands.add_parser("check")
+    check_parser.add_argument("max_length", help="max_length", type=int)
+    check_parser.add_argument("min_length", help="min_length", type=int)
+    check_parser.add_argument("p", type=float)
+    check_parser.add_argument("mu_deletion", help="mu_deletion", type=float)
+    check_parser.add_argument("mu_insertion", help="mu_insertion", type=float)
+
+    check_set_parser = commands.add_parser("check_set")
+
+    args = parser.parse_args()
+
+    if args.command == "main":
+        main(args.reference, args.observed)
+    elif args.command == "check":
+        check(
+            args.max_length,
+            args.min_length,
+            args.p,
+            args.mu_deletion,
+            args.mu_insertion,
+        )
+    elif args.command == "check_set":
+        check_set()

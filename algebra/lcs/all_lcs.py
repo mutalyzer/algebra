@@ -312,7 +312,7 @@ def traversal(root, atomics=False):
     yield from traverse(root, [])
 
 
-def to_dot(reference, root):
+def to_dot(reference, root, extra='', cluster=""):
     """The LCS graph in Graphviz DOT format."""
     def traverse():
         # breadth-first traversal
@@ -321,10 +321,12 @@ def to_dot(reference, root):
         while queue:
             node = queue.pop(0)
             for succ, variant in node.edges:
-                yield (f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}"'
+                yield (f'"{extra}{node.row}_{node.col}" -> "{extra}{succ.row}_{succ.col}"'
                        f' [label="{to_hgvs(variant, reference)}"];')
                 if succ not in visited:
                     visited.add(succ)
                     queue.append(succ)
 
+    if cluster:
+        return "subgraph " + cluster + " {\n    " + "\n    ".join(traverse()) + "\n}"
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
