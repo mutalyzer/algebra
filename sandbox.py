@@ -211,29 +211,106 @@ def check_set():
 
 
 def rm_equals(root):
+    def _empty_child():
+        visited = {root}
+        queue = [root]
+        while queue:
+            node = queue.pop(0)
+            for i, (child, variant) in enumerate(node.edges):
+                if not variant:
+                    return child, node, i
+                if child not in visited:
+                    visited.add(child)
+                    queue.append(child)
+        return None, None, None
+
+    def _update_parent():
+        # print("  - parent edges before:")
+        # for edge in parent.edges:
+        #     print("   ", edge)
+        parent.edges.pop(idx)
+        parent.edges.extend(empty_child.edges)
+        # print("  - parent edges after:")
+        # for edge in parent.edges:
+        #     print("   ", edge)
+
+    def _update_other_parents():
+        visited = {root}
+        queue = [root]
+        parents = []
+        while queue:
+            node = queue.pop(0)
+            for i, (child, variant) in enumerate(node.edges):
+                if child == empty_child:
+                    parents.append((node, i))
+                if child not in visited:
+                    visited.add(child)
+                    queue.append(child)
+        # print(" - other parents:", parents, "\n")
+        for (p, i) in parents:
+            # print("   ", p, i)
+            p.edges[i] = (parent, p.edges[i][1])
+
+    while True:
+        empty_child, parent, idx = _empty_child()
+        # print("- current:", empty_child, parent, idx)
+        if not empty_child:
+            break
+        _update_parent()
+        _update_other_parents()
+
+
+def rm_equals_alt(root):
+
     visited = {root}
     queue = [root]
-    redirect = {}
+    redirect_children = {}
     while queue:
         node = queue.pop(0)
-        print("visit:", node)
-        empty_children = [i for i, (child, variant) in enumerate(node.edges) if not variant]
-        # node.edges = [(succ, variant) in node.edges for succ, variant in node.edges if not variant]
-        print(empty_children)
-        for succ, variant in node.edges:
+        for child, variant in node.edges:
             if not variant:
-                print("empty", node, succ)
-                # redirect[succ] = node
-                # node.edges.extend(succ.edges)
-            if succ not in visited:
-                visited.add(succ)
-                queue.append(succ)
+                redirect_children[child] = node
+            if child not in visited:
+                visited.add(child)
+                queue.append(child)
+
+    print("redirect_children")
+    for equal_child in redirect_children:
+        print(equal_child, redirect_children[equal_child])
+
+    print("---")
+
+    visited = {root}
+    redirect_parents = {}
+    queue = [root]
+    while queue:
+        node = queue.pop(0)
+        # print("- node:", node)
+        for i, (child, variant) in enumerate(node.edges):
+            if child in redirect_children and node != redirect_children[child]:
+                # print(" - child:", child)
+                redirect_parents[child] = (node, i)
+            if child not in visited:
+                visited.add(child)
+                queue.append(child)
+
+    print("redirect_parents")
+    for parent in redirect_parents:
+        print(parent, redirect_parents[parent])
+
+    # print(redirect)
 
 
-def main(reference, obs):
+def extract(reference, obs):
     # CATATAGT "[4_5del;7delinsGA]"
     # CTAA TTA - with equals inside
     # CTAACG TTACC - with equals inside
+    # CTTTG CTATTTT - with consecutive equals inside
+    # GCCTT GCAGCCCAT - with consecutive equals inside
+    # AGGTA AAGAAGGGGA - with consecutive equals inside
+    # TTGTA TTTGTGTT - with consecutive equals inside
+    # ACTAA ACGCCTATTAAATAAA - with consecutive equals inside
+    # CAGGG AACTCAGGTAGGGTTAGAT - with three consecutive equals inside
     if "[" in obs:
         variants = Parser(obs).hgvs()
         observed = patch(reference, variants)
@@ -252,6 +329,7 @@ def main(reference, obs):
     # reduced_root = reduce(reduced_root)
     open("reduced.dot", "w").write(to_dot(reference, reduced_root))
     print("----")
+
     # print(set([len(x) for x in traversal(root)]))
     # print(set([len(x) for x in traversal(reduced_root)]))
 
@@ -260,20 +338,78 @@ def main(reference, obs):
 
     dot_raw = to_dot(reference, root, cluster="cluster_0")
     dot_reduced = to_dot(reference, reduced_root, extra="r", cluster="cluster_1")
-    d = "digraph {\n    " + "\n    " + dot_raw + "\n" + dot_reduced + "}"
-    src = graphviz.Source(d)
-    # src.view()
+
     rm_equals(reduced_root)
-    print(to_dot(reference, reduced_root))
+
+    dot_no_equals = to_dot(reference, reduced_root, extra="n", cluster="cluster_2")
+
+    d = (
+        "digraph {\n    "
+        + "\n    "
+        + dot_raw
+        + "\n"
+        + dot_reduced
+        + "\n"
+        + dot_no_equals
+        + "}"
+    )
+    src = graphviz.Source(d)
+    src.view()
+
+    # print(to_dot(reference, reduced_root))
+
+
+def consecutive_equals(root):
+    visited = {root}
+    queue = [root]
+    while queue:
+        node = queue.pop(0)
+        for child, c_variant in node.edges:
+            if not c_variant:
+                for grand_child, g_variant in child.edges:
+                    if not g_variant:
+                        for grand_grand_child, g_g_variant in grand_child.edges:
+                            if not g_g_variant:
+                                return True
+            if child not in visited:
+                visited.add(child)
+                queue.append(child)
+    return False
+
+
+def get_consecutive_equals():
+    i = 0
+    while True:
+        reference = random_sequence(5, 5)
+        variants = list(
+            random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7)
+        )
+        observed = patch(reference, variants)
+        i += 1
+        print(i, reference, observed)
+        distance, lcs_nodes = edit(reference, observed)
+        root, _ = lcs_graph(reference, observed, lcs_nodes)
+        reduced_root = reduce(root)
+
+        if consecutive_equals(reduced_root):
+            print("found it")
+            dot_raw = to_dot(reference, root, cluster="cluster_0")
+            dot_reduced = to_dot(
+                reference, reduced_root, extra="r", cluster="cluster_1"
+            )
+            d = "digraph {\n    " + "\n    " + dot_raw + "\n" + dot_reduced + "}"
+            src = graphviz.Source(d)
+            src.view()
+            break
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="extractor sandbox")
     commands = parser.add_subparsers(dest="command", required=True, help="Commands")
 
-    main_parser = commands.add_parser("main")
-    main_parser.add_argument("reference", help="reference sequence")
-    main_parser.add_argument("observed", help="observed sequence / [variants]")
+    extract_parser = commands.add_parser("main")
+    extract_parser.add_argument("reference", help="reference sequence")
+    extract_parser.add_argument("observed", help="observed sequence / [variants]")
 
     check_parser = commands.add_parser("check")
     check_parser.add_argument("max_length", help="max_length", type=int)
@@ -282,12 +418,14 @@ if __name__ == "__main__":
     check_parser.add_argument("mu_deletion", help="mu_deletion", type=float)
     check_parser.add_argument("mu_insertion", help="mu_insertion", type=float)
 
+    equals_parser = commands.add_parser("equals")
+
     check_set_parser = commands.add_parser("check_set")
 
     args = parser.parse_args()
 
     if args.command == "main":
-        main(args.reference, args.observed)
+        extract(args.reference, args.observed)
     elif args.command == "check":
         check(
             args.max_length,
@@ -296,5 +434,7 @@ if __name__ == "__main__":
             args.mu_deletion,
             args.mu_insertion,
         )
+    elif args.command == "equals":
+        get_consecutive_equals()
     elif args.command == "check_set":
         check_set()
