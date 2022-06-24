@@ -301,6 +301,42 @@ def rm_equals_alt(root):
     # print(redirect)
 
 
+def to_dot_repeats(reference, root, extra='', cluster=""):
+    """The LCS graph in Graphviz DOT format with repeat edges merged."""
+    def _merge_repeats(variants):
+        # print(variants)
+        # print("---")
+        if len(variants) > 1:
+            return "|".join([to_hgvs([v], reference) for v in variants])
+        else:
+            return to_hgvs(variants)
+            # for variant in variants:
+            #     print(variant.start, variant.end, variant.sequence)
+
+    def traverse():
+        # breadth-first traversal
+        visited = {root}
+        queue = [root]
+        while queue:
+            node = queue.pop(0)
+            children = {}
+            for child, variant in node.edges:
+                if child not in children:
+                    children[child] = []
+                children[child].append(variant[0])
+            for child in children:
+                # print(_merge_repeats(children[child]))
+                yield (f'"{extra}{node.row}_{node.col}" -> "{extra}{child.row}_{child.col}"'
+                       f' [label="{_merge_repeats(children[child])}"];')
+                if child not in visited:
+                    visited.add(child)
+                    queue.append(child)
+
+    if cluster:
+        return "subgraph " + cluster + " {\n    " + "\n    ".join(traverse()) + "\n}"
+    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
+
+
 def extract(reference, obs):
     # CATATAGT "[4_5del;7delinsGA]"
     # CTAA TTA - with equals inside
@@ -337,11 +373,13 @@ def extract(reference, obs):
     #     print(to_hgvs(d, reference))
 
     dot_raw = to_dot(reference, root, cluster="cluster_0")
-    dot_reduced = to_dot(reference, reduced_root, extra="r", cluster="cluster_1")
+    dot_reduced = to_dot(reference, reduced_root, extra="d", cluster="cluster_1")
 
     rm_equals(reduced_root)
 
     dot_no_equals = to_dot(reference, reduced_root, extra="n", cluster="cluster_2")
+
+    dot_repeats = to_dot_repeats(reference, reduced_root, extra="r", cluster="cluster_3")
 
     d = (
         "digraph {\n    "
@@ -351,10 +389,14 @@ def extract(reference, obs):
         + dot_reduced
         + "\n"
         + dot_no_equals
+        + "\n"
+        + dot_repeats
         + "}"
     )
     src = graphviz.Source(d)
     src.view()
+
+    # print(to_dot_repeats(reference, reduced_root))
 
     # print(to_dot(reference, reduced_root))
 
