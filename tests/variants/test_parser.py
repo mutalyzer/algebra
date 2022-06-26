@@ -119,8 +119,8 @@ def test_spdi_parser(expression, variants):
 
 
 @pytest.mark.parametrize("expression, exception, message", [
-    ("", ValueError, "expected ':' at 0"),
-    ("A", ValueError, "expected ':' at 1"),
+    ("", ValueError, "unexpected end of expression"),
+    ("A", ValueError, "unexpected end of expression"),
     ("A:", ValueError, "unexpected end of expression"),
     ("A:0", ValueError, "expected ':' at 3"),
     ("A:0:", ValueError, "expected ':' at 4"),

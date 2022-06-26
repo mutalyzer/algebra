@@ -255,11 +255,8 @@ class Parser:
         """
 
         # ignore reference sequence identifier
-        while self.pos < len(self.expression) and self.expression[self.pos] != ":":
+        while self.pos < len(self.expression) and not self._match(":"):
             self.pos += 1
-
-        if not self._match(":"):
-            raise ValueError(f"expected ':' at {self.pos}")
 
         position = self._match_number()
         if not self._match(":"):
