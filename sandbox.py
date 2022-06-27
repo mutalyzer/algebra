@@ -11,40 +11,14 @@ from algebra.utils import random_sequence, random_variants
 from algebra.variants import Parser, Variant, patch, to_hgvs
 
 
-def reduce(root):
-    distances = {root: {"distance": 0, "parents": set()}}
-
-    queue = [(0, root)]
-    while len(queue) > 0:
-        current_distance, current_node = queue.pop(0)
-        # print(current_node, len(queue))
-        if current_distance > distances[current_node]["distance"]:
-            continue
-
-        for child, edge in current_node.edges:
-            if edge:
-                distance = current_distance + 1
-            else:
-                distance = current_distance
-
-            if distances.get(child) is None or distance < distances[child]["distance"]:
-                distances[child] = {"distance": distance, "parents": {current_node}}
-                # print("- update distance: ", child, distance)
-                queue.append((distance, child))
-            elif distance == distances[child]["distance"]:
-                distances[child]["parents"].add(current_node)
-                # print("- add distance: ", child, distance)
-                queue.append((distance, child))
-
-    # print("---")
+def get_sink(root):
     sink = root
     while sink.edges:
         sink = sink.edges[0][0]
-    # print("---")
-    # print(sink)
-    # for d in distances:
-    #     print(d, distances[d])
+    return sink
 
+
+def extract_subgraph(distances, sink):
     new = {}
     nodes = [sink]
     visited = set()
@@ -53,31 +27,47 @@ def reduce(root):
         if node in visited:
             continue
         visited.add(node)
-        # print("current:", node)
         if node not in new:
-            # print(" added node:", node)
             new[node] = _Node(node.row, node.col, node.length)
         for p in distances[node]["parents"]:
             if p not in new:
                 new[p] = _Node(p.row, p.col, p.length)
-            #     print(" added node:", p)
-            # print("  ", p.edges)
             for c, v in p.edges:
                 if c == node:
                     new[p].edges.append((new[c], deepcopy(v)))
-                    # print("  - edge:", p, c)
         extend = set(distances[node]["parents"]) - visited
         nodes.extend(extend)
-    #     print("extend with:", extend)
-    #     print(nodes)
-    #     print()
-    # print(new)
     for n in new:
         if n.row == 0 and n.col == 0:
             new_root = new[n]
-    # print(new_root)
-
     return new_root
+
+
+def reduce(root):
+    distances = {root: {"distance": 0, "parents": set()}}
+
+    queue = [(0, root)]
+    while len(queue) > 0:
+        current_distance, current_node = queue.pop(0)
+        if current_distance > distances[current_node]["distance"]:
+            continue
+
+        successors = {}
+        for child, edge in current_node.edges:
+            if child not in successors:
+                successors[child] = current_distance
+            if edge:
+                successors[child] = current_distance + 1
+
+        for child, distance in successors.items():
+            if distances.get(child) is None or distance < distances[child]["distance"]:
+                distances[child] = {"distance": distance, "parents": {current_node}}
+                queue.append((distance, child))
+            elif distance == distances[child]["distance"]:
+                distances[child]["parents"].add(current_node)
+                queue.append((distance, child))
+
+    return extract_subgraph(distances, get_sink(root))
 
 
 def compare():
@@ -174,9 +164,9 @@ def check(max_length, min_length, p, mu_deletion, mu_insertion):
             print("error")
             break
 
-        if t > 1:
-            print("longer than expected")
-            break
+        # if t > 5:
+        #     print("longer than expected")
+        #     break
 
 
 def check_set():
