@@ -70,47 +70,84 @@ def reduce(root):
     return extract_subgraph(distances, get_sink(root))
 
 
+def reduce_repeats(root):
+    """Preferring the nodes with the most repeats."""
+    distances = {root: {"distance": 0, "parents": set()}}
+
+    queue = [(0, root)]
+    while len(queue) > 0:
+        current_distance, current_node = queue.pop(0)
+        if current_distance > distances[current_node]["distance"]:
+            continue
+
+        successors = {}
+        for child, edge in current_node.edges:
+            if child not in successors:
+                successors[child] = current_distance
+            if edge:
+                successors[child] += 1
+
+        for child, distance in successors.items():
+            if distances.get(child) is None or distance > distances[child]["distance"]:
+                distances[child] = {"distance": distance, "parents": {current_node}}
+                queue.append((distance, child))
+            elif distance == distances[child]["distance"]:
+                distances[child]["parents"].add(current_node)
+                queue.append((distance, child))
+
+    return extract_subgraph(distances, get_sink(root))
+
+
 def compare():
+    from mutalyzer_hgvs_parser import to_model
+
+    def _convert(description):
+        print(to_model(description, start_rule="variants"))
+
+
     INTERESTING = [
-        ("CAAA", "A"),
-        ("GCG", "GGCGATTCTT"),
-        ("CAAGA", "GTCAA"),
-        ("CAAGA", "CAA"),
-        ("ACCCC", "CCAC"),
-        ("TCT", "TCCTCCT"),
-        ("CTCTTG", "CTCTCTTG"),
-        ("CACCT", "CAGGG"),
-        ("CACCTAA", "CAGGGAA"),
-        ("AAGTT", "TCAGT"),
-        ("CGCCC", "AGCCT"),
-        ("ATATC", "AATTC"),
-        ("ACCGA", "TCCGT"),
-        ("GCACT", "ACTAC"),
-        ("GCACT", "ACTAC"),
-        ("CATAA", "ATTCA"),
-        ("ACTAC", "TACCG"),
-        ("TCCAT", "CACCT"),
-        ("GACCT", "GCGCC"),
-        ("AACGACT", "AGGTACG"),
+        "CAAA A",
+        "GCG GGCGATTCTT",
+        "CAAGA GTCAA",
+        "CAAGA CAA",
+        "ACCCC CCAC",
+        "TCT TCCTCCT",
+        "CTCTTG CTCTCTTG",
+        "CACCT CAGGG",
+        "CACCTAA CAGGGAA",
+        "AAGTT TCAGT",
+        "CGCCC AGCCT",
+        "ATATC AATTC",
+        "ACCGA TCCGT",
+        "GCACT ACTAC",
+        "GCACT ACTAC",
+        "CATAA ATTCA",
+        "ACTAC TACCG",
+        "TCCAT CACCT",
+        "GACCT GCGCC",
+        "AACGACT AGGTACG",
     ]
 
-    for reference, observed in INTERESTING:
+    for t in INTERESTING:
+        reference = t.split()[0]
+        observed = t.split()[1]
         print("\n------")
         print(reference, observed)
         distance, lcs_nodes = edit(reference, observed)
         root, _ = lcs_graph(reference, observed, lcs_nodes)
-        reduced_dot, reduced_root = reduce(reference, root)
+        reduced_root = reduce(root)
         new = [to_hgvs(path, reference) for path in traversal(reduced_root)]
         old = description_extractor(reference, observed)
+        _convert(old)
         if len(new) > 1:
             print(" - Multiple options")
         else:
-            print(" - One option")
+            print(" - One option:", new)
         if old not in new:
             print(" - NOT IN")
             print(to_dot(reference, reduced_root))
-            print("  -", new)
-            print("  -", old)
+            print("  - new:", new)
+            print("  - old:", old)
 
 
 def middle_equal():
@@ -371,6 +408,10 @@ def extract(reference, obs):
 
     dot_repeats = to_dot_repeats(reference, reduced_root, extra="r", cluster="cluster_3")
 
+    root_reduced_repeats = reduce_repeats(reduced_root)
+
+    dot_reduced_repeats = to_dot_repeats(reference, root_reduced_repeats, extra="rr", cluster="cluster_4")
+
     d = (
         "digraph {\n    "
         + "\n    "
@@ -381,6 +422,8 @@ def extract(reference, obs):
         + dot_no_equals
         + "\n"
         + dot_repeats
+        + "\n"
+        + dot_reduced_repeats
         + "}"
     )
     src = graphviz.Source(d)
@@ -454,6 +497,8 @@ if __name__ == "__main__":
 
     check_set_parser = commands.add_parser("check_set")
 
+    compare_parser = commands.add_parser("compare")
+
     args = parser.parse_args()
 
     if args.command == "main":
@@ -470,3 +515,5 @@ if __name__ == "__main__":
         get_consecutive_equals()
     elif args.command == "check_set":
         check_set()
+    elif args.command == "compare":
+        compare()
