@@ -1,6 +1,11 @@
 import argparse
 import time
 from copy import deepcopy
+from mutalyzer_hgvs_parser import to_model
+from mutalyzer.spdi_converter import spdi_converter
+from mutalyzer.mutator import mutate
+from mutalyzer.reference import get_reference_model
+import json
 
 import graphviz
 from mutalyzer.description_extractor import description_extractor
@@ -8,7 +13,7 @@ from mutalyzer.description_extractor import description_extractor
 from algebra.lcs import edit, lcs_graph, to_dot
 from algebra.lcs.all_lcs import _Node, traversal
 from algebra.utils import random_sequence, random_variants
-from algebra.variants import Parser, Variant, patch, to_hgvs
+from algebra.variants import Parser, patch, to_hgvs
 
 
 def get_sink(root):
@@ -99,7 +104,6 @@ def reduce_repeats(root):
 
 
 def compare():
-    from mutalyzer_hgvs_parser import to_model
 
     def _convert(description):
         print(to_model(description, start_rule="variants"))
@@ -374,6 +378,7 @@ def extract(reference, obs):
     # TTGTA TTTGTGTT - with consecutive equals inside
     # ACTAA ACGCCTATTAAATAAA - with consecutive equals inside
     # CAGGG AACTCAGGTAGGGTTAGAT - with three consecutive equals inside
+    # CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACG CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACG - complex component
     if "[" in obs:
         variants = Parser(obs).hgvs()
         observed = patch(reference, variants)
@@ -478,6 +483,32 @@ def get_consecutive_equals():
             break
 
 
+def compare_spdi(file_path=None):
+
+    variants = [
+        "NG_016465.4:3:A:",
+        "NG_016465.4:3:A:T"
+    ]
+
+    if file_path:
+        variants = []
+        with open(file_path) as f:
+            for line in f:
+                variants.append(line.strip())
+
+    print(len(variants), "variants")
+    for i, variant in enumerate(variants[:2]):
+
+        print("\n------", i)
+        print(variant)
+        n_variant = spdi_converter(variant)
+        print(json.dumps(n_variant, indent=2))
+        reference = get_reference_model(n_variant["input_model"]["reference"]["id"])["sequence"]["seq"]
+        observed = mutate(n_variant["normalized_description"])["sequence"]["seq"]
+        print(len(reference), len(observed))
+        extract(reference, observed)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="extractor sandbox")
     commands = parser.add_subparsers(dest="command", required=True, help="Commands")
@@ -499,6 +530,9 @@ if __name__ == "__main__":
 
     compare_parser = commands.add_parser("compare")
 
+    compare_spdi_parser = commands.add_parser("compare_spdi")
+    compare_spdi_parser.add_argument("--file", help="file path")
+
     args = parser.parse_args()
 
     if args.command == "main":
@@ -517,3 +551,5 @@ if __name__ == "__main__":
         check_set()
     elif args.command == "compare":
         compare()
+    elif args.command == "compare_spdi":
+        compare_spdi(args.file)
