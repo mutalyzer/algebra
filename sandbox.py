@@ -1,13 +1,15 @@
 import argparse
+import json
 import time
 from copy import deepcopy
-from mutalyzer_hgvs_parser import to_model
-from mutalyzer.spdi_converter import spdi_converter, spdi_to_hgvs
-from mutalyzer.mutator import mutate
-from mutalyzer.reference import get_reference_model
-import json
+
 import graphviz
 from mutalyzer.description_extractor import description_extractor
+from mutalyzer.mutator import mutate
+from mutalyzer.reference import get_reference_model
+from mutalyzer.spdi_converter import spdi_converter, spdi_to_hgvs
+from mutalyzer_hgvs_parser import to_model
+from mutalyzer_mutator import mutate as mutate_raw
 
 from algebra.lcs import edit, lcs_graph, to_dot
 from algebra.lcs.all_lcs import _Node, traversal
@@ -102,11 +104,39 @@ def reduce_repeats(root):
     return extract_subgraph(distances, get_sink(root))
 
 
-def compare():
+def reduce_simple_repeats(root):
+    def _merge_repeats(variants):
+        # print(variants)
+        # print("---")
+        if len(variants) > 1:
+            # print("more", [max(variants, key=lambda x: x.start)])
+            return [max(variants, key=lambda x: x.start)]
+        else:
+            # print("one", variants)
+            return variants
+            # for variant in variants:
+            #     print(variant.start, variant.end, variant.sequence)
 
+    visited = {root}
+    queue = [root]
+    while queue:
+        node = queue.pop(0)
+        children = {}
+        for child, variant in node.edges:
+            if child not in children:
+                children[child] = []
+            children[child].append(variant[0])
+        new_edges = [(child, _merge_repeats(children[child])) for child in children]
+        node.edges = new_edges
+        for child in children:
+            if child not in visited:
+                visited.add(child)
+                queue.append(child)
+
+
+def compare():
     def _convert(description):
         print(to_model(description, start_rule="variants"))
-
 
     INTERESTING = [
         "CAAA A",
@@ -331,8 +361,9 @@ def rm_equals_alt(root):
     # print(redirect)
 
 
-def to_dot_repeats(reference, root, extra='', cluster=""):
+def to_dot_repeats(reference, root, extra="", cluster=""):
     """The LCS graph in Graphviz DOT format with repeat edges merged."""
+
     def _merge_repeats(variants):
         # print(variants)
         # print("---")
@@ -356,8 +387,10 @@ def to_dot_repeats(reference, root, extra='', cluster=""):
                 children[child].append(variant[0])
             for child in children:
                 # print(_merge_repeats(children[child]))
-                yield (f'"{extra}{node.row}_{node.col}" -> "{extra}{child.row}_{child.col}"'
-                       f' [label="{_merge_repeats(children[child])}"];')
+                yield (
+                    f'"{extra}{node.row}_{node.col}" -> "{extra}{child.row}_{child.col}"'
+                    f' [label="{_merge_repeats(children[child])}"];'
+                )
                 if child not in visited:
                     visited.add(child)
                     queue.append(child)
@@ -367,7 +400,7 @@ def to_dot_repeats(reference, root, extra='', cluster=""):
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
-def extract(reference, obs):
+def extract_main(reference, obs):
     # CATATAGT "[4_5del;7delinsGA]"
     # CTAA TTA - with equals inside
     # CTAACG TTACC - with equals inside
@@ -393,7 +426,6 @@ def extract(reference, obs):
     open("raw.dot", "w").write(to_dot(reference, root))
     print("----")
     reduced_root = reduce(root)
-    # reduced_root = reduce(reduced_root)
     open("reduced.dot", "w").write(to_dot(reference, reduced_root))
     print("----")
 
@@ -410,11 +442,15 @@ def extract(reference, obs):
 
     dot_no_equals = to_dot(reference, reduced_root, extra="n", cluster="cluster_2")
 
-    dot_repeats = to_dot_repeats(reference, reduced_root, extra="r", cluster="cluster_3")
+    dot_repeats = to_dot_repeats(
+        reference, reduced_root, extra="r", cluster="cluster_3"
+    )
 
     root_reduced_repeats = reduce_repeats(reduced_root)
 
-    dot_reduced_repeats = to_dot_repeats(reference, root_reduced_repeats, extra="rr", cluster="cluster_4")
+    dot_reduced_repeats = to_dot_repeats(
+        reference, root_reduced_repeats, extra="rr", cluster="cluster_4"
+    )
 
     d = (
         "digraph {\n    "
@@ -482,45 +518,90 @@ def get_consecutive_equals():
             break
 
 
-def compare_spdi(file_path=None):
+def extract(reference, observed):
 
-    def _convert(variant):
-        # ref_id, position, deleted, inserted = variant.split(":")
-        # print(ref_id, position, deleted, inserted)
-        # print(spdi_to_hgvs(variant))
-        variants = Parser(variant).spdi()
-        print(variants)
-        # start = position - 1
-        # if deleted:
-        #     end = position + len(deleted) - 1
-        # elif inserted:
-        #     end = position
+    t_0 = time.time()
+    distance, lcs_nodes = edit(reference, observed)
+    t_1 = time.time()
+    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    t_2 = time.time()
+    reduced_root = reduce(root)
+    t_3 = time.time()
+    rm_equals(reduced_root)
+    t_4 = time.time()
+    reduce_simple_repeats(reduced_root)
+    t_5 = time.time()
+    # print(t_1 - t_0, t_2 - t_1, t_3 - t_2, t_4 - t_3, t_5 - t_4)
+    return list(traversal(reduced_root))
 
-    variants = [
-        # "NG_016465.4:3:A:",
-        "NG_016465.4:3:A:T",
-        # "NG_016465.4:3::T",
-        # "NG_016465.4:155:C:",
-    ]
 
-    if file_path:
-        variants = []
+def compare_spdi(file_path):
+    def get_models():
         with open(file_path) as f:
             for line in f:
                 variants.append(line.strip())
 
-    print(len(variants), "variants")
-    for i, variant in enumerate(variants[:2]):
+        for spdi_variant in variants:
+            _convert(spdi_variant)
 
-        print("\n------", i)
-        print(variant)
-        _convert(variant)
-        # n_variant = spdi_converter(variant)
-        # print(json.dumps(n_variant, indent=2))
-        # reference = get_reference_model(n_variant["input_model"]["reference"]["id"])["sequence"]["seq"]
-        # observed = mutate(n_variant["normalized_description"])["sequence"]["seq"]
-        # print(len(reference), len(observed))
-        # extract(reference, observed)
+    def _convert(v):
+        ref_id, position, deleted, inserted = v.split(":")
+
+        start = end = int(position)
+
+        if deleted:
+            end += len(deleted)
+
+        del_ins_model = {
+            "type": "deletion_insertion",
+            "location": {
+                "start": {"position": start, "type": "point"},
+                "end": {"position": end, "type": "point"},
+                "type": "range",
+            },
+            "deleted": [],
+            "inserted": [],
+        }
+        if inserted:
+            del_ins_model["deleted"] = []
+            del_ins_model["inserted"] = [
+                {"sequence": inserted, "source": "description"}
+            ]
+        variant_models[v] = del_ins_model
+        reference_ids.add(ref_id)
+
+    variant_models = {}
+    reference_ids = set()
+
+    variants = []
+
+    get_models()
+    reference = get_reference_model(list(reference_ids)[0])["sequence"]["seq"]
+    print(len(reference))
+
+    for i, spdi_variant in enumerate(variants[:10000]):
+        print(f"\n- {i}: {spdi_variant}")
+
+        observed_2 = mutate_raw(
+            {"reference": reference}, [variant_models[spdi_variant]]
+        )
+        mutalyzer_output = spdi_converter(spdi_variant)
+
+        descriptions = extract(reference, observed_2)
+        if len(descriptions) > 1:
+            print("Error: multiple descriptions.")
+            print(descriptions)
+            extract_main(reference, observed_2)
+            break
+        elif (
+            to_hgvs(descriptions[0], reference)
+            != mutalyzer_output["normalized_description"].split(".")[2]
+        ):
+            print("Error: different description when compared to Mutalyzer")
+            print(to_hgvs(descriptions[0], reference))
+            print(mutalyzer_output["normalized_description"].split(".")[2])
+        else:
+            print("  OK")
 
 
 if __name__ == "__main__":
@@ -528,6 +609,10 @@ if __name__ == "__main__":
     commands = parser.add_subparsers(dest="command", required=True, help="Commands")
 
     extract_parser = commands.add_parser("main")
+    extract_parser.add_argument("reference", help="reference sequence")
+    extract_parser.add_argument("observed", help="observed sequence / [variants]")
+
+    extract_parser = commands.add_parser("extract")
     extract_parser.add_argument("reference", help="reference sequence")
     extract_parser.add_argument("observed", help="observed sequence / [variants]")
 
@@ -550,7 +635,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == "main":
-        extract(args.reference, args.observed)
+        extract_main(args.reference, args.observed)
+    elif args.command == "extract":
+        print(extract(args.reference, args.observed))
     elif args.command == "check":
         check(
             args.max_length,
