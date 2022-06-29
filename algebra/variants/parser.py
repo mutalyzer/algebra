@@ -254,9 +254,9 @@ class Parser:
             The variant.
         """
 
-        self._match_sequence()
-        if not self._match(":"):
-            raise ValueError(f"expected ':' at {self.pos}")
+        # ignore reference sequence identifier
+        while self.pos < len(self.expression) and not self._match(":"):
+            self.pos += 1
 
         position = self._match_number()
         if not self._match(":"):

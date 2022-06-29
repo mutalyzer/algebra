@@ -112,6 +112,7 @@ def test_hgvs_parser_with_reference_fail(reference, expression, exception, messa
     ("AAA:0:0:", [Variant(0, 0)]),
     ("AAA:0:3:TTT", [Variant(0, 3, "TTT")]),
     ("AAA:0:AAA:TTT", [Variant(0, 3, "TTT")]),
+    (":1:TT:G", [Variant(1, 3, "G")]),
 ])
 def test_spdi_parser(expression, variants):
     assert Parser(expression).spdi() == variants
@@ -119,7 +120,7 @@ def test_spdi_parser(expression, variants):
 
 @pytest.mark.parametrize("expression, exception, message", [
     ("", ValueError, "unexpected end of expression"),
-    ("A", ValueError, "expected ':' at 1"),
+    ("A", ValueError, "unexpected end of expression"),
     ("A:", ValueError, "unexpected end of expression"),
     ("A:0", ValueError, "expected ':' at 3"),
     ("A:0:", ValueError, "expected ':' at 4"),
