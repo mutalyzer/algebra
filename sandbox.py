@@ -2,11 +2,10 @@ import argparse
 import time
 from copy import deepcopy
 from mutalyzer_hgvs_parser import to_model
-from mutalyzer.spdi_converter import spdi_converter
+from mutalyzer.spdi_converter import spdi_converter, spdi_to_hgvs
 from mutalyzer.mutator import mutate
 from mutalyzer.reference import get_reference_model
 import json
-
 import graphviz
 from mutalyzer.description_extractor import description_extractor
 
@@ -485,9 +484,23 @@ def get_consecutive_equals():
 
 def compare_spdi(file_path=None):
 
+    def _convert(variant):
+        # ref_id, position, deleted, inserted = variant.split(":")
+        # print(ref_id, position, deleted, inserted)
+        # print(spdi_to_hgvs(variant))
+        variants = Parser(variant).spdi()
+        print(variants)
+        # start = position - 1
+        # if deleted:
+        #     end = position + len(deleted) - 1
+        # elif inserted:
+        #     end = position
+
     variants = [
-        "NG_016465.4:3:A:",
-        "NG_016465.4:3:A:T"
+        # "NG_016465.4:3:A:",
+        "NG_016465.4:3:A:T",
+        # "NG_016465.4:3::T",
+        # "NG_016465.4:155:C:",
     ]
 
     if file_path:
@@ -501,12 +514,13 @@ def compare_spdi(file_path=None):
 
         print("\n------", i)
         print(variant)
-        n_variant = spdi_converter(variant)
-        print(json.dumps(n_variant, indent=2))
-        reference = get_reference_model(n_variant["input_model"]["reference"]["id"])["sequence"]["seq"]
-        observed = mutate(n_variant["normalized_description"])["sequence"]["seq"]
-        print(len(reference), len(observed))
-        extract(reference, observed)
+        _convert(variant)
+        # n_variant = spdi_converter(variant)
+        # print(json.dumps(n_variant, indent=2))
+        # reference = get_reference_model(n_variant["input_model"]["reference"]["id"])["sequence"]["seq"]
+        # observed = mutate(n_variant["normalized_description"])["sequence"]["seq"]
+        # print(len(reference), len(observed))
+        # extract(reference, observed)
 
 
 if __name__ == "__main__":
