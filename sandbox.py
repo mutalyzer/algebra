@@ -2,6 +2,7 @@ import argparse
 import json
 import time
 from copy import deepcopy
+from multiprocessing import Pool
 
 import graphviz
 from mutalyzer.description_extractor import description_extractor
@@ -535,7 +536,53 @@ def extract(reference, observed):
     return list(traversal(reduced_root))
 
 
-def compare_spdi(file_path):
+def _compare(work_data):
+    i, spdi_variant, reference, model = work_data
+    output = f"{i} | {spdi_variant} | "
+    # print(f"- {i}: {spdi_variant}")
+    # print(model)
+
+    observed_2 = mutate_raw({"reference": reference}, [model])
+    mutalyzer_output = spdi_converter(spdi_variant)
+
+    descriptions = extract(reference, observed_2)
+    if len(descriptions) > 1:
+        output += "Error | multiple descriptions. | " + str(descriptions) + " | "
+        output += mutalyzer_output["normalized_description"].split(".")[2]
+        # print("Error: multiple descriptions.")
+        # print(descriptions)
+        # extract_main(reference, observed_2)
+    elif (
+        to_hgvs(descriptions[0], reference)
+        != mutalyzer_output["normalized_description"].split(".")[2]
+    ):
+        output += "Error | different description when compared to Mutalyzer | "
+        output += to_hgvs(descriptions[0], reference) + " | "
+        output += mutalyzer_output["normalized_description"].split(".")[2]
+
+        # print("Error: different description when compared to Mutalyzer")
+        # print(to_hgvs(descriptions[0], reference))
+        # print(mutalyzer_output["normalized_description"].split(".")[2])
+    else:
+        output += "OK"
+        # print("  OK")
+    print(output)
+
+
+def compare_spdi(file_path, file_results=None):
+    def get_results():
+        if file_results:
+            with open(file_results) as f:
+                for line in f:
+                    values = line.split("|")
+                    if len(values) < 3:
+                        continue
+                    i, d, status = line.split("|")[:3]
+                    i = i.strip()
+                    d = d.strip()
+                    status = d.strip()
+                    results[d] = status
+
     def get_models():
         with open(file_path) as f:
             for line in f:
@@ -570,6 +617,10 @@ def compare_spdi(file_path):
         variant_models[v] = del_ins_model
         reference_ids.add(ref_id)
 
+    results = {}
+    get_results()
+    # print(len(results))
+
     variant_models = {}
     reference_ids = set()
 
@@ -577,31 +628,57 @@ def compare_spdi(file_path):
 
     get_models()
     reference = get_reference_model(list(reference_ids)[0])["sequence"]["seq"]
-    print(len(reference))
 
-    for i, spdi_variant in enumerate(variants[:10000]):
-        print(f"\n- {i}: {spdi_variant}")
+    work = [
+        (i, v, reference, variant_models[v])
+        for i, v in enumerate(variants)
+        if v not in results
+    ]
 
-        observed_2 = mutate_raw(
-            {"reference": reference}, [variant_models[spdi_variant]]
-        )
-        mutalyzer_output = spdi_converter(spdi_variant)
+    # print(len(work))
+    for w in work:
+        _compare(w)
+    # p = Pool(1)
+    # p.map(_compare, work)
 
-        descriptions = extract(reference, observed_2)
-        if len(descriptions) > 1:
-            print("Error: multiple descriptions.")
-            print(descriptions)
-            extract_main(reference, observed_2)
-            break
-        elif (
-            to_hgvs(descriptions[0], reference)
-            != mutalyzer_output["normalized_description"].split(".")[2]
-        ):
-            print("Error: different description when compared to Mutalyzer")
-            print(to_hgvs(descriptions[0], reference))
-            print(mutalyzer_output["normalized_description"].split(".")[2])
-        else:
-            print("  OK")
+
+def compare_spdi_dup(file_results):
+    reference = get_reference_model("NG_016465.4")["sequence"]["seq"]
+    duplications = 0
+    duplications_as_insertions = 0
+    duplications_same = 0
+    repeats = 0
+    other = 0
+    with open(file_results) as f:
+        for line in f:
+            if "Error" not in line:
+                continue
+            print(line)
+            i, d, status, message, new, old = line.split(" | ")
+            old = old.strip()
+            if "dup" in old:
+                duplications += 1
+                if "ins" in new:
+                    duplications_as_insertions += 1
+                    inserted = new.split("ins")[1]
+                    start = int(new.split("_")[0])
+                    if len(inserted) == 1 and reference[start - 1] == inserted:
+                        if f"{start}dup" == old:
+                            duplications_same += 1
+                    elif reference[start - len(inserted) : start] == inserted:
+                        # print(f"{start-len(inserted)+1}_{start}dup")
+                        if f"{start-len(inserted)+1}_{start}dup" == old:
+                            duplications_same += 1
+                            # print(line)
+                            # print(reference[start - len(inserted):start])
+                            # break
+            elif "[" in old and ";" not in old:
+                repeats += 1
+            else:
+                print(line)
+                other += 1
+
+    print(duplications, duplications_as_insertions, duplications_same, repeats, other)
 
 
 if __name__ == "__main__":
@@ -631,6 +708,10 @@ if __name__ == "__main__":
 
     compare_spdi_parser = commands.add_parser("compare_spdi")
     compare_spdi_parser.add_argument("--file", help="file path")
+    compare_spdi_parser.add_argument("--results", help="already results file path")
+
+    compare_spdi_dup_parser = commands.add_parser("compare_spdi_dup")
+    compare_spdi_dup_parser.add_argument("results", help="results file path")
 
     args = parser.parse_args()
 
@@ -653,4 +734,6 @@ if __name__ == "__main__":
     elif args.command == "compare":
         compare()
     elif args.command == "compare_spdi":
-        compare_spdi(args.file)
+        compare_spdi(args.file, args.results)
+    elif args.command == "compare_spdi_dup":
+        compare_spdi_dup(args.results)
