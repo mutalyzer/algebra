@@ -591,8 +591,12 @@ def _spdi_model(description):
     return ref_id, delins_model
 
 
-def _spdi_sequences(description):
-    pass
+def _normalize_spdi(description):
+    print(description)
+    ref_id, model = _spdi_model(description)
+    reference = get_reference_model(ref_id)["sequence"]["seq"]
+    observed = mutate_raw({"reference": reference}, [model])
+    extract_main(reference, observed)
 
 
 def compare_spdi(file_path, file_results=None):
@@ -655,6 +659,7 @@ def compare_spdi_summary(file_results):
     multiple = 0
     descriptions_multiple = []
     timeout = 0
+    descriptions_timeout = []
     other = 0
     total = 0
 
@@ -692,12 +697,13 @@ def compare_spdi_summary(file_results):
                 else:
                     # print(line)
                     mut_other += 1
-                    descriptions_mut_other.append((d, new, old))
+                    descriptions_mut_other.append((parts[1], new, old))
 
             elif "multiple" in line:
                 multiple += 1
-                descriptions_multiple.append((d, old))
+                descriptions_multiple.append((parts[1], parts[5].strip()))
             elif "timeout" in line:
+                descriptions_timeout.append(parts[1])
                 timeout += 1
             else:
                 other += 1
@@ -737,6 +743,11 @@ def compare_spdi_summary(file_results):
     for description in descriptions_multiple:
         print(description)
 
+    print("\nLong processing times")
+    print("----------")
+    for description in descriptions_timeout:
+        print(description)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="extractor sandbox")
@@ -770,6 +781,9 @@ if __name__ == "__main__":
     compare_spdi_summary_parser = commands.add_parser("compare_spdi_summary")
     compare_spdi_summary_parser.add_argument("results", help="results file path")
 
+    spdi_parser = commands.add_parser("spdi")
+    spdi_parser.add_argument("description", help="SPDI description")
+
     args = parser.parse_args()
 
     if args.command == "main":
@@ -794,3 +808,5 @@ if __name__ == "__main__":
         compare_spdi(args.file, args.results)
     elif args.command == "compare_spdi_summary":
         compare_spdi_summary(args.results)
+    elif args.command == "spdi":
+        _normalize_spdi(args.description)
