@@ -540,7 +540,6 @@ def _compare(work_data):
     i, spdi_variant, reference, model = work_data
     output = f"{i} | {spdi_variant} | "
     # print(f"- {i}: {spdi_variant}")
-    # print(model)
 
     observed_2 = mutate_raw({"reference": reference}, [model])
     mutalyzer_output = spdi_converter(spdi_variant)
@@ -565,8 +564,35 @@ def _compare(work_data):
         # print(mutalyzer_output["normalized_description"].split(".")[2])
     else:
         output += "OK"
-        # print("  OK")
     print(output)
+
+
+def _spdi_model(description):
+    ref_id, position, deleted, inserted = description.split(":")
+
+    start = end = int(position)
+
+    if deleted:
+        end += len(deleted)
+
+    delins_model = {
+        "type": "deletion_insertion",
+        "location": {
+            "start": {"position": start, "type": "point"},
+            "end": {"position": end, "type": "point"},
+            "type": "range",
+        },
+        "deleted": [],
+        "inserted": [],
+    }
+    if inserted:
+        delins_model["deleted"] = []
+        delins_model["inserted"] = [{"sequence": inserted, "source": "description"}]
+    return ref_id, delins_model
+
+
+def _spdi_sequences(description):
+    pass
 
 
 def compare_spdi(file_path, file_results=None):
@@ -592,29 +618,8 @@ def compare_spdi(file_path, file_results=None):
             _convert(spdi_variant)
 
     def _convert(v):
-        ref_id, position, deleted, inserted = v.split(":")
-
-        start = end = int(position)
-
-        if deleted:
-            end += len(deleted)
-
-        del_ins_model = {
-            "type": "deletion_insertion",
-            "location": {
-                "start": {"position": start, "type": "point"},
-                "end": {"position": end, "type": "point"},
-                "type": "range",
-            },
-            "deleted": [],
-            "inserted": [],
-        }
-        if inserted:
-            del_ins_model["deleted"] = []
-            del_ins_model["inserted"] = [
-                {"sequence": inserted, "source": "description"}
-            ]
-        variant_models[v] = del_ins_model
+        ref_id, delins_model = _spdi_model(v)
+        variant_models[v] = delins_model
         reference_ids.add(ref_id)
 
     results = {}
@@ -642,43 +647,95 @@ def compare_spdi(file_path, file_results=None):
     # p.map(_compare, work)
 
 
-def compare_spdi_dup(file_results):
+def compare_spdi_summary(file_results):
     reference = get_reference_model("NG_016465.4")["sequence"]["seq"]
+
+    ok = 0
+    mutalyzer = 0
+    multiple = 0
+    descriptions_multiple = []
+    timeout = 0
+    other = 0
+    total = 0
+
     duplications = 0
     duplications_as_insertions = 0
     duplications_same = 0
     repeats = 0
-    other = 0
+    mut_other = 0
+    descriptions_mut_other = []
+
     with open(file_results) as f:
         for line in f:
-            if "Error" not in line:
-                continue
-            print(line)
-            i, d, status, message, new, old = line.split(" | ")
-            old = old.strip()
-            if "dup" in old:
-                duplications += 1
-                if "ins" in new:
-                    duplications_as_insertions += 1
-                    inserted = new.split("ins")[1]
-                    start = int(new.split("_")[0])
-                    if len(inserted) == 1 and reference[start - 1] == inserted:
-                        if f"{start}dup" == old:
-                            duplications_same += 1
-                    elif reference[start - len(inserted) : start] == inserted:
-                        # print(f"{start-len(inserted)+1}_{start}dup")
-                        if f"{start-len(inserted)+1}_{start}dup" == old:
-                            duplications_same += 1
-                            # print(line)
-                            # print(reference[start - len(inserted):start])
-                            # break
-            elif "[" in old and ";" not in old:
-                repeats += 1
+            total += 1
+            parts = line.split(" | ")
+            if "OK" in line:
+                ok += 1
+            elif "Mutalyzer" in line:
+                mutalyzer += 1
+                i, d, status, message, new, old = parts
+                old = old.strip()
+                if "dup" in old:
+                    duplications += 1
+                    if "ins" in new:
+                        duplications_as_insertions += 1
+                        inserted = new.split("ins")[1]
+                        start = int(new.split("_")[0])
+                        if len(inserted) == 1 and reference[start - 1] == inserted:
+                            if f"{start}dup" == old:
+                                duplications_same += 1
+                        elif reference[start - len(inserted) : start] == inserted:
+                            if f"{start-len(inserted)+1}_{start}dup" == old:
+                                duplications_same += 1
+                elif "[" in old and ";" not in old:
+                    repeats += 1
+                else:
+                    # print(line)
+                    mut_other += 1
+                    descriptions_mut_other.append((d, new, old))
+
+            elif "multiple" in line:
+                multiple += 1
+                descriptions_multiple.append((d, old))
+            elif "timeout" in line:
+                timeout += 1
             else:
-                print(line)
                 other += 1
 
-    print(duplications, duplications_as_insertions, duplications_same, repeats, other)
+    print("\nOverview")
+    print("----------")
+    l_s = 30
+    m_s = 10
+    print(f"{'Same as Mutalyzer':{l_s}} {ok:{m_s}} {ok/total*100:5.3}%")
+    print(
+        f"{'Different than Mutalyzer':{l_s}} {mutalyzer:>{m_s}} {mutalyzer/total*100:5.3}%"
+    )
+    print(f"{'Multiple paths':{l_s}} {multiple:>{m_s}}")
+    print(f"{'Long processing times':{l_s}} {timeout:>{m_s}}")
+    print(f"{'Other':{l_s}} {other:>{m_s}} ")
+    print(f"{'Total':{l_s}} {total:>{m_s}}")
+
+    print("\nDifferent than Mutalyzer")
+    print("----------")
+
+    l_s = 20
+    m_s = 10
+    print(
+        f"{'duplications':{l_s}} {duplications:{m_s}} {duplications/mutalyzer*100:5.3}%"
+    )
+    print(f"{' duplications same':{l_s}} {duplications_same:{m_s}}")
+    print(f"{'repeats':{l_s}} {repeats:{m_s}} {repeats/mutalyzer*100:5.3}%")
+    print(f"{'mut_other':{l_s}} {mut_other:{m_s}} {mut_other/mutalyzer*100:5.3}%")
+
+    print("\nDifferent than Mutalyzer - other")
+    print("----------")
+    for description in descriptions_mut_other:
+        print(description)
+
+    print("\nMultiple paths")
+    print("----------")
+    for description in descriptions_multiple:
+        print(description)
 
 
 if __name__ == "__main__":
@@ -710,8 +767,8 @@ if __name__ == "__main__":
     compare_spdi_parser.add_argument("--file", help="file path")
     compare_spdi_parser.add_argument("--results", help="already results file path")
 
-    compare_spdi_dup_parser = commands.add_parser("compare_spdi_dup")
-    compare_spdi_dup_parser.add_argument("results", help="results file path")
+    compare_spdi_summary_parser = commands.add_parser("compare_spdi_summary")
+    compare_spdi_summary_parser.add_argument("results", help="results file path")
 
     args = parser.parse_args()
 
@@ -735,5 +792,5 @@ if __name__ == "__main__":
         compare()
     elif args.command == "compare_spdi":
         compare_spdi(args.file, args.results)
-    elif args.command == "compare_spdi_dup":
-        compare_spdi_dup(args.results)
+    elif args.command == "compare_spdi_summary":
+        compare_spdi_summary(args.results)
