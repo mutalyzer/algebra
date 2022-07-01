@@ -83,7 +83,7 @@ class Parser:
         end = None
         if self._match("_"):
             end = self._match_number()
-            if start >= end - 1:
+            if start >= end:
                 raise ValueError(f"invalid range at {self.pos}")
 
         if self._match("dup"):
