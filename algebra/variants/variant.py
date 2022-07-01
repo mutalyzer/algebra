@@ -183,7 +183,7 @@ class Variant:
 
         return f"{self.start + 1}_{self.end}del{deleted}ins{self.sequence}"
 
-    def to_spdi(self, reference):
+    def to_spdi(self, reference_id=""):
         """The variant representation in SPDI [1]_.
 
         References
@@ -192,7 +192,7 @@ class Variant:
         data model for variants and applications at NCBI".
         In: Bioinformatics 36.6 (2019), pp. 1902-1907.
         """
-        return (f"{reference}:{self.start}:{self.end - self.start}:"
+        return (f"{reference_id}:{self.start}:{self.end - self.start}:"
                 f"{self.sequence}")
 
 
