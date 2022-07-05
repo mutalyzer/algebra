@@ -1,19 +1,14 @@
 import argparse
-import json
 import time
 from copy import deepcopy
 
 import graphviz
-from mutalyzer.description_extractor import description_extractor
-from mutalyzer.mutator import mutate
+from mutalyzer.normalizer import Description
 from mutalyzer.reference import get_reference_model
-from mutalyzer.spdi_converter import spdi_converter, spdi_to_hgvs
-from mutalyzer_hgvs_parser import to_model
 from mutalyzer_mutator import mutate as mutate_raw
 
 from algebra.lcs import edit, lcs_graph, to_dot
 from algebra.lcs.all_lcs import _Node, traversal
-from algebra.utils import random_sequence, random_variants
 from algebra.variants import Parser, patch, to_hgvs
 
 
@@ -76,200 +71,6 @@ def reduce(root):
     return extract_subgraph(distances, get_sink(root))
 
 
-def reduce_repeats(root):
-    """Preferring the nodes with the most repeats."""
-    distances = {root: {"distance": 0, "parents": set()}}
-
-    queue = [(0, root)]
-    while len(queue) > 0:
-        current_distance, current_node = queue.pop(0)
-        if current_distance > distances[current_node]["distance"]:
-            continue
-
-        successors = {}
-        for child, edge in current_node.edges:
-            if child not in successors:
-                successors[child] = current_distance
-            if edge:
-                successors[child] += 1
-
-        for child, distance in successors.items():
-            if distances.get(child) is None or distance > distances[child]["distance"]:
-                distances[child] = {"distance": distance, "parents": {current_node}}
-                queue.append((distance, child))
-            elif distance == distances[child]["distance"]:
-                distances[child]["parents"].add(current_node)
-                queue.append((distance, child))
-
-    return extract_subgraph(distances, get_sink(root))
-
-
-def reduce_simple_repeats(root):
-    def _merge_repeats(variants):
-        # print(variants)
-        # print("---")
-        if len(variants) > 1:
-            # print("more", [max(variants, key=lambda x: x.start)])
-            return [max(variants, key=lambda x: x.start)]
-        else:
-            # print("one", variants)
-            return variants
-            # for variant in variants:
-            #     print(variant.start, variant.end, variant.sequence)
-
-    visited = {root}
-    queue = [root]
-    while queue:
-        node = queue.pop(0)
-        children = {}
-        for child, variant in node.edges:
-            if child not in children:
-                children[child] = []
-            children[child].append(variant[0])
-        new_edges = [(child, _merge_repeats(children[child])) for child in children]
-        node.edges = new_edges
-        for child in children:
-            if child not in visited:
-                visited.add(child)
-                queue.append(child)
-
-
-def compare():
-    def _convert(description):
-        print(to_model(description, start_rule="variants"))
-
-    INTERESTING = [
-        "CAAA A",
-        "GCG GGCGATTCTT",
-        "CAAGA GTCAA",
-        "CAAGA CAA",
-        "ACCCC CCAC",
-        "TCT TCCTCCT",
-        "CTCTTG CTCTCTTG",
-        "CACCT CAGGG",
-        "CACCTAA CAGGGAA",
-        "AAGTT TCAGT",
-        "CGCCC AGCCT",
-        "ATATC AATTC",
-        "ACCGA TCCGT",
-        "GCACT ACTAC",
-        "GCACT ACTAC",
-        "CATAA ATTCA",
-        "ACTAC TACCG",
-        "TCCAT CACCT",
-        "GACCT GCGCC",
-        "AACGACT AGGTACG",
-    ]
-
-    for t in INTERESTING:
-        reference = t.split()[0]
-        observed = t.split()[1]
-        print("\n------")
-        print(reference, observed)
-        distance, lcs_nodes = edit(reference, observed)
-        root, _ = lcs_graph(reference, observed, lcs_nodes)
-        reduced_root = reduce(root)
-        new = [to_hgvs(path, reference) for path in traversal(reduced_root)]
-        old = description_extractor(reference, observed)
-        _convert(old)
-        if len(new) > 1:
-            print(" - Multiple options")
-        else:
-            print(" - One option:", new)
-        if old not in new:
-            print(" - NOT IN")
-            print(to_dot(reference, reduced_root))
-            print("  - new:", new)
-            print("  - old:", old)
-
-
-def middle_equal():
-    # CATATAGT "[4_5del;7delinsGA]"
-    # CTAA TTA - with equals inside
-    i = 0
-    while True:
-        reference = random_sequence(20, 20)
-        variants = list(
-            random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7)
-        )
-
-        observed = patch(reference, variants)
-        i += 1
-        print(i, reference, observed)
-
-        distance, lcs_nodes = edit(reference, observed)
-        root, _ = lcs_graph(reference, observed, lcs_nodes)
-
-        for path in traversal(root):
-            hgvs = [to_hgvs([v], reference) for v in path]
-            for v in hgvs:
-                if v == "=":
-                    print(reference, observed)
-                    return
-
-
-def check(max_length, min_length, p, mu_deletion, mu_insertion):
-    i = 0
-    while True:
-        reference = random_sequence(max_length, min_length)
-        # variants = list(random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7))
-        variants = list(
-            random_variants(
-                reference, p=p, mu_deletion=mu_deletion, mu_insertion=mu_insertion
-            )
-        )
-        observed = patch(reference, variants)
-        i += 1
-        print(i, reference, observed)
-        distance, lcs_nodes = edit(reference, observed)
-        print("distance:", distance)
-        root, _ = lcs_graph(reference, observed, lcs_nodes)
-        t_s = time.time()
-        reduced_root = reduce(root)
-        t = time.time() - t_s
-        v_n = set([len(x) for x in traversal(reduced_root)])
-        print(v_n, t)
-
-        if len(v_n) > 1:
-            print("error")
-            break
-
-        # if t > 5:
-        #     print("longer than expected")
-        #     break
-
-
-def check_set():
-    status = {}
-    variants = [
-        "GCCC TTCGCGCCCCT",
-        "CATCA ATAATCTCAA",
-        "TCCTT CGCTCTATCCCT",
-        "ATTTT AGGTTAGATTTGGATTGT",
-        "CGGGAACTTA TTACGCCGGGCGCTTA",
-        "TCTCAACGAG AGTTCACAAATCGAA",
-        "AGGAACGACCCGAAAGATTCTGGGAAACGGAGCGTCTCTA ATCACCAGGTCCAGAAGGTTGACCAGGTAGTAGCCGGGATTCTGGATTTTTCCGATC",
-    ]
-    for variant in variants:
-        reference = variant.split()[0]
-        observed = variant.split()[1]
-        print(reference, observed)
-        distance, lcs_nodes = edit(reference, observed)
-        print("distance:", distance)
-        root, _ = lcs_graph(reference, observed, lcs_nodes)
-        reduced_root = reduce(root)
-        v_n = set([len(x) for x in traversal(reduced_root)])
-        print(v_n)
-
-        if len(v_n) > 1:
-            status[variant] = "error"
-        else:
-            status[variant] = "OK"
-    for variant in status:
-        print(variant)
-        print(status[variant])
-
-
 def rm_equals(root):
     def _empty_child():
         visited = {root}
@@ -285,14 +86,8 @@ def rm_equals(root):
         return None, None, None
 
     def _update_parent():
-        # print("  - parent edges before:")
-        # for edge in parent.edges:
-        #     print("   ", edge)
         parent.edges.pop(idx)
         parent.edges.extend(empty_child.edges)
-        # print("  - parent edges after:")
-        # for edge in parent.edges:
-        #     print("   ", edge)
 
     def _update_other_parents():
         visited = {root}
@@ -320,45 +115,49 @@ def rm_equals(root):
         _update_other_parents()
 
 
-def rm_equals_alt(root):
+def reduce_simple_repeats(root):
+    def _merge_repeats(variants):
+        if len(variants) > 1:
+            return [max(variants, key=lambda x: x.start)]
+        else:
+            return variants
 
     visited = {root}
     queue = [root]
-    redirect_children = {}
     while queue:
         node = queue.pop(0)
+        children = {}
         for child, variant in node.edges:
-            if not variant:
-                redirect_children[child] = node
+            if child not in children:
+                children[child] = []
+            children[child].append(variant[0])
+        new_edges = [(child, _merge_repeats(children[child])) for child in children]
+        node.edges = new_edges
+        for child in children:
             if child not in visited:
                 visited.add(child)
                 queue.append(child)
 
-    print("redirect_children")
-    for equal_child in redirect_children:
-        print(equal_child, redirect_children[equal_child])
 
-    print("---")
+def extract(reference, observed):
 
-    visited = {root}
-    redirect_parents = {}
-    queue = [root]
-    while queue:
-        node = queue.pop(0)
-        # print("- node:", node)
-        for i, (child, variant) in enumerate(node.edges):
-            if child in redirect_children and node != redirect_children[child]:
-                # print(" - child:", child)
-                redirect_parents[child] = (node, i)
-            if child not in visited:
-                visited.add(child)
-                queue.append(child)
-
-    print("redirect_parents")
-    for parent in redirect_parents:
-        print(parent, redirect_parents[parent])
-
-    # print(redirect)
+    t_0 = time.time()
+    distance, lcs_nodes = edit(reference, observed)
+    t_1 = time.time()
+    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    t_2 = time.time()
+    reduced_root = reduce(root)
+    t_3 = time.time()
+    rm_equals(reduced_root)
+    t_4 = time.time()
+    reduce_simple_repeats(reduced_root)
+    t_5 = time.time()
+    # print(t_1 - t_0, t_2 - t_1, t_3 - t_2, t_4 - t_3, t_5 - t_4)
+    paths = list(traversal(reduced_root))
+    if len(paths) == 1:
+        return to_hgvs(paths[0], reference)
+    else:
+        raise Exception("Multiple paths:", paths)
 
 
 def to_dot_repeats(reference, root, extra="", cluster=""):
@@ -400,7 +199,7 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
-def extract_main(reference, obs):
+def extract_dev(reference, obs):
     # CATATAGT "[4_5del;7delinsGA]"
     # CTAA TTA - with equals inside
     # CTAACG TTACC - with equals inside
@@ -423,17 +222,11 @@ def extract_main(reference, obs):
     root, _ = lcs_graph(reference, observed, lcs_nodes)
 
     print("----")
-    open("raw.dot", "w").write(to_dot(reference, root))
-    print("----")
+    # open("raw.dot", "w").write(to_dot(reference, root))
+    # print("----")
     reduced_root = reduce(root)
-    open("reduced.dot", "w").write(to_dot(reference, reduced_root))
+    # open("reduced.dot", "w").write(to_dot(reference, reduced_root))
     print("----")
-
-    # print(set([len(x) for x in traversal(root)]))
-    # print(set([len(x) for x in traversal(reduced_root)]))
-
-    # for d in traversal(reduced_root):
-    #     print(to_hgvs(d, reference))
 
     dot_raw = to_dot(reference, root, cluster="cluster_0")
     dot_reduced = to_dot(reference, reduced_root, extra="d", cluster="cluster_1")
@@ -446,12 +239,6 @@ def extract_main(reference, obs):
         reference, reduced_root, extra="r", cluster="cluster_3"
     )
 
-    root_reduced_repeats = reduce_repeats(reduced_root)
-
-    dot_reduced_repeats = to_dot_repeats(
-        reference, root_reduced_repeats, extra="rr", cluster="cluster_4"
-    )
-
     d = (
         "digraph {\n    "
         + "\n    "
@@ -462,195 +249,83 @@ def extract_main(reference, obs):
         + dot_no_equals
         + "\n"
         + dot_repeats
-        + "\n"
-        + dot_reduced_repeats
         + "}"
     )
     src = graphviz.Source(d)
     src.view()
 
-    # print(to_dot_repeats(reference, reduced_root))
 
-    # print(to_dot(reference, reduced_root))
+def _spdi_model(description):
+    ref_id, position, deleted, inserted = description.split(":")
 
+    start = end = int(position)
 
-def consecutive_equals(root):
-    visited = {root}
-    queue = [root]
-    while queue:
-        node = queue.pop(0)
-        for child, c_variant in node.edges:
-            if not c_variant:
-                for grand_child, g_variant in child.edges:
-                    if not g_variant:
-                        for grand_grand_child, g_g_variant in grand_child.edges:
-                            if not g_g_variant:
-                                return True
-            if child not in visited:
-                visited.add(child)
-                queue.append(child)
-    return False
+    if deleted:
+        end += len(deleted)
 
-
-def get_consecutive_equals():
-    i = 0
-    while True:
-        reference = random_sequence(5, 5)
-        variants = list(
-            random_variants(reference, p=0.32, mu_deletion=1.5, mu_insertion=1.7)
-        )
-        observed = patch(reference, variants)
-        i += 1
-        print(i, reference, observed)
-        distance, lcs_nodes = edit(reference, observed)
-        root, _ = lcs_graph(reference, observed, lcs_nodes)
-        reduced_root = reduce(root)
-
-        if consecutive_equals(reduced_root):
-            print("found it")
-            dot_raw = to_dot(reference, root, cluster="cluster_0")
-            dot_reduced = to_dot(
-                reference, reduced_root, extra="r", cluster="cluster_1"
-            )
-            d = "digraph {\n    " + "\n    " + dot_raw + "\n" + dot_reduced + "}"
-            src = graphviz.Source(d)
-            src.view()
-            break
+    delins_model = {
+        "type": "deletion_insertion",
+        "location": {
+            "start": {"position": start, "type": "point"},
+            "end": {"position": end, "type": "point"},
+            "type": "range",
+        },
+        "deleted": [],
+        "inserted": [],
+    }
+    if inserted:
+        delins_model["deleted"] = []
+        delins_model["inserted"] = [{"sequence": inserted, "source": "description"}]
+    return ref_id, delins_model
 
 
-def extract(reference, observed):
-
-    t_0 = time.time()
-    distance, lcs_nodes = edit(reference, observed)
-    t_1 = time.time()
-    root, _ = lcs_graph(reference, observed, lcs_nodes)
-    t_2 = time.time()
-    reduced_root = reduce(root)
-    t_3 = time.time()
-    rm_equals(reduced_root)
-    t_4 = time.time()
-    reduce_simple_repeats(reduced_root)
-    t_5 = time.time()
-    # print(t_1 - t_0, t_2 - t_1, t_3 - t_2, t_4 - t_3, t_5 - t_4)
-    return list(traversal(reduced_root))
+def _normalize_spdi(description, dev=False):
+    print(description)
+    ref_id, model = _spdi_model(description)
+    reference = get_reference_model(ref_id)["sequence"]["seq"]
+    observed = mutate_raw({"reference": reference}, [model])
+    if dev:
+        extract_dev(reference, observed)
+    else:
+        print(extract(reference, observed))
 
 
-def compare_spdi(file_path):
-    def get_models():
-        with open(file_path) as f:
-            for line in f:
-                variants.append(line.strip())
-
-        for spdi_variant in variants:
-            _convert(spdi_variant)
-
-    def _convert(v):
-        ref_id, position, deleted, inserted = v.split(":")
-
-        start = end = int(position)
-
-        if deleted:
-            end += len(deleted)
-
-        del_ins_model = {
-            "type": "deletion_insertion",
-            "location": {
-                "start": {"position": start, "type": "point"},
-                "end": {"position": end, "type": "point"},
-                "type": "range",
-            },
-            "deleted": [],
-            "inserted": [],
-        }
-        if inserted:
-            del_ins_model["deleted"] = []
-            del_ins_model["inserted"] = [
-                {"sequence": inserted, "source": "description"}
-            ]
-        variant_models[v] = del_ins_model
-        reference_ids.add(ref_id)
-
-    variant_models = {}
-    reference_ids = set()
-
-    variants = []
-
-    get_models()
-    reference = get_reference_model(list(reference_ids)[0])["sequence"]["seq"]
-    print(len(reference))
-
-    for i, spdi_variant in enumerate(variants[:10000]):
-        print(f"\n- {i}: {spdi_variant}")
-
-        observed_2 = mutate_raw(
-            {"reference": reference}, [variant_models[spdi_variant]]
-        )
-        mutalyzer_output = spdi_converter(spdi_variant)
-
-        descriptions = extract(reference, observed_2)
-        if len(descriptions) > 1:
-            print("Error: multiple descriptions.")
-            print(descriptions)
-            extract_main(reference, observed_2)
-            break
-        elif (
-            to_hgvs(descriptions[0], reference)
-            != mutalyzer_output["normalized_description"].split(".")[2]
-        ):
-            print("Error: different description when compared to Mutalyzer")
-            print(to_hgvs(descriptions[0], reference))
-            print(mutalyzer_output["normalized_description"].split(".")[2])
+def _get_sequences(ref, obs=None):
+    if obs is None:
+        if ref.count(":") > 1:
+            ref_id, model = _spdi_model(ref)
+            reference = get_reference_model(ref_id)["sequence"]["seq"]
+            observed = mutate_raw({"reference": reference}, [model])
         else:
-            print("  OK")
+            d = Description(ref)
+            d.normalize()
+            reference = d.get_sequences()["reference"]
+            observed = d.get_sequences()["observed"]
+    else:
+        reference = ref
+        if "[" in obs:
+            variants = Parser(obs).hgvs()
+            observed = patch(ref, variants)
+        else:
+            observed = obs
+    return reference, observed
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="extractor sandbox")
-    commands = parser.add_subparsers(dest="command", required=True, help="Commands")
 
-    extract_parser = commands.add_parser("main")
-    extract_parser.add_argument("reference", help="reference sequence")
-    extract_parser.add_argument("observed", help="observed sequence / [variants]")
-
-    extract_parser = commands.add_parser("extract")
-    extract_parser.add_argument("reference", help="reference sequence")
-    extract_parser.add_argument("observed", help="observed sequence / [variants]")
-
-    check_parser = commands.add_parser("check")
-    check_parser.add_argument("max_length", help="max_length", type=int)
-    check_parser.add_argument("min_length", help="min_length", type=int)
-    check_parser.add_argument("p", type=float)
-    check_parser.add_argument("mu_deletion", help="mu_deletion", type=float)
-    check_parser.add_argument("mu_insertion", help="mu_insertion", type=float)
-
-    equals_parser = commands.add_parser("equals")
-
-    check_set_parser = commands.add_parser("check_set")
-
-    compare_parser = commands.add_parser("compare")
-
-    compare_spdi_parser = commands.add_parser("compare_spdi")
-    compare_spdi_parser.add_argument("--file", help="file path")
+    parser.add_argument(
+        "ref", help="reference sequence / SPDI description / HGVS description"
+    )
+    parser.add_argument(
+        "obs", nargs="?", help="observed sequence / [variants]", type=str
+    )
+    parser.add_argument("--dev", action="store_true", required=False)
 
     args = parser.parse_args()
 
-    if args.command == "main":
-        extract_main(args.reference, args.observed)
-    elif args.command == "extract":
-        print(extract(args.reference, args.observed))
-    elif args.command == "check":
-        check(
-            args.max_length,
-            args.min_length,
-            args.p,
-            args.mu_deletion,
-            args.mu_insertion,
-        )
-    elif args.command == "equals":
-        get_consecutive_equals()
-    elif args.command == "check_set":
-        check_set()
-    elif args.command == "compare":
-        compare()
-    elif args.command == "compare_spdi":
-        compare_spdi(args.file)
+    reference, observed = _get_sequences(args.ref, args.obs)
+    if args.dev:
+        extract_dev(reference, observed)
+    else:
+        print(extract(reference, observed))
