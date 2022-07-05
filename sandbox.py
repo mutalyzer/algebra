@@ -161,20 +161,13 @@ def extract(reference, observed):
 
 
 def to_dot_repeats(reference, root, extra="", cluster=""):
-    """The LCS graph in Graphviz DOT format with repeat edges merged."""
-
     def _merge_repeats(variants):
-        # print(variants)
-        # print("---")
         if len(variants) > 1:
             return "|".join([to_hgvs([v], reference) for v in variants])
         else:
             return to_hgvs(variants)
-            # for variant in variants:
-            #     print(variant.start, variant.end, variant.sequence)
 
     def traverse():
-        # breadth-first traversal
         visited = {root}
         queue = [root]
         while queue:
@@ -185,7 +178,6 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
                     children[child] = []
                 children[child].append(variant[0])
             for child in children:
-                # print(_merge_repeats(children[child]))
                 yield (
                     f'"{extra}{node.row}_{node.col}" -> "{extra}{child.row}_{child.col}"'
                     f' [label="{_merge_repeats(children[child])}"];'
@@ -199,6 +191,41 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
+def maximize(start, end):
+    print(start, end)
+
+
+def complex_structures(root):
+
+    visited = {root}
+    queue = [root]
+
+    structures = {}
+    c_open = None
+    c_close = False
+
+    while queue:
+        node = queue.pop(0)
+        if c_close:
+            structures[c_open] = node
+            c_close = False
+            c_open = None
+        children = set()
+        for child, variant in node.edges:
+            children.add(child)
+        if len(children) > 1 and c_open is None:
+            c_open = node
+        for child in children:
+            if child not in visited:
+                visited.add(child)
+                queue.append(child)
+        if len(queue) == 1 and c_open:
+            c_close = True
+    print(structures)
+    for start in structures:
+        maximize(start, structures[start])
+
+
 def extract_dev(reference, obs):
     # CATATAGT "[4_5del;7delinsGA]"
     # CTAA TTA - with equals inside
@@ -210,6 +237,8 @@ def extract_dev(reference, obs):
     # ACTAA ACGCCTATTAAATAAA - with consecutive equals inside
     # CAGGG AACTCAGGTAGGGTTAGAT - with three consecutive equals inside
     # CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACG CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACG - complex component
+    # CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACGTTCGTCCATGATACAGAGTATGCGCAATTCC CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACGATCGTCCATGGCACGGGTATGCGCGCAATTGC - complex component
+    # GTGCCCTAAGGGAT GAGCCTTAGGGCT
     if "[" in obs:
         variants = Parser(obs).hgvs()
         observed = patch(reference, variants)
@@ -222,10 +251,7 @@ def extract_dev(reference, obs):
     root, _ = lcs_graph(reference, observed, lcs_nodes)
 
     print("----")
-    # open("raw.dot", "w").write(to_dot(reference, root))
-    # print("----")
     reduced_root = reduce(root)
-    # open("reduced.dot", "w").write(to_dot(reference, reduced_root))
     print("----")
 
     dot_raw = to_dot(reference, root, cluster="cluster_0")
@@ -235,9 +261,11 @@ def extract_dev(reference, obs):
 
     dot_no_equals = to_dot(reference, reduced_root, extra="n", cluster="cluster_2")
 
-    dot_repeats = to_dot_repeats(
-        reference, reduced_root, extra="r", cluster="cluster_3"
-    )
+    complex_structures(reduced_root)
+
+    # dot_repeats = to_dot_repeats(
+    #     reference, reduced_root, extra="r", cluster="cluster_3"
+    # )
 
     d = (
         "digraph {\n    "
@@ -247,8 +275,8 @@ def extract_dev(reference, obs):
         + dot_reduced
         + "\n"
         + dot_no_equals
-        + "\n"
-        + dot_repeats
+        # + "\n"
+        # + dot_repeats
         + "}"
     )
     src = graphviz.Source(d)
