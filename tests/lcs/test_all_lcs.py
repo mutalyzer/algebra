@@ -20,8 +20,6 @@ from algebra.variants import Variant
 ])
 def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
     distance, lcs_nodes = edit(reference, observed)
-    for level in lcs_nodes:
-        print(level)
     assert distance == expected_distance
     assert lcs_nodes == expected_lcs_nodes
 

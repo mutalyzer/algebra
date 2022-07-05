@@ -127,18 +127,22 @@ class Variant:
 
             yield variants
 
-    def is_disjoint(self, other):
-        """Check if two variants are disjoint, i.e., no common deletion or
-        insertion."""
-        if (self.start < other.end and other.start < self.end and
-                self.start < self.end and other.start < other.end):
-            return False
-        return (self.start > other.end or other.start > self.end or
-                set(self.sequence).isdisjoint(set(other.sequence)))
+    def intersect(self, other):
+        """Check if the deleted ranges (range of influence) of two
+        variants intersect."""
+        return other.start > self.end or self.start > other.end
 
-    def reverse_complement(self, end):
-        """The reverse complement of this variant."""
-        return Variant(end - self.end - 1, end - self.start - 1,
+    def is_disjoint(self, other):
+        """Check if two variants are disjoint, i.e., no common deletion
+        or insertion."""
+        if other.start < self.end and self.start < other.end:
+            return False
+
+        return self.intersect(other) or set(self.sequence).isdisjoint(set(other.sequence))
+
+    def reverse_complement(self, pivot):
+        """The reverse complement with regard to a given pivot."""
+        return Variant(pivot - self.end - 1, pivot - self.start - 1,
                        reverse_complement(self.sequence))
 
     def to_hgvs(self, reference=None, only_substitutions=True):
@@ -188,8 +192,8 @@ class Variant:
 
         References
         ----------
-        [1] J.B. Holmes, E. Moyer, L. Phan, D. Maglott and B. Kattman. "SPDI:
-        data model for variants and applications at NCBI".
+        [1] J.B. Holmes, E. Moyer, L. Phan, D. Maglott and B. Kattman.
+        "SPDI: data model for variants and applications at NCBI".
         In: Bioinformatics 36.6 (2019), pp. 1902-1907.
         """
         return (f"{reference_id}:{self.start}:{self.end - self.start}:"
