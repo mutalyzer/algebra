@@ -152,12 +152,13 @@ def extract(reference, observed):
     t_4 = time.time()
     reduce_simple_repeats(reduced_root)
     t_5 = time.time()
+    return complex_structures(reduced_root, reference)
     # print(t_1 - t_0, t_2 - t_1, t_3 - t_2, t_4 - t_3, t_5 - t_4)
-    paths = list(traversal(reduced_root))
-    if len(paths) == 1:
-        return to_hgvs(paths[0], reference)
-    else:
-        raise Exception("Multiple paths:", paths)
+    # paths = list(traversal(reduced_root))
+    # if len(paths) == 1:
+    #     return to_hgvs(paths[0], reference)
+    # else:
+    #     raise Exception("Multiple paths:", paths)
 
 
 def to_dot_repeats(reference, root, extra="", cluster=""):
@@ -191,23 +192,62 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
-def maximize(start, end):
-    print(start, end)
+def maximize(s_node, e_node, reference):
+
+    # print(s_node, e_node)
+    children = {}
+    # print(s_node.edges)
+    # for child, variant in s_node.edges:
+    #     if child not in children:
+    #         children[child] = variant[0]
+    #     else:
+    #         if variant[0].start > children[child].start:
+    #             children[child] = variant[0]
+    print(s_node.edges)
+    start = max(s_node.edges, key=lambda x: x[1][0].start)[1][0].start
+    # start = max([x.start for x in children.values()])
+    end = e_node.row
+    # print(start, end)
+
+    print("----")
+    node = s_node
+    inserted = ""
+    idx = None
+    while node != e_node:
+        print(node, node.edges)
+        node, edge = max(node.edges, key=lambda x: x[1][0].start)
+        edge = edge[0]
+        print(" ", edge, edge.to_hgvs(reference))
+        if idx is not None:
+            inserted += reference[idx:edge.start]
+            print("  idx:edge.start", idx, edge.start)
+        idx = edge.end
+        print("  ", edge.sequence)
+        inserted += edge.sequence
+        # node = node.edges[0][0]
+    print("---")
+    # print(inserted)
+    # print(f"{start+1}_{end-1}delins{inserted}")
+    if start+1 == end-1:
+        return f"{start + 1}delins{inserted}"
+    else:
+        return f"{start+1}_{end-1}delins{inserted}"
 
 
-def complex_structures(root):
-
+def complex_structures(root, reference):
     visited = {root}
     queue = [root]
 
     structures = {}
     c_open = None
     c_close = False
+    descriptions = []
 
     while queue:
         node = queue.pop(0)
         if c_close:
             structures[c_open] = node
+            descriptions.append(maximize(c_open, node, reference))
             c_close = False
             c_open = None
         children = set()
@@ -215,15 +255,18 @@ def complex_structures(root):
             children.add(child)
         if len(children) > 1 and c_open is None:
             c_open = node
+        if len(children) == 1 and c_open is None:
+            descriptions.append(node.edges[0][1][0].to_hgvs())
         for child in children:
             if child not in visited:
                 visited.add(child)
                 queue.append(child)
         if len(queue) == 1 and c_open:
             c_close = True
-    print(structures)
-    for start in structures:
-        maximize(start, structures[start])
+    if len(descriptions) > 1:
+        return "[" + ";".join(descriptions) + "]"
+    else:
+        return descriptions[0]
 
 
 def extract_dev(reference, obs):
@@ -261,7 +304,10 @@ def extract_dev(reference, obs):
 
     dot_no_equals = to_dot(reference, reduced_root, extra="n", cluster="cluster_2")
 
-    complex_structures(reduced_root)
+    new_variants = complex_structures(reduced_root, reference)
+    print(new_variants)
+    print(observed == patch(reference, Parser(new_variants).hgvs()))
+
 
     # dot_repeats = to_dot_repeats(
     #     reference, reduced_root, extra="r", cluster="cluster_3"
@@ -352,8 +398,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    reference, observed = _get_sequences(args.ref, args.obs)
     if args.dev:
-        extract_dev(reference, observed)
+        extract_dev(*_get_sequences(args.ref, args.obs))
     else:
-        print(extract(reference, observed))
+        print(extract(*_get_sequences(args.ref, args.obs)))
