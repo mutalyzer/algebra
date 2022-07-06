@@ -127,18 +127,14 @@ class Variant:
 
             yield variants
 
-    def disjoint(self, other):
-        """Check if the deleted ranges (range of influence) of two
-        variants are disjoint."""
-        return other.start > self.end or self.start > other.end
-
     def is_disjoint(self, other):
         """Check if two variants are disjoint, i.e., no common deletion
         or insertion."""
         if other.start < self.end and self.start < other.end:
             return False
 
-        return self.disjoint(other) or set(self.sequence).isdisjoint(set(other.sequence))
+        return (other.start > self.end or self.start > other.end or
+            set(self.sequence).isdisjoint(set(other.sequence)))
 
     def reverse_complement(self, pivot):
         """The reverse complement with regard to a given pivot."""

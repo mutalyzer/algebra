@@ -107,6 +107,11 @@ def test_variant_string(variant, string):
     (Variant(2, 3, "T"), Variant(2, 2, "C"), True),
     (Variant(2, 3, "T"), Variant(3, 3, "C"), True),
     (Variant(2, 2, "T"), Variant(2, 2, "T"), False),
+    (Variant(2, 3), Variant(1, 2), True),
+    (Variant(2, 3), Variant(3, 4), True),
+    (Variant(2, 3, "T"), Variant(2, 2, "C"), True),
+    (Variant(2, 3, "T"), Variant(3, 3, "C"), True),
+    (Variant(2, 3, "CT"), Variant(3, 3, "C"), False),
 ])
 def test_variant_is_disjoint(lhs, rhs, expected):
     assert lhs.is_disjoint(rhs) == rhs.is_disjoint(lhs) == expected
