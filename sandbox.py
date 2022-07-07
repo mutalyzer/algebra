@@ -192,46 +192,25 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
-def maximize(s_node, e_node, reference):
+def shortest_delins(s_node, e_node, reference):
 
-    # print(s_node, e_node)
-    children = {}
-    # print(s_node.edges)
-    # for child, variant in s_node.edges:
-    #     if child not in children:
-    #         children[child] = variant[0]
-    #     else:
-    #         if variant[0].start > children[child].start:
-    #             children[child] = variant[0]
-    print(s_node.edges)
-    start = max(s_node.edges, key=lambda x: x[1][0].start)[1][0].start
-    # start = max([x.start for x in children.values()])
-    end = e_node.row
-    # print(start, end)
-
-    print("----")
-    node = s_node
-    inserted = ""
-    idx = None
+    node, edge = max(s_node.edges, key=lambda x: x[1][0].start)
+    inserted = edge[0].sequence
+    start = edge[0].start
+    end = edge[0].end
     while node != e_node:
-        print(node, node.edges)
-        node, edge = max(node.edges, key=lambda x: x[1][0].start)
+        node, edge = min(node.edges, key=lambda x: x[1][0].start)
         edge = edge[0]
-        print(" ", edge, edge.to_hgvs(reference))
-        if idx is not None:
-            inserted += reference[idx:edge.start]
-            print("  idx:edge.start", idx, edge.start)
-        idx = edge.end
-        print("  ", edge.sequence)
+        if end is not None:
+            inserted += reference[end:edge.start]
+        end = edge.end
         inserted += edge.sequence
-        # node = node.edges[0][0]
-    print("---")
-    # print(inserted)
-    # print(f"{start+1}_{end-1}delins{inserted}")
-    if start+1 == end-1:
-        return f"{start + 1}delins{inserted}"
+    start += 1
+
+    if start == end:
+        return f"{start}delins{inserted}"
     else:
-        return f"{start+1}_{end-1}delins{inserted}"
+        return f"{start}_{end}delins{inserted}"
 
 
 def complex_structures(root, reference):
@@ -247,7 +226,7 @@ def complex_structures(root, reference):
         node = queue.pop(0)
         if c_close:
             structures[c_open] = node
-            descriptions.append(maximize(c_open, node, reference))
+            descriptions.append(shortest_delins(c_open, node, reference))
             c_close = False
             c_open = None
         children = set()
@@ -307,7 +286,6 @@ def extract_dev(reference, obs):
     new_variants = complex_structures(reduced_root, reference)
     print(new_variants)
     print(observed == patch(reference, Parser(new_variants).hgvs()))
-
 
     # dot_repeats = to_dot_repeats(
     #     reference, reduced_root, extra="r", cluster="cluster_3"
