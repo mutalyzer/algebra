@@ -9,7 +9,7 @@ from mutalyzer_mutator import mutate as mutate_raw
 
 from algebra.lcs import edit, lcs_graph, to_dot
 from algebra.lcs.all_lcs import _Node, traversal
-from algebra.variants import Parser, patch, to_hgvs
+from algebra.variants import Parser, Variant, patch, to_hgvs
 
 
 def get_sink(root):
@@ -152,7 +152,7 @@ def extract(reference, observed):
     t_4 = time.time()
     reduce_simple_repeats(reduced_root)
     t_5 = time.time()
-    return complex_structures(reduced_root, reference)
+    return _get_variants(reduced_root, reference)
     # print(t_1 - t_0, t_2 - t_1, t_3 - t_2, t_4 - t_3, t_5 - t_4)
     # paths = list(traversal(reduced_root))
     # if len(paths) == 1:
@@ -192,28 +192,70 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
-def shortest_delins(s_node, e_node, reference):
-
-    node, edge = max(s_node.edges, key=lambda x: x[1][0].start)
-    inserted = edge[0].sequence
+def _shortest_delins(start_node, end_node, reference):
+    next_node, edge = max(start_node.edges, key=lambda x: x[1][0].start)
+    sequence = edge[0].sequence
     start = edge[0].start
     end = edge[0].end
-    while node != e_node:
-        node, edge = min(node.edges, key=lambda x: x[1][0].start)
+    while next_node != end_node:
+        next_node, edge = min(next_node.edges, key=lambda x: x[1][0].start)
         edge = edge[0]
         if end is not None:
-            inserted += reference[end:edge.start]
+            sequence += reference[end : edge.start]
         end = edge.end
-        inserted += edge.sequence
-    start += 1
+        sequence += edge.sequence
+    return Variant(start, end, sequence)
 
-    if start == end:
-        return f"{start}delins{inserted}"
+
+def _repeat(node, reference):
+    edges = sorted([edge[1][0] for edge in node.edges], key=lambda x: x.start)
+    first_edge = min(edges, key=lambda x: x.start)
+    last_edge = max(edges, key=lambda x: x.start)
+    if last_edge.sequence == "":
+        # deletion
+        sequences = [reference[edge.start : edge.end] for edge in edges]
+        affected = reference[first_edge.start : last_edge.end]
+        print(f"affected: {affected}, {first_edge.start}:{last_edge.end}]")
+        print(sequences)
+        print(set(sequences))
+        if len(set(sequences)) == 1:
+            # one base repeat unit
+            r_s = sequences[0][0]
+            r_n = len(affected) - len(sequences[0])
+            return f"{first_edge.start+1}{r_s}[{r_n}]"
+        else:
+            if len(set(sequences)) == len(sequences):
+                # most likely a shift
+                return last_edge.to_hgvs(reference)
+            elif sequences[0] == sequences[-1]:
+                r_s = sequences[0][: len(set(sequences))]
+                r_n = (len(affected) - len(sequences[0])) // len(r_s)
+                return f"{first_edge.start + 1}_{last_edge.end}{r_s}[{r_n}]"
     else:
-        return f"{start}_{end}delins{inserted}"
+        # insertion
+        sequences = [edge.sequence for edge in edges]
+        affected = reference[first_edge.start : last_edge.end]
+        print(f"affected: {affected}, {first_edge.start}:{last_edge.end}]")
+        if len(set(sequences)) == 1:
+            # one base repeat unit
+            r_s = sequences[0][0]
+            r_n = len(affected) + len(sequences[0])
+            return f"{first_edge.start + 1}{r_s}[{r_n}]"
+        else:
+            if len(set(sequences)) == len(sequences):
+                # most likely a shift
+                return last_edge.to_hgvs(reference)
+            elif sequences[0] == sequences[-1]:
+                print("repeat insertion of a different length")
+                print(sequences)
+                print(set(sequences))
+                r_s = sequences[0][: len(set(sequences))]
+                r_n = (len(affected) + len(sequences[0])) // len(r_s)
+                return f"{first_edge.start + 1}_{last_edge.end}{r_s}[{r_n}]"
+    return "repeat"
 
 
-def complex_structures(root, reference):
+def _get_variants(root, reference):
     visited = {root}
     queue = [root]
 
@@ -226,7 +268,9 @@ def complex_structures(root, reference):
         node = queue.pop(0)
         if c_close:
             structures[c_open] = node
-            descriptions.append(shortest_delins(c_open, node, reference))
+            descriptions.append(
+                _shortest_delins(c_open, node, reference).to_hgvs(reference)
+            )
             c_close = False
             c_open = None
         children = set()
@@ -235,7 +279,10 @@ def complex_structures(root, reference):
         if len(children) > 1 and c_open is None:
             c_open = node
         if len(children) == 1 and c_open is None:
-            descriptions.append(node.edges[0][1][0].to_hgvs())
+            if len(node.edges) > 1:
+                descriptions.append(_repeat(node, reference))
+            else:
+                descriptions.append(node.edges[0][1][0].to_hgvs())
         for child in children:
             if child not in visited:
                 visited.add(child)
@@ -244,23 +291,13 @@ def complex_structures(root, reference):
             c_close = True
     if len(descriptions) > 1:
         return "[" + ";".join(descriptions) + "]"
-    else:
+    elif len(descriptions) == 1:
         return descriptions[0]
+    else:
+        return "="
 
 
 def extract_dev(reference, obs):
-    # CATATAGT "[4_5del;7delinsGA]"
-    # CTAA TTA - with equals inside
-    # CTAACG TTACC - with equals inside
-    # CTTTG CTATTTT - with consecutive equals inside
-    # GCCTT GCAGCCCAT - with consecutive equals inside
-    # AGGTA AAGAAGGGGA - with consecutive equals inside
-    # TTGTA TTTGTGTT - with consecutive equals inside
-    # ACTAA ACGCCTATTAAATAAA - with consecutive equals inside
-    # CAGGG AACTCAGGTAGGGTTAGAT - with three consecutive equals inside
-    # CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACG CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACG - complex component
-    # CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACGTTCGTCCATGATACAGAGTATGCGCAATTCC CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACGATCGTCCATGGCACGGGTATGCGCGCAATTGC - complex component
-    # GTGCCCTAAGGGAT GAGCCTTAGGGCT
     if "[" in obs:
         variants = Parser(obs).hgvs()
         observed = patch(reference, variants)
@@ -283,9 +320,9 @@ def extract_dev(reference, obs):
 
     dot_no_equals = to_dot(reference, reduced_root, extra="n", cluster="cluster_2")
 
-    new_variants = complex_structures(reduced_root, reference)
+    new_variants = _get_variants(reduced_root, reference)
     print(new_variants)
-    print(observed == patch(reference, Parser(new_variants).hgvs()))
+    # print(observed == patch(reference, Parser(new_variants).hgvs()))
 
     # dot_repeats = to_dot_repeats(
     #     reference, reduced_root, extra="r", cluster="cluster_3"
