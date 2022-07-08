@@ -141,24 +141,12 @@ def reduce_simple_repeats(root):
 
 def extract(reference, observed):
 
-    t_0 = time.time()
     distance, lcs_nodes = edit(reference, observed)
-    t_1 = time.time()
     root, _ = lcs_graph(reference, observed, lcs_nodes)
-    t_2 = time.time()
     reduced_root = reduce(root)
-    t_3 = time.time()
     rm_equals(reduced_root)
-    t_4 = time.time()
-    reduce_simple_repeats(reduced_root)
-    t_5 = time.time()
-    return _get_variants(reduced_root, reference)
-    # print(t_1 - t_0, t_2 - t_1, t_3 - t_2, t_4 - t_3, t_5 - t_4)
-    # paths = list(traversal(reduced_root))
-    # if len(paths) == 1:
-    #     return to_hgvs(paths[0], reference)
-    # else:
-    #     raise Exception("Multiple paths:", paths)
+    new_variants = _get_variants(reduced_root, reference)
+    return new_variants
 
 
 def to_dot_repeats(reference, root, extra="", cluster=""):
@@ -208,51 +196,56 @@ def _shortest_delins(start_node, end_node, reference):
 
 
 def _repeat(node, reference):
+    def get_rotations(s):
+        t = s
+        r = 1
+        while True:
+            t = t[-1] + t[:-1]
+            print(t)
+            r += 1
+            if t == s:
+                return r
+
     edges = sorted([edge[1][0] for edge in node.edges], key=lambda x: x.start)
     first_edge = min(edges, key=lambda x: x.start)
     last_edge = max(edges, key=lambda x: x.start)
     if last_edge.sequence == "":
         # deletion
         sequences = [reference[edge.start : edge.end] for edge in edges]
-        affected = reference[first_edge.start : last_edge.end]
-        print(f"affected: {affected}, {first_edge.start}:{last_edge.end}]")
-        print(sequences)
-        print(set(sequences))
-        if len(set(sequences)) == 1:
-            # one base repeat unit
-            r_s = sequences[0][0]
-            r_n = len(affected) - len(sequences[0])
-            return f"{first_edge.start+1}{r_s}[{r_n}]"
+        rotations = get_rotations(sequences[-1])
+        if rotations <= len(sequences):
+            # repeat
+            start = first_edge.start + sequences.index(sequences[-1])
+            end = last_edge.end
+            affected = reference[start : end]
+            r_s = affected[: len(set(sequences))]
+            r_n = (len(affected) - len(sequences[0])) // len(r_s)
+            return f"{start+1}_{end}{r_s}[{r_n}]"
         else:
-            if len(set(sequences)) == len(sequences):
-                # most likely a shift
-                return last_edge.to_hgvs(reference)
-            elif sequences[0] == sequences[-1]:
-                r_s = sequences[0][: len(set(sequences))]
-                r_n = (len(affected) - len(sequences[0])) // len(r_s)
-                return f"{first_edge.start + 1}_{last_edge.end}{r_s}[{r_n}]"
+            # shift
+            return last_edge.to_hgvs(reference)
     else:
         # insertion
         sequences = [edge.sequence for edge in edges]
-        affected = reference[first_edge.start : last_edge.end]
-        print(f"affected: {affected}, {first_edge.start}:{last_edge.end}]")
-        if len(set(sequences)) == 1:
-            # one base repeat unit
-            r_s = sequences[0][0]
-            r_n = len(affected) + len(sequences[0])
-            return f"{first_edge.start + 1}{r_s}[{r_n}]"
+        print(sequences)
+        rotations = get_rotations(sequences[-1])
+        print(rotations)
+        if rotations <= len(sequences):
+            # repeat
+            start = first_edge.start + sequences.index(sequences[-1])
+            end = last_edge.end
+            affected = reference[start : end]
+            print(affected)
+            r_s = affected[: len(set(sequences))]
+            r_n = (len(affected) + len(sequences[0])) // len(r_s)
+            if start+1 == end:
+                location = f"{start+1}"
+            else:
+                location = f"{start+1}_{end}"
+            return f"{location}{r_s}[{r_n}]"
         else:
-            if len(set(sequences)) == len(sequences):
-                # most likely a shift
-                return last_edge.to_hgvs(reference)
-            elif sequences[0] == sequences[-1]:
-                print("repeat insertion of a different length")
-                print(sequences)
-                print(set(sequences))
-                r_s = sequences[0][: len(set(sequences))]
-                r_n = (len(affected) + len(sequences[0])) // len(r_s)
-                return f"{first_edge.start + 1}_{last_edge.end}{r_s}[{r_n}]"
-    return "repeat"
+            # shift
+            return last_edge.to_hgvs(reference)
 
 
 def _get_variants(root, reference):
@@ -401,6 +394,17 @@ def _get_sequences(ref, obs=None):
 
 
 if __name__ == "__main__":
+    # with open("cftr/spdi_hgvs_algebra.txt") as f, open("cftr/spdi_hgvs_algebra_2.txt", "w") as f_w:
+    #     i = 0
+    #     for line in f:
+    #         i += 1
+    #         print(i, end="\r")
+    #         spdi, hgvs = line.strip().split(" | ")
+    #         # if "timeout" not in hgvs:
+    #         if "timeout" not in hgvs:
+    #             hgvs = f"NG_016465.4:g.{extract(*_get_sequences(spdi))}"
+    #         f_w.write(f"{spdi} | {hgvs}\n")
+
     parser = argparse.ArgumentParser(description="extractor sandbox")
 
     parser.add_argument(
