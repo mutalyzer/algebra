@@ -101,14 +101,11 @@ def rm_equals(root):
                 if child not in visited:
                     visited.add(child)
                     queue.append(child)
-        # print(" - other parents:", parents, "\n")
         for (p, i) in parents:
-            # print("   ", p, i)
             p.edges[i] = (parent, p.edges[i][1])
 
     while True:
         empty_child, parent, idx = _empty_child()
-        # print("- current:", empty_child, parent, idx)
         if not empty_child:
             break
         _update_parent()
@@ -201,7 +198,6 @@ def _repeat(node, reference):
         r = 1
         while True:
             t = t[-1] + t[:-1]
-            print(t)
             r += 1
             if t == s:
                 return r
@@ -227,15 +223,12 @@ def _repeat(node, reference):
     else:
         # insertion
         sequences = [edge.sequence for edge in edges]
-        print(sequences)
         rotations = get_rotations(sequences[-1])
-        print(rotations)
         if rotations <= len(sequences):
             # repeat
             start = first_edge.start + sequences.index(sequences[-1])
             end = last_edge.end
             affected = reference[start : end]
-            print(affected)
             r_s = affected[: len(set(sequences))]
             r_n = (len(affected) + len(sequences[0])) // len(r_s)
             if start+1 == end:
@@ -394,17 +387,6 @@ def _get_sequences(ref, obs=None):
 
 
 if __name__ == "__main__":
-    # with open("cftr/spdi_hgvs_algebra.txt") as f, open("cftr/spdi_hgvs_algebra_2.txt", "w") as f_w:
-    #     i = 0
-    #     for line in f:
-    #         i += 1
-    #         print(i, end="\r")
-    #         spdi, hgvs = line.strip().split(" | ")
-    #         # if "timeout" not in hgvs:
-    #         if "timeout" not in hgvs:
-    #             hgvs = f"NG_016465.4:g.{extract(*_get_sequences(spdi))}"
-    #         f_w.write(f"{spdi} | {hgvs}\n")
-
     parser = argparse.ArgumentParser(description="extractor sandbox")
 
     parser.add_argument(
