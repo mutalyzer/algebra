@@ -67,23 +67,23 @@ def test_variant_len(variant, distance):
     assert len(variant) == distance
 
 
-@pytest.mark.parametrize("lhs, rhs, expected", [
-    (Variant(0, 0, "C"), Variant(0, 1, "C"), [Variant(0, 0, "C"), Variant(0, 1, "C")]),
-    (Variant(0, 1, "C"), Variant(0, 0, "C"), [Variant(0, 0, "C"), Variant(0, 1, "C")]),
-    (Variant(0, 0), Variant(0, 0), [Variant(0, 0), Variant(0, 0)]),
-    (Variant(3, 4), Variant(1, 2), [Variant(1, 2), Variant(3, 4)]),
+@pytest.mark.parametrize("variants, expected", [
+    ([Variant(0, 0, "C"), Variant(0, 1, "C")], [Variant(0, 0, "C"), Variant(0, 1, "C")]),
+    ([Variant(0, 1, "C"), Variant(0, 0, "C")], [Variant(0, 0, "C"), Variant(0, 1, "C")]),
+    ([Variant(0, 0), Variant(0, 0)], [Variant(0, 0), Variant(0, 0)]),
+    ([Variant(3, 4), Variant(1, 2)], [Variant(1, 2), Variant(3, 4)]),
 ])
-def test_variant_sort(lhs, rhs, expected):
-    assert sorted([lhs, rhs]) == expected
+def test_variant_sort(variants, expected):
+    assert sorted(variants) == expected
 
 
-@pytest.mark.parametrize("lhs, rhs, exception, message", [
-    (Variant(1, 3, "C"), Variant(0, 2), ValueError, "variants overlap"),
-    (Variant(4, 4, "C"), Variant(4, 4, "C"), ValueError, "variants overlap"),
+@pytest.mark.parametrize("variants, exception, message", [
+    ([Variant(1, 3, "C"), Variant(0, 2)], ValueError, "variants overlap"),
+    ([Variant(4, 4, "C"), Variant(4, 4, "C")], ValueError, "variants overlap"),
 ])
-def test_variant_sort_fail(lhs, rhs, exception, message):
+def test_variant_sort_fail(variants, exception, message):
     with pytest.raises(exception) as exc:
-        sorted([lhs, rhs])
+        sorted(variants)
     assert str(exc.value) == message
 
 
@@ -102,6 +102,16 @@ def test_variant_string(variant, string):
     (Variant(0, 0, "T"), Variant(0, 1, "T"), False),
     (Variant(0, 5), Variant(2, 3), False),
     (Variant(0, 0, "C"), Variant(0, 1, "T"), True),
+    (Variant(2, 3, "T"), Variant(2, 2, "T"), False),
+    (Variant(2, 3, "T"), Variant(3, 3, "T"), False),
+    (Variant(2, 3, "T"), Variant(2, 2, "C"), True),
+    (Variant(2, 3, "T"), Variant(3, 3, "C"), True),
+    (Variant(2, 2, "T"), Variant(2, 2, "T"), False),
+    (Variant(2, 3), Variant(1, 2), True),
+    (Variant(2, 3), Variant(3, 4), True),
+    (Variant(2, 3, "T"), Variant(2, 2, "C"), True),
+    (Variant(2, 3, "T"), Variant(3, 3, "C"), True),
+    (Variant(2, 3, "CT"), Variant(3, 3, "C"), False),
 ])
 def test_variant_is_disjoint(lhs, rhs, expected):
     assert lhs.is_disjoint(rhs) == rhs.is_disjoint(lhs) == expected
