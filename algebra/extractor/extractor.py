@@ -222,7 +222,7 @@ def get_variants(root, reference):
                 descriptions.append(_repeat(node, reference))
             else:
                 # simple variant(1.a.)
-                descriptions.append(node.edges[0][1][0].to_hgvs())
+                descriptions.append(node.edges[0][1][0].to_hgvs(reference))
         for child in children:
             if child not in visited:
                 visited.add(child)

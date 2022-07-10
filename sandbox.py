@@ -120,7 +120,7 @@ def _normalize_spdi(description, dev=False):
     if dev:
         extract_dev(reference, observed)
     else:
-        print(extract(reference, observed))
+        return extract(reference, observed)
 
 
 def _get_sequences(ref, obs=None):
