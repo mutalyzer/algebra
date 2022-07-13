@@ -260,8 +260,9 @@ def lcs_graph(reference, observed, lcs_nodes):
     return source, edges
 
 
-def maximal_variant(reference, observed, variants):
-    """Calculate the maximal spanning variant for a collection of variants.
+def supremal_variant(reference, observed, variants):
+    """Calculate the supremal variant (mininum spanning) for a collection
+    of variants.
 
     Raises
     ------
