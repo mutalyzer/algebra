@@ -134,7 +134,7 @@ class Variant:
             return False
 
         return (other.start > self.end or self.start > other.end or
-            set(self.sequence).isdisjoint(set(other.sequence)))
+                set(self.sequence).isdisjoint(set(other.sequence)))
 
     def reverse_complement(self, pivot):
         """The reverse complement with regard to a given pivot."""
