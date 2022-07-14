@@ -1,4 +1,4 @@
-"""Variant relations."""
+"""A Boolean Algebra for Genetic Variants."""
 
 
 from .relations import (Relation, are_disjoint, are_equivalent, compare,
