@@ -1,8 +1,19 @@
 """Utility functions for sequences and variants."""
 
 
+from itertools import chain
 import random
 from .variants import DNA_NUCLEOTIDES, Variant
+
+
+def canonical(variants, max_distance=40):
+    """Pick a canonical represention from all minimal variant
+    representations."""
+    first = next(variants)
+    if sum(map(len, first)) > max_distance:
+        return first
+
+    return min(chain([first], variants), key=len)
 
 
 def fasta_sequence(lines):
