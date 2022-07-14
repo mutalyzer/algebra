@@ -7,7 +7,7 @@ their relations.
 
 import argparse
 from . import compare
-from .lcs import edit, lcs_graph, maximal_variant, to_dot, traversal
+from .lcs import edit, lcs_graph, supremal_variant, to_dot, traversal
 from .utils import fasta_sequence, random_sequence, random_variants
 from .variants import Parser, patch, to_hgvs
 
@@ -51,7 +51,7 @@ def main():
     extract_parser.add_argument("--atomics", action="store_true", help="only deletions and insertions")
     extract_parser.add_argument("--distance", action="store_true", help="output simple edit distance")
     extract_parser.add_argument("--dot", action="store_true", help="output Graphviz DOT")
-    extract_parser.add_argument("--max-variant", action="store_true", help="output maximal variant")
+    extract_parser.add_argument("--supremal-variant", action="store_true", help="output supremal variant")
 
     observed_group = extract_parser.add_mutually_exclusive_group()
     observed_group.add_argument("--observed", type=str, help="an observed sequence as string")
@@ -144,9 +144,9 @@ def main():
             print(distance)
         if args.dot:
             print(to_dot(reference, root))
-        if args.max_variant:
-            max_variant = maximal_variant(reference, observed, edges)
-            print(max_variant.to_hgvs(reference), max_variant)
+        if args.supremal_variant:
+            variant = supremal_variant(reference, observed, edges)
+            print(variant.to_hgvs(reference), variant)
         if True or args.all:
             for variants in traversal(root, args.atomics):
                 print(to_hgvs(variants, reference))
