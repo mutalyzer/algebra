@@ -1,5 +1,5 @@
 import pytest
-from algebra.lcs import edit, lcs_graph, supremal_variant, traversal
+from algebra.lcs import edit, lcs_graph, traversal
 from algebra.lcs.all_lcs import _Node
 from algebra.variants import Variant
 
@@ -62,30 +62,6 @@ def test_lcs_graph(reference, observed, expected_edges):
     _, lcs_nodes = edit(reference, observed)
     _, edges = lcs_graph(reference, observed, lcs_nodes)
     assert edges == expected_edges
-
-
-@pytest.mark.parametrize("reference, observed, expected_variant", [
-    ("A", "C", Variant(0, 1, "C")),
-    ("", "A", Variant(0, 0, "A")),
-    ("A", "", Variant(0, 1)),
-    ("ACCCA", "ACCA", Variant(1, 4, "CC")),
-    ("AACCT", "AACGT", Variant(2, 4, "CG")),
-])
-def test_supremal_variant(reference, observed, expected_variant):
-    _, lcs_nodes = edit(reference, observed)
-    _, edges = lcs_graph(reference, observed, lcs_nodes)
-    assert supremal_variant(reference, observed, edges) == expected_variant
-
-
-@pytest.mark.parametrize("reference, observed, exception, message", [
-    ("", "", ValueError, "No variants"),
-])
-def test_supremal_variant_fail(reference, observed, exception, message):
-    _, lcs_nodes = edit(reference, observed)
-    _, edges = lcs_graph(reference, observed, lcs_nodes)
-    with pytest.raises(exception) as exc:
-        supremal_variant(reference, observed, edges)
-    assert str(exc.value) == message
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [

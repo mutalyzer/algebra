@@ -7,7 +7,8 @@ their relations.
 
 import argparse
 from . import compare
-from .lcs import edit, lcs_graph, supremal_variant, to_dot, traversal
+from .lcs import edit, lcs_graph, to_dot, traversal
+from .supremal import spanning_variant
 from .utils import fasta_sequence, random_sequence, random_variants
 from .variants import Parser, patch, to_hgvs
 
@@ -145,7 +146,7 @@ def main():
         if args.dot:
             print(to_dot(reference, root))
         if args.supremal_variant:
-            variant = supremal_variant(reference, observed, edges)
+            variant = spanning_variant(reference, observed, edges)
             print(variant.to_hgvs(reference), variant)
         if True or args.all:
             for variants in traversal(root, args.atomics):

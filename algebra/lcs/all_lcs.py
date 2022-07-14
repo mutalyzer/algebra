@@ -20,7 +20,6 @@ pp. 317-323.
 """
 
 
-from operator import attrgetter
 from ..variants import Variant, to_hgvs
 
 
@@ -258,24 +257,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                 source.edges.append((node, []))
 
     return source, edges
-
-
-def supremal_variant(reference, observed, variants):
-    """Calculate the supremal variant (mininum spanning) for a collection
-    of variants.
-
-    Raises
-    ------
-    ValueError
-        If no variants are present.
-    """
-
-    if not variants:
-        raise ValueError("No variants")
-
-    start = min(variants, key=attrgetter("start")).start
-    end = max(variants, key=attrgetter("end")).end
-    return Variant(start, end, observed[start:len(observed) - (len(reference) - end)])
 
 
 def traversal(root, atomics=False):
