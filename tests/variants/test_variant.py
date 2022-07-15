@@ -1,5 +1,6 @@
 import pytest
 from algebra.variants import Variant, patch, to_hgvs
+from algebra.relations import Relation, compare
 
 
 @pytest.mark.parametrize("args, expected", [
@@ -203,3 +204,13 @@ def test_patch(reference, variants, observed):
 ])
 def test_to_hgvs(reference, variants, hgvs):
     assert to_hgvs(variants, reference, sequence_prefix=True) == hgvs
+
+
+@pytest.mark.parametrize("reference, a, b, c", [
+    ("CACACAC", Variant(1, 6, "TCACT"), Variant(3, 4, "T"), Variant(1, 6, "TCTCT")),
+    ("ACCTGC", Variant(1, 3, "TC"), Variant(3, 5, "TT"), Variant(1, 5, "TCTT")),
+    ("CATATATC", Variant(4, 5, "AA"), Variant(4, 5, "TT"), Variant(1, 7, "ATATATAT")),
+])
+def test_variant_subtract(reference, a, b, c):
+    assert compare(reference, patch(reference, c.subtract(reference, a)), patch(reference, [b])) == Relation.EQUIVALENT
+    assert compare(reference, patch(reference, c.subtract(reference, b)), patch(reference, [a])) == Relation.EQUIVALENT
