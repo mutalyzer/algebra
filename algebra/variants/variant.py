@@ -136,64 +136,6 @@ class Variant:
         return (other.start > self.end or self.start > other.end or
                 set(self.sequence).isdisjoint(set(other.sequence)))
 
-    def subtract(self, other):
-        # self contains other and as supremal variants
-        variants = []
-        prefix = Variant(self.start, other.start, self.sequence[:other.start - self.start])
-        if prefix:
-            variants.append(prefix)
-        for idx, ch in enumerate(other.sequence):
-            if self.sequence[other.start - self.start + idx] != ch:
-                variants.append(Variant(other.start + idx, other.start + idx + 1, self.sequence[other.start - self.start + idx]))
-
-        suffix = Variant(other.end, self.end, self.sequence[other.end - 1:])
-        if suffix:
-            variants.append(suffix)
-
-        return variants
-
-    def union(self, reference, other):
-        raise NotImplementedError
-        # self and other are disjoint and as supremal variants
-        start = max(self.start, other.start)
-        end = min(self.end, other.end)
-
-        variants = []
-
-        if self.start <= other.start:
-            prefix = Variant(self.start, start, self.sequence[:start - 1])
-        else:
-            prefix = Variant(other.start, start, other.sequence[:start - 1])
-
-        if prefix:
-            variants.append(prefix)
-
-        for idx in range(end - start):
-            print(idx, reference[start + idx], self.sequence[start - self.start + idx], other.sequence[start - other.start + idx])
-            if self.sequence[start - self.start + idx] == other.sequence[start - other.start + idx]:
-                if self.sequence[start - self.start + idx] != reference[start + idx]:
-                    variants.append(Variant(start + idx, start + idx + 1, self.sequence[start - self.start + idx]))
-                    assert False
-            else:
-                if self.sequence[start - self.start + idx] != reference[start + idx] and other.sequence[start - other.start + idx] == reference[start + idx]:
-                    variants.append(Variant(start + idx, start + idx + 1, self.sequence[start - self.start + idx]))
-                elif other.sequence[start - other.start + idx] != reference[start + idx] and self.sequence[start - self.start + idx] == reference[start + idx]:
-                    variants.append(Variant(start + idx, start + idx + 1, other.sequence[start - other.start + idx]))
-                else:
-                    raise ValueError("Undefined")
-
-        if self.end >= other.end:
-            suffix = Variant(end, self.end, self.sequence[end - self.end:])
-        else:
-            suffix = Variant(end, other.end, other.sequence[end - other.end:])
-
-        if suffix:
-            variants.append(suffix)
-
-        print(prefix, suffix)
-
-        return variants
-
     def reverse_complement(self, pivot):
         """The reverse complement with regard to a given pivot."""
         return Variant(pivot - self.end - 1, pivot - self.start - 1,

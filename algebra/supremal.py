@@ -38,6 +38,55 @@ def compare(reference, lhs, rhs):
     return compare_sequence(reference[start:end], lhs_observed, rhs_observed)
 
 
+def subtract(reference, lhs, rhs):
+    """The difference between the supremal variants `lhs` and `rhs`."""
+    if len(rhs.sequence) > rhs.end - rhs.start:
+        raise ValueError("Undefined")
+
+    variants = []
+    for idx in range(min(lhs.start, rhs.start), max(lhs.end, rhs.end)):
+        lhs_ch = lhs.sequence[idx - lhs.start] if lhs.start <= idx < lhs.end else None
+        rhs_ch = rhs.sequence[idx - rhs.start] if rhs.start <= idx < rhs.end else None
+
+        if lhs_ch is None:
+            raise ValueError("Undefined")
+        if lhs_ch == rhs_ch:
+            continue
+        if rhs_ch is None or rhs_ch == reference[idx]:
+            variants.append(Variant(idx, idx + 1, lhs_ch))
+        else:
+            raise ValueError("Undefined")
+
+    return variants
+
+
+def union(reference, lhs, rhs):
+    """The union between the supremal variants `lhs` and `rhs`."""
+    variants = []
+    for idx in range(min(lhs.start, rhs.start), max(lhs.end, rhs.end)):
+        lhs_ch = lhs.sequence[idx - lhs.start] if lhs.start <= idx < lhs.end else None
+        rhs_ch = rhs.sequence[idx - rhs.start] if rhs.start <= idx < rhs.end else None
+
+        if lhs_ch == rhs_ch:
+            if lhs_ch != reference[idx]:
+                variants.append(Variant(idx, idx + 1, lhs_ch))
+            continue
+
+        if lhs_ch is None:
+            variants.append(Variant(idx, idx + 1, rhs_ch))
+        elif rhs_ch is None:
+            variants.append(Variant(idx, idx + 1, lhs_ch))
+        else:
+            if lhs_ch == reference[idx]:
+                variants.append(Variant(idx, idx + 1, rhs_ch))
+            elif rhs_ch == reference[idx]:
+                variants.append(Variant(idx, idx + 1, lhs_ch))
+            else:
+                raise ValueError("Undefined")
+
+    return variants
+
+
 def spanning_variant(reference, observed, variants):
     """Calculate the mininum spanning variant for a collection of
     variants. If the collection of variants is the collection of all
