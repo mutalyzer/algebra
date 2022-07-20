@@ -1,6 +1,7 @@
 """Functions to find and compare supremal (minimum spanning) variants."""
 
 
+from itertools import zip_longest
 from operator import attrgetter
 from . import Relation, compare as compare_sequence
 from .lcs import edit, lcs_graph
@@ -38,57 +39,123 @@ def compare(reference, lhs, rhs):
     return compare_sequence(reference[start:end], lhs_observed, rhs_observed)
 
 
-def subtract(reference, lhs, rhs):
-    """The difference between the supremal variants `lhs` and `rhs`."""
-    if len(rhs.sequence) > rhs.end - rhs.start:
-        raise ValueError("Undefined")
+def merge(lhs, rhs, split=True):
+    def explode(variant):
+        for idx, ch in zip_longest(range(variant.start, variant.end), variant.sequence):
+            if idx is None:
+                yield Variant(variant.end, variant.end, ch)
+            elif ch is None:
+                yield Variant(idx, idx + 1)
+            else:
+                yield Variant(idx, idx + 1, ch)
 
-    variants = []
-    for idx in range(min(lhs.start, rhs.start), max(lhs.end, rhs.end)):
-        lhs_ch = lhs.sequence[idx - lhs.start] if lhs.start <= idx < lhs.end else None
-        rhs_ch = rhs.sequence[idx - rhs.start] if rhs.start <= idx < rhs.end else None
+    lhs_explode = explode(lhs)
+    rhs_explode = explode(rhs)
 
-        if lhs_ch is None:
-            raise ValueError("Undefined")
-        if lhs_ch == rhs_ch:
-            continue
-        if rhs_ch is None or rhs_ch == reference[idx]:
-            variants.append(Variant(idx, idx + 1, lhs_ch))
+    lhs_element = next(lhs_explode, None)
+    rhs_element = next(rhs_explode, None)
+    while lhs_element is not None and rhs_element is not None:
+        if rhs_element.start < lhs_element.start:
+            yield None, rhs_element
+            rhs_element = next(rhs_explode, None)
+        elif lhs_element.start < rhs_element.start or (split and rhs_element.start == rhs_element.end and rhs_element.sequence != lhs_element.sequence):
+            yield lhs_element, None
+            lhs_element = next(lhs_explode, None)
         else:
+            yield lhs_element, rhs_element
+            lhs_element = next(lhs_explode, None)
+            rhs_element = next(rhs_explode, None)
+
+    if lhs_element is not None or rhs_element is not None:
+        yield lhs_element, rhs_element
+        for lhs_element in lhs_explode:
+            yield lhs_element, None
+        for rhs_element in rhs_explode:
+            yield None, rhs_element
+
+
+def subtract(reference, lhs, rhs):
+    print("subtract", reference, lhs, rhs)
+
+    for lhs_element, rhs_element in merge(lhs, rhs):
+        print(lhs_element, rhs_element)
+
+        if lhs_element is None:
+            # Can't subtract from nothing
             raise ValueError("Undefined")
 
-    return variants
+        if rhs_element is None:
+            if lhs_element.sequence != reference[lhs_element.start:lhs_element.end]:
+                yield lhs_element
+            continue
+
+        if lhs_element == rhs_element:
+            continue
+
+        if rhs_element.sequence == reference[rhs_element.start:rhs_element.end]:
+            yield lhs_element
+            continue
+
+        assert False
 
 
 def union(reference, lhs, rhs):
-    """The union between the supremal variants `lhs` and `rhs`."""
-    variants = []
-    for idx in range(min(lhs.start, rhs.start), max(lhs.end, rhs.end)):
-        lhs_ch = lhs.sequence[idx - lhs.start] if lhs.start <= idx < lhs.end else None
-        rhs_ch = rhs.sequence[idx - rhs.start] if rhs.start <= idx < rhs.end else None
+    print("union", reference, lhs, rhs)
 
-        if lhs_ch == rhs_ch:
-            if lhs_ch != reference[idx]:
-                variants.append(Variant(idx, idx + 1, lhs_ch))
+    for lhs_element, rhs_element in merge(lhs, rhs, split=False):
+        print(lhs_element, rhs_element)
+
+        if lhs_element is None:
+            if rhs_element.sequence != reference[rhs_element.start:rhs_element.end]:
+                yield rhs_element
             continue
 
-        if lhs_ch is None:
-            variants.append(Variant(idx, idx + 1, rhs_ch))
-        elif rhs_ch is None:
-            variants.append(Variant(idx, idx + 1, lhs_ch))
-        else:
-            if lhs_ch == reference[idx]:
-                variants.append(Variant(idx, idx + 1, rhs_ch))
-            elif rhs_ch == reference[idx]:
-                variants.append(Variant(idx, idx + 1, lhs_ch))
-            else:
-                raise ValueError("Undefined")
+        if rhs_element is None:
+            if lhs_element.sequence != reference[lhs_element.start:lhs_element.end]:
+                yield lhs_element
+            continue
 
-    return variants
+        if lhs_element == rhs_element:
+            yield lhs_element
+            continue
+
+        if lhs_element.sequence == reference[lhs_element.start:lhs_element.end]:
+            if rhs_element.start == rhs_element.end:
+                if lhs_element.sequence == rhs_element.sequence:
+                    yield Variant(lhs_element.start, lhs_element.end)
+                    continue
+                raise ValueError("Undefined")
+            yield rhs_element
+            continue
+
+        if rhs_element.sequence == reference[rhs_element.start:rhs_element.end]:
+            if lhs_element.start == lhs_element.end:
+                if rhs_element.sequence == lhs_element.sequence:
+                    yield Variant(rhs_element.start, rhs_element.end)
+                    continue
+                raise ValueError("Undefined")
+            yield lhs_element
+            continue
+
+        raise ValueError("Undefined")
+
+
+def intersect(reference, lhs, rhs):
+    print("intersect", reference, lhs, rhs)
+
+    for lhs_element, rhs_element in merge(lhs, rhs):
+        print(lhs_element, rhs_element)
+
+        if lhs_element is None or rhs_element is None:
+            continue
+
+        if lhs_element == rhs_element: #  and lhs_element.sequence != reference[lhs_element.start:lhs_element.end]:
+            yield lhs_element
+            continue
 
 
 def spanning_variant(reference, observed, variants):
-    """Calculate the mininum spanning variant for a collection of
+    """Calculate the minimum spanning variant for a collection of
     variants. If the collection of variants is the collection of all
     minimal variants the minimum spanning variant is the supremal
     variant.
