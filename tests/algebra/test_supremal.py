@@ -63,6 +63,7 @@ def test_find_supremal(reference, variant, supremal_variant):
     ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGGGTA"), []),
     ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGG"), [Variant(4, 4, "G"), Variant(4, 4, "T"), Variant(4, 4, "A")]),
     ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGTA"), [Variant(4, 4, "G"), Variant(4, 4, "G")]),
+    ("T", Variant(0, 1, "G"), Variant(0, 1), [Variant(1, 1, "G")]),
 ])
 def test_subtract(reference, lhs, rhs, expected):
     assert list(subtract(reference, lhs, rhs)) == expected

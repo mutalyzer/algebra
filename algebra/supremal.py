@@ -1,6 +1,7 @@
 """Functions to find and compare supremal (minimum spanning) variants."""
 
 
+from itertools import zip_longest
 from operator import attrgetter
 from . import Relation, compare as compare_sequence
 from .lcs import edit, lcs_graph
@@ -39,14 +40,13 @@ def compare(reference, lhs, rhs):
 
 
 def explode(variant):
-    positions = iter(range(variant.start, variant.end))
-    characters = iter(variant.sequence)
-    for pos, ch in zip(positions, characters):
-        yield Variant(pos, pos + 1, ch)
-    for pos in positions:
-        yield Variant(pos, pos + 1)
-    for ch in characters:
-        yield Variant(variant.end, variant.end, ch)
+    for idx, ch in zip_longest(range(variant.start, variant.end), variant.sequence):
+        if idx is None:
+            yield Variant(variant.end, variant.end, ch)
+        elif ch is None:
+            yield Variant(idx, idx + 1)
+        else:
+            yield Variant(idx, idx + 1, ch)
 
 
 def subtract(reference, lhs, rhs):
