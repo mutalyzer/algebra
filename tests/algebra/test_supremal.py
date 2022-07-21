@@ -64,6 +64,7 @@ def test_find_supremal(reference, variant, supremal_variant):
     ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGG"), [Variant(4, 4, "G"), Variant(4, 4, "T"), Variant(4, 4, "A")]),
     ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGTA"), [Variant(4, 4, "G"), Variant(4, 4, "G")]),
     ("T", Variant(0, 1, "G"), Variant(0, 1), [Variant(1, 1, "G")]),
+    ("TT", Variant(0, 2), Variant(0, 2, "T"), [Variant(0, 1)]),
 ])
 def test_subtract(reference, lhs, rhs, expected):
     assert list(subtract(reference, lhs, rhs)) == expected
@@ -72,10 +73,14 @@ def test_subtract(reference, lhs, rhs, expected):
 @pytest.mark.parametrize("reference, lhs, rhs", [
     ("CATATATC", Variant(1, 7, "ATATATAT"), Variant(4, 5, "TT")),
     ("AA", Variant(1, 1, "C"), Variant(1, 1, "T")),
+    ("G", Variant(0, 1, "ATGG"), Variant(0, 0, "T")),
+    ("G", Variant(0, 1, "TAGG"), Variant(0, 0, "T")),
+    ("CCG", Variant(0, 3, "TAT"), Variant(1, 1, "A")),
+    ("TT", Variant(0, 2, "T"), Variant(0, 2)),
 ])
 def test_subtract_fail(reference, lhs, rhs):
     with pytest.raises(ValueError) as exc:
-        list(subtract(reference, lhs, rhs))
+        print(list(subtract(reference, lhs, rhs)))
     assert str(exc.value) == "Undefined"
 
 
