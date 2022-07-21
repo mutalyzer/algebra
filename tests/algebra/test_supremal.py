@@ -51,16 +51,18 @@ def test_find_supremal(reference, variant, supremal_variant):
 
 
 @pytest.mark.parametrize("reference, lhs, rhs, expected", [
-    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGTA"), [Variant(4, 4, "G"), Variant(4, 4, "G")]),
-    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGG"), [Variant(4, 4, "G"), Variant(4, 4, "T"), Variant(4, 4, "A")]),
-    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGGGTA"), []),
-    ("CACACAC", Variant(1, 6, "TCTCT"), Variant(1, 6, "TCACT"), [Variant(3, 4, "T")]),
-    ("CACACAC", Variant(1, 6, "TCTCT"), Variant(3, 4, "T"), [Variant(1, 2, "T"), Variant(5, 6, "T")]),
-    ("ACCTGC", Variant(1, 5, "TCTT"), Variant(1, 3, "TC"), [Variant(4, 5, "T")]),
-    ("ACCTGC", Variant(1, 5, "TCTT"), Variant(3, 5, "TT"), [Variant(1, 2, "T")]),
-    ("ACTG", Variant(2, 4), Variant(2, 3), [Variant(3, 4)]),
+    ("TGGA", Variant(0, 3, "GGG"), Variant(1, 3, "GGG"), [Variant(0, 1, "")]),
+    ("ACCTGC", Variant(1, 5, "CCCT"), Variant(3, 5, "TT"), [Variant(1, 2, "C"), Variant(2, 3, "C"), Variant(3, 4, "C")]),
+    ("CGTCCA", Variant(1, 5, "TCCC"), Variant(1, 3, "TT"), [Variant(2, 3, "C"), Variant(3, 4, "C"), Variant(4, 5, "C")]),
     ("ACCTGC", Variant(1, 5, "CCCT"), Variant(1, 4, "CCC"), [Variant(4, 5, "T")]),
-    ("ACCTGC", Variant(1, 5, "CCCT"), Variant(3, 5, "TT"), [Variant(3, 4, "C")]),
+    ("ACTG", Variant(2, 4), Variant(2, 3), [Variant(3, 4)]),
+    ("ACCTGC", Variant(1, 5, "TCTT"), Variant(3, 5, "TT"), [Variant(1, 2, "T"), Variant(2, 3, "C")]),
+    ("ACCTGC", Variant(1, 5, "TCTT"), Variant(1, 3, "TC"), [Variant(3, 4, "T"), Variant(4, 5, "T")]),
+    ("CACACAC", Variant(1, 6, "TCTCT"), Variant(3, 4, "T"), [Variant(1, 2, "T"), Variant(2, 3, "C"), Variant(4, 5, "C"), Variant(5, 6, "T")]),
+    ("CACACAC", Variant(1, 6, "TCTCT"), Variant(1, 6, "TCACT"), [Variant(3, 4, "T")]),
+    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGGGTA"), []),
+    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGG"), [Variant(4, 4, "G"), Variant(4, 4, "T"), Variant(4, 4, "A")]),
+    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGTA"), [Variant(4, 4, "G"), Variant(4, 4, "G")]),
 ])
 def test_subtract(reference, lhs, rhs, expected):
     assert list(subtract(reference, lhs, rhs)) == expected
@@ -77,22 +79,12 @@ def test_subtract_fail(reference, lhs, rhs):
 
 
 @pytest.mark.parametrize("reference, lhs, rhs, expected", [
-    ("CACACAC", Variant(1, 6, "TCACT"), Variant(3, 4, "T"), [Variant(1, 2, "T"), Variant(3, 4, "T"), Variant(5, 6, "T")]),
-    ("CACACAC", Variant(3, 4, "T"), Variant(1, 6, "TCACT"), [Variant(1, 2, "T"), Variant(3, 4, "T"), Variant(5, 6, "T")]),
-    ("ACCTGC", Variant(1, 3, "TC"), Variant(3, 5, "TT"), [Variant(1, 2, "T"), Variant(4, 5, "T")]),
-    ("ACCTGC", Variant(3, 5, "TT"), Variant(1, 3, "TC"), [Variant(1, 2, "T"), Variant(4, 5, "T")]),
-    ("ACTG", Variant(2, 4), Variant(2, 3), [Variant(2, 3), Variant(3, 4)]),
-    ("ACTG", Variant(2, 3), Variant(2, 4), [Variant(2, 3), Variant(3, 4)]),
-    ("ACCTGC", Variant(1, 4, "CCC"), Variant(3, 5, "TT"), [Variant(3, 4, "C"), Variant(4, 5, "T")]),
 ])
 def test_union(reference, lhs, rhs, expected):
     assert list(union(reference, lhs, rhs)) == expected
 
 
 @pytest.mark.parametrize("reference, lhs, rhs", [
-    ("ACCACATTA", Variant(3, 4, "AGTA"), Variant(3, 4, "AGG")),
-    ("CATATATC", Variant(1, 7, "ATATATAT"), Variant(4, 5, "TT")),
-    ("AA", Variant(1, 1, "C"), Variant(1, 1, "T")),
 ])
 def test_union_fail(reference, lhs, rhs):
     with pytest.raises(ValueError) as exc:
@@ -101,21 +93,6 @@ def test_union_fail(reference, lhs, rhs):
 
 
 @pytest.mark.parametrize("reference, lhs, rhs, expected", [
-    ("ACCACATTA", Variant(3, 4, "AGTA"), Variant(3, 4, "AGG"), [Variant(3, 4, "A"), Variant(4, 4, "G")]),
-    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGTA"), [Variant(3, 4, "A"), Variant(4, 4, "G"), Variant(4, 4, "T"), Variant(4, 4, "A")]),
-    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGG"), [Variant(3, 4, "A"), Variant(4, 4, "G"), Variant(4, 4, "G")]),
-    ("ACCACATTA", Variant(3, 4, "AGGGTA"), Variant(3, 4, "AGGGTA"), [Variant(3, 4, "A"), Variant(4, 4, "G"), Variant(4, 4, "G"), Variant(4, 4, "G"), Variant(4, 4, "T"), Variant(4, 4, "A")]),
-    ("ACCACATTA", Variant(3, 4, "AGTA"), Variant(3, 4, "AGTA"), [Variant(3, 4, "A"), Variant(4, 4, "G"), Variant(4, 4, "T"), Variant(4, 4, "A")]),
-    ("ACCACATTA", Variant(3, 4, "AGG"), Variant(3, 4, "AGG"), [Variant(3, 4, "A"), Variant(4, 4, "G"), Variant(4, 4, "G")]),
-    ("CATATATC", Variant(1, 7, "ATATATAT"), Variant(4, 5, "TT"), [Variant(4, 5, "T")]),
-    ("CACACAC", Variant(1, 6, "TCACT"), Variant(3, 4, "T"), []),
-    ("CACACAC", Variant(3, 4, "T"), Variant(1, 6, "TCTCT"), [Variant(3, 4, "T")]),
-    ("CACACAC", Variant(1, 6, "TCACT"), Variant(1, 6, "TCTCT"), [Variant(1, 2, "T"), Variant(2, 3, "C"), Variant(4, 5, "C"), Variant(5, 6, "T")]),
-    ("ACCTGC", Variant(1, 3, "TC"), Variant(3, 5, "TT"), []),
-    ("ACCTGC", Variant(3, 5, "TT"), Variant(1, 5, "TCTT"), [Variant(3, 4, "T"), Variant(4, 5, "T")]),
-    ("ACCTGC", Variant(1, 3, "TC"), Variant(1, 5, "TCTT"), [Variant(1, 2, "T"), Variant(2, 3, "C")]),
-    ("AA", Variant(1, 1, "C"), Variant(1, 1, "T"), []),
-    ("ACTG", Variant(2, 4), Variant(2, 3), [Variant(2, 3)]),
 ])
 def test_intersect(reference, lhs, rhs, expected):
     assert list(intersect(reference, lhs, rhs)) == expected
