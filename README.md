@@ -50,11 +50,11 @@ Or as a Python package.
 
 ```python
 from algebra import compare
-from algebra.variants import Parser, patch
+from algebra.variants import Parser
 
 reference = "AAAAA"
-lhs = patch(reference, Parser("1_2insTA").hgvs())
-rhs = patch(reference, Parser("2_3insT").hgvs())
+lhs = Parser("1_2insTA").hgvs()
+rhs = Parser("2_3insT").hgvs()
 
 # returns: Relation.DISJOINT
 compare(reference, lhs, rhs)
