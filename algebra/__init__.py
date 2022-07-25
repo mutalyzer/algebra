@@ -1,16 +1,9 @@
 """A Boolean Algebra for Genetic Variants."""
 
 
-from .relations import (Relation, are_disjoint, are_equivalent, compare,
-                        contains, have_overlap, is_contained)
+from .relations import Relation
 
 
 __all__ = [
     "Relation",
-    "are_disjoint",
-    "are_equivalent",
-    "compare",
-    "contains",
-    "have_overlap",
-    "is_contained",
 ]

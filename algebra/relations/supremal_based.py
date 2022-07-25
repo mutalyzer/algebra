@@ -2,9 +2,10 @@
 
 
 from operator import attrgetter
-from . import Relation, compare as compare_sequence
-from .lcs import edit, lcs_graph
-from .variants import Variant
+from . import Relation
+from .sequence_based import compare as compare_sequence
+from ..lcs import edit, lcs_graph
+from ..variants import Variant
 
 
 def compare(reference, lhs, rhs):
