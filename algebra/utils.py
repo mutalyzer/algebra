@@ -3,7 +3,8 @@
 
 from itertools import chain
 import random
-from .variants import DNA_NUCLEOTIDES, Variant
+from . import Variant
+from .variants import DNA_NUCLEOTIDES
 
 
 def canonical(variants, max_distance=40):

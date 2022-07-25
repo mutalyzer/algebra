@@ -1,5 +1,6 @@
 import pytest
-from algebra.variants import Parser, Variant, reverse_complement
+from algebra import Variant
+from algebra.variants import Parser, reverse_complement
 
 
 @pytest.mark.parametrize("expression, variants", [

@@ -1,8 +1,7 @@
 import pytest
-from algebra import Relation
+from algebra import Relation, Variant
 from algebra.lcs import edit, lcs_graph
 from algebra.relations.supremal_based import compare, find_supremal, spanning_variant
-from algebra.variants import Variant
 
 
 @pytest.mark.parametrize("reference, lhs, rhs, expected", [

@@ -6,9 +6,9 @@ their relations.
 
 
 import argparse
-from . import compare
 from .lcs import edit, lcs_graph, to_dot, traversal
-from .supremal import spanning_variant
+from .relations.sequence_based import compare
+from .relations.supremal_based import spanning_variant
 from .utils import fasta_sequence, random_sequence, random_variants
 from .variants import Parser, patch, to_hgvs
 
