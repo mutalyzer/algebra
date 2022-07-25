@@ -1,7 +1,6 @@
 """Functions to find and compare supremal (minimum spanning) variants."""
 
 
-from itertools import zip_longest
 from operator import attrgetter
 from . import Relation, compare as compare_sequence
 from .lcs import edit, lcs_graph
@@ -37,95 +36,6 @@ def compare(reference, lhs, rhs):
     lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
     rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
     return compare_sequence(reference[start:end], lhs_observed, rhs_observed)
-
-
-def explode(variant):
-    for idx, ch in zip_longest(range(variant.start, variant.end), variant.sequence):
-        if idx is None:
-            yield Variant(variant.end, variant.end, ch)
-        elif ch is None:
-            yield Variant(idx, idx + 1)
-        else:
-            yield Variant(idx, idx + 1, ch)
-
-
-def subtract(reference, lhs, rhs):
-    print("subtract", reference, lhs, rhs)
-
-    lhs_elements = explode(lhs)
-    rhs_elements = explode(rhs)
-    lhs_element = next(lhs_elements, None)
-    rhs_element = next(rhs_elements, None)
-    while lhs_element is not None:
-        print(lhs_element, rhs_element)
-
-        if rhs_element is None:
-            print("rhs empty")
-            yield lhs_element
-            yield from lhs_elements
-            return
-
-        if lhs_element == rhs_element:
-            print("match")
-            lhs_element = next(lhs_elements, None)
-            rhs_element = next(rhs_elements, None)
-            continue
-
-        if rhs_element.start < lhs_element.start:
-            print("unmatched rhs", rhs_element)
-            raise ValueError("Undefined")
-
-        if (lhs_element.start == rhs_element.end or lhs_element.end == rhs_element.start) and len(lhs_element.sequence) == 1 and lhs_element.sequence == rhs_element.sequence:
-            print("match insertion")
-            lhs_element = Variant(lhs_element.start, lhs_element.end)
-            if not lhs_element:
-                lhs_element = next(lhs_elements, None)
-            rhs_element = Variant(rhs_element.start, rhs_element.end)
-            if not rhs_element:
-                rhs_element = next(rhs_elements, None)
-            continue
-
-        if lhs_element.start < rhs_element.start:
-            print("lhs before rhs")
-            yield lhs_element
-            lhs_element = next(lhs_elements, None)
-            continue
-
-        if len(lhs_element.sequence) == 1 and reference[lhs_element.start:lhs_element.end] == lhs_element.sequence:
-            print("lhs is reference")
-
-        if len(rhs_element.sequence) == 1 and reference[rhs_element.start:rhs_element.end] == rhs_element.sequence:
-            print("rhs is reference")
-            yield lhs_element
-            lhs_element = next(lhs_elements, None)
-            rhs_element = next(rhs_elements, None)
-            continue
-
-        if lhs_element.end - lhs_element.start == 1 and lhs_element.start == rhs_element.start and lhs_element.end == rhs_element.end:
-            print("match deletion")
-            lhs_element = Variant(lhs_element.end, lhs_element.end, lhs_element.sequence)
-            if not lhs_element:
-                lhs_element = next(lhs_elements, None)
-            rhs_element = Variant(rhs_element.end, rhs_element.end, rhs_element.sequence)
-            if not rhs_element:
-                rhs_element = next(rhs_elements, None)
-            continue
-
-        print("difference", lhs_element)
-        yield lhs_element
-        lhs_element = next(lhs_elements, None)
-
-    if rhs_element is not None:
-        print("rhs left over", rhs_element, list(rhs_elements))
-        raise ValueError("Undefined")
-
-
-def union(reference, lhs, rhs):
-    raise NotImplementedError
-
-
-def intersect(reference, lhs, rhs):
-    raise NotImplementedError
 
 
 def spanning_variant(reference, observed, variants):
