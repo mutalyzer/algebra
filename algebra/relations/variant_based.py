@@ -1,4 +1,4 @@
-from .. import Relation
+from . import Relation
 from .supremal_based import compare as compare_supremal, find_supremal, spanning_variant
 from ..variants import patch
 
