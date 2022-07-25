@@ -25,17 +25,7 @@ def contains(reference, lhs, rhs):
 
 def is_contained(reference, lhs, rhs):
     """Check if `lhs` is contained in `rhs`."""
-    if lhs == rhs:
-        return False
-
-    lhs_distance = edit_distance_only(reference, lhs)
-    rhs_distance = edit_distance_only(reference, rhs)
-    distance = edit_distance_only(lhs, rhs)
-
-    if lhs_distance + rhs_distance == distance:
-        return False
-
-    return rhs_distance - lhs_distance == distance
+    return contains(reference, rhs, lhs)
 
 
 def are_disjoint(reference, lhs, rhs):
