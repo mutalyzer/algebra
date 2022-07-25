@@ -1,7 +1,10 @@
 import pytest
-from algebra import Relation, Variant, are_disjoint, are_equivalent, compare, contains, have_overlap, is_contained
+from algebra import (Relation, Variant, are_disjoint, are_equivalent,
+                     compare, contains, have_overlap, is_contained)
+
 
 TESTS = [
+    ("ACGT", [Variant(0, 1), Variant(1, 2)], [Variant(0, 4)], Relation.IS_CONTAINED),
 ]
 
 
