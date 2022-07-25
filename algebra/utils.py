@@ -7,7 +7,7 @@ from .variants import DNA_NUCLEOTIDES, Variant
 
 
 def canonical(variants, max_distance=40):
-    """Pick a canonical represention from all minimal variant
+    """Pick a canonical representation from all minimal variant
     representations."""
     first = next(variants)
     if sum(map(len, first)) > max_distance:
