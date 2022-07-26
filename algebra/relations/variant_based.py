@@ -1,3 +1,6 @@
+"""Functions to compare variant alleles."""
+
+
 from . import Relation
 from .supremal_based import compare as compare_supremal, find_supremal, spanning_variant
 from ..variants import patch
@@ -29,6 +32,23 @@ def have_overlap(reference, lhs, rhs):
 
 
 def compare(reference, lhs, rhs):
+    """Compare two variant alleles.
+
+    Parameters
+    ----------
+    reference : str
+        The reference sequence.
+    lhs : list of variants
+        The variant allele on the left-hand side.
+    rhs : list of variants
+        The variant allele on the right-hand side.
+
+    Returns
+    -------
+    `Relation`
+        The relation between the two variant alleles.
+    """
+
     lhs_sup = find_supremal(reference, spanning_variant(reference, patch(reference, lhs), lhs))
     rhs_sup = find_supremal(reference, spanning_variant(reference, patch(reference, rhs), rhs))
 
