@@ -26,7 +26,7 @@ def reverse_complement(sequence):
 class Variant:
     """Variant class for deletion/insertions."""
 
-    def __init__(self, start, end, sequence=""):
+    def __init__(self, start, end, sequence):
         """Create a variant.
 
         Parameters
@@ -35,7 +35,7 @@ class Variant:
             The start position (included) of the deleted part (zero-based).
         end : int
             The end position (not included) of the deleted part.
-        sequence : str, optional
+        sequence : str
             The inserted sequence.
 
         Raises
@@ -106,13 +106,13 @@ class Variant:
             variants = []
             c = 0
             pos = self.start
-            variant = Variant(pos, pos)
+            variant = Variant(pos, pos, "")
             for i, _ in enumerate(self.sequence):
                 if combo[i] > c:
                     if variant:
                         variants.append(variant)
                     for j in range(pos, pos + combo[i] - c):
-                        variants.append(Variant(j, j + 1))
+                        variants.append(Variant(j, j + 1, ""))
                     pos += combo[i] - c
                     c = combo[i]
                     variant = Variant(pos, pos, self.sequence[i])
@@ -123,7 +123,7 @@ class Variant:
             if variant:
                 variants.append(variant)
             for i in range(pos, self.end):
-                variants.append(Variant(i, i + 1))
+                variants.append(Variant(i, i + 1, ""))
 
             yield variants
 

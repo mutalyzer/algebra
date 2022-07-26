@@ -5,11 +5,11 @@ from algebra.variants import Parser, reverse_complement
 
 @pytest.mark.parametrize("expression, variants", [
     ("=", []),
-    ("3del", [Variant(2, 3)]),
-    ("3delA", [Variant(2, 3)]),
-    ("3_4del", [Variant(2, 4)]),
-    ("3_3del", [Variant(2, 3)]),
-    ("3_4delTT", [Variant(2, 4)]),
+    ("3del", [Variant(2, 3, "")]),
+    ("3delA", [Variant(2, 3, "")]),
+    ("3_4del", [Variant(2, 4, "")]),
+    ("3_3del", [Variant(2, 3, "")]),
+    ("3_4delTT", [Variant(2, 4, "")]),
     ("3delinsA", [Variant(2, 3, "A")]),
     ("3delAinsA", [Variant(2, 3, "A")]),
     ("3_4delinsTT", [Variant(2, 4, "TT")]),
@@ -17,8 +17,8 @@ from algebra.variants import Parser, reverse_complement
     ("3_4insTTT", [Variant(3, 3, "TTT")]),
     ("3A>T", [Variant(2, 3, "T")]),
     ("5>G", [Variant(4, 5, "G")]),
-    ("[3del]", [Variant(2, 3)]),
-    ("[3del;3_4insT]", [Variant(2, 3), Variant(3, 3, "T")]),
+    ("[3del]", [Variant(2, 3, "")]),
+    ("[3del;3_4insT]", [Variant(2, 3, ""), Variant(3, 3, "T")]),
     ("3_4A[4]", [Variant(2, 4, "AAAA")]),
     ("0_1insT", [Variant(0, 0, "T")]),
     ("3=", []),
@@ -63,7 +63,7 @@ def test_hgvs_parser_fail(expression, exception, message):
 
 @pytest.mark.parametrize("expression, variants", [
     ("NG_008376.4:g.=", []),
-    ("NG_008376.4:g.3del", [Variant(2, 3)]),
+    ("NG_008376.4:g.3del", [Variant(2, 3, "")]),
 ])
 def test_hgvs_parser_with_prefix(expression, variants):
     assert Parser(expression).hgvs(skip_reference=True) == variants
@@ -88,7 +88,7 @@ def test_hgvs_parser_with_prefix_fail(expression, exception, message):
     ("ACCGGGTTTT", "1dup", [Variant(1, 1, "A")]),
     ("ACCGGGTTTT", "1_2dup", [Variant(2, 2, "AC")]),
     ("TTGAGAGAGATT", "3GA[3]", [Variant(2, 10, "GAGAGA")]),
-    ("AAA", "1delA", [Variant(0, 1)]),
+    ("AAA", "1delA", [Variant(0, 1, "")]),
 ])
 def test_hgvs_parser_with_reference(reference, expression, variants):
     assert Parser(expression).hgvs(reference) == variants
@@ -111,7 +111,7 @@ def test_hgvs_parser_with_reference_fail(reference, expression, exception, messa
 
 
 @pytest.mark.parametrize("expression, variants", [
-    ("AAA:0:0:", [Variant(0, 0)]),
+    ("AAA:0:0:", [Variant(0, 0, "")]),
     ("AAA:0:3:TTT", [Variant(0, 3, "TTT")]),
     ("AAA:0:AAA:TTT", [Variant(0, 3, "TTT")]),
     (":1:TT:G", [Variant(1, 3, "G")]),

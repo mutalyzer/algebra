@@ -135,7 +135,7 @@ class Parser:
 
             if self._match("ins"):
                 return Variant(start, end, self._match_sequence())
-            return Variant(start, end)
+            return Variant(start, end, "")
 
         if self._match("ins"):
             if end is None or end - start != 2:
@@ -162,7 +162,7 @@ class Parser:
             raise ValueError(f"'{sequence}' not found in reference at {start}")
 
         if self._match("="):
-            return Variant(start, start)
+            return Variant(start, start, "")
         if sequence is not None and self._match("["):
             # dbSNP HGVS repeat notation
             if reference is None:
