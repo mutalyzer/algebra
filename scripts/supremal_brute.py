@@ -18,23 +18,23 @@ def drive():
         lhs_sup = find_supremal(reference, lhs_span, offset=1)
         rhs_sup = find_supremal(reference, rhs_span, offset=1)
     except ValueError:
-        return
+        return 0
 
     rel_seq = compare_sequence(reference, lhs_seq, rhs_seq)
     rel_sup = compare_supremal(reference, lhs_sup, rhs_sup)
 
     assert rel_seq == rel_sup, (reference, lhs_var, rhs_var, rel_seq.value, rel_sup.value)
+    return 1
 
 
 def main():
+    # random.seed(42)
     count = 0
     while True:
-        drive()
-        count += 1
-        if count % 100000 == 0:
+        count += drive()
+        if count % 100_000 == 0:
             print(count)
 
 
-if __name__ == '__main__':
-    # random.seed(42)
+if __name__ == "__main__":
     main()
