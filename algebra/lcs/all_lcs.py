@@ -10,7 +10,7 @@ LCS and consequently a unique variant representation.
 
 See Also
 --------
-algebra.lcs.onp : Calculates only the simple edit distance.
+algebra.lcs.distance_only : Calculates only the simple edit distance.
 
 References
 ----------
@@ -20,7 +20,7 @@ pp. 317-323.
 """
 
 
-from ..variants import Variant, to_hgvs
+from ..variants import Variant
 
 
 class _Node:
@@ -156,7 +156,7 @@ def lcs_graph(reference, observed, lcs_nodes):
     --------
     `edit` : Calculates the LCS nodes.
     `traversal` : Traverses the LS graph.
-    `to_dot` : Graphviz DOT format.
+    `algebra.utils.to_dot` : Graphviz DOT format.
     """
 
     sink = _Node(len(reference) + 1, len(observed) + 1)
@@ -292,21 +292,3 @@ def traversal(root, atomics=False):
                 yield from traverse(succ, path + variant)
 
     yield from traverse(root, [])
-
-
-def to_dot(reference, root):
-    """The LCS graph in Graphviz DOT format."""
-    def traverse():
-        # breadth-first traversal
-        visited = {root}
-        queue = [root]
-        while queue:
-            node = queue.pop(0)
-            for succ, variant in node.edges:
-                yield (f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}"'
-                       f' [label="{to_hgvs(variant, reference)}"];')
-                if succ not in visited:
-                    visited.add(succ)
-                    queue.append(succ)
-
-    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"

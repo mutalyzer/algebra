@@ -6,10 +6,10 @@ their relations.
 
 
 import argparse
-from .lcs import edit, lcs_graph, to_dot, traversal
+from .lcs import edit, lcs_graph, traversal
 from .relations.sequence_based import compare
 from .relations.supremal_based import spanning_variant
-from .utils import fasta_sequence, random_sequence, random_variants
+from .utils import fasta_sequence, random_sequence, random_variants, to_dot
 from .variants import Parser, patch, to_hgvs
 
 
