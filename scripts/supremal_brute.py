@@ -1,9 +1,9 @@
+import random
 from algebra import compare
 from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.supremal_based import find_supremal, spanning_variant, compare as compare_supremal
 from algebra.utils import random_sequence, random_variants
 from algebra.variants import patch
-import random
 
 
 def drive():
