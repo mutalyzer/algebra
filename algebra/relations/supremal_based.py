@@ -84,18 +84,13 @@ def spanning_variant(reference, observed, variants):
     minimal variants the minimum spanning variant is the supremal
     variant.
 
-    Raises
-    ------
-    ValueError
-        If no variants are present.
-
     See Also
     --------
     `algebra.lcs.all_lcs.lcs_graph` : The collection of all minimal variants.
     """
 
     if not variants:
-        raise ValueError("No variants")
+        return Variant(0, 0, "")
 
     start = min(variants, key=attrgetter("start")).start
     end = max(variants, key=attrgetter("end")).end

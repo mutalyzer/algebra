@@ -12,26 +12,23 @@ def drive():
     rhs_var = list(random_variants(reference))
     rhs_seq = patch(reference, rhs_var)
 
-    try:
-        lhs_span = spanning_variant(reference, lhs_seq, lhs_var)
-        rhs_span = spanning_variant(reference, rhs_seq, rhs_var)
-        lhs_sup = find_supremal(reference, lhs_span, offset=1)
-        rhs_sup = find_supremal(reference, rhs_span, offset=1)
-    except ValueError:
-        return 0
+    lhs_span = spanning_variant(reference, lhs_seq, lhs_var)
+    rhs_span = spanning_variant(reference, rhs_seq, rhs_var)
+    lhs_sup = find_supremal(reference, lhs_span, offset=1)
+    rhs_sup = find_supremal(reference, rhs_span, offset=1)
 
     rel_seq = compare_sequence(reference, lhs_seq, rhs_seq)
     rel_sup = compare_supremal(reference, lhs_sup, rhs_sup)
 
     assert rel_seq == rel_sup, (reference, lhs_var, rhs_var, rel_seq.value, rel_sup.value)
-    return 1
 
 
 def main():
     # random.seed(42)
     count = 0
     while True:
-        count += drive()
+        drive()
+        count += 1
         if count % 100_000 == 0:
             print(count)
 
