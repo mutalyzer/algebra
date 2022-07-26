@@ -24,7 +24,7 @@ def fasta_sequence(lines):
 
 def vcf_variant(line):
     """Create a variant from a (simple) VCF line."""
-    _, position, _,  deleted, inserted, *_ = line.split()
+    _, position, _, deleted, inserted, *_ = line.split()
     start = int(position) - 1
     return Variant(start, start + len(deleted), inserted)
 
