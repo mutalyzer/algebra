@@ -58,6 +58,14 @@ rhs = Parser("2_3insT").hgvs()
 
 # returns: Relation.DISJOINT
 compare(reference, lhs, rhs)
+
+
+reference = "CATATATC"
+lhs = Parser("2_7AT[4]").hgvs(reference)  # observed: "CATATATATC"
+rhs = Parser("5_6insT").hgvs()            # observed: "CATATTATC"
+
+# returns: Relation.CONTAINS
+compare(reference, lhs, rhs)
 ```
 
 See Also
