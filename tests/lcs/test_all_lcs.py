@@ -104,3 +104,17 @@ def test_traversal_atomics(reference, observed, expected_variant):
     _, lcs_nodes = edit(reference, observed)
     root, _ = lcs_graph(reference, observed, lcs_nodes)
     assert list(traversal(root, atomics=True)) == expected_variant
+
+
+@pytest.mark.parametrize("node, expected_hash", [
+    (_Node(0, 0), 1267304713960822739),
+])
+def test_node_hash(node, expected_hash):
+    assert hash(node) == expected_hash
+
+
+@pytest.mark.parametrize("node, string", [
+    (_Node(0, 0), "(0, 0, 0)"),
+])
+def test_node_string(node, string):
+    assert str(node) == string
