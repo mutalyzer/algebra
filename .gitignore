@@ -4,3 +4,5 @@ venv/
 
 .coverage
 .idea/
+
+data/
