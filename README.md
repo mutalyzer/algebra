@@ -52,6 +52,7 @@ Or as a Python package.
 from algebra import compare
 from algebra.variants import Parser
 
+
 reference = "AAAAA"
 lhs = Parser("1_2insTA").hgvs()
 rhs = Parser("2_3insT").hgvs()
@@ -61,8 +62,8 @@ compare(reference, lhs, rhs)
 
 
 reference = "CATATATC"
-lhs = Parser("2_7AT[4]").hgvs(reference)  # observed: "CATATATATC"
-rhs = Parser("5_6insT").hgvs()            # observed: "CATATTATC"
+lhs = Parser("2_7AT[4]").hgvs()  # observed: "CATATATATC"
+rhs = Parser("5_6insT").hgvs()   # observed: "CATATTATC"
 
 # returns: Relation.CONTAINS
 compare(reference, lhs, rhs)
