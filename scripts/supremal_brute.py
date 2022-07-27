@@ -1,8 +1,9 @@
+import random
+from algebra import compare
 from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.supremal_based import find_supremal, spanning_variant, compare as compare_supremal
 from algebra.utils import random_sequence, random_variants
 from algebra.variants import patch
-import random
 
 
 def drive():
@@ -19,8 +20,9 @@ def drive():
 
     rel_seq = compare_sequence(reference, lhs_seq, rhs_seq)
     rel_sup = compare_supremal(reference, lhs_sup, rhs_sup)
+    rel_var = compare(reference, lhs_var, rhs_var)
 
-    assert rel_seq == rel_sup, (reference, lhs_var, rhs_var, rel_seq.value, rel_sup.value)
+    assert rel_seq == rel_sup == rel_var, (reference, lhs_var, rhs_var, rel_seq.value, rel_sup.value, rel_var.value)
 
 
 def main():
