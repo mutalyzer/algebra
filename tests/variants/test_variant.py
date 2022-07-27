@@ -71,21 +71,24 @@ def test_variant_len(variant, distance):
 @pytest.mark.parametrize("variants, expected", [
     ([Variant(0, 0, "C"), Variant(0, 1, "C")], [Variant(0, 0, "C"), Variant(0, 1, "C")]),
     ([Variant(0, 1, "C"), Variant(0, 0, "C")], [Variant(0, 0, "C"), Variant(0, 1, "C")]),
-    ([Variant(0, 0, ""), Variant(0, 0, "")], [Variant(0, 0, ""), Variant(0, 0, "")]),
     ([Variant(3, 4, ""), Variant(1, 2, "")], [Variant(1, 2, ""), Variant(3, 4, "")]),
+    ([Variant(2, 4, "T"), Variant(2, 2, "G")], [Variant(2, 2, "G"), Variant(2, 4, "T")]),
+    ([Variant(4, 4, "G"), Variant(2, 4, "T")], [Variant(2, 4, "T"), Variant(4, 4, "G")]),
 ])
 def test_variant_sort(variants, expected):
     assert sorted(variants) == expected
 
 
-@pytest.mark.parametrize("variants, exception, message", [
-    ([Variant(1, 3, "C"), Variant(0, 2, "")], ValueError, "variants overlap"),
-    ([Variant(4, 4, "C"), Variant(4, 4, "C")], ValueError, "variants overlap"),
+@pytest.mark.parametrize("variants", [
+    ([Variant(1, 3, "C"), Variant(0, 2, "")]),
+    ([Variant(4, 4, "C"), Variant(4, 4, "C")]),
+    ([Variant(2, 4, "T"), Variant(3, 3, "G")]),
+    ([Variant(0, 0, ""), Variant(0, 0, "")]),
 ])
-def test_variant_sort_fail(variants, exception, message):
-    with pytest.raises(exception) as exc:
+def test_variant_sort_fail(variants):
+    with pytest.raises(ValueError) as exc:
         sorted(variants)
-    assert str(exc.value) == message
+    assert str(exc.value) == "unorderable variants"
 
 
 @pytest.mark.parametrize("variant, string", [

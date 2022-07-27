@@ -78,13 +78,9 @@ class Variant:
         return self.end - self.start + len(self.sequence)
 
     def __lt__(self, other):
-        if ((self.start < other.start and self.end > other.start) or
-                (other.start < self.start and other.end > self.start) or
-                (self.start == other.start and self.end == other.end and
-                    len(self.sequence) > 0)):
-            # deletions and insertions are handled asymmetrically
-            raise ValueError("variants overlap")
-
+        if ((other.start < self.end and self.start < other.end) or
+                (other.start == self.start and other.end == self.end)):
+            raise ValueError("unorderable variants")
         return self.start < other.start or self.end < other.end
 
     def __repr__(self):
