@@ -111,7 +111,7 @@ def find_supremal(reference, variant, offset=10):
     Other Parameters
     ----------------
     offset : int, optional
-        The mininum offset around the variant.
+        The minimum offset around the variant.
 
     See Also
     --------
