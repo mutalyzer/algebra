@@ -187,8 +187,8 @@ def parse_hgvs(expression, reference=None):
             raise ValueError(f"expected end of expression at {pos + 1}")
         return []
 
-    variants = []
     if match_optional("["):
+        variants = []
         variant = match_variant(reference)
         if variant:
             variants.append(variant)
