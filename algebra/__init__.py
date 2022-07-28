@@ -2,7 +2,8 @@
 
 
 from .relations import Relation
-from .relations.variant_based import are_disjoint, are_equivalent, compare, contains, have_overlap, is_contained
+from .relations.variant_based import (are_disjoint, are_equivalent, compare,
+                                      contains, have_overlap, is_contained)
 from .variants import Variant
 
 

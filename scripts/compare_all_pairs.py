@@ -4,7 +4,7 @@ import sys
 from algebra import Relation
 from algebra.relations.supremal_based import compare, find_supremal
 from algebra.utils import fasta_sequence
-from algebra.variants import Parser
+from algebra.variants import parse_spdi
 
 
 def main():
@@ -18,7 +18,7 @@ def main():
 
     variants = []
     for line in sys.stdin:
-        variants.append(find_supremal(reference, Parser(line.strip()).spdi()[0]))
+        variants.append(find_supremal(reference, parse_spdi(line.strip())[0]))
 
     for lhs, rhs in combinations(variants, 2):
         relation = compare(reference, lhs, rhs)

@@ -10,7 +10,7 @@ from .lcs import edit, lcs_graph, traversal
 from .relations.sequence_based import compare
 from .relations.supremal_based import spanning_variant
 from .utils import fasta_sequence, random_sequence, random_variants, to_dot
-from .variants import Parser, patch, to_hgvs
+from .variants import parse_hgvs, parse_spdi, patch, to_hgvs
 
 
 def main():
@@ -87,9 +87,9 @@ def main():
         if args.lhs is not None:
             lhs = args.lhs
         elif args.lhs_hgvs is not None:
-            lhs = patch(reference, Parser(args.lhs_hgvs).hgvs(reference))
+            lhs = patch(reference, parse_hgvs(args.lhs_hgvs, reference=reference))
         elif args.lhs_spdi is not None:
-            lhs = patch(reference, Parser(args.lhs_spdi).spdi())
+            lhs = patch(reference, parse_spdi(args.lhs_spdi))
         elif args.lhs_file is not None:
             with open(args.lhs_file, encoding="utf-8") as file:
                 lhs = fasta_sequence(file.readlines())
@@ -104,9 +104,9 @@ def main():
         if args.rhs is not None:
             rhs = args.rhs
         elif args.rhs_hgvs is not None:
-            rhs = patch(reference, Parser(args.rhs_hgvs).hgvs(reference))
+            rhs = patch(reference, parse_hgvs(args.rhs_hgvs, reference=reference))
         elif args.rhs_spdi is not None:
-            rhs = patch(reference, Parser(args.rhs_spdi).spdi())
+            rhs = patch(reference, parse_spdi(args.rhs_spdi))
         elif args.rhs_file is not None:
             with open(args.rhs_file, encoding="utf-8") as file:
                 rhs = fasta_sequence(file.readlines())
@@ -124,9 +124,9 @@ def main():
         if args.observed is not None:
             observed = args.observed
         elif args.observed_hgvs is not None:
-            observed = patch(reference, Parser(args.observed_hgvs).hgvs(reference))
+            observed = patch(reference, parse_hgvs(args.observed_hgvs, reference=reference))
         elif args.observed_spdi is not None:
-            observed = patch(reference, Parser(args.observed_spdi).spdi())
+            observed = patch(reference, parse_spdi(args.observed_spdi))
         elif args.observed_file is not None:
             with open(args.observed_file, encoding="utf-8") as file:
                 observed = fasta_sequence(file.readlines())
@@ -154,9 +154,9 @@ def main():
 
     elif args.command == "patch":
         if args.hgvs is not None:
-            variants = Parser(args.hgvs).hgvs(reference)
+            variants = parse_hgvs(args.hgvs, reference=reference)
         elif args.spdi is not None:
-            variants = Parser(args.spdi).spdi()
+            variants = parse_spdi(args.spdi)
         else:  # args.random_variant
             variants = list(random_variants(reference, args.random_variant_p))
             print(to_hgvs(variants, reference))

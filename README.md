@@ -50,20 +50,20 @@ Or as a Python package.
 
 ```python
 from algebra import compare
-from algebra.variants import Parser
+from algebra.variants import parse_hgvs
 
 
 reference = "AAAAA"
-lhs = Parser("1_2insTA").hgvs()
-rhs = Parser("2_3insT").hgvs()
+lhs = parse_hgvs("1_2insTA")
+rhs = parse_hgvs("2_3insT")
 
 # returns: Relation.DISJOINT
 compare(reference, lhs, rhs)
 
 
 reference = "CATATATC"
-lhs = Parser("2_7AT[4]").hgvs()  # observed: "CATATATATC"
-rhs = Parser("5_6insT").hgvs()   # observed: "CATATTATC"
+lhs = parse_hgvs("2_7AT[4]")  # observed: CATATATATC
+rhs = parse_hgvs("5_6insT")   # observed: CATATTATC
 
 # returns: Relation.CONTAINS
 compare(reference, lhs, rhs)
