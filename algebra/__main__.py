@@ -6,10 +6,11 @@ their relations.
 
 
 import argparse
-from . import compare
-from .lcs import edit, lcs_graph, maximal_variant, to_dot, traversal
-from .utils import fasta_sequence, random_sequence, random_variants
-from .variants import Parser, patch, to_hgvs
+from .lcs import edit, lcs_graph, traversal
+from .relations.sequence_based import compare
+from .relations.supremal_based import spanning_variant
+from .utils import fasta_sequence, random_sequence, random_variants, to_dot
+from .variants import parse_hgvs, parse_spdi, patch, to_hgvs
 
 
 def main():
@@ -51,7 +52,7 @@ def main():
     extract_parser.add_argument("--atomics", action="store_true", help="only deletions and insertions")
     extract_parser.add_argument("--distance", action="store_true", help="output simple edit distance")
     extract_parser.add_argument("--dot", action="store_true", help="output Graphviz DOT")
-    extract_parser.add_argument("--max-variant", action="store_true", help="output maximal variant")
+    extract_parser.add_argument("--supremal-variant", action="store_true", help="output supremal variant")
 
     observed_group = extract_parser.add_mutually_exclusive_group()
     observed_group.add_argument("--observed", type=str, help="an observed sequence as string")
@@ -86,9 +87,9 @@ def main():
         if args.lhs is not None:
             lhs = args.lhs
         elif args.lhs_hgvs is not None:
-            lhs = patch(reference, Parser(args.lhs_hgvs).hgvs(reference))
+            lhs = patch(reference, parse_hgvs(args.lhs_hgvs, reference=reference))
         elif args.lhs_spdi is not None:
-            lhs = patch(reference, Parser(args.lhs_spdi).spdi())
+            lhs = patch(reference, parse_spdi(args.lhs_spdi))
         elif args.lhs_file is not None:
             with open(args.lhs_file, encoding="utf-8") as file:
                 lhs = fasta_sequence(file.readlines())
@@ -103,9 +104,9 @@ def main():
         if args.rhs is not None:
             rhs = args.rhs
         elif args.rhs_hgvs is not None:
-            rhs = patch(reference, Parser(args.rhs_hgvs).hgvs(reference))
+            rhs = patch(reference, parse_hgvs(args.rhs_hgvs, reference=reference))
         elif args.rhs_spdi is not None:
-            rhs = patch(reference, Parser(args.rhs_spdi).spdi())
+            rhs = patch(reference, parse_spdi(args.rhs_spdi))
         elif args.rhs_file is not None:
             with open(args.rhs_file, encoding="utf-8") as file:
                 rhs = fasta_sequence(file.readlines())
@@ -123,9 +124,9 @@ def main():
         if args.observed is not None:
             observed = args.observed
         elif args.observed_hgvs is not None:
-            observed = patch(reference, Parser(args.observed_hgvs).hgvs(reference))
+            observed = patch(reference, parse_hgvs(args.observed_hgvs, reference=reference))
         elif args.observed_spdi is not None:
-            observed = patch(reference, Parser(args.observed_spdi).spdi())
+            observed = patch(reference, parse_spdi(args.observed_spdi))
         elif args.observed_file is not None:
             with open(args.observed_file, encoding="utf-8") as file:
                 observed = fasta_sequence(file.readlines())
@@ -144,18 +145,18 @@ def main():
             print(distance)
         if args.dot:
             print(to_dot(reference, root))
-        if args.max_variant:
-            max_variant = maximal_variant(reference, observed, edges)
-            print(max_variant.to_hgvs(reference), max_variant)
+        if args.supremal_variant:
+            variant = spanning_variant(reference, observed, edges)
+            print(variant.to_hgvs(reference), variant)
         if True or args.all:
             for variants in traversal(root, args.atomics):
                 print(to_hgvs(variants, reference))
 
     elif args.command == "patch":
         if args.hgvs is not None:
-            variants = Parser(args.hgvs).hgvs(reference)
+            variants = parse_hgvs(args.hgvs, reference=reference)
         elif args.spdi is not None:
-            variants = Parser(args.spdi).spdi()
+            variants = parse_spdi(args.spdi)
         else:  # args.random_variant
             variants = list(random_variants(reference, args.random_variant_p))
             print(to_hgvs(variants, reference))

@@ -1,8 +1,20 @@
 """Utility functions for sequences and variants."""
 
 
+from itertools import chain
 import random
-from .variants import DNA_NUCLEOTIDES, Variant
+from . import Variant
+from .variants import DNA_NUCLEOTIDES, to_hgvs
+
+
+def canonical(variants, max_distance=40):
+    """Pick a canonical representation from all minimal variant
+    representations."""
+    first = next(variants)
+    if sum(map(len, first)) > max_distance:
+        return first
+
+    return min(chain([first], variants), key=len)
 
 
 def fasta_sequence(lines):
@@ -12,9 +24,27 @@ def fasta_sequence(lines):
 
 def vcf_variant(line):
     """Create a variant from a (simple) VCF line."""
-    _, position, _,  deleted, inserted, *_ = line.split()
+    _, position, _, deleted, inserted, *_ = line.split()
     start = int(position) - 1
     return Variant(start, start + len(deleted), inserted)
+
+
+def to_dot(reference, root):
+    """The LCS graph in Graphviz DOT format."""
+    def traverse():
+        # breadth-first traversal
+        visited = {root}
+        queue = [root]
+        while queue:
+            node = queue.pop(0)
+            for succ, variant in node.edges:
+                yield (f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}"'
+                       f' [label="{to_hgvs(variant, reference)}"];')
+                if succ not in visited:
+                    visited.add(succ)
+                    queue.append(succ)
+
+    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):

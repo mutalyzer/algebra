@@ -1,7 +1,7 @@
 import pytest
 
 from algebra.extractor import extract
-from algebra.variants import Parser, patch
+from algebra.variants import parse_hgvs, patch
 
 variants = [
     ("CATATAGT CATAGAT", "5_7delinsGA"),
@@ -39,7 +39,7 @@ def test_observed(sequences, expected):
     reference, observed = sequences.split(" ")
     new_variants = extract(reference, observed)
 
-    assert patch(reference, Parser(new_variants).hgvs()) == observed
+    assert patch(reference, parse_hgvs(new_variants)) == observed
 
 
 @pytest.mark.parametrize("sequences, expected", variants)

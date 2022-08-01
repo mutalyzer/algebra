@@ -6,8 +6,28 @@ from mutalyzer.reference import get_reference_model
 from mutalyzer_mutator import mutate as mutate_raw
 
 from algebra.extractor import extract, get_variants, reduce, rm_equals
-from algebra.lcs import edit, lcs_graph, to_dot
-from algebra.variants import Parser, Variant, patch, to_hgvs
+from algebra.lcs import edit, lcs_graph
+from algebra.variants import parse_hgvs, patch, to_hgvs
+
+
+def to_dot(reference, root, extra='', cluster=""):
+    """The LCS graph in Graphviz DOT format."""
+    def traverse():
+        # breadth-first traversal
+        visited = {root}
+        queue = [root]
+        while queue:
+            node = queue.pop(0)
+            for succ, variant in node.edges:
+                yield (f'"{extra}{node.row}_{node.col}" -> "{extra}{succ.row}_{succ.col}"'
+                       f' [label="{to_hgvs(variant, reference)}"];')
+                if succ not in visited:
+                    visited.add(succ)
+                    queue.append(succ)
+
+    if cluster:
+        return "subgraph " + cluster + " {\n    " + "\n    ".join(traverse()) + "\n}"
+    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
 def to_dot_repeats(reference, root, extra="", cluster=""):
@@ -43,7 +63,7 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
 
 def extract_dev(reference, obs):
     if "[" in obs:
-        variants = Parser(obs).hgvs()
+        variants = parse_hgvs(obs)
         observed = patch(reference, variants)
     else:
         observed = obs
@@ -66,7 +86,7 @@ def extract_dev(reference, obs):
 
     new_variants = get_variants(reduced_root, reference)
     print(new_variants)
-    # print(observed == patch(reference, Parser(new_variants).hgvs()))
+    # print(observed == patch(reference, parse_hgvs(new_variants)))
 
     # dot_repeats = to_dot_repeats(
     #     reference, reduced_root, extra="r", cluster="cluster_3"
@@ -137,7 +157,7 @@ def _get_sequences(ref, obs=None):
     else:
         reference = ref
         if "[" in obs:
-            variants = Parser(obs).hgvs()
+            variants = parse_hgvs(obs)
             observed = patch(ref, variants)
         else:
             observed = obs

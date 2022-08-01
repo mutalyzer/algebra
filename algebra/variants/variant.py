@@ -26,7 +26,7 @@ def reverse_complement(sequence):
 class Variant:
     """Variant class for deletion/insertions."""
 
-    def __init__(self, start, end, sequence=""):
+    def __init__(self, start, end, sequence):
         """Create a variant.
 
         Parameters
@@ -35,7 +35,7 @@ class Variant:
             The start position (included) of the deleted part (zero-based).
         end : int
             The end position (not included) of the deleted part.
-        sequence : str, optional
+        sequence : str
             The inserted sequence.
 
         Raises
@@ -78,13 +78,9 @@ class Variant:
         return self.end - self.start + len(self.sequence)
 
     def __lt__(self, other):
-        if ((self.start < other.start and self.end > other.start) or
-                (other.start < self.start and other.end > self.start) or
-                (self.start == other.start and self.end == other.end and
-                    len(self.sequence) > 0)):
-            # deletions and insertions are handled asymmetrically
-            raise ValueError("variants overlap")
-
+        if ((other.start < self.end and self.start < other.end) or
+                (other.start == self.start and other.end == self.end)):
+            raise ValueError("unorderable variants")
         return self.start < other.start or self.end < other.end
 
     def __repr__(self):
@@ -106,13 +102,13 @@ class Variant:
             variants = []
             c = 0
             pos = self.start
-            variant = Variant(pos, pos)
+            variant = Variant(pos, pos, "")
             for i, _ in enumerate(self.sequence):
                 if combo[i] > c:
                     if variant:
                         variants.append(variant)
                     for j in range(pos, pos + combo[i] - c):
-                        variants.append(Variant(j, j + 1))
+                        variants.append(Variant(j, j + 1, ""))
                     pos += combo[i] - c
                     c = combo[i]
                     variant = Variant(pos, pos, self.sequence[i])
@@ -123,7 +119,7 @@ class Variant:
             if variant:
                 variants.append(variant)
             for i in range(pos, self.end):
-                variants.append(Variant(i, i + 1))
+                variants.append(Variant(i, i + 1, ""))
 
             yield variants
 
@@ -134,7 +130,7 @@ class Variant:
             return False
 
         return (other.start > self.end or self.start > other.end or
-            set(self.sequence).isdisjoint(set(other.sequence)))
+                set(self.sequence).isdisjoint(set(other.sequence)))
 
     def reverse_complement(self, pivot):
         """The reverse complement with regard to a given pivot."""
