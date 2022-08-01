@@ -1,8 +1,6 @@
-"""Relation class and functions to compare variants.
-
-Calculate the relation between two variants using the definitions
+"""Calculate the relation between two variants using the definitions
 from [1]_. Variants are given as alleles, i.e., a list of variants
-applied to some reference sequence. Both variants subject to the same
+applied to some reference sequence. Both variants are subject to the same
 reference sequence.
 
 References
@@ -13,13 +11,17 @@ In: arXiv preprint 2112.14494 (2021).
 """
 
 
-from enum import Enum
+from .relation import Relation
+from .variant_based import (are_disjoint, are_equivalent, compare,
+                            contains, have_overlap, is_contained)
 
 
-class Relation(Enum):
-    """Relation enum."""
-    EQUIVALENT = "equivalent"
-    CONTAINS = "contains"
-    IS_CONTAINED = "is_contained"
-    OVERLAP = "overlap"
-    DISJOINT = "disjoint"
+__all__ = [
+    "Relation",
+    "are_disjoint",
+    "are_equivalent",
+    "compare",
+    "contains",
+    "have_overlap",
+    "is_contained",
+]

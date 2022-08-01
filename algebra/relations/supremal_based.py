@@ -2,7 +2,11 @@
 
 
 from operator import attrgetter
-from . import Relation, sequence_based
+from .relation import Relation
+from .sequence_based import (are_disjoint as sequence_based_are_disjoint,
+                             compare as sequence_based_compare,
+                             contains as sequence_based_contains,
+                             have_overlap as sequence_based_have_overlap)
 from ..lcs import edit, lcs_graph
 from ..variants import Variant
 
@@ -18,7 +22,7 @@ def contains(reference, lhs, rhs):
     end = max(lhs.end, rhs.end)
     lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
     rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
-    return sequence_based.contains(reference[start:end], lhs_observed, rhs_observed)
+    return sequence_based_contains(reference[start:end], lhs_observed, rhs_observed)
 
 
 def is_contained(reference, lhs, rhs):
@@ -35,7 +39,7 @@ def are_disjoint(reference, lhs, rhs):
     end = max(lhs.end, rhs.end)
     lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
     rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
-    return sequence_based.are_disjoint(reference[start:end], lhs_observed, rhs_observed)
+    return sequence_based_are_disjoint(reference[start:end], lhs_observed, rhs_observed)
 
 
 def have_overlap(reference, lhs, rhs):
@@ -44,7 +48,7 @@ def have_overlap(reference, lhs, rhs):
     end = max(lhs.end, rhs.end)
     lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
     rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
-    return sequence_based.have_overlap(reference[start:end], lhs_observed, rhs_observed)
+    return sequence_based_have_overlap(reference[start:end], lhs_observed, rhs_observed)
 
 
 def compare(reference, lhs, rhs):
@@ -75,7 +79,7 @@ def compare(reference, lhs, rhs):
     end = max(lhs.end, rhs.end)
     lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
     rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
-    return sequence_based.compare(reference[start:end], lhs_observed, rhs_observed)
+    return sequence_based_compare(reference[start:end], lhs_observed, rhs_observed)
 
 
 def spanning_variant(reference, observed, variants):

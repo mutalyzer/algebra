@@ -2,7 +2,7 @@
 
 
 from itertools import product
-from . import Relation
+from .relation import Relation
 from ..lcs import edit, edit_distance_only, lcs_graph
 
 

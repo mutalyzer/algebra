@@ -1,7 +1,7 @@
 """Functions to compare variant alleles."""
 
 
-from . import Relation
+from .relation import Relation
 from .supremal_based import compare as compare_supremal, find_supremal, spanning_variant
 from ..variants import patch
 
