@@ -38,8 +38,7 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
     def _merge_repeats(variants):
         if len(variants) > 1:
             return "|".join([to_hgvs([v], reference) for v in variants])
-        else:
-            return to_hgvs(variants)
+        return to_hgvs(variants)
 
     def traverse():
         visited = {root}
@@ -170,26 +169,22 @@ def _get_sequences(ref, obs=None):
 
 def extract_one_traversal(reference, observed, root):
     def lowest_common_ancestor(node_a, edge_a, node_b, edge_b):
-        if node_a == node_b:
-            return node_a, edge_a, edge_b, True
-
-        empty_b = not bool(edge_b)
         while node_a:
             node = node_b
+            edges = list(edge_b)
             while node:
                 if node == node_a:
-                    return node_a, edge_a, edge_b, empty_b
+                    return node_a, edge_a, edges
 
-                if empty_b and edge_b:
-                    empty_b = False
-                node, edge_b = node.pre_edges
+                node, edge = node.pre_edges
+                edges.extend(edge)
 
-            node_a, edge_a = node_a.pre_edges
+            node_a, edge = node_a.pre_edges
+            edge_a.extend(edge)
 
     lower = [(root, None, [])]
     upper = []
     distance = 0
-    print("digraph {")
 
     while lower or upper:
         if not lower:
@@ -199,13 +194,10 @@ def extract_one_traversal(reference, observed, root):
             print("switch", distance, file=stderr)
 
         node, parent, variant = lower.pop(0)
-
         if node.pre_edges:
             if node.length == distance:
-                lca, edge_a, edge_b, repeat = lowest_common_ancestor(
-                    *node.pre_edges, parent, variant
-                )
-                if repeat:
+                lca, edge_a, edge_b = lowest_common_ancestor(*node.pre_edges, parent, variant)
+                if len(edge_a) == len(edge_b) == 1:
                     print("repeat", node, lca, edge_a, edge_b, file=stderr)
                 else:
                     print("complex", node, lca, edge_a, edge_b, file=stderr)
@@ -216,11 +208,6 @@ def extract_one_traversal(reference, observed, root):
         node.pre_edges = parent, variant
         node.length = distance
         print("visit", node, file=stderr)
-        if parent:
-            print(
-                f'"{parent.row}_{parent.col}" -> "{node.row}_{node.col}"'
-                f' [label="{to_hgvs(variant, reference)}"];'
-            )
 
         if not node.edges:
             sink = node
@@ -233,7 +220,7 @@ def extract_one_traversal(reference, observed, root):
             else:
                 upper.append((succ, node, edge))
                 print("push upper", succ, file=stderr)
-    print("}")
+
     variants = []
     while sink:
         sink, variant = sink.pre_edges
