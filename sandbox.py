@@ -169,18 +169,19 @@ def _get_sequences(ref, obs=None):
 
 def extract_one_traversal(reference, observed, root):
     def lowest_common_ancestor(node_a, edge_a, node_b, edge_b):
+        edges_a = list(edge_a)
         while node_a:
             node = node_b
-            edges = list(edge_b)
+            edges_b = list(edge_b)
             while node:
                 if node == node_a:
-                    return node_a, edge_a, edges
+                    return node_a, edges_a, edges_b
 
                 node, edge = node.pre_edges
-                edges.extend(edge)
+                edges_b.extend(edge)
 
             node_a, edge = node_a.pre_edges
-            edge_a.extend(edge)
+            edges_a.extend(edge)
 
     lower = [(root, None, [])]
     upper = []
