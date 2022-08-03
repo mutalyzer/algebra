@@ -1,4 +1,5 @@
 import argparse
+from sys import stderr
 
 import graphviz
 from mutalyzer.normalizer import Description
@@ -10,8 +11,9 @@ from algebra.lcs import edit, lcs_graph
 from algebra.variants import parse_hgvs, patch, to_hgvs
 
 
-def to_dot(reference, root, extra='', cluster=""):
+def to_dot(reference, root, extra="", cluster=""):
     """The LCS graph in Graphviz DOT format."""
+
     def traverse():
         # breadth-first traversal
         visited = {root}
@@ -19,8 +21,10 @@ def to_dot(reference, root, extra='', cluster=""):
         while queue:
             node = queue.pop(0)
             for succ, variant in node.edges:
-                yield (f'"{extra}{node.row}_{node.col}" -> "{extra}{succ.row}_{succ.col}"'
-                       f' [label="{to_hgvs(variant, reference)}"];')
+                yield (
+                    f'"{extra}{node.row}_{node.col}" -> "{extra}{succ.row}_{succ.col}"'
+                    f' [label="{to_hgvs(variant, reference)}"];'
+                )
                 if succ not in visited:
                     visited.add(succ)
                     queue.append(succ)
@@ -61,7 +65,7 @@ def to_dot_repeats(reference, root, extra="", cluster=""):
     return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
-def extract_dev(reference, obs):
+def extract_steps_dev(reference, obs):
     if "[" in obs:
         variants = parse_hgvs(obs)
         observed = patch(reference, variants)
@@ -138,7 +142,7 @@ def _normalize_spdi(description, dev=False):
     reference = get_reference_model(ref_id)["sequence"]["seq"]
     observed = mutate_raw({"reference": reference}, [model])
     if dev:
-        extract_dev(reference, observed)
+        extract_steps_dev(reference, observed)
     else:
         return extract(reference, observed)
 
@@ -164,6 +168,88 @@ def _get_sequences(ref, obs=None):
     return reference, observed
 
 
+def extract_one_traversal(reference, observed, root):
+    def lowest_common_ancestor(node_a, edge_a, node_b, edge_b):
+        if node_a == node_b:
+            return node_a, edge_a, edge_b, True
+
+        empty_b = not bool(edge_b)
+        while node_a:
+            node = node_b
+            while node:
+                if node == node_a:
+                    return node_a, edge_a, edge_b, empty_b
+
+                if empty_b and edge_b:
+                    empty_b = False
+                node, edge_b = node.pre_edges
+
+            node_a, edge_a = node_a.pre_edges
+
+    lower = [(root, None, [])]
+    upper = []
+    distance = 0
+    print("digraph {")
+
+    while lower or upper:
+        if not lower:
+            lower = upper
+            upper = []
+            distance += 1
+            print("switch", distance, file=stderr)
+
+        node, parent, variant = lower.pop(0)
+
+        if node.pre_edges:
+            if node.length == distance:
+                lca, edge_a, edge_b, repeat = lowest_common_ancestor(
+                    *node.pre_edges, parent, variant
+                )
+                if repeat:
+                    print("repeat", node, lca, edge_a, edge_b, file=stderr)
+                else:
+                    print("complex", node, lca, edge_a, edge_b, file=stderr)
+            else:
+                print("pop", node, distance, file=stderr)
+            continue
+
+        node.pre_edges = parent, variant
+        node.length = distance
+        print("visit", node, file=stderr)
+        if parent:
+            print(
+                f'"{parent.row}_{parent.col}" -> "{node.row}_{node.col}"'
+                f' [label="{to_hgvs(variant, reference)}"];'
+            )
+
+        if not node.edges:
+            sink = node
+            print("sink", node, file=stderr)
+
+        for succ, edge in node.edges:
+            if not edge:
+                lower.append((succ, node, edge))
+                print("push lower", succ, file=stderr)
+            else:
+                upper.append((succ, node, edge))
+                print("push upper", succ, file=stderr)
+    print("}")
+    variants = []
+    while sink:
+        sink, variant = sink.pre_edges
+        variants.extend(variant)
+    return reversed(variants)
+
+
+def extract_one_traveral_wrap(reference, observed):
+    _, lcs_nodes = edit(reference, observed)
+    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    canonical = list(extract_one_traversal(reference, observed, root))
+    # print(canonical)
+    # assert canonical == expected
+    # print(to_dot(reference, root))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="extractor sandbox")
 
@@ -178,6 +264,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.dev:
-        extract_dev(*_get_sequences(args.ref, args.obs))
+        extract_steps_dev(*_get_sequences(args.ref, args.obs))
     else:
-        print(extract(*_get_sequences(args.ref, args.obs)))
+        # print(extract(*_get_sequences(args.ref, args.obs)))
+        extract_one_traveral_wrap(*_get_sequences(args.ref, args.obs))
