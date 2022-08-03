@@ -1,74 +1,270 @@
-import sys
-from algebra.lcs import edit, lcs_graph, to_dot
-from algebra.utils import random_sequence, random_variants
-from algebra.variants import Parser, Variant, patch, to_hgvs
+import argparse
+from sys import stderr
+
+import graphviz
+from mutalyzer.normalizer import Description
+from mutalyzer.reference import get_reference_model
+from mutalyzer_mutator import mutate as mutate_raw
+
+from algebra.extractor import extract, get_variants, reduce, rm_equals
+from algebra.lcs import edit, lcs_graph
+from algebra.variants import parse_hgvs, patch, to_hgvs
 
 
-def reduce(reference, root):
-    visited = set()
-    queue = [(root, None, None)]
-    dot = "digraph {\n"
-    while queue:
-        node, parent, in_variant = queue.pop(0)
-        visited.add(node)
-        print("pop", node)
-        if not node.edges:
-            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference)}"];\n'
-            continue
+def to_dot(reference, root, extra="", cluster=""):
+    """The LCS graph in Graphviz DOT format."""
 
-        successors = {}
-        for succ, out_variant in node.edges:
-            if succ in visited:
-                successors = {}
-                continue
+    def traverse():
+        # breadth-first traversal
+        visited = {root}
+        queue = [root]
+        while queue:
+            node = queue.pop(0)
+            for succ, variant in node.edges:
+                yield (
+                    f'"{extra}{node.row}_{node.col}" -> "{extra}{succ.row}_{succ.col}"'
+                    f' [label="{to_hgvs(variant, reference)}"];'
+                )
+                if succ not in visited:
+                    visited.add(succ)
+                    queue.append(succ)
 
-            length = len(out_variant[0]) if len(out_variant) else 0
-            if length in successors:
-                found = False
-                for idx, value in enumerate(successors[length]):
-                    if succ == value[0]:
-                        # variant = Variant(min(value[1][0].start, out_variant[0].start), max(value[1][0].end, out_variant[0].end), value[1][0].sequence)
-                        # successors[length][idx] = (succ, [variant])
-                        print("repeat", variant)
-                        found = True
-                        break
-                if not found:
-                    successors[length].append((succ, out_variant))
-            else:
-                successors[length] = [(succ, out_variant)]
-
-        for _, edges in sorted(successors.items(), reverse=True):
-            for succ, variant in edges:
-                queue.append((succ, node, variant))
-                print("push", succ)
-
-        if parent and successors:
-            dot += f'    "{parent.row}_{parent.col}" -> "{node.row}_{node.col}" [label="{to_hgvs(in_variant, reference)}"];\n'
-
-    return dot + "}"
+    if cluster:
+        return "subgraph " + cluster + " {\n    " + "\n    ".join(traverse()) + "\n}"
+    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
-def main():
-    if len(sys.argv) < 3:
-        reference = random_sequence(100, 100)
-        variants = list(random_variants(reference, p=0.02, mu_deletion=1.5, mu_insertion=1.7))
+def to_dot_repeats(reference, root, extra="", cluster=""):
+    def _merge_repeats(variants):
+        if len(variants) > 1:
+            return "|".join([to_hgvs([v], reference) for v in variants])
+        else:
+            return to_hgvs(variants)
+
+    def traverse():
+        visited = {root}
+        queue = [root]
+        while queue:
+            node = queue.pop(0)
+            children = {}
+            for child, variant in node.edges:
+                if child not in children:
+                    children[child] = []
+                children[child].append(variant[0])
+            for child in children:
+                yield (
+                    f'"{extra}{node.row}_{node.col}" -> "{extra}{child.row}_{child.col}"'
+                    f' [label="{_merge_repeats(children[child])}"];'
+                )
+                if child not in visited:
+                    visited.add(child)
+                    queue.append(child)
+
+    if cluster:
+        return "subgraph " + cluster + " {\n    " + "\n    ".join(traverse()) + "\n}"
+    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
+
+
+def extract_steps_dev(reference, obs):
+    if "[" in obs:
+        variants = parse_hgvs(obs)
+        observed = patch(reference, variants)
     else:
-        reference = sys.argv[1]
-        variants = Parser(sys.argv[2]).hgvs()
-
-    observed = patch(reference, variants)
+        observed = obs
 
     distance, lcs_nodes = edit(reference, observed)
-
-    print(to_hgvs(variants, reference, sequence_prefix=True))
-    print(distance)
-    print(sum([len(level) for level in lcs_nodes]))
+    print("distance:", distance)
 
     root, _ = lcs_graph(reference, observed, lcs_nodes)
 
-    print(to_dot(reference, root))
-    print(reduce(reference, root))
+    print("----")
+    reduced_root = reduce(root)
+    print("----")
+
+    dot_raw = to_dot(reference, root, cluster="cluster_0")
+    dot_reduced = to_dot(reference, reduced_root, extra="d", cluster="cluster_1")
+
+    rm_equals(reduced_root)
+
+    dot_no_equals = to_dot(reference, reduced_root, extra="n", cluster="cluster_2")
+
+    new_variants = get_variants(reduced_root, reference)
+    print(new_variants)
+    # print(observed == patch(reference, parse_hgvs(new_variants)))
+
+    # dot_repeats = to_dot_repeats(
+    #     reference, reduced_root, extra="r", cluster="cluster_3"
+    # )
+
+    d = (
+        "digraph {\n    "
+        + "\n    "
+        + dot_raw
+        + "\n"
+        + dot_reduced
+        + "\n"
+        + dot_no_equals
+        # + "\n"
+        # + dot_repeats
+        + "}"
+    )
+    src = graphviz.Source(d)
+    src.view()
+
+
+def _spdi_model(description):
+    ref_id, position, deleted, inserted = description.split(":")
+
+    start = end = int(position)
+
+    if deleted:
+        end += len(deleted)
+
+    delins_model = {
+        "type": "deletion_insertion",
+        "location": {
+            "start": {"position": start, "type": "point"},
+            "end": {"position": end, "type": "point"},
+            "type": "range",
+        },
+        "deleted": [],
+        "inserted": [],
+    }
+    if inserted:
+        delins_model["deleted"] = []
+        delins_model["inserted"] = [{"sequence": inserted, "source": "description"}]
+    return ref_id, delins_model
+
+
+def _normalize_spdi(description, dev=False):
+    print(description)
+    ref_id, model = _spdi_model(description)
+    reference = get_reference_model(ref_id)["sequence"]["seq"]
+    observed = mutate_raw({"reference": reference}, [model])
+    if dev:
+        extract_steps_dev(reference, observed)
+    else:
+        return extract(reference, observed)
+
+
+def _get_sequences(ref, obs=None):
+    if obs is None:
+        if ref.count(":") > 1:
+            ref_id, model = _spdi_model(ref)
+            reference = get_reference_model(ref_id)["sequence"]["seq"]
+            observed = mutate_raw({"reference": reference}, [model])
+        else:
+            d = Description(ref)
+            d.normalize()
+            reference = d.get_sequences()["reference"]
+            observed = d.get_sequences()["observed"]
+    else:
+        reference = ref
+        if "[" in obs:
+            variants = parse_hgvs(obs)
+            observed = patch(ref, variants)
+        else:
+            observed = obs
+    return reference, observed
+
+
+def extract_one_traversal(reference, observed, root):
+    def lowest_common_ancestor(node_a, edge_a, node_b, edge_b):
+        if node_a == node_b:
+            return node_a, edge_a, edge_b, True
+
+        empty_b = not bool(edge_b)
+        while node_a:
+            node = node_b
+            while node:
+                if node == node_a:
+                    return node_a, edge_a, edge_b, empty_b
+
+                if empty_b and edge_b:
+                    empty_b = False
+                node, edge_b = node.pre_edges
+
+            node_a, edge_a = node_a.pre_edges
+
+    lower = [(root, None, [])]
+    upper = []
+    distance = 0
+    print("digraph {")
+
+    while lower or upper:
+        if not lower:
+            lower = upper
+            upper = []
+            distance += 1
+            print("switch", distance, file=stderr)
+
+        node, parent, variant = lower.pop(0)
+
+        if node.pre_edges:
+            if node.length == distance:
+                lca, edge_a, edge_b, repeat = lowest_common_ancestor(
+                    *node.pre_edges, parent, variant
+                )
+                if repeat:
+                    print("repeat", node, lca, edge_a, edge_b, file=stderr)
+                else:
+                    print("complex", node, lca, edge_a, edge_b, file=stderr)
+            else:
+                print("pop", node, distance, file=stderr)
+            continue
+
+        node.pre_edges = parent, variant
+        node.length = distance
+        print("visit", node, file=stderr)
+        if parent:
+            print(
+                f'"{parent.row}_{parent.col}" -> "{node.row}_{node.col}"'
+                f' [label="{to_hgvs(variant, reference)}"];'
+            )
+
+        if not node.edges:
+            sink = node
+            print("sink", node, file=stderr)
+
+        for succ, edge in node.edges:
+            if not edge:
+                lower.append((succ, node, edge))
+                print("push lower", succ, file=stderr)
+            else:
+                upper.append((succ, node, edge))
+                print("push upper", succ, file=stderr)
+    print("}")
+    variants = []
+    while sink:
+        sink, variant = sink.pre_edges
+        variants.extend(variant)
+    return reversed(variants)
+
+
+def extract_one_traveral_wrap(reference, observed):
+    _, lcs_nodes = edit(reference, observed)
+    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    canonical = list(extract_one_traversal(reference, observed, root))
+    # print(canonical)
+    # assert canonical == expected
+    # print(to_dot(reference, root))
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="extractor sandbox")
+
+    parser.add_argument(
+        "ref", help="reference sequence / SPDI description / HGVS description"
+    )
+    parser.add_argument(
+        "obs", nargs="?", help="observed sequence / [variants]", type=str
+    )
+    parser.add_argument("--dev", action="store_true", required=False)
+
+    args = parser.parse_args()
+
+    if args.dev:
+        extract_steps_dev(*_get_sequences(args.ref, args.obs))
+    else:
+        # print(extract(*_get_sequences(args.ref, args.obs)))
+        extract_one_traveral_wrap(*_get_sequences(args.ref, args.obs))
