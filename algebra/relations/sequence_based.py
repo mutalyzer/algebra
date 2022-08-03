@@ -1,30 +1,9 @@
-"""Relation class and functions to compare variants.
-
-Calculate the relation between two variants using the definitions
-from [1]_. Variants are given as observed sequences (alleles), i.e., a
-list of variants applied to some reference sequence. Both variants
-subject to the same reference sequence.
-
-References
-----------
-[1] J.K. Vis, M.A. Santcroos, W.A. Kosters and J.F.J. Laros.
-"A Boolean Algebra for Genetic Variants".
-In: arXiv preprint 2112.14494 (2021).
-"""
+"""Functions to compare variants as sequences."""
 
 
-from enum import Enum
 from itertools import product
-from .lcs import edit, edit_distance_only, lcs_graph
-
-
-class Relation(Enum):
-    """Relation enum."""
-    EQUIVALENT = "equivalent"
-    CONTAINS = "contains"
-    IS_CONTAINED = "is_contained"
-    OVERLAP = "overlap"
-    DISJOINT = "disjoint"
+from .relation import Relation
+from ..lcs import edit, edit_distance_only, lcs_graph
 
 
 def are_equivalent(_reference, lhs, rhs):
@@ -49,17 +28,7 @@ def contains(reference, lhs, rhs):
 
 def is_contained(reference, lhs, rhs):
     """Check if `lhs` is contained in `rhs`."""
-    if lhs == rhs:
-        return False
-
-    lhs_distance = edit_distance_only(reference, lhs)
-    rhs_distance = edit_distance_only(reference, rhs)
-    distance = edit_distance_only(lhs, rhs)
-
-    if lhs_distance + rhs_distance == distance:
-        return False
-
-    return rhs_distance - lhs_distance == distance
+    return contains(reference, rhs, lhs)
 
 
 def are_disjoint(reference, lhs, rhs):

@@ -15,10 +15,18 @@ representations.
 from itertools import combinations
 
 
+DNA_NUCLEOTIDES = "ACGT"
+
+
+def reverse_complement(sequence):
+    """The reverse complement of a sequence."""
+    return sequence.translate(sequence.maketrans(DNA_NUCLEOTIDES, DNA_NUCLEOTIDES[::-1]))[::-1]
+
+
 class Variant:
     """Variant class for deletion/insertions."""
 
-    def __init__(self, start, end, sequence=""):
+    def __init__(self, start, end, sequence):
         """Create a variant.
 
         Parameters
@@ -27,7 +35,7 @@ class Variant:
             The start position (included) of the deleted part (zero-based).
         end : int
             The end position (not included) of the deleted part.
-        sequence : str, optional
+        sequence : str
             The inserted sequence.
 
         Raises
@@ -70,13 +78,9 @@ class Variant:
         return self.end - self.start + len(self.sequence)
 
     def __lt__(self, other):
-        if ((self.start < other.start and self.end > other.start) or
-                (other.start < self.start and other.end > self.start) or
-                (self.start == other.start and self.end == other.end and
-                    len(self.sequence) > 0)):
-            # deletions and insertions are handled asymmetrically
-            raise ValueError("variants overlap")
-
+        if ((other.start < self.end and self.start < other.end) or
+                (other.start == self.start and other.end == self.end)):
+            raise ValueError("unorderable variants")
         return self.start < other.start or self.end < other.end
 
     def __repr__(self):
@@ -98,13 +102,13 @@ class Variant:
             variants = []
             c = 0
             pos = self.start
-            variant = Variant(pos, pos)
+            variant = Variant(pos, pos, "")
             for i, _ in enumerate(self.sequence):
                 if combo[i] > c:
                     if variant:
                         variants.append(variant)
                     for j in range(pos, pos + combo[i] - c):
-                        variants.append(Variant(j, j + 1))
+                        variants.append(Variant(j, j + 1, ""))
                     pos += combo[i] - c
                     c = combo[i]
                     variant = Variant(pos, pos, self.sequence[i])
@@ -115,18 +119,23 @@ class Variant:
             if variant:
                 variants.append(variant)
             for i in range(pos, self.end):
-                variants.append(Variant(i, i + 1))
+                variants.append(Variant(i, i + 1, ""))
 
             yield variants
 
     def is_disjoint(self, other):
-        """Check if two variants are disjoint, i.e., no common deletion or
-        insertion."""
-        if (self.start < other.end and other.start < self.end and
-                self.start < self.end and other.start < other.end):
+        """Check if two variants are disjoint, i.e., no common deletion
+        or insertion."""
+        if other.start < self.end and self.start < other.end:
             return False
-        return (self.start > other.end or other.start > self.end or
+
+        return (other.start > self.end or self.start > other.end or
                 set(self.sequence).isdisjoint(set(other.sequence)))
+
+    def reverse_complement(self, pivot):
+        """The reverse complement with regard to a given pivot."""
+        return Variant(pivot - self.end - 1, pivot - self.start - 1,
+                       reverse_complement(self.sequence))
 
     def to_hgvs(self, reference=None, only_substitutions=True):
         """The variant representation in HGVS [1]_.
@@ -170,16 +179,16 @@ class Variant:
 
         return f"{self.start + 1}_{self.end}del{deleted}ins{self.sequence}"
 
-    def to_spdi(self, reference):
+    def to_spdi(self, reference_id=""):
         """The variant representation in SPDI [1]_.
 
         References
         ----------
-        [1] J.B. Holmes, E. Moyer, L. Phan, D. Maglott and B. Kattman. "SPDI:
-        data model for variants and applications at NCBI".
+        [1] J.B. Holmes, E. Moyer, L. Phan, D. Maglott and B. Kattman.
+        "SPDI: data model for variants and applications at NCBI".
         In: Bioinformatics 36.6 (2019), pp. 1902-1907.
         """
-        return (f"{reference}:{self.start}:{self.end - self.start}:"
+        return (f"{reference_id}:{self.start}:{self.end - self.start}:"
                 f"{self.sequence}")
 
 

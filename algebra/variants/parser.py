@@ -4,7 +4,7 @@ Parses (simple) genomic variants in HGVS [1]_ or SPDI [2]_ format.
 
 See Also
 --------
-algebra.variants.variant : The variant class.
+algebra.variants.variant : The `Variant` class.
 
 References
 ----------
@@ -15,260 +15,224 @@ In: Bioinformatics 36.6 (2019), pp. 1902-1907.
 """
 
 
-from .variant import Variant
+from .variant import DNA_NUCLEOTIDES, Variant, reverse_complement
 
 
-DNA_NUCLEOTIDES = "ACGT"
+def parse_hgvs(expression, reference=None):
+    """Parse an expression as HGVS.
 
+    Only simple (deletions, insertions, substitutions,
+    deletion/insertions and repeats) are supported in a genomic
+    coordinate system.
 
-def reverse_complement(sequence):
-    """The reverse complement of a sequence."""
-    return sequence.translate(sequence.maketrans(DNA_NUCLEOTIDES, DNA_NUCLEOTIDES[::-1]))[::-1]
+    Other Parameters
+    ----------------
+    reference : str or None, optional
+        The reference sequence useful for handling inversions,
+        duplications and/or repeats.
 
+    Raises
+    ------
+    TypeError
+        If `expression` is not a string.
+    ValueError
+        If a syntax (or a simple semantic) error occurs.
+    NotImplementedError
+        If a syntax construct is not supported.
 
-class Parser:
-    """Parser class."""
+    Returns
+    -------
+    list
+        A sorted list of variants (allele).
+    """
 
-    def __init__(self, expression):
-        """Create a parser for an `expression`.
+    def match(word):
+        nonlocal pos
+        if pos > len(expression) - len(word):
+            raise ValueError("unexpected end of expression")
+        if expression[pos:pos + len(word)] != word:
+            raise ValueError(f"expected '{word}' at {pos + 1}")
+        pos += len(word)
+        return word
 
-        Raises
-        ------
-        TypeError
-            If `expression` is not a string.
-        """
-
-        if not isinstance(expression, str):
-            raise TypeError("expression must be a string")
-
-        self.pos = 0
-        self.expression = expression
-
-    def _match(self, word):
-        if not self.expression[self.pos:self.pos + len(word)] == word:
+    def match_optional(word):
+        try:
+            return match(word) == word
+        except ValueError:
             return False
 
-        self.pos += len(word)
-        return True
-
-    def _match_digit(self):
-        if self.pos >= len(self.expression):
+    def match_plus(predicate, label=None):
+        nonlocal pos
+        if pos >= len(expression):
             raise ValueError("unexpected end of expression")
-        if not self.expression[self.pos].isdigit():
-            raise ValueError(f"expected digit at {self.pos}")
+        if not predicate(expression[pos]):
+            raise ValueError(f"expected {label if label is not None else predicate} at {pos + 1}")
+        start = pos
+        pos += 1
+        while pos < len(expression) and predicate(expression[pos]):
+            pos += 1
+        return expression[start:pos]
 
-        self.pos += 1
-        return int(self.expression[self.pos - 1])
+    def match_number():
+        return int(match_plus(lambda ch: ch.isdigit(), "digit"))
 
-    def _match_nucleotide(self):
-        if self.pos >= len(self.expression):
-            raise ValueError("unexpected end of expression")
-        if not self.expression[self.pos] in DNA_NUCLEOTIDES:
-            raise ValueError(f"expected nucleotide at {self.pos}")
+    def match_sequence():
+        return match_plus(lambda ch: ch in DNA_NUCLEOTIDES, "nucleotide")
 
-        self.pos += 1
-        return self.expression[self.pos - 1]
+    def match_location():
+        start = match_number()
+        end = match_number() if match_optional("_") else start
+        return start - 1, end
 
-    def _match_number(self):
-        number = self._match_digit()
-        while True:
+    def match_variant(reference):
+        start, end = match_location()
+        ctx_pos = pos
+
+        if match_optional("dup"):
             try:
-                number = number * 10 + self._match_digit()
+                sequence = match_sequence()
             except ValueError:
-                return number
+                if reference is None:
+                    raise NotImplementedError(f"duplication without reference context at {ctx_pos + 1}") from None
+                if end > len(reference):
+                    raise ValueError("invalid range in reference") from None
+                sequence = reference[start:end]
+            else:
+                if len(sequence) != end - start:
+                    raise ValueError(f"inconsistent duplicated length at {pos}")
+                if reference is not None and sequence != reference[start:end]:
+                    raise ValueError(f"'{sequence}' not found in reference at {start}")
+            return Variant(start, end, 2 * sequence)
 
-    def _match_sequence(self):
-        start = self.pos
-        self._match_nucleotide()
-        while True:
+        if match_optional("inv"):
             try:
-                self._match_nucleotide()
+                sequence = match_sequence()
             except ValueError:
-                return self.expression[start:self.pos]
+                if reference is None:
+                    raise NotImplementedError(f"inversion without reference context at {ctx_pos + 1}") from None
+                if end > len(reference):
+                    raise ValueError("invalid range in reference") from None
+                sequence = reverse_complement(reference[start:end])
+            else:
+                if len(sequence) != end - start:
+                    raise ValueError(f"inconsistent inversion length at {ctx_pos + 1}")
+                if reference is not None and sequence != reverse_complement(reference[start:end]):
+                    raise ValueError(f"'{sequence}' not found in reference at {start}")
+            return Variant(start, end, sequence)
 
-    def _match_variant(self, reference):
-        start = self._match_number() - 1
-        end = None
-        if self._match("_"):
-            end = self._match_number()
-            if start >= end - 1:
-                raise ValueError(f"invalid range at {self.pos}")
-
-        if self._match("dup"):
-            if end is None:
-                end = start + 1
-            duplicated = None
+        if match_optional("del"):
+            if start == end:
+                raise ValueError(f"invalid range at {ctx_pos}")
             try:
-                duplicated = self._match_sequence()
+                sequence = match_sequence()
             except ValueError:
-                pass
+                sequence = ""
+            else:
+                if len(sequence) != end - start:
+                    raise ValueError(f"inconsistent deleted length at {pos}")
+                if reference is not None and sequence != reference[start:end]:
+                    raise ValueError(f"'{sequence}' not found in reference at {start}")
+            if match_optional("ins"):
+                return Variant(start, end, match_sequence())
+            return Variant(start, end, "")
 
-            if duplicated is not None:
-                if len(duplicated) != end - start:
-                    raise ValueError(f"inconsistent duplicated length at {self.pos}")
-            if reference is None:
-                raise NotImplementedError("duplications without the reference context are not supported")
-            if start < 0 or len(reference) < end:
-                raise ValueError("invalid range in reference")
+        if match_optional("ins"):
+            if end - start != 2:
+                raise ValueError(f"invalid inserted range at {pos}")
+            return Variant(start + 1, start + 1, match_sequence())
 
-            return Variant(end, end, reference[start:end])
-
-        if self._match("inv"):
-            if end is None:
-                end = start + 1
-            if reference is None:
-                raise NotImplementedError("inversions without the reference context are not supported")
-            if len(reference) < end:
-                raise ValueError("invalid range in reference")
-
-            return Variant(start, end, reverse_complement(reference[start:end]))
-
-        if self._match("del"):
-            if end is None:
-                end = start + 1
-            deleted = None
-            try:
-                deleted = self._match_sequence()
-            except ValueError:
-                pass
-
-            if deleted is not None and len(deleted) != end - start:
-                raise ValueError(f"inconsistent deleted length at {self.pos}")
-            if self._match("ins"):
-                return Variant(start, end, self._match_sequence())
-            return Variant(start, end)
-
-        if self._match("ins"):
-            if end is None or end - start != 2:
-                raise ValueError(f"invalid inserted range at {self.pos}")
-            return Variant(start + 1, start + 1, self._match_sequence())
-
-        if end is not None:
-            repeat_unit = self._match_sequence()
-            if not self._match("["):
-                raise ValueError(f"expected '[' at {self.pos}")
-            repeat_number = self._match_number()
-            if not self._match("]"):
-                raise ValueError(f"expected ']' at {self.pos}")
-            return Variant(start, end, repeat_number * repeat_unit)
-
-        sequence = None
         try:
-            sequence = self._match_sequence()
+            sequence = match_sequence()
         except ValueError:
-            pass
-        if self._match("="):
-            return Variant(start, start)
-        if sequence is not None and self._match("["):
-            # this is PharmVars HGVS repeat notation
-            repeat_number = self._match_number()
-            if not self._match("]"):
-                raise ValueError(f"expected ']' at {self.pos}")
-            return Variant(start + len(sequence), start + len(sequence), sequence * (repeat_number - 1))
+            sequence = ""
 
-        if not self._match(">"):
-            raise ValueError(f"expected '>' at {self.pos}")
-        return Variant(start, start + 1, self._match_sequence())
+        if match_optional(">"):
+            if len(sequence):
+                if len(sequence) != end - start:
+                    raise ValueError(f"inconstistent deletion length at {ctx_pos + 1}")
+                if reference is not None and sequence != reference[start:end]:
+                    raise ValueError(f"'{sequence}' not found in reference at {start}")
+            return Variant(start, end, match_sequence())
 
-    def hgvs(self, reference=None, skip_reference=False):
-        """Parse an expression as HGVS.
+        if match_optional("="):
+            return Variant(0, 0, "")
 
-        Only simple (deletions, insertions, substitutions,
-        deletion/insertions and repeats) are supported in a genomic
-        coordinate system.
+        if match_optional("["):
+            repeat = match_number()
+            match("]")
+            if end - start == 1:
+                # NCBI style repeat
+                if reference is None:
+                    raise NotImplementedError(f"NCBI style repeat without reference context at {ctx_pos + 1}")
+                found = 0
+                while reference[start + found * len(sequence):start + (found + 1) * len(sequence)] == sequence:
+                    found += 1
+                if found == 0:
+                    raise ValueError(f"'{sequence}' not found in reference at {start}")
+                return Variant(start, start + found * len(sequence), repeat * sequence)
 
-        Parameters
-        ----------
-        reference : str or None, optional
-            The reference sequence useful for handling inversions and/or
-            duplications.
-        skip_reference : bool, optional
-            Skips a reference sequence identifier and coordinate system.
+            # HGVS style repeat
+            return Variant(start, end, repeat * sequence)
 
-        Raises
-        ------
-        ValueError
-            If a syntax (or a simple sematic) error occurs.
-        NotImplementedError
-            If a syntax construct is not supported.
+        raise NotImplementedError(f"unsupported variant at {ctx_pos + 1}")
 
-        Returns
-        -------
-        list
-            A sorted list of variants (allele).
-        """
+    if not isinstance(expression, str):
+        raise TypeError("expression must be a string")
 
-        if skip_reference:
-            while self.pos < len(self.expression) and not self._match(":"):
-                self.pos += 1
-            if not self._match("g."):
-                raise ValueError(f"expected 'g.' at {self.pos}")
+    pos = expression.find(":") + 1
+    match_optional("g.")
 
-        if self._match("="):
-            if not self.pos == len(self.expression):
-                raise ValueError(f"expected end of expression at {self.pos}")
-            return []
+    if match_optional("="):
+        if pos != len(expression):
+            raise ValueError(f"expected end of expression at {pos + 1}")
+        return []
 
+    if match_optional("["):
         variants = []
-        if self._match("["):
-            variant = self._match_variant(reference)
+        variant = match_variant(reference)
+        if variant:
+            variants.append(variant)
+        while match_optional(";"):
+            variant = match_variant(reference)
             if variant:
                 variants.append(variant)
-            while self._match(";"):
-                variant = self._match_variant(reference)
-                if variant:
-                    variants.append(variant)
-            if not self._match("]"):
-                raise ValueError(f"expected ']' at {self.pos}")
-        else:
-            variant = self._match_variant(reference)
-            if variant:
-                variants.append(variant)
-
-        if not self.pos == len(self.expression):
-            raise ValueError(f"expected end of expression at {self.pos}")
-        self.pos = 0
+        match("]")
+        if pos != len(expression):
+            raise ValueError(f"expected end of expression at {pos + 1}")
         return sorted(variants)
 
-    def spdi(self):
-        """Parse an expression as SPDI.
+    variant = match_variant(reference)
+    if pos != len(expression):
+        raise ValueError(f"expected end of expression at {pos + 1}")
+    if variant:
+        return [variant]
+    return []
 
-        Raises
-        ------
-        ValueError
-            If a syntax error occurs.
 
-        Returns
-        -------
-        `Variant`
-            The variant.
-        """
+def parse_spdi(expression):
+    """Parse an expression as SPDI.
 
-        self._match_sequence()
-        if not self._match(":"):
-            raise ValueError(f"expected ':' at {self.pos}")
+    Raises
+    ------
+    TypeError
+        If `expression` is not a string.
+    ValueError
+        If a syntax error occurs.
 
-        position = self._match_number()
-        if not self._match(":"):
-            raise ValueError(f"expected ':' at {self.pos}")
+    Returns
+    -------
+    list
+        A sorted list of variants (allele). Always contains exactly one
+        `Variant`.
+    """
 
-        length = 0
-        try:
-            length = self._match_number()
-        except ValueError:
-            try:
-                length = len(self._match_sequence())
-            except ValueError:
-                pass
-        if not self._match(":"):
-            raise ValueError(f"expected ':' at {self.pos}")
+    if not isinstance(expression, str):
+        raise TypeError("expression must be a string")
 
-        inserted = ""
-        try:
-            inserted = self._match_sequence()
-        except ValueError:
-            pass
-        if not self.pos == len(self.expression):
-            raise ValueError(f"expected end of expression at {self.pos}")
-        self.pos = 0
-        return [Variant(position, position + length, inserted)]
+    _, position, deletion, insertion = expression.split(":")
+    start = int(position)
+    try:
+        length = int(deletion)
+    except ValueError:
+        length = len(deletion)
+    return [Variant(start, start + length, insertion)]

@@ -9,7 +9,8 @@ disjoint, i.e., no common elements that allows for a comprehensive
 classification of the relation for every pair of variants by taking all
 minimal Longest Common Subsequence (LCS) alignments into account.
 
-[Jonathan K. Vis, Mark Santcroos, Walter A. Kosters and Jeroen F.J. Laros. "A Boolean Algebra for Genetic Variants." (2021)](https://arxiv.org/abs/2112.14494)
+[Jonathan K. Vis, Mark A. Santcroos, Walter A. Kosters and Jeroen F.J. Laros.
+"A Boolean Algebra for Genetic Variants." (2021)](https://arxiv.org/abs/2112.14494)
 
 Installation
 ------------
@@ -49,13 +50,22 @@ Or as a Python package.
 
 ```python
 from algebra import compare
-from algebra.variants import Parser, patch
+from algebra.variants import parse_hgvs
+
 
 reference = "AAAAA"
-lhs = patch(reference, Parser("1_2insTA").hgvs())
-rhs = patch(reference, Parser("2_3insT").hgvs())
+lhs = parse_hgvs("1_2insTA")
+rhs = parse_hgvs("2_3insT")
 
 # returns: Relation.DISJOINT
+compare(reference, lhs, rhs)
+
+
+reference = "CATATATC"
+lhs = parse_hgvs("2_7AT[4]")  # observed: CATATATATC
+rhs = parse_hgvs("5_6insT")   # observed: CATATTATC
+
+# returns: Relation.CONTAINS
 compare(reference, lhs, rhs)
 ```
 
