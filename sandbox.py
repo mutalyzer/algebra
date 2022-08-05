@@ -167,21 +167,15 @@ def _get_sequences(ref, obs=None):
     return reference, observed
 
 
-def extract_one_traversal(reference, observed, root):
+def extract_one_traversal(observed, root):
     def lowest_common_ancestor(node_a, edge_a, node_b, edge_b):
-        edges_a = list(edge_a)
         while node_a:
             node = node_b
-            edges_b = list(edge_b)
             while node:
                 if node == node_a:
-                    return node_a, edges_a, edges_b
-
-                node, edge = node.pre_edges
-                edges_b.extend(edge)
-
-            node_a, edge = node_a.pre_edges
-            edges_a.extend(edge)
+                    return node_a, edge_a, edge_b
+                node, edge_b = node.pre_edges
+            node_a, edge_a = node_a.pre_edges
 
     lower = [(root, None, [])]
     upper = []
@@ -197,11 +191,28 @@ def extract_one_traversal(reference, observed, root):
         node, parent, variant = lower.pop(0)
         if node.pre_edges:
             if node.length == distance:
-                lca, edge_a, edge_b = lowest_common_ancestor(*node.pre_edges, parent, variant)
-                if len(edge_a) == len(edge_b) == 1:
-                    print("repeat", node, lca, edge_a, edge_b, file=stderr)
-                else:
-                    print("complex", node, lca, edge_a, edge_b, file=stderr)
+                pred, edge = node.pre_edges
+
+                end = node.row - 1
+                if edge:
+                    end = max(end, edge[0].end)
+                if variant:
+                    end = max(end, variant[0].end)
+                end_offset = end - node.row
+
+                lca, edge_a, edge_b = lowest_common_ancestor(pred, edge, parent, variant)
+
+                if edge_a and edge_b:
+                    start = min(edge_a[0].start, edge_b[0].start)
+                elif edge_a:
+                    start = edge_a[0].start
+                elif edge_b:
+                    start = edge_b[0].start
+                start_offset = start - lca.row
+
+                delins = [Variant(start, end, observed[lca.col + start_offset:node.col + end_offset])]
+                node.pre_edges = lca, delins
+                print("complex", node, lca, delins, file=stderr)
             else:
                 print("pop", node, distance, file=stderr)
             continue
@@ -229,10 +240,50 @@ def extract_one_traversal(reference, observed, root):
     return reversed(variants)
 
 
+def repeats(word):
+    length = 0
+    idx = 1
+    lps = [0] * len(word)
+    while idx < len(word):
+        if word[idx] == word[length]:
+            length += 1
+            lps[idx] = length
+            idx += 1
+        elif length != 0:
+            length = lps[length - 1]
+        else:
+            lps[idx] = 0
+            idx += 1
+
+    pattern = len(word) - length
+    return word[:pattern], len(word) // pattern, len(word) % pattern
+
+
+def trim(word_a, word_b):
+    prefix = len(commonprefix([word_a, word_b]))
+    suffix = len(commonprefix([word_a[prefix:][::-1], word_b[prefix:][::-1]]))
+    return prefix, suffix
+
+
+def to_hgvs_rep(reference, variant):
+    if len(variant.sequence):
+        pattern, times, remainder = repeats(variant.sequence)
+        print(pattern, times, remainder, file=stderr)
+        if times > 1 and remainder == 0:
+            return f"{variant.start + 1}_{variant.end}{pattern}[{times}]"
+
+        deleted = reference[variant.start:variant.end]
+        print(deleted, variant.sequence, trim(deleted, variant.sequence), file=stderr)
+
+    return variant.to_hgvs()
+
+
 def extract_one_traveral_wrap(reference, observed):
     _, lcs_nodes = edit(reference, observed)
     root, _ = lcs_graph(reference, observed, lcs_nodes)
-    canonical = list(extract_one_traversal(reference, observed, root))
+    canonical = extract_one_traversal(observed, root)
+    for variant in canonical:
+        print(to_hgvs_rep(reference, variant))
     # print(canonical)
     # assert canonical == expected
     # print(to_dot(reference, root))
