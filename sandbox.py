@@ -275,7 +275,7 @@ def to_hgvs_rep(reference, variant):
         deleted = reference[variant.start:variant.end]
         print(deleted, variant.sequence, trim(deleted, variant.sequence), file=stderr)
 
-    return variant.to_hgvs()
+    return variant.to_hgvs(reference)
 
 
 def extract_one_traveral_wrap(reference, observed):
