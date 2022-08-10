@@ -65,7 +65,7 @@ class Variant:
 
     def __bool__(self):
         """Check for empty (=) variants."""
-        return self.end - self.start > 0 or len(self.sequence) > 0
+        return len(self) > 0
 
     def __eq__(self, other):
         return (self.start == other.start and self.end == other.end and
@@ -155,8 +155,9 @@ class Variant:
         ----------
         [1] https://varnomen.hgvs.org/.
         """
+
         if self.end - self.start == 0:
-            if len(self.sequence) == 0:
+            if not self.sequence:
                 return "="
             return f"{self.start}_{self.start + 1}ins{self.sequence}"
 
@@ -168,13 +169,13 @@ class Variant:
             substitution = reference[self.start:self.end]
 
         if self.end - self.start == 1:
-            if len(self.sequence) == 0:
+            if not self.sequence:
                 return f"{self.start + 1}del{deleted}"
             if len(self.sequence) == 1:
                 return f"{self.start + 1}{substitution}>{self.sequence}"
             return f"{self.start + 1}del{deleted}ins{self.sequence}"
 
-        if len(self.sequence) == 0:
+        if not self.sequence:
             return f"{self.start + 1}_{self.end}del{deleted}"
 
         return f"{self.start + 1}_{self.end}del{deleted}ins{self.sequence}"
@@ -226,7 +227,7 @@ def patch(reference, variants, sort=True):
             yield reference[start:variant.start] + variant.sequence
             start = variant.end
 
-        if len(reference[start:]) > 0:
+        if reference[start:]:
             yield reference[start:]
 
     return "".join(slices(reference, variants))
@@ -266,7 +267,7 @@ def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=F
     if reference is not None and sequence_prefix:
         prefix = f"{reference}:g."
 
-    if len(variants) == 0:
+    if not variants:
         return f"{prefix}="
 
     if len(variants) == 1:
