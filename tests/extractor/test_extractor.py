@@ -1,6 +1,6 @@
 import pytest
-from algebra.extractor import extract, to_hgvs
 from algebra import Variant
+from algebra.extractor import extract, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
