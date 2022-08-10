@@ -156,7 +156,6 @@ def to_hgvs(variants, reference):
                 return f"{variant.start + 1}_{variant.end - inserted_remainder}{inserted_unit}[{inserted_number}]"
             raise NotImplementedError("unknown repeat")
 
-        start, end = trim(deleted, variant.sequence)
         if inserted_number > 1:
             if inserted_remainder > 0:
                 if variant.start == variant.end:
@@ -166,6 +165,8 @@ def to_hgvs(variants, reference):
                 return f"{variant.start}_{variant.start + 1}ins{inserted_unit}[{inserted_number}]"
             return f"{variant.start + 1}_{variant.end}delins{inserted_unit}[{inserted_number}]"
 
+        start, end = trim(deleted, variant.sequence)
+        # TODO: reverse complement?
         return Variant(variant.start + start, variant.end - end, variant.sequence[start:len(variant.sequence) - end]).to_hgvs(reference)
 
     if not variants:
