@@ -4,6 +4,17 @@ from algebra.extractor import extract, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
+    # FIXME: was 1_5delinsAACTCAGGTAGGGTTAGAT
+    ("CAGGG", "AACTCAGGTAGGGTTAGAT", [Variant(0, 0, "AACT"), Variant(3, 5, "GTAGGGTTAGAT")], "[0_1insAACT;5delinsTAGGGTTAGAT]"),
+
+    ("GTGCCCTAAGGGAT", "GAGCCTTAGGGCT", [Variant(1, 2, "A"), Variant(3, 9, "CCTTA"), Variant(12, 13, "C")], "[2T>A;6_8delinsTT;13A>C]"),
+    ("CATCAT", "TCAT", [Variant(0, 2, "")], "1_2del"),
+    ("ACTAA", "ACGCCTATTAAATAAA", [Variant(1, 5, "CGCCTATTAAATAAA")], "3delinsGCCTATTAAATA"),
+    ("TTGTA", "TTTGTGTT", [Variant(0, 5, "TTTGTGTT")], "3_5delinsTGTGTT"),
+    ("AGGTA", "AAGAAGGGGA", [Variant(0, 4, "AAGAAGGGG")], "2_4delinsAGAAGGGG"),
+    ("GCCTT", "GCAGCCCAT", [Variant(0, 4, "GCAGCCCA")], "3_4delinsAGCCCA"),
+    ("CTAACG", "TTACC", [Variant(0, 6, "TTACC")], "1_6delinsTTACC"),
+    ("CTAA", "TTA", [Variant(0, 4, "TTA")], "1_3delinsTT"),
     ("CATATAGT", "CATAGAT", [Variant(1, 7, "ATAGA")], "5_7delinsGA"),
     ("CGC", "CATATATC", [Variant(1, 2, "ATATAT")], "2delinsAT[3]"),
     ("CGC", "CATATAC", [Variant(1, 2, "ATATA")], "2delins[AT[2];A]"),
