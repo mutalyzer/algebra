@@ -266,7 +266,7 @@ def to_hgvs(variants, reference=None, only_substitutions=True, sequence_prefix=F
     if reference is not None and sequence_prefix:
         prefix = f"{reference}:g."
 
-    if len(variants) == 0:
+    if not variants:
         return f"{prefix}="
 
     if len(variants) == 1:

@@ -1,249 +1,177 @@
-from copy import deepcopy
-
-from algebra.lcs import edit, lcs_graph
-from algebra.lcs.all_lcs import _Node
-from algebra.variants import Variant
+"""Extract canonical variant representations from all minimal
+LCS alignments with support for tandem repeats and complex variants."""
 
 
-def _get_sink(root):
-    sink = root
-    while sink.edges:
-        sink = sink.edges[0][0]
-    return sink
+from os.path import commonprefix
+from ..lcs import edit, lcs_graph
+from ..variants import Variant
 
 
-def _extract_subgraph(distances, sink):
-    new = {}
-    nodes = [sink]
-    visited = set()
-    while nodes:
-        node = nodes.pop(0)
-        if node in visited:
+def extractor(observed, root):
+    """Traverse (BFS) the LCS graph to extract the canonical variant,
+    i.e., minimize the number separate variants within an allele.
+
+    If there are multiple minimal variant representations (locally), a
+    (local) supremal variant will be created. This allows for the
+    detection of tandem repeats as well as complex variants.
+
+    Parameters
+    ----------
+    observed : str
+        The observed sequence.
+    root : `_Node` (opaque data type)
+        The root of the LCS graph.
+
+    Returns
+    -------
+    list
+        The canonical list of variants (allele).
+
+    See Also
+    --------
+    `algebra.lcs.lcs_graph` : Constructs the LCS graph.
+    """
+
+    def lowest_common_ancestor(node_a, edge_a, node_b, edge_b):
+        while node_a:
+            node = node_b
+            while node:
+                if node == node_a:
+                    return node_a, edge_a, edge_b
+                node, edge_b = node.pre_edges
+            node_a, edge_a = node_a.pre_edges
+
+    lower = [(root, None, [])]
+    upper = []
+    distance = 0
+
+    while lower or upper:
+        if not lower:
+            lower = upper
+            upper = []
+            distance += 1
+
+        node, parent, variant = lower.pop(0)
+        if node.pre_edges:
+            if node.length == distance:
+                pred, edge = node.pre_edges
+
+                end = node.row - 1
+                if edge:
+                    end = max(end, edge[0].end)
+                if variant:
+                    end = max(end, variant[0].end)
+                end_offset = end - node.row
+
+                lca, edge_a, edge_b = lowest_common_ancestor(pred, edge, parent, variant)
+
+                if edge_a and edge_b:
+                    start = min(edge_a[0].start, edge_b[0].start)
+                elif edge_a:
+                    start = edge_a[0].start
+                elif edge_b:
+                    start = edge_b[0].start
+                start_offset = start - lca.row
+
+                delins = [Variant(start, end, observed[lca.col + start_offset:node.col + end_offset])]
+                node.pre_edges = lca, delins
             continue
-        visited.add(node)
-        if node not in new:
-            new[node] = _Node(node.row, node.col, node.length)
-        for p in distances[node]["parents"]:
-            if p not in new:
-                new[p] = _Node(p.row, p.col, p.length)
-            for c, v in p.edges:
-                if c == node:
-                    new[p].edges.append((new[c], deepcopy(v)))
-        extend = set(distances[node]["parents"]) - visited
-        nodes.extend(extend)
-    for n in new:
-        if n.row == 0 and n.col == 0:
-            new_root = new[n]
-    return new_root
 
+        node.pre_edges = parent, variant
+        node.length = distance
 
-def reduce(root):
-    """
-    Reduce the graph to the paths that provide a minimal number of variants.
-    """
-    distances = {root: {"distance": 0, "parents": set()}}
+        if not node.edges:
+            sink = node
 
-    queue = [(0, root)]
-    while len(queue) > 0:
-        current_distance, current_node = queue.pop(0)
-        if current_distance > distances[current_node]["distance"]:
-            continue
-
-        successors = {}
-        for child, edge in current_node.edges:
-            if child not in successors:
-                successors[child] = current_distance
-            if edge:
-                successors[child] = current_distance + 1
-
-        for child, distance in successors.items():
-            if distances.get(child) is None or distance < distances[child]["distance"]:
-                distances[child] = {"distance": distance, "parents": {current_node}}
-                queue.append((distance, child))
-            elif distance == distances[child]["distance"]:
-                distances[child]["parents"].add(current_node)
-                queue.append((distance, child))
-
-    return _extract_subgraph(distances, _get_sink(root))
-
-
-def rm_equals(root):
-    """
-    Remove the equal edges.
-    """
-
-    def _empty_child():
-        visited = {root}
-        queue = [root]
-        while queue:
-            node = queue.pop(0)
-            for i, (child, variant) in enumerate(node.edges):
-                if not variant:
-                    return child, node, i
-                if child not in visited:
-                    visited.add(child)
-                    queue.append(child)
-        return None, None, None
-
-    def _update_parent():
-        parent.edges.pop(idx)
-        parent.edges.extend(empty_child.edges)
-
-    def _update_other_parents():
-        visited = {root}
-        queue = [root]
-        parents = []
-        while queue:
-            node = queue.pop(0)
-            for i, (child, variant) in enumerate(node.edges):
-                if child == empty_child:
-                    parents.append((node, i))
-                if child not in visited:
-                    visited.add(child)
-                    queue.append(child)
-        for (p, i) in parents:
-            p.edges[i] = (parent, p.edges[i][1])
-
-    while True:
-        empty_child, parent, idx = _empty_child()
-        if not empty_child:
-            break
-        _update_parent()
-        _update_other_parents()
-
-
-def _shortest_delins(start_node, end_node, reference):
-    """
-    Get the deletion insertion variant between the start and the end nodes.
-    """
-    next_node, edge = max(start_node.edges, key=lambda x: x[1][0].start)
-    sequence = edge[0].sequence
-    start = edge[0].start
-    end = edge[0].end
-    while next_node != end_node:
-        next_node, edge = min(next_node.edges, key=lambda x: x[1][0].start)
-        edge = edge[0]
-        if end is not None:
-            sequence += reference[end : edge.start]
-        end = edge.end
-        sequence += edge.sequence
-    return Variant(start, end, sequence)
-
-
-def _repeat(node, reference):
-    """
-    Determine if the multiple edges of a node form a full or partial repeat.
-    """
-
-    def get_rotations(s):
-        t = s
-        r = 1
-        while True:
-            t = t[-1] + t[:-1]
-            r += 1
-            if t == s:
-                return r
-
-    edges = sorted([edge[1][0] for edge in node.edges], key=lambda x: x.start)
-    first_edge = min(edges, key=lambda x: x.start)
-    last_edge = max(edges, key=lambda x: x.start)
-    if last_edge.sequence == "":
-        # deletion
-        sequences = [reference[edge.start : edge.end] for edge in edges]
-        rotations = get_rotations(sequences[-1])
-        if rotations <= len(sequences):
-            # repeat
-            start = first_edge.start + sequences.index(sequences[-1])
-            end = last_edge.end
-            affected = reference[start:end]
-            r_s = affected[: len(set(sequences))]
-            r_n = (len(affected) - len(sequences[0])) // len(r_s)
-            return f"{start+1}_{end}{r_s}[{r_n}]"
-        else:
-            # shift
-            return last_edge.to_hgvs(reference)
-    else:
-        # insertion
-        sequences = [edge.sequence for edge in edges]
-        rotations = get_rotations(sequences[-1])
-        if rotations <= len(sequences):
-            # repeat
-            start = first_edge.start + sequences.index(sequences[-1])
-            end = last_edge.end
-            affected = reference[start:end]
-            r_s = affected[: len(set(sequences))]
-            r_n = (len(affected) + len(sequences[0])) // len(r_s)
-            if start + 1 == end:
-                location = f"{start+1}"
+        for succ, edge in node.edges:
+            if not edge:
+                lower.append((succ, node, edge))
             else:
-                location = f"{start+1}_{end}"
-            return f"{location}{r_s}[{r_n}]"
-        else:
-            # shift
-            return last_edge.to_hgvs(reference)
+                upper.append((succ, node, edge))
 
-
-def get_variants(root, reference):
-    """
-    Traverse the graph to extract the 'canonical/normalized' variants.
-
-    1. A node has only one child:
-       a. with one edge -> a simple the variant.
-       b. with multpile edges -> a form of a repeat variant.
-    2. A node has multiple children -> a complex structure (deletion insertion).
-    """
-    visited = {root}
-    queue = [root]
-
-    structures = {}
-    c_open = None
-    c_close = False
-    descriptions = []
-
-    while queue:
-        node = queue.pop(0)
-        if c_close:
-            # complex structure (2)
-            structures[c_open] = node
-            descriptions.append(
-                _shortest_delins(c_open, node, reference).to_hgvs(reference)
-            )
-            c_close = False
-            c_open = None
-        children = set()
-        for child, variant in node.edges:
-            children.add(child)
-        if len(children) > 1 and c_open is None:
-            # start complex structure (2)
-            c_open = node
-        if len(children) == 1 and c_open is None:
-            if len(node.edges) > 1:
-                # repeat (1.b.)
-                descriptions.append(_repeat(node, reference))
-            else:
-                # simple variant(1.a.)
-                descriptions.append(node.edges[0][1][0].to_hgvs(reference))
-        for child in children:
-            if child not in visited:
-                visited.add(child)
-                queue.append(child)
-        if len(queue) == 1 and c_open:
-            # end complex structure when next node is popped (2)
-            c_close = True
-    if len(descriptions) > 1:
-        return "[" + ";".join(descriptions) + "]"
-    elif len(descriptions) == 1:
-        return descriptions[0]
-    else:
-        return "="
+    variants = []
+    while sink:
+        sink, variant = sink.pre_edges
+        variants.extend(variant)
+    return reversed(variants)
 
 
 def extract(reference, observed):
-
-    distance, lcs_nodes = edit(reference, observed)
+    """Extract the canonical variant representation (allele) for a
+    reference and observed sequence."""
+    _, lcs_nodes = edit(reference, observed)
     root, _ = lcs_graph(reference, observed, lcs_nodes)
+    return extractor(observed, root)
 
-    reduced_root = reduce(root)
-    rm_equals(reduced_root)
 
-    return get_variants(reduced_root, reference)
+def to_hgvs(variants, reference):
+    """Experimental version of HGVS serialization with support for
+    tandem repeats and complex variants.
+    """
+
+    def repeats(word):
+        length = 0
+        idx = 1
+        lps = [0] * len(word)
+        while idx < len(word):
+            if word[idx] == word[length]:
+                length += 1
+                lps[idx] = length
+                idx += 1
+            elif length != 0:
+                length = lps[length - 1]
+            else:
+                lps[idx] = 0
+                idx += 1
+
+        pattern = len(word) - length
+        if pattern == 0:
+            return "", 0, 0
+        return word[:pattern], len(word) // pattern, len(word) % pattern
+
+    def trim(word_a, word_b):
+        prefix = len(commonprefix([word_a, word_b]))
+        suffix = len(commonprefix([word_a[prefix:][::-1], word_b[prefix:][::-1]]))
+        return prefix, suffix
+
+    def hgvs(variant, reference):
+        # FIXME: Ultimately this code should be merge with `to_hgvs` from Variant
+        deleted = reference[variant.start:variant.end]
+        deleted_unit, deleted_number, deleted_remainder = repeats(deleted)
+        inserted_unit, inserted_number, inserted_remainder = repeats(variant.sequence)
+
+        if deleted_unit == inserted_unit:
+            if deleted_number == inserted_number:
+                raise ValueError("empty variant")
+            if deleted_remainder == inserted_remainder:
+                if inserted_number == 0:
+                    raise NotImplementedError("deletion")
+                if deleted_number == 1 and inserted_number == 2:
+                    if len(inserted_unit) == 1:
+                        return f"{variant.start + 1 + inserted_remainder}dup"
+                    return f"{variant.start + 1 + inserted_remainder}_{variant.start + inserted_remainder + len(inserted_unit)}dup"
+
+                if variant.end - variant.start == 1:
+                    return f"{variant.start + 1}{inserted_unit}[{inserted_number}]"
+                return f"{variant.start + 1}_{variant.end - inserted_remainder}{inserted_unit}[{inserted_number}]"
+            raise NotImplementedError("unknown repeat")
+
+        start, end = trim(deleted, variant.sequence)
+        if inserted_number > 1:
+            if inserted_remainder > 0:
+                if variant.start == variant.end:
+                    return f"{variant.start}_{variant.start + 1}ins[{inserted_unit}[{inserted_number}];{inserted_unit[:inserted_remainder]}]"
+                raise NotImplementedError("imperfect repeated insertion")
+            if variant.start == variant.end:
+                return f"{variant.start}_{variant.start + 1}ins{inserted_unit}[{inserted_number}]"
+            return f"{variant.start + 1}_{variant.end}delins{inserted_unit}[{inserted_number}]"
+
+        return Variant(variant.start + start, variant.end - end, variant.sequence[start:len(variant.sequence) - end]).to_hgvs(reference)
+
+    if not variants:
+        return "="
+
+    if len(variants) == 1:
+        return hgvs(variants[0], reference)
+
+    return f"[{';'.join([hgvs(variant, reference) for variant in variants])}]"

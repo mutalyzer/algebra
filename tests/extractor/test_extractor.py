@@ -1,48 +1,50 @@
 import pytest
-
-from algebra.extractor import extract
-from algebra.variants import parse_hgvs, patch
-
-variants = [
-    ("CATATAGT CATAGAT", "5_7delinsGA"),
-    ("CTAA TTA", "1_3delinsTT"),  # - with equals inside
-    ("CTAACG TTACC", "1_6delinsTTACC"),  # - with equals inside
-    ("CTTTG CTATTTT", "3_5delinsATTTT"),  # - with consecutive equals inside
-    ("GCCTT GCAGCCCAT", "3_4delinsAGCCCA"),  # - with consecutive equals inside
-    ("AGGTA AAGAAGGGGA", "2_4delinsAGAAGGGG"),  # - with consecutive equals inside
-    ("TTGTA TTTGTGTT", "3_5delinsTGTGTT"),  # - with consecutive equals inside
-    (
-        "ACTAA ACGCCTATTAAATAAA",
-        "3delinsGCCTATTAAATA",
-    ),  # - with consecutive equals inside
-    (
-        "CAGGG AACTCAGGTAGGGTTAGAT",
-        "1_5delinsAACTCAGGTAGGGTTAGAT",
-    ),  # - with three consecutive equals inside
-    (
-        "CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACG CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACG",
-        "[9G>A;19_24T[7];31_34delinsGGTT]",
-    ),  # - complex component
-    (
-        "CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACGTTCGTCCATGATACAGAGTATGCGCAATTCC CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACGATCGTCCATGGCACGGGTATGCGCGCAATTGC",
-        "[9G>A;19_24T[7];31_34delinsGGTT;41T>A;51_57delinsGCACGG;62_65GC[3];70C>G]",
-    ),  # - complex component
-    ("GTGCCCTAAGGGAT GAGCCTTAGGGCT", "[2T>A;6_8delinsTT;13A>C]"),
-    ("TCATCAT TCAT", "2_7CAT[1]"),
-    ("CATCAT CAT", "1_6CAT[1]"),
-    ("CATCAT TCAT", "1_2del"),
-]
+from algebra.extractor import extract, to_hgvs
+from algebra import Variant
 
 
-@pytest.mark.parametrize("sequences, expected", variants)
-def test_observed(sequences, expected):
-    reference, observed = sequences.split(" ")
-    new_variants = extract(reference, observed)
-
-    assert patch(reference, parse_hgvs(new_variants)) == observed
-
-
-@pytest.mark.parametrize("sequences, expected", variants)
-def test_variants(sequences, expected):
-    reference, observed = sequences.split(" ")
-    assert extract(reference, observed) == expected
+@pytest.mark.parametrize("reference, observed, variants, hgvs", [
+    ("CATCAT", "CATCAGGGGGGGT", [Variant(5, 5, "GGGGGGG")], "5_6insG[7]"),
+    ("CATCA", "CATCAGGGGGGG", [Variant(5, 5, "GGGGGGG")], "5_6insG[7]"),
+    ("CATCAT", "CATCATCAT", [Variant(0, 6, "CATCATCAT")], "1_6CAT[3]"),
+    ("CATCAT", "CATCATCATCAT", [Variant(0, 6, "CATCATCATCAT")], "1_6CAT[4]"),
+    ("AA", "AAA", [Variant(0, 2, "AAA")], "1_2A[3]"),
+    ("AA", "AAAA", [Variant(0, 2, "AAAA")], "1_2A[4]"),
+    ("CATCAT", "CAT", [Variant(0, 6, "CAT")], "1_6CAT[1]"),
+    ("CATCAT", "", [Variant(0, 6, "")], "1_6del"),
+    ("", "CATCAT", [Variant(0, 0, "CATCAT")], "0_1insCAT[2]"),
+    ("CATCATC", "CATCATCATC", [Variant(0, 7, "CATCATCATC")], "1_6CAT[3]"),
+    ("CATCA", "CATCATCAT", [Variant(5, 5, "TCAT")], "5_6insTCAT"),
+    ("ATCAT", "CATCATCAT", [Variant(0, 0, "CATC")], "0_1insCATC"),
+    ("TT", "TATT", [Variant(0, 1, "TAT")], "1_2insAT"),
+    ("TATT", "TT", [Variant(0, 3, "T")], "2_3del"),
+    ("CTTTG", "CTATTTT", [Variant(1, 5, "TATTTT")], "3_5delinsATTTT"),
+    ("TTT", "T", [Variant(0, 3, "T")], "1_3T[1]"),
+    ("TT", "T", [Variant(0, 2, "T")], "1_2T[1]"),
+    ("T", "TTT", [Variant(0, 1, "TTT")], "1T[3]"),
+    ("AAA", "AAAA", [Variant(0, 3, "AAAA")], "1_3A[4]"),
+    ("AAA", "AAAAA", [Variant(0, 3, "AAAAA")], "1_3A[5]"),
+    ("AAA", "AAAAAA", [Variant(0, 3, "AAAAAA")], "1_3A[6]"),
+    ("AAA", "AAAAAAA", [Variant(0, 3, "AAAAAAA")], "1_3A[7]"),
+    ("CATATATATC", "CATATC", [Variant(1, 9, "ATAT")], "2_9AT[2]"),
+    ("CATATATATC", "CATATATC", [Variant(1, 9, "ATATAT")], "2_9AT[3]"),
+    ("CATATATC", "CATATATATC", [Variant(1, 7, "ATATATAT")], "2_7AT[4]"),
+    ("CATC", "CATATC", [Variant(1, 3, "ATAT")], "2_3dup"),
+    ("CATATC", "CC", [Variant(1, 5, "")], "2_5del"),
+    ("CC", "CATATC", [Variant(1, 1, "ATAT")], "1_2insAT[2]"),
+    ("TCAT", "TCATCAT", [Variant(0, 4, "TCATCAT")], "2_4dup"),
+    ("TCATCAT", "TCAT", [Variant(0, 7, "TCAT")], "1_6TCA[1]"),
+    ("CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACGTTCGTCCATGATACAGAGTATGCGCAATTCC",
+     "CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACGATCGTCCATGGCACGGGTATGCGCGCAATTGC",
+     [Variant(8, 9, "A"), Variant(18, 24, "TTTTTTT"), Variant(29, 35, "GGGTTC"), Variant(40, 41, "A"), Variant(50, 57, "GCACGG"), Variant(61, 65, "GCGCGC"), Variant(69, 70, "G")],
+     "[9G>A;19_24T[7];31_34delinsGGTT;41T>A;51_57delinsGCACGG;62_65GC[3];70C>G]"),
+    ("TCATCA", "CATCATCAT", [Variant(0, 0, "CA"), Variant(6, 6, "T")], "[0_1insCA;6_7insT]"),
+    ("TCATCATC", "CATCATCAT", [Variant(0, 8, "CATCATCAT")], "1_8delinsCAT[3]"),
+    ("CATCA", "CATCATCATCATCATCAT", [Variant(5, 5, "TCATCATCATCAT")], "5_6ins[TCA[4];T]"),
+    ("CATCAT", "CATCATCATCATC", [Variant(6, 6,  "CATCATC")], "6_7ins[CAT[2];C]"),
+    ("CATCAT", "CATCATCATCATCA", [Variant(6, 6,  "CATCATCA")], "6_7ins[CAT[2];CA]"),
+])
+def test_extract(reference, observed, variants, hgvs):
+    canonical = list(extract(reference, observed))
+    assert canonical == variants
+    assert to_hgvs(canonical, reference) == hgvs

@@ -2,7 +2,8 @@
 
 
 from .parser import parse_hgvs, parse_spdi
-from .variant import DNA_NUCLEOTIDES, Variant, patch, reverse_complement, to_hgvs
+from .variant import (DNA_NUCLEOTIDES, Variant, patch, reverse_complement,
+                      to_hgvs)
 
 
 __all__ = [
