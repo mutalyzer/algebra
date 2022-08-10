@@ -4,7 +4,10 @@ from algebra.extractor import extract, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
+    ("CATATAGT", "CATAGAT", [Variant(1, 7, "ATAGA")], "5_7delinsGA"),
     ("CGC", "CATATATC", [Variant(1, 2, "ATATAT")], "2delinsAT[3]"),
+    ("CGC", "CATATAC", [Variant(1, 2, "ATATA")], "2delins[AT[2];A]"),
+    ("CGGC", "CATATAC", [Variant(1, 3, "ATATA")], "2_3delins[AT[2];A]"),
     ("CAT", "CAT", [], "="),
     ("TA", "TAA", [Variant(1, 2, "AA")], "2dup"),
     ("CATCAT", "CATCAGGGGGGGT", [Variant(5, 5, "GGGGGGG")], "5_6insG[7]"),
