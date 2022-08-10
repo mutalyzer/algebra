@@ -163,6 +163,8 @@ def to_hgvs(variants, reference):
                 raise NotImplementedError("imperfect repeated insertion")
             if variant.start == variant.end:
                 return f"{variant.start}_{variant.start + 1}ins{inserted_unit}[{inserted_number}]"
+            if variant.end - variant.start == 1:
+                return f"{variant.start + 1}delins{inserted_unit}[{inserted_number}]"
             return f"{variant.start + 1}_{variant.end}delins{inserted_unit}[{inserted_number}]"
 
         start, end = trim(deleted, variant.sequence)
