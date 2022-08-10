@@ -55,12 +55,6 @@ def parse_hgvs(expression, reference=None):
         pos += len(word)
         return word
 
-    def match_optional(word):
-        try:
-            return match(word) == word
-        except ValueError:
-            return False
-
     def match_plus(predicate, label=None):
         nonlocal pos
         if pos >= len(expression):
@@ -72,6 +66,12 @@ def parse_hgvs(expression, reference=None):
         while pos < len(expression) and predicate(expression[pos]):
             pos += 1
         return expression[start:pos]
+
+    def match_optional(word):
+        try:
+            return match(word) == word
+        except ValueError:
+            return False
 
     def match_number():
         return int(match_plus(lambda ch: ch.isdigit(), "digit"))
@@ -147,7 +147,7 @@ def parse_hgvs(expression, reference=None):
             sequence = ""
 
         if match_optional(">"):
-            if len(sequence):
+            if sequence:
                 if len(sequence) != end - start:
                     raise ValueError(f"inconstistent deletion length at {ctx_pos + 1}")
                 if reference is not None and sequence != reference[start:end]:
