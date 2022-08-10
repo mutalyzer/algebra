@@ -93,7 +93,7 @@ def extractor(observed, root):
             sink = node
             print("sink", node, file=stderr)
 
-        for succ, edge in node.edges:
+        for succ, edge in reversed(node.edges):
             if not edge:
                 lower.append((succ, node, edge))
                 print("push lower", succ, file=stderr)
