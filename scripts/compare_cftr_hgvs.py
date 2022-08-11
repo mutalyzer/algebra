@@ -1,12 +1,11 @@
-import argparse
+from argparse import ArgumentParser
+from sys import stderr
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare the HGVS descriptions of algebra and NCBI")
-    parser.add_argument("--refseq-id", required=True, type=str, help="RefSeq identifier")
+    parser = ArgumentParser(description="Compare the HGVS descriptions of algebra and NCBI")
     parser.add_argument("--ncbi", required=True, type=str, help="Path to the NCBI file")
     parser.add_argument("--alg", required=True, type=str, help="Path to the algebra file")
-
     args = parser.parse_args()
 
     descriptions_ncbi = {}
@@ -35,19 +34,20 @@ def main():
             if ncbi == alg:
                 common += 1
             elif "del" in ncbi and "ins" not in ncbi and "del" not in alg and "ins" not in alg and "[" in alg:
-                # print(description_spdi, ncbi, alg)
+                print(description_spdi, ncbi, alg)
                 del_repeat += 1
             elif "dup" in ncbi and "del" not in alg and "ins" not in alg and "[" in alg:
-                # print(description_spdi, ncbi, alg)
+                print(description_spdi, ncbi, alg)
                 dup_repeat += 1
             else:
                 print(description_spdi, ncbi, alg)
                 other += 1
-    print("\n--------\n")
-    print(f"common: {common}")
-    print(f"del_repeat: {del_repeat}")
-    print(f"dup_repeat: {dup_repeat}")
-    print(f"other: {other}")
+
+    print("\n--------\n", file=stderr)
+    print(f"common: {common}", file=stderr)
+    print(f"del_repeat: {del_repeat}", file=stderr)
+    print(f"dup_repeat: {dup_repeat}", file=stderr)
+    print(f"other: {other}", file=stderr)
 
 
 if __name__ == "__main__":
