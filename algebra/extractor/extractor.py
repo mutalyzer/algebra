@@ -50,7 +50,6 @@ def canonical(observed, root):
             lower = upper
             upper = []
             distance += 1
-            print("switch", distance, file=stderr)
 
         node, parent, variant = lower.pop(0)
         if node.pre_edges:
