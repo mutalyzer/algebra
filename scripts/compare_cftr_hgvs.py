@@ -58,9 +58,7 @@ def check_dup_repeat(ncbi, alg):
 
 
 def main():
-    parser = ArgumentParser(
-        description="Compare the HGVS descriptions of algebra and NCBI"
-    )
+    parser = ArgumentParser(description="Compare the HGVS descriptions of algebra and NCBI")
     parser.add_argument("--ncbi", required=True, type=str, help="Path to the NCBI file")
     parser.add_argument("--alg", required=True, type=str, help="Path to the algebra file")
     parser.add_argument("--fasta", required=True, type=str, help="Path to the fasta reference file")
@@ -97,28 +95,25 @@ def main():
             ncbi = descriptions_ncbi[description_spdi]
             alg = descriptions_alg[description_spdi]
             if ncbi == alg:
-                summary["common"][description_spdi] = (ncbi, alg)
+                summary["common"][description_spdi] = ncbi, alg
+            elif check_del_repeat(ncbi, alg):
+                summary["del_repeat"][description_spdi] = ncbi, alg
+            elif check_dup_repeat(ncbi, alg):
+                summary["dup_repeat"][description_spdi] = ncbi, alg
+            elif check_ins_repeat(ncbi, alg):
+                summary["ins_repeat"][description_spdi] = ncbi, alg
+            elif check_ins_ins(ncbi, alg):
+                summary["ins_ins"][description_spdi] = ncbi, alg
+            elif check_repeat_repeat(ncbi, alg, reference):
+                summary["repeat_repeat"][description_spdi] = ncbi, alg
             else:
-                print(description_spdi, ncbi, alg)
-                if check_del_repeat(ncbi, alg):
-                    summary["del_repeat"][description_spdi] = (ncbi, alg)
-                elif check_dup_repeat(ncbi, alg):
-                    summary["dup_repeat"][description_spdi] = (ncbi, alg)
-                elif check_ins_repeat(ncbi, alg):
-                    summary["ins_repeat"][description_spdi] = (ncbi, alg)
-                elif check_ins_ins(ncbi, alg):
-                    summary["ins_ins"][description_spdi] = (ncbi, alg)
-                elif check_repeat_repeat(ncbi, alg, reference):
-                    summary["repeat_repeat"][description_spdi] = (ncbi, alg)
-                else:
-                    summary["other"][description_spdi] = (ncbi, alg)
+                summary["other"][description_spdi] = ncbi, alg
 
     for case in summary:
         print(f"{case}: {len(summary[case])}", file=stderr)
-    for case in summary:
         if case != "common":
             for d in summary[case]:
-                print(d, case, summary[case][d][0], summary[case][d][1])
+                print(d, case, *summary[case][d])
 
 
 if __name__ == "__main__":
