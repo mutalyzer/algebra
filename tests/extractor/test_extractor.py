@@ -65,3 +65,13 @@ def test_extract(reference, observed, variants, hgvs):
     canonical = list(extract(reference, observed))
     assert canonical == variants
     assert to_hgvs(canonical, reference) == hgvs
+
+
+@pytest.mark.parametrize("reference, variants, exception, message", [
+    ("", [Variant(0, 0, "")], ValueError, "empty variant"),
+    ("ATAT", [Variant(0, 4, "ATATA")], NotImplementedError, "unknown repeat"),
+])
+def test_to_hgvs(reference, variants, exception, message):
+    with pytest.raises(exception) as exc:
+        to_hgvs(variants, reference)
+    assert str(exc.value) == message
