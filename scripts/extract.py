@@ -1,9 +1,10 @@
 from argparse import ArgumentParser
 from sys import stdin
-from algebra.extractor import extract_supremal
+from algebra import Variant
+from algebra.extractor import extract_supremal, to_hgvs
 from algebra.relations.supremal_based import find_supremal
 from algebra.utils import fasta_sequence
-from algebra.variants import parse_spdi
+from algebra.variants import parse_spdi, to_hgvs as to_hgvs_simple
 
 
 def main():
@@ -18,11 +19,14 @@ def main():
     for line in stdin:
         spdi = line.strip()
         variant = parse_spdi(spdi)[0]
+        print(spdi, variant, end=" ", flush=True)
+        if variant == Variant(117642410, 117643194, "AGT") or variant == Variant(117664686, 117665566, "GGT"):
+            print("skipped")
+            continue
         supremal = find_supremal(reference, variant)
+        print(supremal, end=" ", flush=True)
         canonical = list(extract_supremal(reference, supremal))
-
-        print(spdi, variant, supremal, canonical)
-        return
+        print(to_hgvs_simple([variant], reference), to_hgvs(canonical, reference))
 
 
 if __name__ == "__main__":
