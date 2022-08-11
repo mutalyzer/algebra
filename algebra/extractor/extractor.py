@@ -55,7 +55,6 @@ def canonical(observed, root):
             distance += 1
             print("switch", distance, file=stderr)
 
-
         node, parent, variant = lower.pop(0)
         if node.pre_edges:
             if node.length == distance:
@@ -114,6 +113,12 @@ def extract(reference, observed):
     _, lcs_nodes = edit(reference, observed)
     root, _ = lcs_graph(reference, observed, lcs_nodes)
     return canonical(observed, root)
+
+
+def extract_supremal(reference, supremal):
+    """Extract the canonical variant representation (allele) for a
+    supremal variant."""
+    return [Variant(supremal.start + variant.start, supremal.start + variant.end, variant.sequence) for variant in extract(reference[supremal.start:supremal.end], supremal.sequence)]
 
 
 def to_hgvs(variants, reference):
