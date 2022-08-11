@@ -142,24 +142,27 @@ def to_hgvs(variants, reference):
 
     def hgvs(variant, reference):
         # FIXME: Ultimately this code should be merge with `to_hgvs` from Variant
-        deleted = reference[variant.start:variant.end]
-        deleted_unit, deleted_number, deleted_remainder = repeats(deleted)
         inserted_unit, inserted_number, inserted_remainder = repeats(variant.sequence)
 
+        deleted = reference[variant.start:variant.end]
+        if deleted and deleted == inserted_unit:
+            deleted_unit = inserted_unit
+            deleted_number = 1
+        else:
+            deleted_unit, deleted_number, _ = repeats(deleted)
+
         if deleted_unit == inserted_unit:
-            if deleted_remainder == inserted_remainder:
-                if deleted_number == inserted_number:
-                    raise ValueError("empty variant")
+            if deleted_number == inserted_number:
+                raise ValueError("empty variant")
 
-                if deleted_number == 1 and inserted_number == 2:
-                    if len(inserted_unit) == 1:
-                        return f"{variant.start + 1 + inserted_remainder}dup"
-                    return f"{variant.start + 1 + inserted_remainder}_{variant.start + inserted_remainder + len(inserted_unit)}dup"
+            if deleted_number == 1 and inserted_number == 2:
+                if len(inserted_unit) == 1:
+                    return f"{variant.start + 1 + inserted_remainder}dup"
+                return f"{variant.start + 1 + inserted_remainder}_{variant.start + inserted_remainder + len(inserted_unit)}dup"
 
-                if variant.end - variant.start == 1:
-                    return f"{variant.start + 1}{inserted_unit}[{inserted_number}]"
-                return f"{variant.start + 1}_{variant.end - inserted_remainder}{inserted_unit}[{inserted_number}]"
-            raise NotImplementedError("unknown repeat")
+            if variant.end - variant.start == 1:
+                return f"{variant.start + 1}{inserted_unit}[{inserted_number}]"
+            return f"{variant.start + 1}_{variant.end - inserted_remainder}{inserted_unit}[{inserted_number}]"
 
         if inserted_number > 1:
             if inserted_remainder > 0:

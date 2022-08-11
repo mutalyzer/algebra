@@ -4,6 +4,7 @@ from algebra.extractor import extract, extract_supremal, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
+    ("AAGTCTCATGGCTATTTGCA", "AAGTCTCATGGCTATATGGCTATTTGCA", [Variant(7, 15, "ATGGCTATATGGCTAT")], "8_15dup"),
     ("ATAT", "ATATATATA", [Variant(4, 4, "ATATA")], "4_5ins[AT[2];A]"),
     ("CAAAAAA", "TTTTTTG", [Variant(0, 7, "TTTTTTG")], "1_7inv"),
     ("AACTCAGGTAGGGTTAGAT", "CAGGG", [Variant(0, 19, "CAGGG")], "1_19delinsCAGGG"),
@@ -79,9 +80,8 @@ def test_extract_supremal(reference, supremal, variants, hgvs):
 
 @pytest.mark.parametrize("reference, variants, exception, message", [
     ("", [Variant(0, 0, "")], ValueError, "empty variant"),
-    ("ATAT", [Variant(0, 4, "ATATATATA")], NotImplementedError, "unknown repeat"),
 ])
-def test_to_hgvs(reference, variants, exception, message):
+def test_to_hgvs_fail(reference, variants, exception, message):
     with pytest.raises(exception) as exc:
-        to_hgvs(variants, reference)
+        print(to_hgvs(variants, reference))
     assert str(exc.value) == message
