@@ -5,6 +5,32 @@ from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs
 
 
+def check_ins_ins(ncbi, alg):
+    if (
+        "ins" in ncbi
+        and "del" not in ncbi
+        and "ins" in alg
+        and "del" not in alg
+        and "[" in alg
+    ):
+        return True
+    else:
+        return False
+
+
+def check_ins_repeat(ncbi, alg):
+    if (
+        "ins" in ncbi
+        and "del" not in ncbi
+        and "del" not in alg
+        and "ins" not in alg
+        and "[" in alg
+    ):
+        return True
+    else:
+        return False
+
+
 def check_repeat_repeat(ncbi, alg, reference):
     if (
         "dup" not in ncbi
@@ -71,6 +97,8 @@ def main():
         "common": {},
         "del_repeat": {},
         "dup_repeat": {},
+        "ins_repeat": {},
+        "ins_ins": {},
         "repeat_repeat": {},
         "other": {},
     }
@@ -88,6 +116,10 @@ def main():
                     summary["del_repeat"][description_spdi] = (ncbi, alg)
                 elif check_dup_repeat(ncbi, alg):
                     summary["dup_repeat"][description_spdi] = (ncbi, alg)
+                elif check_ins_repeat(ncbi, alg):
+                    summary["ins_repeat"][description_spdi] = (ncbi, alg)
+                elif check_ins_ins(ncbi, alg):
+                    summary["ins_ins"][description_spdi] = (ncbi, alg)
                 elif check_repeat_repeat(ncbi, alg, reference):
                     summary["repeat_repeat"][description_spdi] = (ncbi, alg)
                 else:
