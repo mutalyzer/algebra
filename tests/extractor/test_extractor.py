@@ -1,6 +1,6 @@
 import pytest
 from algebra import Variant
-from algebra.extractor import extract, to_hgvs
+from algebra.extractor import extract, extract_supremal, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
@@ -64,6 +64,15 @@ from algebra.extractor import extract, to_hgvs
 ])
 def test_extract(reference, observed, variants, hgvs):
     canonical = list(extract(reference, observed))
+    assert canonical == variants
+    assert to_hgvs(canonical, reference) == hgvs
+
+
+@pytest.mark.parametrize("reference, supremal, variants, hgvs", [
+    ("GTGTGTTTTTTTAACAGGGA", Variant(5, 12, "TATAT"), [Variant(6, 11, "ATA")], "7_11delinsATA"),
+])
+def test_extract_supremal(reference, supremal, variants, hgvs):
+    canonical = list(extract_supremal(reference, supremal))
     assert canonical == variants
     assert to_hgvs(canonical, reference) == hgvs
 
