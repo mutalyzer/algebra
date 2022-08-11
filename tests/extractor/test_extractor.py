@@ -4,6 +4,10 @@ from algebra.extractor import extract, extract_supremal, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
+    # FIXME:
+    # ("AGTGCTTTGTTTTGTTATAATTAAC", "AGTGCTTTGTTATAATTAAC", [Variant(5, 16, "TTTGTT")], "?"),
+
+    ("ATTTCCCACTGAAAAATAAATCCCACCGGGC", "ATTTCCACCGGGC", [Variant(4, 24, "CC")], "7_24del"),
     ("AAGTCTCATGGCTATTTGCA", "AAGTCTCATGGCTATATGGCTATTTGCA", [Variant(7, 15, "ATGGCTATATGGCTAT")], "8_15dup"),
     ("ATAT", "ATATATATA", [Variant(4, 4, "ATATA")], "4_5ins[AT[2];A]"),
     ("CAAAAAA", "TTTTTTG", [Variant(0, 7, "TTTTTTG")], "1_7inv"),
