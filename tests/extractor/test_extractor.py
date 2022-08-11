@@ -4,6 +4,7 @@ from algebra.extractor import extract, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
+    ("ATAT", "ATATATATA", [Variant(4, 4, "ATATA")], "4_5ins[AT[2];A]"),
     ("CAAAAAA", "TTTTTTG", [Variant(0, 7, "TTTTTTG")], "1_7inv"),
     ("AACTCAGGTAGGGTTAGAT", "CAGGG", [Variant(0, 19, "CAGGG")], "1_19delinsCAGGG"),
     ("CAGGG", "AACTCAGGTAGGGTTAGAT", [Variant(0, 5, "AACTCAGGTAGGGTTAGAT")], "1_5delinsAACTCAGGTAGGGTTAGAT"),
@@ -69,7 +70,7 @@ def test_extract(reference, observed, variants, hgvs):
 
 @pytest.mark.parametrize("reference, variants, exception, message", [
     ("", [Variant(0, 0, "")], ValueError, "empty variant"),
-    ("ATAT", [Variant(0, 4, "ATATA")], NotImplementedError, "unknown repeat"),
+    ("ATAT", [Variant(0, 4, "ATATATATA")], NotImplementedError, "unknown repeat"),
 ])
 def test_to_hgvs(reference, variants, exception, message):
     with pytest.raises(exception) as exc:
