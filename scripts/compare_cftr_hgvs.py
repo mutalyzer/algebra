@@ -1,38 +1,31 @@
 from argparse import ArgumentParser
 from sys import stderr
-
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs
 
 
 def check_ins_ins(ncbi, alg):
-    if (
+    return (
         "ins" in ncbi
         and "del" not in ncbi
         and "ins" in alg
         and "del" not in alg
         and "[" in alg
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def check_ins_repeat(ncbi, alg):
-    if (
+    return (
         "ins" in ncbi
         and "del" not in ncbi
         and "del" not in alg
         and "ins" not in alg
         and "[" in alg
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def check_repeat_repeat(ncbi, alg, reference):
-    if (
+    return (
         "dup" not in ncbi
         and "del" not in ncbi
         and "ins" not in ncbi
@@ -42,30 +35,26 @@ def check_repeat_repeat(ncbi, alg, reference):
         and ncbi.count("[") == 1
         and alg.count("[") == 1
         and parse_hgvs(ncbi, reference) == parse_hgvs(alg, reference)
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def check_del_repeat(ncbi, alg):
-    if (
+    return (
         "del" in ncbi
         and "ins" not in ncbi
         and "del" not in alg
         and "ins" not in alg
         and "[" in alg
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def check_dup_repeat(ncbi, alg):
-    if "dup" in ncbi and "del" not in alg and "ins" not in alg and "[" in alg:
-        return True
-    else:
-        return False
+    return (
+        "dup" in ncbi
+        and "del" not in alg
+        and "ins" not in alg
+        and "[" in alg
+    )
 
 
 def main():
@@ -107,7 +96,6 @@ def main():
         if description_spdi in descriptions_alg:
             ncbi = descriptions_ncbi[description_spdi]
             alg = descriptions_alg[description_spdi]
-            print(description_spdi, ncbi, alg)
             if ncbi == alg:
                 summary["common"][description_spdi] = (ncbi, alg)
             else:
@@ -129,9 +117,8 @@ def main():
         print(f"{case}: {len(summary[case])}", file=stderr)
     for case in summary:
         if case != "common":
-            print(f"\n{case}\n-----\n", file=stderr)
             for d in summary[case]:
-                print(d, summary[case][d][0], summary[case][d][1], file=stderr)
+                print(d, case, summary[case][d][0], summary[case][d][1])
 
 
 if __name__ == "__main__":
