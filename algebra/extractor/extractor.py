@@ -7,10 +7,10 @@ from sys import stderr
 
 from os.path import commonprefix
 from ..lcs import edit, lcs_graph
-from ..variants import Variant
+from ..variants import Variant, reverse_complement
 
 
-def extractor(observed, root):
+def canonical(observed, root):
     """Traverse (BFS) the LCS graph to extract the canonical variant,
     i.e., minimize the number separate variants within an allele.
 
@@ -113,7 +113,7 @@ def extract(reference, observed):
     reference and observed sequence."""
     _, lcs_nodes = edit(reference, observed)
     root, _ = lcs_graph(reference, observed, lcs_nodes)
-    return extractor(observed, root)
+    return canonical(observed, root)
 
 
 def to_hgvs(variants, reference):
@@ -182,8 +182,12 @@ def to_hgvs(variants, reference):
             return f"{variant.start + 1}_{variant.end}delins{inserted_unit}[{inserted_number}]"
 
         start, end = trim(deleted, variant.sequence)
-        # TODO: reverse complement?
-        return Variant(variant.start + start, variant.end - end, variant.sequence[start:len(variant.sequence) - end]).to_hgvs(reference)
+        sequence = variant.sequence[start:len(variant.sequence) - end]
+
+        if len(sequence) > 1 and sequence == reverse_complement(reference[variant.start + start:variant.end - end]):
+            return f"{variant.start + 1}_{variant.end}inv"
+
+        return Variant(variant.start + start, variant.end - end, sequence).to_hgvs(reference)
 
     if not variants:
         return "="
