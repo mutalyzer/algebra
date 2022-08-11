@@ -2,9 +2,6 @@
 LCS alignments with support for tandem repeats and complex variants."""
 
 
-# FIXME: DEBUG
-from sys import stderr
-
 from os.path import commonprefix
 from ..lcs import edit, lcs_graph
 from ..variants import Variant, reverse_complement
@@ -79,26 +76,19 @@ def canonical(observed, root):
 
                 delins = [Variant(start, end, observed[lca.col + start_offset:node.col + end_offset])]
                 node.pre_edges = lca, delins
-                print("complex", node, pred, edge, parent, variant, lca, delins, file=stderr)
-            else:
-                print("pop", node, distance, file=stderr)
             continue
 
         node.pre_edges = parent, variant
         node.length = distance
-        print("visit", node, parent, variant, file=stderr)
 
         if not node.edges:
             sink = node
-            print("sink", node, file=stderr)
 
         for succ, edge in reversed(node.edges):
             if not edge:
                 lower.append((succ, node, edge))
-                print("push lower", succ, file=stderr)
             else:
                 upper.append((succ, node, edge))
-                print("push upper", succ, file=stderr)
 
     variants = []
     while sink:
