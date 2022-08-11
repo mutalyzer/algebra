@@ -138,14 +138,14 @@ def to_hgvs(variants, reference):
         suffix = len(commonprefix([word_a[prefix:][::-1], word_b[prefix:][::-1]]))
         return prefix, suffix
 
-    def hgvs(variant, reference):
-        def to_hgvs_position(start, end):
-            if end - start == 1:
-                return f"{start + 1}"
-            if start == end:
-                return f"{start}_{start + 1}"
-            return f"{start + 1}_{end}"
+    def to_hgvs_position(start, end):
+        if end - start == 1:
+            return f"{start + 1}"
+        if start == end:
+            return f"{start}_{start + 1}"
+        return f"{start + 1}_{end}"
 
+    def hgvs(variant, reference):
         # FIXME: Ultimately this code should be merge with `to_hgvs` from Variant
         inserted_unit, inserted_number, inserted_remainder = repeats(variant.sequence)
 
@@ -164,6 +164,13 @@ def to_hgvs(variants, reference):
                 return f"{to_hgvs_position(variant.start + inserted_remainder, variant.start + inserted_remainder + len(inserted_unit))}dup"
             return f"{to_hgvs_position(variant.start, variant.end - inserted_remainder)}{inserted_unit}[{inserted_number}]"
 
+        start, end = trim(deleted, variant.sequence)
+        sequence = variant.sequence[start:len(variant.sequence) - end]
+        if not sequence:
+            return Variant(variant.start + start, variant.end - end, "").to_hgvs(reference)
+        if len(sequence) > 1 and sequence == reverse_complement(reference[variant.start + start:variant.end - end]):
+            return f"{to_hgvs_position(variant.start, variant.end)}inv"
+
         if inserted_number > 1:
             suffix = f"{inserted_unit}[{inserted_number}]"
             if inserted_remainder:
@@ -172,12 +179,6 @@ def to_hgvs(variants, reference):
             if variant.start == variant.end:
                 return f"{to_hgvs_position(variant.start, variant.end)}ins{suffix}"
             return f"{to_hgvs_position(variant.start, variant.end)}delins{suffix}"
-
-        start, end = trim(deleted, variant.sequence)
-        sequence = variant.sequence[start:len(variant.sequence) - end]
-
-        if len(sequence) > 1 and sequence == reverse_complement(reference[variant.start + start:variant.end - end]):
-            return f"{to_hgvs_position(variant.start, variant.end)}inv"
 
         return Variant(variant.start + start, variant.end - end, sequence).to_hgvs(reference)
 
