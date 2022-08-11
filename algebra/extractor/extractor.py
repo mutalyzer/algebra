@@ -112,9 +112,7 @@ def extract_supremal(reference, supremal):
 
 def to_hgvs(variants, reference):
     """Experimental version of HGVS serialization with support for
-    tandem repeats and complex variants.
-    """
-
+    tandem repeats and complex variants."""
     def repeats(word):
         length = 0
         idx = 1
@@ -141,6 +139,13 @@ def to_hgvs(variants, reference):
         return prefix, suffix
 
     def hgvs(variant, reference):
+        def to_hgvs_position(start, end):
+            if end - start == 1:
+                return f"{start + 1}"
+            if start == end:
+                return f"{start}_{start + 1}"
+            return f"{start + 1}_{end}"
+
         # FIXME: Ultimately this code should be merge with `to_hgvs` from Variant
         inserted_unit, inserted_number, inserted_remainder = repeats(variant.sequence)
 
@@ -156,32 +161,23 @@ def to_hgvs(variants, reference):
                 raise ValueError("empty variant")
 
             if deleted_number == 1 and inserted_number == 2:
-                if len(inserted_unit) == 1:
-                    return f"{variant.start + 1 + inserted_remainder}dup"
-                return f"{variant.start + 1 + inserted_remainder}_{variant.start + inserted_remainder + len(inserted_unit)}dup"
-
-            if variant.end - variant.start == 1:
-                return f"{variant.start + 1}{inserted_unit}[{inserted_number}]"
-            return f"{variant.start + 1}_{variant.end - inserted_remainder}{inserted_unit}[{inserted_number}]"
+                return f"{to_hgvs_position(variant.start + inserted_remainder, variant.start + inserted_remainder + len(inserted_unit))}dup"
+            return f"{to_hgvs_position(variant.start, variant.end - inserted_remainder)}{inserted_unit}[{inserted_number}]"
 
         if inserted_number > 1:
-            if inserted_remainder > 0:
-                if variant.start == variant.end:
-                    return f"{variant.start}_{variant.start + 1}ins[{inserted_unit}[{inserted_number}];{inserted_unit[:inserted_remainder]}]"
-                if variant.end - variant.start == 1:
-                    return f"{variant.start + 1}delins[{inserted_unit}[{inserted_number}];{inserted_unit[:inserted_remainder]}]"
-                return f"{variant.start + 1}_{variant.end}delins[{inserted_unit}[{inserted_number}];{inserted_unit[:inserted_remainder]}]"
+            suffix = f"{inserted_unit}[{inserted_number}]"
+            if inserted_remainder:
+                suffix = f"[{suffix};{inserted_unit[:inserted_remainder]}]"
+
             if variant.start == variant.end:
-                return f"{variant.start}_{variant.start + 1}ins{inserted_unit}[{inserted_number}]"
-            if variant.end - variant.start == 1:
-                return f"{variant.start + 1}delins{inserted_unit}[{inserted_number}]"
-            return f"{variant.start + 1}_{variant.end}delins{inserted_unit}[{inserted_number}]"
+                return f"{to_hgvs_position(variant.start, variant.end)}ins{suffix}"
+            return f"{to_hgvs_position(variant.start, variant.end)}delins{suffix}"
 
         start, end = trim(deleted, variant.sequence)
         sequence = variant.sequence[start:len(variant.sequence) - end]
 
         if len(sequence) > 1 and sequence == reverse_complement(reference[variant.start + start:variant.end - end]):
-            return f"{variant.start + 1}_{variant.end}inv"
+            return f"{to_hgvs_position(variant.start, variant.end)}inv"
 
         return Variant(variant.start + start, variant.end - end, sequence).to_hgvs(reference)
 
