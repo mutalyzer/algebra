@@ -20,7 +20,13 @@ def main():
         spdi = line.strip()
         variant = parse_spdi(spdi)[0]
         print(spdi, variant, end=" ", flush=True)
-        if variant == Variant(117642410, 117643194, "AGT") or variant == Variant(117664686, 117665566, "GGT"):
+        to_skip = [
+            Variant(117642410, 117643194, "AGT"), # NC
+            Variant(181627, 182411, "AGT"), # NG
+            Variant(117664686, 117665566, "GGT"), # NC
+            Variant(203903, 204783, "GGT"), # NG
+        ]
+        if variant in to_skip:
             print("skipped")
             continue
         supremal = find_supremal(reference, variant)
