@@ -7,6 +7,7 @@ from algebra.extractor import extract, extract_supremal, to_hgvs
     # FIXME:
     # ("AGTGCTTTGTTTTGTTATAATTAAC", "AGTGCTTTGTTATAATTAAC", [Variant(5, 16, "TTTGTT")], "?"),
 
+    ("AAAGGGAGAGAAGACT", "AAAGGGAGAGACT", [Variant(8, 14, "AGA")], "9_13AGA[1]"),
     ("ATTTCCCACTGAAAAATAAATCCCACCGGGC", "ATTTCCACCGGGC", [Variant(4, 24, "CC")], "7_24del"),
     ("AAGTCTCATGGCTATTTGCA", "AAGTCTCATGGCTATATGGCTATTTGCA", [Variant(7, 15, "ATGGCTATATGGCTAT")], "8_15dup"),
     ("ATAT", "ATATATATA", [Variant(4, 4, "ATATA")], "4_5ins[AT[2];A]"),

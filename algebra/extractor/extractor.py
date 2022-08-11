@@ -156,6 +156,9 @@ def to_hgvs(variants, reference):
         else:
             deleted_unit, deleted_number, _ = repeats(deleted)
 
+        if variant.sequence and variant.sequence == deleted_unit:
+            inserted_unit = deleted_unit
+
         if deleted_unit == inserted_unit:
             if deleted_number == inserted_number:
                 raise ValueError("empty variant")
