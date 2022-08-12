@@ -83,7 +83,7 @@ def check_compound_repeat_(ncbi):
         "dup" not in ncbi
         and "del" not in ncbi
         and "ins" not in ncbi
-        and ncbi.count("[") == 2
+        and ncbi.count("[") > 1
     )
 
 
