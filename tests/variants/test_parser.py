@@ -91,6 +91,7 @@ def test_hgvs_parser_fail(expression, exception, message):
     ("TTGAGAGAGATT", "3GA[3]", [Variant(2, 10, "GAGAGA")]),
     ("AAA", "1delA", [Variant(0, 1, "")]),
     ("GGGG", "2_3invCC", [Variant(1, 3, "CC")]),
+    ("CAAAAC", "2_5A[8]", [Variant(1, 5, "AAAAAAAA")]),
 ])
 def test_hgvs_parser_with_reference(reference, expression, variants):
     assert parse_hgvs(expression, reference=reference) == variants
