@@ -1,7 +1,16 @@
 from argparse import ArgumentParser
 from sys import stderr
+
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs
+
+
+def is_del(d):
+    pass
+
+
+def is_substitution(d):
+    pass
 
 
 def check_ins_ins(ncbi, alg):
@@ -24,7 +33,7 @@ def check_ins_repeat(ncbi, alg):
     )
 
 
-def check_repeat_repeat(ncbi, alg, reference):
+def check_common_repeat_repeat(ncbi, alg, reference):
     return (
         "dup" not in ncbi
         and "del" not in ncbi
@@ -38,6 +47,37 @@ def check_repeat_repeat(ncbi, alg, reference):
     )
 
 
+def rotate(s, n):
+    while n > 0:
+        s = s[-1] + s[:-1]
+        n = n - 1
+    return s
+
+
+def check_rotated_repeat_repeat(ncbi, alg, reference):
+
+    if (
+        "dup" not in ncbi
+        and "del" not in ncbi
+        and "ins" not in ncbi
+        and "dup" not in alg
+        and "del" not in alg
+        and "ins" not in alg
+        and ncbi.count("[") == 1
+        and alg.count("[") == 1
+    ):
+        var_ncbi = parse_hgvs(ncbi, reference)[0]
+        var_alg = parse_hgvs(alg, reference)[0]
+        return (
+            var_ncbi.start > var_alg.start
+            and len(var_ncbi.sequence) == len(var_alg.sequence)
+            and var_alg.sequence
+            == rotate(var_ncbi.sequence, var_ncbi.start - var_alg.start)
+        )
+    else:
+        return False
+
+
 def check_del_repeat(ncbi, alg):
     return (
         "del" in ncbi
@@ -49,19 +89,20 @@ def check_del_repeat(ncbi, alg):
 
 
 def check_dup_repeat(ncbi, alg):
-    return (
-        "dup" in ncbi
-        and "del" not in alg
-        and "ins" not in alg
-        and "[" in alg
-    )
+    return "dup" in ncbi and "del" not in alg and "ins" not in alg and "[" in alg
 
 
 def main():
-    parser = ArgumentParser(description="Compare the HGVS descriptions of algebra and NCBI")
+    parser = ArgumentParser(
+        description="Compare the HGVS descriptions of algebra and NCBI"
+    )
     parser.add_argument("--ncbi", required=True, type=str, help="Path to the NCBI file")
-    parser.add_argument("--alg", required=True, type=str, help="Path to the algebra file")
-    parser.add_argument("--fasta", required=True, type=str, help="Path to the fasta reference file")
+    parser.add_argument(
+        "--alg", required=True, type=str, help="Path to the algebra file"
+    )
+    parser.add_argument(
+        "--fasta", required=True, type=str, help="Path to the fasta reference file"
+    )
     args = parser.parse_args()
 
     with open(args.fasta, encoding="utf-8") as file:
@@ -86,7 +127,8 @@ def main():
         "dup_repeat": {},
         "ins_repeat": {},
         "ins_ins": {},
-        "repeat_repeat": {},
+        "common_repeat_repeat": {},
+        "rotated_repeat_repeat": {},
         "other": {},
     }
 
@@ -104,16 +146,17 @@ def main():
                 summary["ins_repeat"][description_spdi] = ncbi, alg
             elif check_ins_ins(ncbi, alg):
                 summary["ins_ins"][description_spdi] = ncbi, alg
-            elif check_repeat_repeat(ncbi, alg, reference):
-                summary["repeat_repeat"][description_spdi] = ncbi, alg
+            elif check_common_repeat_repeat(ncbi, alg, reference):
+                summary["common_repeat_repeat"][description_spdi] = ncbi, alg
+            elif check_rotated_repeat_repeat(ncbi, alg, reference):
+                summary["rotated_repeat_repeat"][description_spdi] = ncbi, alg
             else:
                 summary["other"][description_spdi] = ncbi, alg
 
     for case in summary:
         print(f"{case}: {len(summary[case])}", file=stderr)
-        if case != "common":
-            for d in summary[case]:
-                print(d, case, *summary[case][d])
+        for d in summary[case]:
+            print(d, case, *summary[case][d])
 
 
 if __name__ == "__main__":
