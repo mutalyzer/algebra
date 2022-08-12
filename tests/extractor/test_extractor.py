@@ -26,6 +26,7 @@ from algebra.extractor import extract, extract_supremal, to_hgvs
     ("CTAACG", "TTACC", [Variant(0, 6, "TTACC")], "1_6delinsTTACC"),
     ("CTAA", "TTA", [Variant(0, 4, "TTA")], "1_3delinsTT"),
     ("CATATAGT", "CATAGAT", [Variant(1, 7, "ATAGA")], "5_7delinsGA"),
+    ("CGC", "CATC", [Variant(1, 2, "AT")], "2delinsAT"),
     ("CGC", "CATATATC", [Variant(1, 2, "ATATAT")], "2delinsAT[3]"),
     ("CGC", "CATATAC", [Variant(1, 2, "ATATA")], "2delins[AT[2];A]"),
     ("CGGC", "CATATAC", [Variant(1, 3, "ATATA")], "2_3delins[AT[2];A]"),
