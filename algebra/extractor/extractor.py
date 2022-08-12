@@ -155,13 +155,13 @@ def to_hgvs(variants, reference):
         # in agreement.
         diff = abs(len(deleted_unit) - len(inserted_unit))
         if (len(inserted_unit) < len(deleted_unit) and
-            inserted_remainder >= diff and
-            inserted_unit + inserted_unit[:diff] == deleted_unit):
-                inserted_unit = deleted_unit
+                inserted_remainder >= diff and
+                inserted_unit + inserted_unit[:diff] == deleted_unit):
+            inserted_unit = deleted_unit
         elif (len(deleted_unit) < len(inserted_unit) and
-              deleted_remainder >= diff and
-              deleted_unit + deleted_unit[:diff] == inserted_unit):
-                deleted_unit = inserted_unit
+                deleted_remainder >= diff and
+                deleted_unit + deleted_unit[:diff] == inserted_unit):
+            deleted_unit = inserted_unit
 
         # Repeat structure
         if deleted_unit == inserted_unit:
