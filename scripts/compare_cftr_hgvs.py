@@ -78,6 +78,15 @@ def check_rotated_repeat_repeat(ncbi, alg, reference):
         return False
 
 
+def check_compound_repeat_(ncbi):
+    return (
+        "dup" not in ncbi
+        and "del" not in ncbi
+        and "ins" not in ncbi
+        and ncbi.count("[") == 2
+    )
+
+
 def check_del_repeat(ncbi, alg):
     return (
         "del" in ncbi
@@ -129,6 +138,7 @@ def main():
         "ins_ins": {},
         "common_repeat_repeat": {},
         "rotated_repeat_repeat": {},
+        "compound_repeat_": {},
         "other": {},
     }
 
@@ -150,6 +160,8 @@ def main():
                 summary["common_repeat_repeat"][description_spdi] = ncbi, alg
             elif check_rotated_repeat_repeat(ncbi, alg, reference):
                 summary["rotated_repeat_repeat"][description_spdi] = ncbi, alg
+            elif check_compound_repeat_(ncbi):
+                summary["compound_repeat_"][description_spdi] = ncbi, alg
             else:
                 summary["other"][description_spdi] = ncbi, alg
 
