@@ -4,6 +4,7 @@ from algebra.extractor import extract, extract_supremal, to_hgvs
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
+    ("AAAGCATTTTAAA", "AAAGCATGTGTTTTAAA", [Variant(6, 7, "TGTGT")], "7_8insGT[2]"),
     ("CAATAAATACAG", "CAATACAG", [Variant(1, 9, "AATA")], "2_9AATA[1]"),
     ("AGTGCTTTGTTTTGTTATAATTAAC", "AGTGCTTTGTTATAATTAAC", [Variant(5, 16, "TTTGTT")], "6_15TTTGT[1]"),
     ("ATTGCATTTCTTCAATACTAATTTCTAAAGCCTTT", "ATTGCATTTCTTCAATACTAATTTCTAAAGCCTTTTTCTTCAATACTAATTTCTAAAGCCTTT", [Variant(6, 35, "TTTCTTCAATACTAATTTCTAAAGCCTTTTTCTTCAATACTAATTTCTAAAGCCTTT")], "8_35dup"),
@@ -18,14 +19,14 @@ from algebra.extractor import extract, extract_supremal, to_hgvs
     ("CAAAAAA", "TTTTTTG", [Variant(0, 7, "TTTTTTG")], "1_7inv"),
     ("AACTCAGGTAGGGTTAGAT", "CAGGG", [Variant(0, 19, "CAGGG")], "1_19delinsCAGGG"),
     ("CAGGG", "AACTCAGGTAGGGTTAGAT", [Variant(0, 5, "AACTCAGGTAGGGTTAGAT")], "1_5delinsAACTCAGGTAGGGTTAGAT"),
-    ("GTGCCCTAAGGGAT", "GAGCCTTAGGGCT", [Variant(1, 2, "A"), Variant(3, 9, "CCTTA"), Variant(12, 13, "C")], "[2T>A;6_8delinsTT;13A>C]"),
+    ("GTGCCCTAAGGGAT", "GAGCCTTAGGGCT", [Variant(1, 2, "A"), Variant(3, 9, "CCTTA"), Variant(12, 13, "C")], "[2T>A;6_8delinsT[2];13A>C]"),
     ("CATCAT", "TCAT", [Variant(0, 2, "")], "1_2del"),
     ("ACTAA", "ACGCCTATTAAATAAA", [Variant(1, 5, "CGCCTATTAAATAAA")], "3delinsGCCTATTAAATA"),
     ("TTGTA", "TTTGTGTT", [Variant(0, 5, "TTTGTGTT")], "3_5delinsTGTGTT"),
     ("AGGTA", "AAGAAGGGGA", [Variant(0, 4, "AAGAAGGGG")], "2_4delinsAGAAGGGG"),
     ("GCCTT", "GCAGCCCAT", [Variant(0, 4, "GCAGCCCA")], "3_4delinsAGCCCA"),
     ("CTAACG", "TTACC", [Variant(0, 6, "TTACC")], "1_6delinsTTACC"),
-    ("CTAA", "TTA", [Variant(0, 4, "TTA")], "1_3delinsTT"),
+    ("CTAA", "TTA", [Variant(0, 4, "TTA")], "1_3delinsT[2]"),
     ("CATATAGT", "CATAGAT", [Variant(1, 7, "ATAGA")], "5_7delinsGA"),
     ("CGC", "CATC", [Variant(1, 2, "AT")], "2delinsAT"),
     ("CGC", "CATATATC", [Variant(1, 2, "ATATAT")], "2delinsAT[3]"),

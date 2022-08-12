@@ -177,24 +177,23 @@ def to_hgvs(variants, reference):
         if len(variant.sequence) > 1 and variant.sequence == reverse_complement(deleted):
             return f"{to_hgvs_position(variant.start, variant.end)}inv"
 
-        # Deletion
+        # Prefix and suffix trimming
         start, end = trim(deleted, variant.sequence)
-        sequence = variant.sequence[start:len(variant.sequence) - end]
-        if not sequence:
-            return Variant(variant.start + start, variant.end - end, "").to_hgvs(reference)
+        trimmed = Variant(variant.start + start, variant.end - end, variant.sequence[start:len(variant.sequence) - end])
 
-        # Deletion/insertion with repeated insert
+        # Deletion/insertion with repeated insertion
+        inserted_unit, inserted_number, inserted_remainder = repeats(trimmed.sequence)
         if inserted_number > 1:
             suffix = f"{inserted_unit}[{inserted_number}]"
             if inserted_remainder:
                 suffix = f"[{suffix};{inserted_unit[:inserted_remainder]}]"
 
-            if variant.start == variant.end:
-                return f"{to_hgvs_position(variant.start, variant.end)}ins{suffix}"
-            return f"{to_hgvs_position(variant.start, variant.end)}delins{suffix}"
+            if trimmed.start == trimmed.end:
+                return f"{to_hgvs_position(trimmed.start, trimmed.end)}ins{suffix}"
+            return f"{to_hgvs_position(trimmed.start, trimmed.end)}delins{suffix}"
 
         # All other variants
-        return Variant(variant.start + start, variant.end - end, sequence).to_hgvs(reference)
+        return trimmed.to_hgvs(reference)
 
     if not variants:
         return "="
