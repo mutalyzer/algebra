@@ -153,15 +153,13 @@ def to_hgvs(variants, reference):
 
         # Select a non-minimal repeat unit if reference and observed are
         # in agreement.
-        diff = abs(len(deleted_unit) - len(inserted_unit))
-        if (len(inserted_unit) < len(deleted_unit) and
-                inserted_remainder >= diff and
-                inserted_unit + inserted_unit[:diff] == deleted_unit):
+        diff = len(inserted_unit) - len(deleted_unit)
+        if diff < 0 and deleted_unit == variant.sequence[:len(inserted_unit) + -diff]:
             inserted_unit = deleted_unit
-        elif (len(deleted_unit) < len(inserted_unit) and
-                deleted_remainder >= diff and
-                deleted_unit + deleted_unit[:diff] == inserted_unit):
+            inserted_number = 1
+        elif diff > 0 and inserted_unit == deleted[:len(deleted_unit) + diff]:
             deleted_unit = inserted_unit
+            deleted_number = 1
             deleted_remainder -= diff
 
         # Repeat structure
