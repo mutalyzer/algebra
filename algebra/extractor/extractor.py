@@ -162,6 +162,7 @@ def to_hgvs(variants, reference):
                 deleted_remainder >= diff and
                 deleted_unit + deleted_unit[:diff] == inserted_unit):
             deleted_unit = inserted_unit
+            deleted_remainder -= diff
 
         # Repeat structure
         if deleted_unit == inserted_unit:
