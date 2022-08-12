@@ -148,32 +148,42 @@ def to_hgvs(variants, reference):
     def hgvs(variant, reference):
         # FIXME: Ultimately this code should be merge with `to_hgvs` from Variant
         inserted_unit, inserted_number, inserted_remainder = repeats(variant.sequence)
-
         deleted = reference[variant.start:variant.end]
-        if deleted and deleted == inserted_unit:
-            deleted_unit = inserted_unit
-            deleted_number = 1
-        else:
-            deleted_unit, deleted_number, _ = repeats(deleted)
+        deleted_unit, deleted_number, deleted_remainder = repeats(deleted)
 
-        if variant.sequence and variant.sequence == deleted_unit:
-            inserted_unit = deleted_unit
+        # Select a non-minimal repeat unit if reference and observed are
+        # in agreement.
+        diff = abs(len(deleted_unit) - len(inserted_unit))
+        if (len(inserted_unit) < len(deleted_unit) and
+            inserted_remainder >= diff and
+            inserted_unit + inserted_unit[:diff] == deleted_unit):
+                inserted_unit = deleted_unit
+        elif (len(deleted_unit) < len(inserted_unit) and
+              deleted_remainder >= diff and
+              deleted_unit + deleted_unit[:diff] == inserted_unit):
+                deleted_unit = inserted_unit
 
+        # Repeat structure
         if deleted_unit == inserted_unit:
             if deleted_number == inserted_number:
                 raise ValueError("empty variant")
 
+            # Duplication
             if deleted_number == 1 and inserted_number == 2:
                 return f"{to_hgvs_position(variant.start + inserted_remainder, variant.start + inserted_remainder + len(inserted_unit))}dup"
             return f"{to_hgvs_position(variant.start, variant.end - inserted_remainder)}{inserted_unit}[{inserted_number}]"
 
+        # Inversion
+        if len(variant.sequence) > 1 and variant.sequence == reverse_complement(deleted):
+            return f"{to_hgvs_position(variant.start, variant.end)}inv"
+
+        # Deletion
         start, end = trim(deleted, variant.sequence)
         sequence = variant.sequence[start:len(variant.sequence) - end]
         if not sequence:
             return Variant(variant.start + start, variant.end - end, "").to_hgvs(reference)
-        if len(sequence) > 1 and sequence == reverse_complement(reference[variant.start + start:variant.end - end]):
-            return f"{to_hgvs_position(variant.start, variant.end)}inv"
 
+        # Deletion/insertion with repeated insert
         if inserted_number > 1:
             suffix = f"{inserted_unit}[{inserted_number}]"
             if inserted_remainder:
@@ -183,6 +193,7 @@ def to_hgvs(variants, reference):
                 return f"{to_hgvs_position(variant.start, variant.end)}ins{suffix}"
             return f"{to_hgvs_position(variant.start, variant.end)}delins{suffix}"
 
+        # All other variants
         return Variant(variant.start + start, variant.end - end, sequence).to_hgvs(reference)
 
     if not variants:
