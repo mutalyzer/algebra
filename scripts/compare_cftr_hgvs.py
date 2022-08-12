@@ -23,6 +23,14 @@ def check_ins_ins(ncbi, alg):
     )
 
 
+def check_delins_delins(ncbi, alg):
+    return (
+        "delins" in ncbi
+        and not alg.startswith("[")
+        and "delins" in alg
+    )
+
+
 def check_ins_repeat(ncbi, alg):
     return (
         "ins" in ncbi
@@ -136,6 +144,7 @@ def main():
         "dup_repeat": {},
         "ins_repeat": {},
         "ins_ins": {},
+        "delins_delins": {},
         "common_repeat_repeat": {},
         "rotated_repeat_repeat": {},
         "compound_repeat_": {},
@@ -156,6 +165,8 @@ def main():
                 summary["ins_repeat"][description_spdi] = ncbi, alg
             elif check_ins_ins(ncbi, alg):
                 summary["ins_ins"][description_spdi] = ncbi, alg
+            elif check_delins_delins(ncbi, alg):
+                summary["delins_delins"][description_spdi] = ncbi, alg
             elif check_common_repeat_repeat(ncbi, alg, reference):
                 summary["common_repeat_repeat"][description_spdi] = ncbi, alg
             elif check_rotated_repeat_repeat(ncbi, alg, reference):
