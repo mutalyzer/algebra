@@ -171,7 +171,7 @@ def to_hgvs(variants, reference):
             # Duplication
             if deleted_number == 1 and inserted_number == 2:
                 return f"{to_hgvs_position(variant.start + inserted_remainder, variant.start + inserted_remainder + len(inserted_unit))}dup"
-            return f"{to_hgvs_position(variant.start, variant.end - inserted_remainder)}{inserted_unit}[{inserted_number}]"
+            return f"{to_hgvs_position(variant.start, variant.end - deleted_remainder)}{inserted_unit}[{inserted_number}]"
 
         # Inversion
         if len(variant.sequence) > 1 and variant.sequence == reverse_complement(deleted):
