@@ -5,14 +5,6 @@ from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs
 
 
-def is_del(d):
-    pass
-
-
-def is_substitution(d):
-    pass
-
-
 def check_ins_ins(ncbi, alg):
     return (
         "ins" in ncbi
@@ -82,8 +74,7 @@ def check_rotated_repeat_repeat(ncbi, alg, reference):
             and var_alg.sequence
             == rotate(var_ncbi.sequence, var_ncbi.start - var_alg.start)
         )
-    else:
-        return False
+    return False
 
 
 def check_compound_repeat_(ncbi):
@@ -140,12 +131,13 @@ def main():
 
     summary = {
         "common": {},
+        "common_substitution": {},
+        "common_repeat_repeat": {},
         "del_repeat": {},
         "dup_repeat": {},
         "ins_repeat": {},
         "ins_ins": {},
         "delins_delins": {},
-        "common_repeat_repeat": {},
         "rotated_repeat_repeat": {},
         "compound_repeat_": {},
         "other": {},
@@ -156,7 +148,10 @@ def main():
             ncbi = descriptions_ncbi[description_spdi]
             alg = descriptions_alg[description_spdi]
             if ncbi == alg:
-                summary["common"][description_spdi] = ncbi, alg
+                if ">" in ncbi:
+                    summary["common_substitution"][description_spdi] = ncbi, alg
+                else:
+                    summary["common"][description_spdi] = ncbi, alg
             elif check_del_repeat(ncbi, alg):
                 summary["del_repeat"][description_spdi] = ncbi, alg
             elif check_dup_repeat(ncbi, alg):
