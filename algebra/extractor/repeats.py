@@ -19,6 +19,8 @@ def repeats(word):
                 # Add to the results if the haystack is made out of needles exclusively
                 if word[start:start + period] * count == word[start:start + period + extension]:
                     results.append((start, period, count))
+                    # Don't continue for less/contained repeats.
+                    break
 
     return results
 
