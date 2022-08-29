@@ -1,6 +1,7 @@
 """Utility functions for sequences and variants."""
 
 
+from collections import deque
 from itertools import chain
 import random
 from . import Variant
@@ -34,9 +35,9 @@ def to_dot(reference, root):
     def traverse():
         # breadth-first traversal
         visited = {root}
-        queue = [root]
+        queue = deque([root])
         while queue:
-            node = queue.pop(0)
+            node = queue.popleft()
             for succ, variant in node.edges:
                 yield (f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}"'
                        f' [label="{to_hgvs(variant, reference)}"];')
