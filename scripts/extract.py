@@ -12,13 +12,6 @@ def main():
     parser.add_argument("--fasta", required=True, type=str, help="Path to reference fasta file")
     args = parser.parse_args()
 
-    to_skip = [
-        Variant(117642410, 117643194, "AGT"),   # NC
-        Variant(181627, 182411, "AGT"),         # NG
-        Variant(117664686, 117665566, "GGT"),   # NC
-        Variant(203903, 204783, "GGT"),         # NG
-    ]
-
     with open(args.fasta, encoding="utf-8") as file:
         reference = fasta_sequence(file)
 
@@ -26,9 +19,6 @@ def main():
         spdi = line.strip()
         variant = parse_spdi(spdi)[0]
         print(spdi, variant, end=" ", flush=True)
-        if variant in to_skip:
-            print("skipped")
-            continue
         supremal = find_supremal(reference, variant)
         print(supremal, end=" ", flush=True)
         canonical = list(extract_supremal(reference, supremal))

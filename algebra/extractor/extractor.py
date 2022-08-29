@@ -2,6 +2,7 @@
 LCS alignments with support for tandem repeats and complex variants."""
 
 
+from collections import deque
 from os.path import commonprefix
 from ..lcs import edit, lcs_graph
 from ..variants import Variant, reverse_complement
@@ -41,17 +42,17 @@ def canonical(observed, root):
                 node, edge_b = node.pre_edges
             node_a, edge_a = node_a.pre_edges
 
-    lower = [(root, None, [])]
-    upper = []
+    lower = deque([(root, None, [])])
+    upper = deque()
     distance = 0
 
     while lower or upper:
         if not lower:
             lower = upper
-            upper = []
+            upper = deque()
             distance += 1
 
-        node, parent, variant = lower.pop(0)
+        node, parent, variant = lower.popleft()
         if node.pre_edges:
             if node.length == distance:
                 pred, edge = node.pre_edges
