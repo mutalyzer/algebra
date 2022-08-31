@@ -73,7 +73,7 @@ def extract_global(subs, word):
             print("Continue because of window_end")
             continue
 
-        window_end = start + period * count
+        window_end = start + period * count - 1
         print(f"Window end: {window_end} span: {period * count}")
 
         idx2 = idx + 1
