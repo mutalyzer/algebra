@@ -3,8 +3,6 @@ def cover(word, runs, n=0, repeats=[]):
         def hgvs():
             start = 0
             for repeat in repeats:
-                if repeat[2] == 1:
-                    continue
                 if repeat[0] > start:
                     yield word[start:repeat[0]]
                 yield f"{word[repeat[0]:repeat[0] + repeat[1]]}[{repeat[2]}]"
@@ -19,6 +17,8 @@ def cover(word, runs, n=0, repeats=[]):
             curr = run[0] + rotation, run[1], run[2], run[3] - rotation
             if prev[0] + prev[1] * prev[2] > curr[0]:
                 curr = run[0] + rotation + run[1], run[1], run[2] - 1, run[3] - rotation
+                if curr[2] == 1:
+                    continue
 
             repeats.append(curr)
             yield from cover(word, runs, n + idx + 1, repeats)
@@ -33,7 +33,7 @@ def main():
         ( 9, 3, 2, 2),
         (16, 1, 5, 0),
     ]
-    for hgvs in set(cover(word, runs)):
+    for hgvs in cover(word, runs):
         print(hgvs)
 
 
