@@ -86,7 +86,7 @@ def extract_global(subs, word):
             next_span = next_period * next_count
             print(f"idx2: {idx2} start: {next_start} period: {next_period} count: {next_count} span: {next_span}")
 
-            if next_start < window_end:
+            if next_start <= window_end:
                 print(f"Overlap. Span: {next_span}")
                 if next_span > max_span:
                     print("Higher span!")
