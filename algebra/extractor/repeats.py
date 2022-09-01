@@ -1,4 +1,5 @@
 import sys
+from os.path import commonprefix
 
 
 def repeats(word):
@@ -124,6 +125,44 @@ def extract_global(subs, word):
         print()
 
     return desc
+
+
+def subswithseqs(subs, word):
+    skip = 0
+    match_idx = -1
+    for idx, (start, period, count) in enumerate(subs):
+        remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
+
+        if match_idx > -1:
+            match_start, match_period, match_count = subs[match_idx]
+            # print("match", subs[match_idx])
+
+            # print(start)
+            # print(match_start)
+            # print(period * count)
+            # print(match_period * match_count + remainder)
+            if start == match_start and period * count + remainder == match_period * match_count:
+                # print("non-primitive, same start, same span")
+                continue
+
+            if period == match_period and start + period * count == match_start + match_period * match_count:
+                # print("non-primitive, same period, other start, same end")
+                continue
+
+            if start + period * count == match_start + match_period * match_count:
+                # print("non-primitive, same period, other start, same end")
+                continue
+
+            if skip and match_period == period and match_start + match_period * match_count > start:
+                skip -= 1
+                # print("skip")
+                continue
+
+            if remainder:
+                skip = remainder
+
+        print("   ", (start, period, count, remainder), ", #", word[start:start + period], word[start:start + period] * count)
+        match_idx = idx
 
 
 def main():
