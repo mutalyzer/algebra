@@ -4,9 +4,15 @@ from os.path import commonprefix
 
 def repeats(word):
     results = []
+    remainder = -1
 
     # For all bases as start position, except the last
     for start in range(len(word)):
+
+        # Deal with rotations
+        if remainder > 0:
+            remainder -= 1
+            continue
 
         # For all the periods remaining
         for period in range(1, len(word) - start + 1):
@@ -19,7 +25,29 @@ def repeats(word):
 
                 # Add to the results if the haystack is made out of needles exclusively
                 if word[start:start + period] * count == word[start:start + period + extension]:
-                    result = start, period, count
+                    remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
+                    print("remainder", remainder)
+                    result = start, period, count, remainder
+                    print("Going to add", result)
+                    if results:
+                        last = results[-1]
+                        print("Top of stack is:", last)
+                        last_start, last_period, last_count, last_remainder = last
+                        if last_start == start:
+                            print("Share start")
+                            if period % last_period == 0:
+                                print("Non-primitive?")
+                                break
+                        if last_start + last_period * last_count == start + period * count:
+                            print("Share end")
+                            if last_period == period:
+                                print("Same period")
+                                break
+                            if period % last_period == 0:
+                                print("Non-primitive?")
+                                break
+                    else:
+                        print("Empty stack")
                     results.append(result)
                     # Don't continue for less/contained repeats.
                     break
@@ -128,8 +156,8 @@ def extract_global(subs, word):
 
 
 def subswithseqs(subs, word):
-    for start, period, count in subs:
-        remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
+    for start, period, count, remainder in subs:
+        #remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
         print((start, period, count, remainder), ", #", word[start:start + period], word[start:start + period] * count)
 
 
