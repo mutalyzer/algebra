@@ -28,7 +28,7 @@ def _window_fixed_size(seq, window_sz):
     return repeats
 
 
-def _repeats(seq):
+def get_repeats(seq):
     def _already_in(new_interval):
         for in_interval in intervals:
             if new_interval[0] >= in_interval[0] and new_interval[1] <= in_interval[1]:
@@ -54,7 +54,7 @@ def main():
     parser.add_argument("seq", type=str, help="Sequence")
     args = parser.parse_args()
 
-    for repeat in _repeats(args.seq):
+    for repeat in get_repeats(args.seq):
         print(repeat)
 
 
@@ -122,7 +122,7 @@ def main():
     ],
 )
 def test_repeats(sequence, repeats):
-    assert repeats == _repeats(sequence)
+    assert repeats == get_repeats(sequence)
 
 
 if __name__ == "__main__":
