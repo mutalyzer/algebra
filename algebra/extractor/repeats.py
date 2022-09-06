@@ -166,7 +166,7 @@ def brutepower(pmrs, word):
             print("answer:", l, z)
             y = max(y, z)
 
-    print(y)
+    return y
 
 
 def main():
