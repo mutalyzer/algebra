@@ -2,17 +2,17 @@ import sys
 from os.path import commonprefix
 
 
-def repeats(word):
+def extract_repeats(word):
     results = []
-    remainder = -1
 
     # For all bases as start position, except the last
     for start in range(len(word)):
 
-        # Deal with rotations
-        if remainder > 0:
-            remainder -= 1
-            continue
+        # Deal with rotations that belong to us
+        if results:
+            last_start, last_period, last_count, last_remainder = results[-1]
+            if last_remainder > 0 and start == last_start + 1:
+                continue
 
         # For all the periods remaining
         for period in range(1, len(word) - start + 1):
@@ -26,177 +26,31 @@ def repeats(word):
                 # Add to the results if the haystack is made out of needles exclusively
                 if word[start:start + period] * count == word[start:start + period + extension]:
                     remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
-                    print("remainder", remainder)
-                    result = start, period, count, remainder
-                    print("Going to add", result)
-                    if results:
-                        last = results[-1]
-                        print("Top of stack is:", last)
-                        last_start, last_period, last_count, last_remainder = last
-                        if last_start == start:
-                            print("Share start")
-                            if period % last_period == 0:
-                                print("Non-primitive?")
-                                break
-                        if last_start + last_period * last_count == start + period * count:
-                            print("Share end")
-                            if last_period == period:
-                                print("Same period")
-                                break
-                            if period % last_period == 0:
-                                print("Non-primitive?")
-                                break
-                    else:
-                        print("Empty stack")
-                    results.append(result)
+
+                    back = 1
+                    skip = False
+                    while len(results) >= back:
+                        last_start, last_period, last_count, last_remainder = results[-back]
+                        back += 1
+                        last_end = last_start + last_period * last_count
+                        end = start + period * count
+                        if last_end + last_remainder == end + remainder and period % last_period == 0:
+                            # Non-primitive, same-period or sub-pattern
+                            skip = True
+                            break
+
+                    if not skip:
+                        results.append((start, period, count, remainder))
+
                     # Don't continue for less/contained repeats.
                     break
 
     return results
 
 
-def extract(subs, word):
-    desc = []
-
-    end = -1
-    for start, period, count in subs:
-
-        # This position already covered by previous iteration
-        if end >= start:
-            continue
-
-        # Add leading bases that were not part of a repeat
-        if end + 1 < start:
-            desc.append(word[end + 1: start])
-
-        # Add repeat to description
-        desc.append(word[start:start + period] + f"[{count}]")
-
-        # Set new end base
-        end = start + period * count - 1
-
-    # Add trailing bases that was not part of a repeat
-    if end + 1 < len(word):
-        desc.append(word[end + 1:])
-
-    return desc
-
-
-def extract_global(subs, word):
-    desc = []
-
-    end = -1
-    window_end = -1
-    idx2 = -1
-
-    for idx, (start, period, count) in enumerate(subs):
-        print(f"idx: {idx} idx2: {idx2} window_end: {window_end}")
-        print(f"idx: {idx} start: {start} period: {period} count: {count} span: {period * count}")
-        max_span = period * count
-        max_idx = idx
-
-        if idx < idx2:
-            print("Continue because of index")
-            continue
-
-        if start <= window_end:
-            print("Continue because of window_end")
-            continue
-
-        window_end = start + period * count - 1
-        print(f"Window end: {window_end} span: {period * count}")
-
-        idx2 = idx + 1
-
-        stack = [idx]
-
-        next_end = window_end
-        while idx2 < len(subs):
-            next_start, next_period, next_count = subs[idx2]
-            next_span = next_period * next_count
-            print(f"idx2: {idx2} start: {next_start} period: {next_period} count: {next_count} span: {next_span}")
-
-            if next_start <= window_end:
-                print(f"Overlap. Span: {next_span}")
-                if next_span > max_span:
-                    print("Higher span!")
-                    max_idx = idx2
-                    max_span = next_span
-                    next_end = next_start + next_span - 1
-                    stack.append(idx2)
-                    print(f"stack: {stack}")
-                elif next_span < max_span:
-                    print("Lower span!")
-                else:
-                    print("Same span!")
-            else:
-                print("No overlap")
-                window_end = next_end
-                break
-
-            print(f"max_idx: {max_idx} max_span: {max_span} (end of while)")
-            # max_start, max_period, max_count = subs[max_idx]
-            # desc.append(f"{word[max_start:max_start + max_period]}[{max_count}]")
-
-            idx2 += 1
-        print(f"stack: {stack} after while")
-
-        # for stack_idx in reversed(stack):
-        #     stack_start, stack_period, stack_count = subs[stack_idx]
-        #     print(stack_start, stack_period, stack_count)
-        # max_start, max_period, max_count = subs[max_idx]
-        # desc.append(f"{word[max_start:max_start + max_period]}[{max_count}]")
-        stack_start, stack_period, stack_count = subs[stack[-1]]
-        print(stack_start, stack_period, stack_count)
-        desc.append(f"{word[stack_start:stack_start + stack_period]}[{stack_count}]")
-
-        print()
-
-    return desc
-
-
 def subswithseqs(subs, word):
     for start, period, count, remainder in subs:
-        #remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
-        print((start, period, count, remainder), ", #", word[start:start + period], word[start:start + period] * count)
-
-
-def filter(subs, word):
-    skip = 0
-    match_idx = -1
-    for idx, (start, period, count) in enumerate(subs):
-        remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
-
-        # if match_idx > -1:
-        #     match_start, match_period, match_count = subs[match_idx]
-        #     # print("match", subs[match_idx])
-        #
-        #     # print(start)
-        #     # print(match_start)
-        #     # print(period * count)
-        #     # print(match_period * match_count + remainder)
-        #     if start == match_start and period * count + remainder == match_period * match_count:
-        #         # print("non-primitive, same start, same span")
-        #         continue
-        #
-        #     if period == match_period and start + period * count == match_start + match_period * match_count:
-        #         # print("non-primitive, same period, other start, same end")
-        #         continue
-        #
-        #     if start + period * count == match_start + match_period * match_count:
-        #         # print("non-primitive, same period, other start, same end")
-        #         continue
-        #
-        #     if skip and match_period == period and match_start + match_period * match_count > start:
-        #         skip -= 1
-        #         # print("skip")
-        #         continue
-        #
-        #     if remainder:
-        #         skip = remainder
-
-        print((start, period, count, remainder), ", #", word[start:start + period], word[start:start + period] * count)
-        # match_idx = idx
+        print(str((start, period, count, remainder)) + ",  #", word[start:start + period], word[start:start + period] * count)
 
 
 def main():
@@ -204,19 +58,12 @@ def main():
         return -1
     input = sys.argv[1]
 
-    # Get all the repeats as (position, period, count) triples
-    subs = repeats(input)
+    # Get all the repeats as (position, period, count, remainder) quadruples
+    subs = extract_repeats(input)
     print(subs)
+    print(len(subs))
+    subswithseqs(subs, input)
 
-    # Extract HGVS-like descriptions
-    desc = extract(subs, input)
-    print(";".join(desc))
-
-    print()
-
-    # Extract HGVS-like descriptions
-    desc = extract_global(subs, input)
-    print(";".join(desc))
 
 if __name__ == '__main__':
     main()
