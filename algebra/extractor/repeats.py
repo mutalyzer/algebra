@@ -74,30 +74,37 @@ def koffer(pmrs, word):
 
         if not inv[idx]:
             max_cover[idx] = prev
+            continue
 
-        else:
-            for pmr in inv[idx]:
-                start, period, count, remainder = pmrs[pmr]
+        # I / 0 = prev
+        m = prev
+        print("default m + 0", m)
+        for pmr in inv[idx]:
+            start, period, count, remainder = pmrs[pmr]
+            length = period * ((idx - start + 1) // period)
+            print("length", length)
 
-                length = period * ((idx - start + 1) // period)
-                print("length", length)
+            # II / -1
+            length2 = length - period
+            print("length II", length2)
+            count2 = length2 // period
+            print("count II", count2)
+            idx2 = idx - length2
+            print("index II", idx2)
+            if count2 > 1:
+                m = max(m, max_cover[idx2] + length2)
+            else:
+                m = max(m, max_cover[idx2])
+            print("m after II", m)
 
-                prev = 0
-                if idx - length > 0:
-                    prev = max_cover[idx - length]
+            # III / F
+            if idx - length > 0:
+                m = max(m, max_cover[idx - length] + length)
+            else:
+                m = max(m, length)
 
-                    for prev_pmr in inv[idx - length]:
-                        prev_start, prev_period, prev_count, prev_remainder = pmrs[prev_pmr]
-                        pos = prev_start + prev_period * prev_count + prev_remainder - 1
-                        print("pos", pos)
-
-                        length_prime = period * ((idx - pos) // period)
-                        print("length prime", length_prime)
-
-                        if length_prime > 1:
-                            max_cover[idx] = max(max_cover[idx], max_cover[pos] + length_prime)
-
-                max_cover[idx] = max(max_cover[idx], prev + length)
+        print("m", m)
+        max_cover[idx] = m
 
     for pos, a in enumerate(max_cover):
         print(pos, a)
