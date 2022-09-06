@@ -1,5 +1,6 @@
-import sys
+from itertools import chain, combinations
 from os.path import commonprefix
+import sys
 
 
 def extract_repeats(word):
@@ -117,6 +118,57 @@ def subswithseqs(subs, word):
         print(str((start, period, count, remainder)) + ",  #", word[start:start + period], word[start:start + period] * count)
 
 
+
+def powerset(iterable):
+    "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+
+
+def brutepower(pmrs, word):
+
+    def intersect(a, b):
+        a_start, a_period, a_count, a_remainder = a
+        a_end = a_start + a_period * a_count
+
+        b_start, b_period, b_count, b_remainder = b
+
+        return b_start < a_end
+
+    pmrs_complete = []
+    for start, period, count, remainder in pmrs:
+        for idx in range(remainder + 1):
+            for offset in range(count):
+                if count - offset > 1:
+                    if offset > 0:
+                        pmrs_complete.append((start + idx + offset * period, period, count - offset, 0))
+                    pmrs_complete.append((start + idx, period, count - offset, 0))
+
+    # print(pmrs_complete)
+
+    y = 0
+    for subset in powerset(pmrs_complete):
+        # print(subset)
+        l = list(subset)
+
+        conflict = False
+        for idx in range(1, len(l)):
+            if intersect(l[idx - 1], l[idx]):
+                # print("conflict", l[idx - 1], l[idx])
+                conflict = True
+                break
+
+        if not conflict:
+            z = 0
+            for x in l:
+                if x[2] > 1:
+                    z += x[1] * x[2]
+            print("answer:", l, z)
+            y = max(y, z)
+
+    print(y)
+
+
 def main():
     if len(sys.argv) < 2:
         return -1
@@ -128,6 +180,7 @@ def main():
     print(len(runs))
     subswithseqs(runs, word)
     koffer(runs, word)
+    brutepower(runs, word)
 
 
 if __name__ == '__main__':
