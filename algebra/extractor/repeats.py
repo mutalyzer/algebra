@@ -147,9 +147,11 @@ def brutepower(pmrs, word):
     # print(pmrs_complete)
 
     y = 0
+    solutions = []
     for subset in powerset(pmrs_complete):
         # print(subset)
         l = list(subset)
+
 
         conflict = False
         for idx in range(1, len(l)):
@@ -164,9 +166,18 @@ def brutepower(pmrs, word):
                 if x[2] > 1:
                     z += x[1] * x[2]
             print("answer:", l, z)
+            old_max = y
             y = max(y, z)
 
-    print(y)
+            if z == y:
+                if z > old_max:
+                    solutions = [l]
+                else:
+                    solutions.append(l)
+
+    print("solutions", solutions)
+
+    return y, solutions
 
 
 def main():
@@ -180,7 +191,10 @@ def main():
     print(len(runs))
     subswithseqs(runs, word)
     koffer(runs, word)
-    brutepower(runs, word)
+    _, solutions = brutepower(runs, word)
+    for sol in solutions:
+        print("Solution")
+        subswithseqs(sol, word)
 
 
 if __name__ == '__main__':
