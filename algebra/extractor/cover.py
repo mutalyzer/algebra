@@ -1,3 +1,21 @@
+"""
+How to flatten the inv array
+
+I equal
+  x  [A, B]  y
+with x != A, x != B, y != A, y != B
+choose the unit (A, B) with the largest period
+
+II overlap
+  x  A  [A, B]  B  y
+choose unit B
+
+III prefix
+  x  [A, B]  B  y
+choose unit A
+"""
+
+
 TESTS = [
     ("AAB",
      [
@@ -138,7 +156,7 @@ TESTS = [
      #                       4
      #  0  2  2  4  4  6  6  8
      [[], [0], [], [2], [], [3], [], [1, 4]],
-     [None, 0, None, 2, None, 3, None, 1],     # CONDITION I: IF only one, choose the larger unit
+     [None, 0, None, 2, None, 3, None, 1],  # [1, 4] :: I
      [0, 2, 2, 4, 4, 6, 6, 8],
      "AABB[2]",  # or "A[2];B[2];A[2];B[2]"
     ),
@@ -183,7 +201,7 @@ TESTS = [
      #                 2
      #  0  0  2  2  2  6  6  6  6
      [[], [], [1], [], [], [0, 2], [], [], [3]],
-     [None, None, 1, None, None, 0, None, None, 3],  # CONDITION I
+     [None, None, 1, None, None, 0, None, None, 3],  # [0, 2] :: I
      [0, 0, 2, 2, 2, 6, 6, 6, 6],
      "ACC[2];TCT",  # or "A;C[2];AC;CT[2]"
     ),
@@ -209,7 +227,7 @@ TESTS = [
      #                 2
      #  0  0  2  2  2  6  6  6  8  8
      [[], [], [1], [], [], [0, 2], [], [], [4], [3]],
-     [None, None, 1, None, None, 0, None, None, 4, 3],  # CONDITION I
+     [None, None, 1, None, None, 0, None, None, 4, 3],  # [0, 2] :: I
      [0, 0, 2, 2, 2, 6, 6, 6, 8, 8],
      "TCC[2];A;C[2];A",  # or "T;C[2];T;CCA[2]"
     ),
@@ -303,7 +321,7 @@ TESTS = [
      #                       4              6
      #  0  2  2  2  4  6  6  8  9 10 10 10 12 14 15
      [[], [0], [], [], [2], [1], [1], [1, 4], [4], [4], [], [], [3, 6], [5], [5]],
-     [None, 0, None, None, 2, 1, 1, 4, 4, 4, None, None, 3, 5, 5],   # CONDITION I + CONTIDITION II (overlap choose right)
+     [None, 0, None, None, 2, 1, 1, 4, 4, 4, None, None, 3, 5, 5],  # [1, 4] :: II & [3, 6] :: I
      [0, 2, 2, 2, 4, 6, 6, 8, 9, 10, 10, 10, 12, 14, 15],
      "AAC[2];A[3];ACA[2]",
     ),
@@ -397,7 +415,7 @@ TESTS = [
      #                          3  3
      #  0  2  2  2  4  5  5  8  8 10 11 12
      [[], [0], [], [], [2], [2], [], [1], [1, 3], [1, 3], [3], [3]],
-     [None, 0, None, None, 2, 2, None, 1, 3, 3, 3, 3],  # CONDITION II
+     [None, 0, None, None, 2, 2, None, 1, 3, 3, 3, 3],  # [1, 3] :: II
      [0, 2, 2, 2, 4, 5, 5, 8, 8, 10, 11, 12],
      "AATA[2];A[4]",  # or "A[2];TAAA[2];A[2]"
     ),
@@ -419,7 +437,7 @@ TESTS = [
      #                 2
      #  0  0  2  2  2  6  6  8  9 10
      [[], [], [1], [], [], [0, 2], [2], [2], [2], [2]],
-     [None, None, 1, None, None, 0, 2, 2, 2, 2],  # CONDITION prefix choose left
+     [None, None, 1, None, None, 0, 2, 2, 2, 2],  # [0, 2] :: III
      [0, 0, 2, 2, 2, 6, 6, 8, 9, 10],
      "TAA[2];A[4]",
     ),
@@ -441,7 +459,7 @@ TESTS = [
      #                    2
      #  0  0  0  2  2  2  6  6  8
      [[], [], [], [1], [], [], [0, 2], [2], [2]],
-     [None, None, None, 1, None, None, 0, 2, 2],  # CONDITION prefix
+     [None, None, None, 1, None, None, 0, 2, 2],  # [0, 2] :: III
      [0, 0, 0, 2, 2, 2, 6, 6, 8],
      "T;ACC[2];C[2]",
     ),
