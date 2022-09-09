@@ -385,22 +385,16 @@ TESTS = [
 ]
 
 
-def is_prefix(pmr):
+def pmr_interval(pmr):
     start, period, count, remainder = pmr
-    return start + 2 * period == start + period * count + remainder
+    return start + 2 * period - 1, start + count * period + remainder
 
 
 def inv_array(n, pmrs):
     inv = [[] for _ in range(n)]
     for idx, pmr in enumerate(pmrs):
-        start, period, count, remainder = pmr
-        for c in range(1, count):
-            for offset in range(remainder + 1):
-                pos = start + (c + 1) * period + offset - 1
-                if inv[pos] and is_prefix(pmrs[inv[pos][0]]):
-                    continue
-                inv[pos].append(idx)
-
+        for pos in range(*pmr_interval(pmr)):
+            inv[pos].append(idx)
     return inv
 
 
