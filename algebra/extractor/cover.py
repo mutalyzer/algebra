@@ -421,7 +421,9 @@ def uniq_ends(n, pmrs, inv):
     ends = [0] * len(pmrs)
     for pos in range(1, n):
         if len(inv[pos]) == 1 or (inv[pos] and ends[inv[pos][0]] == 0):
-            ends[inv[pos][0]] = pos
+            start, period, count, remainder = pmrs[inv[pos][0]]
+            if start + count * period - 1 == pos:
+                ends[inv[pos][0]] = pos
 
     return ends
 
@@ -430,7 +432,9 @@ def cover(word, pmrs, inv=None):
     n = len(word)
     if not inv:
         inv = inv_array(n, pmrs)
-    ends = uniq_ends(n, pmrs, inv)
+
+    values = [0] * len(pmrs)
+    ends = [0] * len(pmrs)
     max_cover = [0] * n
 
     hwm = 0
@@ -445,7 +449,11 @@ def cover(word, pmrs, inv=None):
                 real_count = (pos - hwm) // period
                 if real_count > 1:
                     real_length = real_count * period
-                    value = max(value, max_cover[hwm] + real_length)
+                    if max_cover[hwm] + real_length > value:
+                        value = max_cover[hwm] + real_length
+                        if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
+                            values[idx] = value
+                            ends[idx] = pos
 
             real_count = (pos - start + 1) // period
             if real_count > 1:
@@ -454,10 +462,14 @@ def cover(word, pmrs, inv=None):
                 if pos - real_length >= 0:
                     prev_value = max_cover[pos - real_length]
 
-                if prev_value + real_length >= value:
+                if prev_value + real_length > value:
                     value = prev_value + real_length
-                    if pos == ends[idx]:
-                        hwm = pos
+                    if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
+                        values[idx] = value
+                        ends[idx] = pos
+
+            if start + period * count + remainder - 1 == pos:
+                hwm = ends[idx]
 
         max_cover[pos] = value
 
@@ -469,8 +481,9 @@ def main():
         print(word)
         n = len(word)
         assert inv == inv_array(n, pmrs)
-        assert ends == uniq_ends(n, pmrs, inv)
-        assert max_cover == cover(word, pmrs)
+        # assert ends == uniq_ends(n, pmrs, inv)
+        # print(uniq_ends(n, pmrs, inv))
+        assert max_cover == cover(word, pmrs)  # , ends=ends)
 
 
 if __name__ == "__main__":
