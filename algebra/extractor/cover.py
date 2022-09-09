@@ -407,9 +407,10 @@ def uniq_ends(n, pmrs, inv):
     return ends
 
 
-def cover(word, pmrs):
+def cover(word, pmrs, inv=None):
     n = len(word)
-    inv = inv_array(n, pmrs)
+    if not inv:
+        inv = inv_array(n, pmrs)
     ends = uniq_ends(n, pmrs, inv)
     max_cover = [0] * n
 
