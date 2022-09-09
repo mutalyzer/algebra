@@ -434,7 +434,7 @@ def cover(word, pmrs):
                 if pos - real_length >= 0:
                     prev_value = max_cover[pos - real_length]
 
-                if prev_value + real_length > value:
+                if prev_value + real_length >= value:
                     value = prev_value + real_length
                     if pos == ends[idx]:
                         hwm = pos
