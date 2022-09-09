@@ -90,9 +90,22 @@ from algebra.extractor import extract_repeats
             (19, 2, 3, 1),
             (25, 1, 7, 0),
         ]),
+        ("CTACTACTATATA", [
+            (0, 3, 3, 0),
+            (7, 2, 3, 0),
+        ]),
+        ("TAATAAAAAA", [
+            (0, 3, 2, 0),
+            (1, 1, 2, 0),
+            (4, 1, 6, 0),
+        ]),
+        ("AATAAATAAAAA", [ # 12, AATA[2];A[4]
+            (0, 1, 2, 0),
+            (0, 4, 2, 2),
+            (3, 1, 3, 0),
+            (7, 1, 5, 0),
+        ]),
     ],
-
-
 )
 def test_repeats(sequence, expected):
     assert expected == extract_repeats(sequence)
