@@ -134,6 +134,9 @@ def find_supremal(reference, variant, offset=10):
         _, edges = lcs_graph(reference[start:end], observed, lcs_nodes)
         supremum = spanning_variant(reference[start:end], observed, edges)
 
+        if not supremum:
+            return supremum
+
         supremum.start += start
         supremum.end += start
 
