@@ -1,3 +1,6 @@
+from os.path import commonprefix
+
+
 TESTS = [
     ("AAB",
      [
@@ -377,6 +380,61 @@ TESTS = [
      [0, 2, 2, 2, 4, 6, 6, 6, 8, 10],
      "AAC[2];AC[2]",
     ),
+
+    ("TATAATAATA",
+     [
+        (0, 2, 2, 0),  # TA
+        (1, 3, 3, 0),  # ATA
+        (3, 1, 2, 0),  # A
+        (6, 1, 2, 0),  # A
+     ],
+     #  0  1  2  3  4  5  6  7  8  9
+     #  T  A  T  A  A  T  A  A  T  A
+     #  .  .  .  0  2  .  1  1  1  1
+     #                       3
+     #  0  0  0  4  4  4  6  6  6 10
+     [[], [], [], [0], [2], [], [1], [1, 3], [1], [1]],  # nesting
+     [0, 0, 0, 4, 4, 4, 6, 6, 6, 10],
+     "TA[2];ATA[2]",
+    ),
+
+    ("CACCACACCACCACACCACACCACCACACCACCA",
+     [
+        (2, 1, 2, 0),   #  0: C
+        (7, 1, 2, 0),   #  1: C
+        (10, 1, 2, 0),  #  2: C
+        (15, 1, 2, 0),  #  3: C
+        (20, 1, 2, 0),  #  4: C
+        (23, 1, 2, 0),  #  5: C
+        (28, 1, 2, 0),  #  6: C
+        (31, 1, 2, 0),  #  7: C
+        (3, 2, 2, 1),   #  8: CA
+        (11, 2, 2, 1),  #  9: CA
+        (16, 2, 2, 1),  # 10: CA
+        (24, 2, 2, 1),  # 11: CA
+        (0, 3, 2, 0),   # 12: CAC
+        (5, 3, 3, 0),   # 13: CAC
+        (13, 3, 2, 0),  # 14: CAC
+        (18, 3, 3, 0),  # 15: CAC
+        (26, 3, 2, 2),  # 16: CAC
+        (0, 5, 2, 1),   # 17: CACCA
+        (8, 5, 3, 1),   # 18: CACCA
+        (21, 5, 2, 1),  # 19: CACCA
+        (0, 8, 2, 3),   # 20: CACCACAC
+        (13, 8, 2, 5),  # 21: CACCACAC
+        (0, 13, 2, 6),  # 22: CACCACACCACCA
+     ],
+     #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33
+     #  C  A  C  C  A  C  A  C  C  A  C  C  A  C  A  C  C  A  C  A  C  C  A  C  C  A  C  A  C  C  A  C  C  A
+     #  .  .  .  0  . 12  8  8  1 17 13  2 13 13  9  9  3 18 14 10 10  4 18 15  5 15 15 11 11  6 19 16  7 16
+     #                               17 13          20 20 20 18 18 18 18    18 15 22 22 22 21 21 21 19 16 21
+     #                                                       20                            22 22 22 21 21
+     #                                                                                              22
+     #  0  0  0  2  2  6  6  6  8 10 10 12  
+     [[], [], [], [0], [], [12], [8], [8], [1], [17], [13, 17], [2, 13], [13], [13], [9], [9, 20], [3, 20], [18, 20], [14, 18, 20], [10, 18], [10, 18], [4, 18], [18], [15, 18], [5, 15], [15, 22], [15, 22], [11, 22], [11, 21, 22], [6, 21, 22], [19, 21, 22], [16, 19, 21, 22], [7, 16, 21], [16, 21]],  # complex
+     [],
+     "",
+    ),
 ]
 
 
@@ -434,6 +492,7 @@ def cover(word, pmrs, inv=None):
                         ends[idx] = pos
 
             if start + period * count + remainder - 1 == pos:
+                print("update hwm", pos, idx, ends[idx])
                 hwm = ends[idx]
 
         max_cover[pos] = value
@@ -441,10 +500,72 @@ def cover(word, pmrs, inv=None):
     return max_cover
 
 
+def find_pmrs(word):
+    n = len(word)
+    pmrs = []
+    inv = [None] * n
+    for period in range(1, n // 2 + 1):
+        start = 0
+        while start < n - period:
+            pattern = word[start:start + period]
+
+            if inv[start] is not None:
+                pmr_start, pmr_period, pmr_count, _ = pmrs[inv[start]]
+                if word[pmr_start:pmr_start + pmr_period * pmr_count].startswith(2 * pattern):
+                    start += pmr_period * pmr_count - period + 1
+                    continue
+
+            count = 1
+            while pattern == word[start + period * count:start + period * (count + 1)]:
+                count += 1
+
+            remainder = len(commonprefix([pattern, word[start + period * count:]]))
+            if count > 1:
+                inv[start] = len(pmrs)
+                pmrs.append((start, period, count, remainder))
+                start += period * (count - 1) + 1
+            else:
+                start += remainder + 1
+
+    return pmrs
+
+
+def fib_word(n):
+    fw0 = "A"
+    if n <= 0:
+        return fw0
+
+    fw1 = "C"
+    for _ in range(1, n):
+        fw0, fw1 = fw1, fw1 + fw0
+    return fw1
+
+
 def main():
+    word = fib_word(9)
+    n = len(word)
+    pmrs = find_pmrs(word)
+    print(len(pmrs))
+    for idx, pmr in enumerate(pmrs):
+        print(f"        {pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
+
+    inv = inv_array(n, pmrs)
+    print(n, inv, sum([len(i) for i in inv]))
+    print(cover(word, pmrs))
+    return
+
+    #print(find_pmrs("CCCCACCAT"))
+    #return
+
     for word, pmrs, inv, max_cover, hgvs in TESTS:
         print(word)
+        my_pmrs = find_pmrs(word)
+        assert set(pmrs) == set(my_pmrs)
+        continue
+
+
         n = len(word)
+        assert n > sum([len(i) for i in inv])
         assert inv == inv_array(n, pmrs)
         assert max_cover == cover(word, pmrs)
 
