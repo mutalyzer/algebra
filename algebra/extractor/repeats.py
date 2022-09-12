@@ -22,19 +22,12 @@ def extract_repeats(word):
                 if word[start:start + period] * count == word[start:start + period + extension]:
                     remainder = len(commonprefix([word[start:start + period], word[start + period * count: start + period * (count + 1)]]))
 
-                    back = 1
-                    skip = False
-                    while len(results) >= back:
-                        last_start, last_period, last_count, last_remainder = results[-back]
-                        back += 1
-                        last_end = last_start + last_period * last_count
-                        end = start + period * count
-                        if last_end + last_remainder == end + remainder and period % last_period == 0:
+                    # Check with existing results
+                    for last_start, last_period, last_count, last_remainder in results:
+                        if last_start + last_period * last_count + last_remainder == start + period * count + remainder and period % last_period == 0:
                             # Non-primitive, same-period or sub-pattern
-                            skip = True
                             break
-
-                    if not skip:
+                    else:
                         results.append((start, period, count, remainder))
 
                     # Don't continue for less/contained repeats.
