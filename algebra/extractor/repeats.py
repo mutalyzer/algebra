@@ -49,74 +49,9 @@ def extract_repeats(word):
     return results
 
 
-def koffer(pmrs, word):
-
-    inv = [[] for _ in range(len(word))]
-
-    for idx, (start, period, count, remainder) in enumerate(pmrs):
-        begin = start + period * 2 - 1
-        end = start + period * count + remainder
-
-        print(idx, begin, end)
-
-        for pos in range(begin, end):
-            inv[pos].append(idx)
-
-    for pos, a in enumerate(inv):
-        print(pos, a)
-
-    max_cover = [0] * len(word)
-
-    for idx in range(len(max_cover)):
-        print("idx", idx)
-        prev = 0
-        if idx > 0:
-            prev = max_cover[idx - 1]
-
-        if not inv[idx]:
-            max_cover[idx] = prev
-            continue
-
-        # I / 0 = prev
-        m = prev
-        print("default m + 0", m)
-        for pmr in inv[idx]:
-            start, period, count, remainder = pmrs[pmr]
-            length = period * ((idx - start + 1) // period)
-            print("length", length)
-
-            # II / -1
-            length2 = length - period
-            print("length II", length2)
-            count2 = length2 // period
-            print("count II", count2)
-            idx2 = idx - length2
-            print("index II", idx2)
-            if count2 > 1:
-                m = max(m, max_cover[idx2] + length2)
-            else:
-                m = max(m, max_cover[idx2])
-            print("m after II", m)
-
-            # III / F
-            if idx - length > 0:
-                m = max(m, max_cover[idx - length] + length)
-            else:
-                m = max(m, length)
-
-        print("m", m)
-        max_cover[idx] = m
-
-    for pos, a in enumerate(max_cover):
-        print(pos, a)
-
-    return max_cover[-1]
-
-
 def subswithseqs(subs, word):
     for start, period, count, remainder in subs:
         print(str((start, period, count, remainder)) + ",  #", word[start:start + period], word[start:start + period] * count)
-
 
 
 def powerset(iterable):
@@ -137,12 +72,12 @@ def brutepower(pmrs, word):
 
     pmrs_complete = []
     for start, period, count, remainder in pmrs:
-        for idx in range(remainder + 1):
-            for offset in range(count):
-                if count - offset > 1:
-                    if offset > 0:
-                        pmrs_complete.append((start + idx + offset * period, period, count - offset, 0))
-                    pmrs_complete.append((start + idx, period, count - offset, 0))
+        pmrs_complete.append((start, period, count, 0))  # add self
+        length = period * count + remainder
+        for l in range(length - 1, 1, -1):
+            for offset in range(length - l + 1):
+                if l // period > 1:
+                    pmrs_complete.append((start + offset, period, l // period, 0))
 
     # print(pmrs_complete)
 
@@ -165,7 +100,7 @@ def brutepower(pmrs, word):
             for x in l:
                 if x[2] > 1:
                     z += x[1] * x[2]
-            print("answer:", l, z)
+            # print("answer:", l, z)
             old_max = y
             y = max(y, z)
 
@@ -190,7 +125,6 @@ def main():
     print(runs)
     print(len(runs))
     subswithseqs(runs, word)
-    koffer(runs, word)
     _, solutions = brutepower(runs, word)
     for sol in solutions:
         print("Solution")
