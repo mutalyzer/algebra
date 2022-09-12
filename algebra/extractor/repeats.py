@@ -9,12 +9,6 @@ def extract_repeats(word):
     # For all bases as start position, except the last
     for start in range(len(word)):
 
-        # Deal with rotations that belong to us
-        if results:
-            last_start, last_period, last_count, last_remainder = results[-1]
-            if last_remainder > 0 and start == last_start + 1:
-                continue
-
         # For all the periods remaining
         for period in range(1, len(word) - start + 1):
 
