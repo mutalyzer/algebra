@@ -99,11 +99,16 @@ from algebra.extractor import extract_repeats
             (1, 1, 2, 0),
             (4, 1, 6, 0),
         ]),
-        ("AATAAATAAAAA", [ # 12, AATA[2];A[4]
+        ("AATAAATAAAAA", [
             (0, 1, 2, 0),
             (0, 4, 2, 2),
             (3, 1, 3, 0),
             (7, 1, 5, 0),
+        ]),
+        ("CGAAGAAGAC", [
+            (1, 3, 2, 2),
+            (2, 1, 2, 0),
+            (5, 1, 2, 0),
         ]),
     ],
 )
