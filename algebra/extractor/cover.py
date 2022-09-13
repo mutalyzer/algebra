@@ -464,8 +464,10 @@ def cover(word, pmrs, inv=None):
     for pos in range(1, n):
         # default to the previous value
         value = max_cover[pos - 1]
+        print(f"pos: {pos}")
 
         for idx in inv[pos]:
+            print(f"idx: {idx}")
             start, period, count, remainder = pmrs[idx]
 
             if hwm >= start:
@@ -477,6 +479,8 @@ def cover(word, pmrs, inv=None):
                         if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
                             values[idx] = value
                             ends[idx] = pos
+                            print(f"Update because of hwm values[idx] {values[idx]}")
+                            print(f"Update because of hwm ends[idx] {ends[idx]}")
 
             real_count = (pos - start + 1) // period
             if real_count > 1:
@@ -490,6 +494,8 @@ def cover(word, pmrs, inv=None):
                     if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
                         values[idx] = value
                         ends[idx] = pos
+                        print(f"Update values[idx] {values[idx]}")
+                        print(f"Update ends[idx] {ends[idx]}")
 
             if start + period * count + remainder - 1 == pos and values[idx] > 0:
                 print("update hwm (pos, idx, ends[idx])", pos, idx, ends[idx])
@@ -568,25 +574,81 @@ def main():
     for idx, pmr in enumerate(pmrs):
         print(f"        {pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
 
-    inv = inv_array(n, pmrs)
-    print(n, inv, sum([len(i) for i in inv]))
-    print(cover(word, pmrs))
-    return
+
+def to_hgvs(word, repeats):
+    def hgvs():
+        start = 0
+        for repeat in repeats:
+            if repeat[0] > start:
+                yield word[start:repeat[0]]
+            yield f"{word[repeat[0]:repeat[0] + repeat[1]]}[{repeat[2]}]"
+            start = repeat[0] + repeat[1] * repeat[2]
+        if start < len(word):
+            yield word[start:]
+    return ";".join(hgvs())
+
+
+def extract_cover(pos, pmrs, inv, max_cover, hwm, start=0, cover=[]):
+
+    if pos < start:
+        print("end pos", pos, cover)
+        yield list(cover)
+        return
+
+    if not inv[pos]:
+        print("inv pos", pos)
+        yield from extract_cover(pos - 1, pmrs, inv, max_cover, hwm, start, cover)
+        return
+
+    print("work")
+
+    if max_cover[pos] == max_cover[pos - 1]:
+        print("yield left", pos)
+        yield from extract_cover(pos - 1, pmrs, inv, max_cover, hwm, start, cover)
+
+    for idx in inv[pos]:
+        start, period, count, remainder = pmrs[idx]
+        length = period * count
+        if pos - length == -1 or max_cover[pos] == max_cover[pos - length] + length:
+            print("pmrs", pmrs[idx], pos)
+            offset = pos + 1 - period * count
+            cover.append((start + offset, period, count))
+            yield from extract_cover(pos - length, pmrs, inv, max_cover, hwm, start, cover)
+            cover.pop()
+
+
+def main():
+    # word = fib_word(9)
+    # n = len(word)
+    # pmrs = find_pmrs(word)
+    # print(len(pmrs))
+    # for idx, pmr in enumerate(pmrs):
+    #     print(f"        {pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
+    #
+    # inv = inv_array(n, pmrs)
+    # print(n, inv, sum([len(i) for i in inv]))
+    # print(cover(word, pmrs))
+    # return
 
     #print(find_pmrs("CCCCACCAT"))
     #return
 
-    for word, pmrs, inv, max_cover, hgvs in TESTS:
+    for word, pmrs, inv, max_cover, hgvs in TESTS[4:5]:
         print(word)
-        my_pmrs = find_pmrs(word)
-        assert set(pmrs) == set(my_pmrs)
-        continue
-
+        # my_pmrs = find_pmrs(word)
+        # assert set(pmrs) == set(my_pmrs)
+        # continue
 
         n = len(word)
-        assert n > sum([len(i) for i in inv])
+        # print("AAA", cover(word, pmrs))
         assert inv == inv_array(n, pmrs)
         assert max_cover == cover(word, pmrs)
+
+        print()
+        print()
+        print()
+        for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
+            print(to_hgvs(word, e))
 
 
 if __name__ == "__main__":
