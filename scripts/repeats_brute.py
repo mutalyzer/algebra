@@ -3,6 +3,7 @@ import subprocess
 from algebra.utils import random_sequence
 from algebra.extractor.repeats import extract_repeats, subswithseqs
 from algebra.extractor.repeats_alt import _repeats
+from algebra.extractor.cover import find_pmrs
 
 
 def main():
@@ -17,14 +18,17 @@ def main():
         # "Mihai"
         pmrs_alt = sorted([(x[1], len(x[0]), x[2], x[3]) for x in _repeats(word)])
 
+        # "Jonathan"
+        pmrs_vis = sorted(find_pmrs(word))
+
         # mreps if available
         mreps_bin = "../repeats/mreps/mreps"
         if os.path.isfile(mreps_bin) and os.access(mreps_bin, os.X_OK):
             p = subprocess.run([mreps_bin, "-allowsmall", "-s", word], capture_output=True)
             pmrs_mreps = eval(p.stdout)
-            assert pmrs == pmrs_alt == pmrs_mreps
+            assert pmrs == pmrs_alt == pmrs_vis == pmrs_mreps
         else:
-            assert pmrs == pmrs_alt
+            assert pmrs == pmrs_alt == pmrs_vis
 
         if not pmrs:
             continue
