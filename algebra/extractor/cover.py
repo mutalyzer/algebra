@@ -491,8 +491,8 @@ def cover(word, pmrs, inv=None):
                         values[idx] = value
                         ends[idx] = pos
 
-            if start + period * count + remainder - 1 == pos:
-                print("update hwm", pos, idx, ends[idx])
+            if start + period * count + remainder - 1 == pos and values[idx] > 0:
+                print("update hwm (pos, idx, ends[idx])", pos, idx, ends[idx])
                 hwm = ends[idx]
 
         max_cover[pos] = value
