@@ -541,6 +541,25 @@ def fib_word(n):
     return fw1
 
 
+def frac(n):
+    fw0 = "A"
+    if n <= 0:
+        return fw0
+    fw1 = "AC"
+    if n == 1:
+        return fw1
+    fw2 = "AG"
+    if n == 2:
+        return fw2
+    fw3 = "AT"
+    if n == 3:
+        return fw3
+
+    for _ in range(3, n):
+        fw0, fw1, fw2, fw3 = fw1, fw2, fw3, fw3 + fw2 + fw1 + fw0
+    return fw3
+
+
 def main():
     word = fib_word(9)
     n = len(word)
