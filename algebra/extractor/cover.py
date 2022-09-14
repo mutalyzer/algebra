@@ -130,15 +130,6 @@ def frac(n):
     return fw3
 
 
-def main():
-    word = fib_word(9)
-    n = len(word)
-    pmrs = find_pmrs(word)
-    print(len(pmrs))
-    for idx, pmr in enumerate(pmrs):
-        print(f"        {pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
-
-
 def to_hgvs(word, repeats):
     def hgvs():
         start = 0
