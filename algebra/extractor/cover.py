@@ -1,6 +1,5 @@
 from os.path import commonprefix
 import sys
-from repeats import extract_repeats
 
 
 def pmr_interval(pmr):
@@ -220,7 +219,7 @@ def main():
     word = sys.argv[1]
     n = len(word)
     print(n, word)
-    pmrs = extract_repeats(word)
+    pmrs = find_pmrs(word)
     print("pmrs", pmrs)
     inv = inv_array(n, pmrs)
     print("inv", inv)
