@@ -173,37 +173,19 @@ def extract_cover(pos, pmrs, inv, max_cover, hwm, start=0, cover=[]):
 
 
 def main():
-    # word = fib_word(9)
-    # n = len(word)
-    # pmrs = find_pmrs(word)
-    # print(len(pmrs))
-    # for idx, pmr in enumerate(pmrs):
-    #     print(f"        {pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
-    #
-    # inv = inv_array(n, pmrs)
-    # print(n, inv, sum([len(i) for i in inv]))
-    # print(cover(word, pmrs))
-    # return
-
-    #print(find_pmrs("CCCCACCAT"))
-    #return
-
-    for word, pmrs, inv, max_cover, hgvs in TESTS[4:5]:
-        print(word)
-        # my_pmrs = find_pmrs(word)
-        # assert set(pmrs) == set(my_pmrs)
-        # continue
-
-        n = len(word)
-        # print("AAA", cover(word, pmrs))
-        assert inv == inv_array(n, pmrs)
-        assert max_cover == cover(word, pmrs)
-
-        print()
-        print()
-        print()
-        for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
-            print(to_hgvs(word, e))
+    if len(sys.argv) < 2:
+        return -1
+    word = sys.argv[1]
+    n = len(word)
+    print(n, word)
+    pmrs = find_pmrs(word)
+    print("pmrs", pmrs)
+    inv = inv_array(n, pmrs)
+    print("inv", inv)
+    max_cover = cover(word, pmrs)
+    print("max_cover", max_cover)
+    for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
+        print(to_hgvs(word, e))
 
 
 if __name__ == "__main__":
