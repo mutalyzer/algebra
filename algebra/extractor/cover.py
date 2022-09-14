@@ -38,7 +38,7 @@ def cover(word, pmrs, inv=None):
                     real_length = real_count * period
                     if max_cover[hwm] + real_length > value:
                         value = max_cover[hwm] + real_length
-                        if real_count > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
+                        if real_count >= values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
                             values[idx] = real_count
                             ends[idx] = pos
 
@@ -57,6 +57,7 @@ def cover(word, pmrs, inv=None):
 
             if start + period * count + remainder - 1 == pos and values[idx] > 0:
                 hwm = ends[idx]
+                print("update hwm", pos, idx, hwm)
 
         max_cover[pos] = value
 
@@ -216,13 +217,13 @@ def main():
     print("inv", inv)
     max_cover = cover(word, pmrs)
     print("max_cover", max_cover)
-    for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
-        print(to_hgvs(word, e))
+    #for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
+    #    print(to_hgvs(word, e))
 
-    print("start bcover")
-    print(sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs]))
-    print(brute_cover(word, sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs])))
-    print("end bcover")
+    #print("start bcover")
+    #print(sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs]))
+    #print(brute_cover(word, sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs])))
+    #print("end bcover")
 
 
 if __name__ == "__main__":
