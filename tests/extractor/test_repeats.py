@@ -485,5 +485,5 @@ def test_inv_array(word, pmrs, inv, max_cover, hgvs):
 
 @pytest.mark.parametrize(
     "word, pmrs, inv, max_cover, hgvs", TESTS)
-def test_max_cover(word, pmrs, inv, max_cover, hgvs):
+def test_cover(word, pmrs, inv, max_cover, hgvs):
     assert max_cover == cover(word, pmrs)

@@ -31,15 +31,17 @@ def cover(word, pmrs, inv=None):
         # print(f"pos: {pos}")
 
         for idx in inv[pos]:
-            # print(f"idx: {idx}")
+            print(f"idx: {idx}")
             start, period, count, remainder = pmrs[idx]
 
-            if hwm >= start:
-                real_count = (pos - hwm) // period
+            hwm_pos = hwm - period + 1
+            print("hwm", hwm, hwm_pos)
+            if hwm_pos >= start:
+                real_count = (pos - hwm_pos) // period
                 if real_count > 1:
                     real_length = real_count * period
-                    if max_cover[hwm] + real_length > value:
-                        value = max_cover[hwm] + real_length
+                    if max_cover[hwm_pos] + real_length > value:
+                        value = max_cover[hwm_pos] + real_length
                         if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
                             values[idx] = value
                             ends[idx] = pos
