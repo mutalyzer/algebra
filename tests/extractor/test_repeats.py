@@ -1,5 +1,5 @@
 import pytest
-from algebra.extractor.cover import cover, find_pmrs, inv_array
+from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array
 from algebra.extractor.repeats import extract_repeats
 from algebra.extractor.repeats_alt import _repeats as repeats_alt
 
@@ -487,3 +487,9 @@ def test_inv_array(word, pmrs, inv, max_cover, hgvs):
     "word, pmrs, inv, max_cover, hgvs", TESTS)
 def test_cover(word, pmrs, inv, max_cover, hgvs):
     assert max_cover == cover(word, pmrs)
+
+
+@pytest.mark.parametrize(
+    "word, pmrs, inv, max_cover, hgvs", TESTS)
+def test_brute_cover(word, pmrs, inv, max_cover, hgvs):
+    assert max_cover[-1] == brute_cover(word, sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs]))

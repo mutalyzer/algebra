@@ -173,19 +173,44 @@ def extract_cover(pos, pmrs, inv, max_cover, hwm, start=0, cover=[]):
             cover.pop()
 
 
-def bcover(pmrs, n=0, cover=[]):
-    print("BCOVER", n)
+def brute_cover(word, pmrs):
+    def intersect(a, b):
+        a_start, a_period, a_count = a
+        b_start, *_ = b
+        return b_start < a_start + a_period * a_count
 
-    if n >= len(pmrs):
-        yield cover
-        return
+    def cover_length(cover):
+        return sum([period * count for _, period, count in cover])
 
-    # skip this pmr
-    yield from bcover(pmrs, n + 1, cover)
+    def bcover(pmrs, n=0, cover=[]):
+        if n >= len(pmrs):
+            yield cover_length(cover)
+            return
 
-    # try all non-conflicting runs for this pmr
-    prev = cover[-1]
-    start, period, count, remainder = pmrs[n]
+        # whitout this prm
+        yield from bcover(pmrs, n + 1, cover)
+
+        prev = None
+        if len(cover):
+            prev = cover[-1]
+
+        start, period, count, remainder = pmrs[n]
+        for i in range(remainder + 1):
+            # the complete prm
+            if prev is None or not intersect(prev, (start + i, period, count)):
+                cover.append((start + i, period, count))
+                yield from bcover(pmrs, n + 1, cover)
+                cover.pop()
+
+        for i in range(remainder + period + 1):
+            for j in range(2, count):
+                for k in range(count - j):
+                    if prev is None or not intersect(prev, (start + i + k * period, period, j)):
+                        cover.append((start + i + k * period, period, j))
+                        yield from bcover(pmrs, n + 1, cover)
+                        cover.pop()
+
+    return max(bcover(pmrs))
 
 
 def main():
@@ -204,7 +229,8 @@ def main():
         print(to_hgvs(word, e))
 
     print("start bcover")
-    bcover(pmrs)
+    print(sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs]))
+    print(brute_cover(word, sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs])))
     print("end bcover")
 
 
