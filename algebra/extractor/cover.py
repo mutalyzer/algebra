@@ -28,10 +28,10 @@ def cover(word, pmrs, inv=None):
     for pos in range(1, n):
         # default to the previous value
         value = max_cover[pos - 1]
-        print(f"pos: {pos}")
+        # print(f"pos: {pos}")
 
         for idx in inv[pos]:
-            print(f"idx: {idx}")
+            # print(f"idx: {idx}")
             start, period, count, remainder = pmrs[idx]
 
             if hwm >= start:
@@ -43,8 +43,8 @@ def cover(word, pmrs, inv=None):
                         if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
                             values[idx] = value
                             ends[idx] = pos
-                            print(f"Update because of hwm values[idx] {values[idx]}")
-                            print(f"Update because of hwm ends[idx] {ends[idx]}")
+                            # print(f"Update because of hwm values[idx] {values[idx]}")
+                            # print(f"Update because of hwm ends[idx] {ends[idx]}")
 
             real_count = (pos - start + 1) // period
             if real_count > 1:
@@ -58,11 +58,11 @@ def cover(word, pmrs, inv=None):
                     if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
                         values[idx] = value
                         ends[idx] = pos
-                        print(f"Update values[idx] {values[idx]}")
-                        print(f"Update ends[idx] {ends[idx]}")
+                        # print(f"Update values[idx] {values[idx]}")
+                        # print(f"Update ends[idx] {ends[idx]}")
 
             if start + period * count + remainder - 1 == pos and values[idx] > 0:
-                print("update hwm (pos, idx, ends[idx])", pos, idx, ends[idx])
+                # print("update hwm (pos, idx, ends[idx])", pos, idx, ends[idx])
                 hwm = ends[idx]
 
         max_cover[pos] = value
