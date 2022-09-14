@@ -132,19 +132,18 @@ def frac(n):
 
 def to_hgvs(word, repeats):
     def hgvs():
-        start = 0
-        for repeat in repeats:
-            if repeat[0] > start:
-                yield word[start:repeat[0]]
-            yield f"{word[repeat[0]:repeat[0] + repeat[1]]}[{repeat[2]}]"
-            start = repeat[0] + repeat[1] * repeat[2]
-        if start < len(word):
-            yield word[start:]
+        pos = 0
+        for start, period, count in repeats:
+            if start > pos:
+                yield word[pos:start]
+            yield f"{word[start:start + period]}[{count}]"
+            pos = start + period * count
+        if pos < len(word):
+            yield word[pos:]
     return ";".join(hgvs())
 
 
 def extract_cover(pos, pmrs, inv, max_cover, hwm, start=0, cover=[]):
-
     if pos < start:
         print("end pos", pos, cover)
         yield list(cover)
@@ -172,9 +171,24 @@ def extract_cover(pos, pmrs, inv, max_cover, hwm, start=0, cover=[]):
             cover.pop()
 
 
+def bcover(pmrs, n=0, cover=[]):
+    print("BCOVER", n)
+
+    if n >= len(pmrs):
+        yield cover
+        return
+
+    # skip this pmr
+    yield from bcover(pmrs, n + 1, cover)
+
+    # try all non-conflicting runs for this pmr
+    prev = cover[-1]
+    start, period, count, remainder = pmrs[n]
+
+
 def main():
     if len(sys.argv) < 2:
-        return -1
+        return
     word = sys.argv[1]
     n = len(word)
     print(n, word)
@@ -186,6 +200,10 @@ def main():
     print("max_cover", max_cover)
     for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
         print(to_hgvs(word, e))
+
+    print("start bcover")
+    bcover(pmrs)
+    print("end bcover")
 
 
 if __name__ == "__main__":
