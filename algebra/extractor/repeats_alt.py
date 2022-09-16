@@ -1,7 +1,5 @@
 from argparse import ArgumentParser
 
-import pytest
-
 
 def _window_fixed_size(seq, window_sz):
     repeats = []
@@ -28,7 +26,7 @@ def _window_fixed_size(seq, window_sz):
     return repeats
 
 
-def get_repeats(seq):
+def _repeats(seq):
     def _already_in(new_interval):
         for in_interval in intervals:
             if new_interval[0] >= in_interval[0] and new_interval[1] <= in_interval[1]:
@@ -54,75 +52,8 @@ def main():
     parser.add_argument("seq", type=str, help="Sequence")
     args = parser.parse_args()
 
-    for repeat in get_repeats(args.seq):
+    for repeat in _repeats(args.seq):
         print(repeat)
-
-
-@pytest.mark.parametrize(
-    "sequence, repeats",
-    [
-        (
-            "CATCATACATACTACTAAAAA",
-            [
-                ("A", 16, 5, 0),
-                ("CAT", 0, 2, 0),
-                ("TAC", 9, 2, 2),
-                ("CATA", 3, 2, 1),
-            ],
-        ),
-        (
-            "ACCACCTCT",
-            [
-                ("C", 1, 2, 0),
-                ("C", 4, 2, 0),
-                ("CT", 5, 2, 0),
-                ("ACC", 0, 2, 0),
-            ],
-        ),
-        (
-            "CCACACAC",
-            [
-                ("C", 0, 2, 0),
-                ("CA", 1, 3, 1),
-            ],
-        ),
-        (
-            "CACATCACATCACATCACAT",
-            [
-                ("CA", 0, 2, 0),
-                ("CA", 5, 2, 0),
-                ("CA", 10, 2, 0),
-                ("CA", 15, 2, 0),
-                ("CACAT", 0, 4, 0),
-            ],
-        ),
-        (
-            "AACAACAAAACAACA",
-            [
-                ("A", 0, 2, 0),
-                ("A", 3, 2, 0),
-                ("A", 6, 4, 0),
-                ("A", 11, 2, 0),
-                ("AAC", 0, 2, 2),
-                ("AAC", 8, 2, 1),
-                ("AACAA", 3, 2, 0),
-            ],
-        ),
-        (
-            "AAAAAACAAAAAACAAAAAACACACAAAAAAA",
-            [
-                ("A", 0, 6, 0),
-                ("A", 7, 6, 0),
-                ("A", 14, 6, 0),
-                ("A", 25, 7, 0),
-                ("AC", 19, 3, 1),
-                ("AAAAAAC", 0, 3, 1),
-            ],
-        ),
-    ],
-)
-def test_repeats(sequence, repeats):
-    assert repeats == get_repeats(sequence)
 
 
 if __name__ == "__main__":

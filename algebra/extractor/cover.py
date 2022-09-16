@@ -1,441 +1,5 @@
 from os.path import commonprefix
-
-
-TESTS = [
-    ("AAB",
-     [
-        (0, 1, 2, 0),  # A
-     ],
-     #  0  1  2
-     #  A  A  B
-     #  .  0  .
-     #  0  2  2
-     [[], [0], []],  # flat
-     [0, 2, 2],
-     "A[2];B",
-    ),
-
-    ("AABAB",
-     [
-        (0, 1, 2, 0),  # A
-        (1, 2, 2, 0),  # AB
-     ],
-     #  0  1  2  3  4
-     #  A  A  B  A  B
-     #  .  0  .  .  1
-     #  0  2  2  2  4
-     [[], [0], [], [], [1]],  # flat
-     [0, 2, 2, 2, 4],
-     "A;AB[2]",
-    ),
-
-    ("AABC",
-     [
-        (0, 1, 2, 0),  # A
-     ],
-     #  0  1  2  3
-     #  A  A  B  C
-     #  .  0  .  .
-     #  0  2  2  2
-     [[], [0], [], []],  # flat
-     [0, 2, 2, 2],
-     "A[2];BC",
-    ),
-
-    ("AABAAB",
-     [
-        (0, 1, 2, 0),  # A
-        (0, 3, 2, 0),  # AAB
-        (3, 1, 2, 0),  # A
-     ],
-     #  0  1  2  3  4  5
-     #  A  A  B  A  A  B
-     #  .  0  .  .  2  1
-     #  0  2  2  2  4  6
-     [[], [0], [], [], [2], [1]],  # flat
-     [0, 2, 2, 2, 4, 6],
-     "AAB[2]",
-    ),
-
-    ("AABAABA",
-     [
-        (0, 1, 2, 0),  # A
-        (0, 3, 2, 1),  # AAB
-        (3, 1, 2, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6
-     #  A  A  B  A  A  B  A
-     #  .  0  .  .  2  1  1
-     #  0  2  2  2  4  6  6
-     [[], [0], [], [], [2], [1], [1]],  # flat
-     [0, 2, 2, 2, 4, 6, 6],
-     "AAB[2];A",  # or "A;ABA[2]"
-    ),
-
-    ("AABAABB",
-     [
-        (0, 1, 2, 0),  # A
-        (0, 3, 2, 0),  # AAB
-        (3, 1, 2, 0),  # A
-        (5, 1, 2, 0),  # B
-     ],
-     #  0  1  2  3  4  5  6
-     #  A  A  B  A  A  B  B
-     #  .  0  .  .  2  1  3
-     #  0  2  2  2  4  6  6
-     [[], [0], [], [], [2], [1], [3]],  # flat
-     [0, 2, 2, 2, 4, 6, 6],
-     "AAB[2];B",  # or "A[2];B;A[2];B[2]"
-    ),
-
-    ("AABBAABB",
-     [
-        (0, 1, 2, 0),  # A
-        (0, 4, 2, 0),  # AABB
-        (2, 1, 2, 0),  # B
-        (4, 1, 2, 0),  # A
-        (6, 1, 2, 0),  # B
-     ],
-     #  0  1  2  3  4  5  6  7
-     #  A  A  B  B  A  A  B  B
-     #  .  0  .  2  .  3  .  1
-     #                       4
-     #  0  2  2  4  4  6  6  8
-     [[], [0], [], [2], [], [3], [], [1, 4]],  # prefix
-     [0, 2, 2, 4, 4, 6, 6, 8],
-     "AABB[2]",  # or "A[2];B[2];A[2];B[2]"
-    ),
-
-    ("AAABAAAB",
-     [
-        (0, 1, 3, 0),  # A
-        (0, 4, 2, 0),  # AAAB
-        (4, 1, 3, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7
-     #  A  A  A  B  A  A  A  B
-     #  .  0  0  .  .  2  2  1
-     #  0  2  3  3  3  5  6  8
-     [[], [0], [0], [], [], [2], [2], [1]],  # flat
-     [0, 2, 3, 3, 3, 5, 6, 8],
-     "AAAB[2]",
-    ),
-
-    ("ACCACCTCT",
-     [
-        (0, 3, 2, 0),  # ACC
-        (1, 1, 2, 0),  # C
-        (4, 1, 2, 0),  # C
-        (5, 2, 2, 0),  # CT
-     ],
-     #  0  1  2  3  4  5  6  7  8
-     #  A  C  C  A  C  C  T  C  T
-     #  .  .  1  .  .  0  .  .  3
-     #                 2
-     #  0  0  2  2  2  6  6  6  6
-     [[], [], [1], [], [], [0, 2], [], [], [3]],  # prefix
-     [0, 0, 2, 2, 2, 6, 6, 6, 6],
-     "ACC[2];TCT",  # or "A;C[2];AC;CT[2]"
-    ),
-
-    ("TCCTCCACCA",
-     [
-        (0, 3, 2, 0),  # TCC
-        (1, 1, 2, 0),  # C
-        (4, 1, 2, 0),  # C
-        (4, 3, 2, 0),  # CCA
-        (7, 1, 2, 0),  # C
-     ],
-     #  0  1  2  3  4  5  6  7  8  9
-     #  T  C  C  T  C  C  A  C  C  A
-     #  .  .  1  .  .  0  .  .  4  3
-     #                 2
-     #  0  0  2  2  2  6  6  6  8  8
-     [[], [], [1], [], [], [0, 2], [], [], [4], [3]],  # prefix
-     [0, 0, 2, 2, 2, 6, 6, 6, 8, 8],
-     "TCC[2];A;C[2];A",  # or "T;C[2];T;CCA[2]"
-    ),
-
-    ("ABCABCABCDABCD",
-     [
-        (0, 3, 3, 0),  # ABC
-        (6, 4, 2, 0),  # ABCD
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11 12 13
-     #  A  B  C  A  B  C  A  B  C  D  A  B  C  D
-     #  .  .  .  .  .  0  .  .  0  .  .  .  .  1
-     #  0  0  0  0  0  6  6  6  9  9  9  9  9 14
-     [[], [], [], [], [], [0], [0], [0], [0], [], [], [], [], [1]],  # flat
-     [0, 0, 0, 0, 0, 6, 6, 6, 9, 9, 9, 9, 9, 14],
-     "ABC[2];ABCD[2]",
-    ),
-
-    ("CCACACAC",
-     [
-        (0, 1, 2, 0),  # C
-        (1, 2, 3, 1),  # CA
-     ],
-     #  0  1  2  3  4  5  6  7
-     #  C  C  A  C  A  C  A  C
-     #  .  0  .  .  1  1  1  1
-     #  0  2  2  2  4  6  6  8
-     [[], [0], [], [], [1], [1], [1], [1]],  # flat
-     [0, 2, 2, 2, 4, 6, 6, 8],
-     "C[2];AC[3]",
-    ),
-
-    ("CACATCACATCACATCACAT",
-     [
-        (0, 2, 2, 0),   # CA
-        (0, 5, 4, 0),   # CACAT
-        (5, 2, 2, 0),   # CA
-        (10, 2, 2, 0),  # CA
-        (15, 2, 2, 0),  # CA
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
-     #  C  A  C  A  T  C  A  C  A  T  C  A  C  A  T  C  A  C  A  T
-     #  .  .  .  0  .  .  .  .  2  1  1  1  1  1  1  1  1  1  1  1
-     #                                         3              4
-     #  0  0  0  4  4  4  4  4  8 10 10 10 10 14 15 15 15 15 19 20
-     [[], [], [], [0], [], [], [], [], [2], [1], [1], [1], [1], [1, 3], [1], [1], [1], [1], [1, 4], [1]],  # nesting
-     [0, 0, 0, 4, 4, 4, 4, 4, 8, 10, 10, 10, 10, 14, 15, 15, 15, 15, 19, 20],
-     "CACAT[4]"
-    ),
-
-    ("AACAACAAAACAACA",
-     [
-        (0, 1, 2, 0),   # A
-        (0, 3, 2, 2),   # AAC
-        (3, 1, 2, 0),   # A
-        (3, 5, 2, 0),   # AACAA
-        (6, 1, 4, 0),   # A
-        (8, 3, 2, 1),   # AAC
-        (11, 1, 2, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
-     #  A  A  C  A  A  C  A  A  A  A  C  A  A  C  A
-     #  .  0  .  .  2  1  1  1  4  4  .  .  3  5  5
-     #                       4              6
-     #  0  2  2  2  4  6  6  8  9 10 10 10 12 14 15
-     [[], [0], [], [], [2], [1], [1], [1, 4], [4], [4], [], [], [3, 6], [5], [5]],  # interval intersection & prefix
-     [0, 2, 2, 2, 4, 6, 6, 8, 9, 10, 10, 10, 12, 14, 15],
-     "AAC[2];A[3];ACA[2]",
-    ),
-
-    ("AAAAAACAAAAAACAAAAAACACACAAAAAAA",
-     [
-        (0, 1, 6, 0),   # A
-        (0, 7, 3, 1),   # AAAAAAC
-        (7, 1, 6, 0),   # A
-        (14, 1, 6, 0),  # A
-        (19, 2, 3, 1),  # AC
-        (25, 1, 7, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
-     #  A  A  A  A  A  A  C  A  A  A  A  A  A  C  A  A  A  A  A  A  C  A  C  A  C  A  A  A  A  A  A  A
-     #  .  0  0  0  0  0  .  .  2  2  2  2  2  1  1  1  1  1  1  1  1  1  4  4  4  4  5  5  5  5  5  5
-     #                                               3  3  3  3  3
-     #  0  2  3  4  5  6  6  6  8  9 10 11 12 14 14 16 17 18 19 20 21 21 23 24 25 26 27 28 29 30 31 32
-     [[], [0], [0], [0], [0], [0], [], [], [2], [2], [2], [2], [2], [1], [1], [1, 3], [1, 3], [1, 3], [1, 3], [1, 3], [1], [1], [4], [4], [4], [4], [5], [5], [5], [5], [5], [5]],  # nesting
-     [0, 2, 3, 4, 5, 6, 6, 6, 8, 9, 10, 11, 12, 14, 14, 16, 17, 18, 19, 20, 21, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
-     "AAAAAAC[2];A[6];CA[3];A[6]",
-    ),
-
-    ("CATCATACATACTACTAAAAA",
-     [
-        (0, 3, 2, 0),   # CAT
-        (3, 4, 2, 1),   # CATA
-        (9, 3, 2, 2),   # TAC
-        (16, 1, 5, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-     #  C  A  T  C  A  T  A  C  A  T  A  C  T  A  C  T  A  A  A  A  A
-     #  .  .  .  .  .  0  .  .  .  .  1  1  .  .  2  2  2  3  3  3  3
-     #  0  0  0  0  0  6  6  6  6  6  8  8  8  8 12 12 14 14 16 17 18
-     [[], [], [], [], [], [0], [], [], [], [], [1], [1], [], [], [2], [2], [2], [3], [3], [3], [3]],  # flat
-     [0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 8, 8, 8, 8, 12, 12, 14, 14, 16, 17, 18],
-     "CAT;CATA[2];CTA[2];A[4]",
-    ),
-
-    ("CTACTACTATATA",
-     [
-        (0, 3, 3, 0),  # CTA
-        (7, 2, 3, 0),  # TA
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11 12
-     #  C  T  A  C  T  A  C  T  A  T  A  T  A
-     #  .  .  .  .  .  0  0  0  0  .  1  1  1
-     #  0  0  0  0  0  6  6  6  9  9 10 10 13
-     [[], [], [], [], [], [0], [0], [0], [0], [], [1], [1], [1]],  # flat
-     [0, 0, 0, 0, 0, 6, 6, 6, 9, 9, 10, 10, 13],
-     "CTA[3];TA[2]",
-    ),
-
-    ("AATAAATAAAAA",
-     [
-        (0, 1, 2, 0),  # A
-        (0, 4, 2, 2),  # AATA
-        (3, 1, 3, 0),  # A
-        (7, 1, 5, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11
-     #  A  A  T  A  A  A  T  A  A  A  A  A
-     #  .  0  .  .  2  2  .  1  1  1  3  3
-     #                          3  3
-     #  0  2  2  2  4  5  5  8  8 10 11 12
-     [[], [0], [], [], [2], [2], [], [1], [1, 3], [1, 3], [3], [3]],  # interval intersection
-     [0, 2, 2, 2, 4, 5, 5, 8, 8, 10, 11, 12],
-     "AATA[2];A[4]",  # or "A[2];TAAA[2];A[2]"
-    ),
-
-    ("TAATAAAAAA",
-     [
-        (0, 3, 2, 0),  # TAA
-        (1, 1, 2, 0),  # A
-        (4, 1, 6, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7  8  9
-     #  T  A  A  T  A  A  A  A  A  A
-     #  .  .  1  .  .  0  2  2  2  2
-     #                 2
-     #  0  0  2  2  2  6  6  8  9 10
-     [[], [], [1], [], [], [0, 2], [2], [2], [2], [2]],  # prefix
-     [0, 0, 2, 2, 2, 6, 6, 8, 9, 10],
-     "TAA[2];A[4]",
-    ),
-
-    ("CCCCACCAT",
-     [
-        (0, 1, 4, 0),  # C
-        (2, 3, 2, 0),  # CCA
-        (5, 1, 2, 0),  # C
-     ],
-     #  0  1  2  3  4  5  6  7  8
-     #  C  C  C  C  A  C  C  A  T
-     #  .  0  0  0  .  .  2  1  .
-     #  0  2  3  4  4  4  6  8  8
-     [[], [0], [0], [0], [], [], [2], [1], []],  # flat
-     [0, 2, 3, 4, 4, 4, 6, 8, 8],
-     "C[2];CCA[2];T",
-    ),
-
-    ("TACCACCCC",
-     [
-        (1, 3, 2, 0),  # ACC
-        (2, 1, 2, 0),  # C
-        (5, 1, 4, 0),  # C
-     ],
-     #  0  1  2  3  4  5  6  7  8
-     #  T  A  C  C  A  C  C  C  C
-     #  .  .  .  1  .  .  0  2  2
-     #                    2
-     #  0  0  0  2  2  2  6  6  8
-     [[], [], [], [1], [], [], [0, 2], [2], [2]],  # prefix
-     [0, 0, 0, 2, 2, 2, 6, 6, 8],
-     "T;ACC[2];C[2]",
-    ),
-
-    ("CCACACAAA",
-     [
-        (0, 1, 2, 0),  # C
-        (1, 2, 3, 0),  # CA
-        (6, 1, 3, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7  8
-     #  C  C  A  C  A  C  A  A  A
-     #  .  0  .  .  1  1  1  2  2
-     #  0  2  2  2  4  6  6  8  9
-     [[], [0], [], [], [1], [1], [1], [2], [2]],  # flat
-     [0, 2, 2, 2, 4, 6, 6, 8, 9],
-     "C[2];AC[2];A[3]",
-    ),
-
-    ("CGCGGGGCGC",
-     [
-        (0, 2, 2, 0),  # CG
-        (3, 1, 4, 0),  # G
-        (6, 2, 2, 0),  # GC
-     ],
-     #  0  1  2  3  4  5  6  7  8  9
-     #  C  G  C  G  G  G  G  C  G  C
-     #  .  .  .  0  1  1  1  .  .  2
-     #  0  0  0  4  4  6  7  7  7 10
-     [[], [], [], [0], [1], [1], [1], [], [], [2]],  # flat
-     [0, 0, 0, 4, 4, 6, 7, 7, 7, 10],
-     "CG[2];G[2];GC[2]",
-    ),
-
-    ("AACAACACAC",
-     [
-        (0, 1, 2, 0),  # A
-        (0, 3, 2, 1),  # AAC
-        (3, 1, 2, 0),  # A
-        (4, 2, 3, 0),  # AC
-     ],
-     #  0  1  2  3  4  5  6  7  8  9
-     #  A  A  C  A  A  C  A  C  A  C
-     #  .  0  .  .  2  1  1  3  3  3
-     #  0  2  2  2  4  6  6  6  8 10
-     [[], [0], [], [], [2], [1], [1], [3], [3], [3]],  # flat
-     [0, 2, 2, 2, 4, 6, 6, 6, 8, 10],
-     "AAC[2];AC[2]",
-    ),
-
-    ("TATAATAATA",
-     [
-        (0, 2, 2, 0),  # TA
-        (1, 3, 3, 0),  # ATA
-        (3, 1, 2, 0),  # A
-        (6, 1, 2, 0),  # A
-     ],
-     #  0  1  2  3  4  5  6  7  8  9
-     #  T  A  T  A  A  T  A  A  T  A
-     #  .  .  .  0  2  .  1  1  1  1
-     #                       3
-     #  0  0  0  4  4  4  6  6  6 10
-     [[], [], [], [0], [2], [], [1], [1, 3], [1], [1]],  # nesting
-     [0, 0, 0, 4, 4, 4, 6, 6, 6, 10],
-     "TA[2];ATA[2]",
-    ),
-
-    ("CACCACACCACCACACCACACCACCACACCACCA",
-     [
-        (2, 1, 2, 0),   #  0: C
-        (7, 1, 2, 0),   #  1: C
-        (10, 1, 2, 0),  #  2: C
-        (15, 1, 2, 0),  #  3: C
-        (20, 1, 2, 0),  #  4: C
-        (23, 1, 2, 0),  #  5: C
-        (28, 1, 2, 0),  #  6: C
-        (31, 1, 2, 0),  #  7: C
-        (3, 2, 2, 1),   #  8: CA
-        (11, 2, 2, 1),  #  9: CA
-        (16, 2, 2, 1),  # 10: CA
-        (24, 2, 2, 1),  # 11: CA
-        (0, 3, 2, 0),   # 12: CAC
-        (5, 3, 3, 0),   # 13: CAC
-        (13, 3, 2, 0),  # 14: CAC
-        (18, 3, 3, 0),  # 15: CAC
-        (26, 3, 2, 2),  # 16: CAC
-        (0, 5, 2, 1),   # 17: CACCA
-        (8, 5, 3, 1),   # 18: CACCA
-        (21, 5, 2, 1),  # 19: CACCA
-        (0, 8, 2, 3),   # 20: CACCACAC
-        (13, 8, 2, 5),  # 21: CACCACAC
-        (0, 13, 2, 6),  # 22: CACCACACCACCA
-     ],
-     #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33
-     #  C  A  C  C  A  C  A  C  C  A  C  C  A  C  A  C  C  A  C  A  C  C  A  C  C  A  C  A  C  C  A  C  C  A
-     #  .  .  .  0  . 12  8  8  1 17 13  2 13 13  9  9  3 18 14 10 10  4 18 15  5 15 15 11 11  6 19 16  7 16
-     #                               17 13          20 20 20 18 18 18 18    18 15 22 22 22 21 21 21 19 16 21
-     #                                                       20                            22 22 22 21 21
-     #                                                                                              22
-     #  0  0  0  2  2  6  6  6  8 10 10 12  
-     [[], [], [], [0], [], [12], [8], [8], [1], [17], [13, 17], [2, 13], [13], [13], [9], [9, 20], [3, 20], [18, 20], [14, 18, 20], [10, 18], [10, 18], [4, 18], [18], [15, 18], [5, 15], [15, 22], [15, 22], [11, 22], [11, 21, 22], [6, 21, 22], [19, 21, 22], [16, 19, 21, 22], [7, 16, 21], [16, 21]],  # complex
-     [],
-     "",
-    ),
-]
+import sys
 
 
 def pmr_interval(pmr):
@@ -474,8 +38,8 @@ def cover(word, pmrs, inv=None):
                     real_length = real_count * period
                     if max_cover[hwm] + real_length > value:
                         value = max_cover[hwm] + real_length
-                        if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
-                            values[idx] = value
+                        if real_count >= values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
+                            values[idx] = real_count
                             ends[idx] = pos
 
             real_count = (pos - start + 1) // period
@@ -487,13 +51,13 @@ def cover(word, pmrs, inv=None):
 
                 if prev_value + real_length > value:
                     value = prev_value + real_length
-                    if value > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
-                        values[idx] = value
+                    if real_count > values[idx] and (values[idx] == 0 or len(inv[pos]) == 1):
+                        values[idx] = real_count
                         ends[idx] = pos
 
-            if start + period * count + remainder - 1 == pos:
-                print("update hwm", pos, idx, ends[idx])
+            if start + period * count + remainder - 1 == pos and values[idx] > 0:
                 hwm = ends[idx]
+                print("update hwm", pos, idx, hwm)
 
         max_cover[pos] = value
 
@@ -541,33 +105,125 @@ def fib_word(n):
     return fw1
 
 
+def frac(n):
+    fw0 = "A"
+    if n <= 0:
+        return fw0
+    fw1 = "AC"
+    if n == 1:
+        return fw1
+    fw2 = "AG"
+    if n == 2:
+        return fw2
+    fw3 = "AT"
+    if n == 3:
+        return fw3
+
+    for _ in range(3, n):
+        fw0, fw1, fw2, fw3 = fw1, fw2, fw3, fw3 + fw2 + fw1 + fw0
+    return fw3
+
+
+def to_hgvs(word, repeats):
+    def hgvs():
+        pos = 0
+        for start, period, count in repeats:
+            if start > pos:
+                yield word[pos:start]
+            yield f"{word[start:start + period]}[{count}]"
+            pos = start + period * count
+        if pos < len(word):
+            yield word[pos:]
+    return ";".join(hgvs())
+
+
+def extract_cover(pos, pmrs, inv, max_cover, hwm, start=0, cover=[]):
+    if pos < start:
+        print("end pos", pos, cover)
+        yield list(cover)
+        return
+
+    if not inv[pos]:
+        print("inv pos", pos)
+        yield from extract_cover(pos - 1, pmrs, inv, max_cover, hwm, start, cover)
+        return
+
+    print("work")
+
+    if max_cover[pos] == max_cover[pos - 1]:
+        print("yield left", pos)
+        yield from extract_cover(pos - 1, pmrs, inv, max_cover, hwm, start, cover)
+
+    for idx in inv[pos]:
+        start, period, count, remainder = pmrs[idx]
+        length = period * count
+        if pos - length == -1 or max_cover[pos] == max_cover[pos - length] + length:
+            print("pmrs", pmrs[idx], pos)
+            offset = pos + 1 - period * count
+            cover.append((start + offset, period, count))
+            yield from extract_cover(pos - length, pmrs, inv, max_cover, hwm, start, cover)
+            cover.pop()
+
+
+def brute_cover(word, pmrs):
+    def intersect(a, b):
+        a_start, a_period, a_count = a
+        b_start, *_ = b
+        return b_start < a_start + a_period * a_count
+
+    def cover_length(cover):
+        return sum([period * count for _, period, count in cover])
+
+    def bcover(pmrs, n=0, cover=[]):
+        if n >= len(pmrs):
+            yield cover_length(cover)
+            return
+
+        # whitout this prm
+        yield from bcover(pmrs, n + 1, cover)
+
+        prev = None
+        if len(cover):
+            prev = cover[-1]
+
+        start, period, count, remainder = pmrs[n]
+        for i in range(remainder + 1):
+            # the complete prm
+            if prev is None or not intersect(prev, (start + i, period, count)):
+                cover.append((start + i, period, count))
+                yield from bcover(pmrs, n + 1, cover)
+                cover.pop()
+
+        for i in range(remainder + period + 1):
+            for j in range(2, count):
+                for k in range(count - j):
+                    if prev is None or not intersect(prev, (start + i + k * period, period, j)):
+                        cover.append((start + i + k * period, period, j))
+                        yield from bcover(pmrs, n + 1, cover)
+                        cover.pop()
+
+    return max(bcover(pmrs))
+
+
 def main():
-    word = fib_word(9)
+    if len(sys.argv) < 2:
+        return
+    word = sys.argv[1]
     n = len(word)
+    print(n, word)
     pmrs = find_pmrs(word)
-    print(len(pmrs))
-    for idx, pmr in enumerate(pmrs):
-        print(f"        {pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
-
+    print("pmrs", pmrs)
     inv = inv_array(n, pmrs)
-    print(n, inv, sum([len(i) for i in inv]))
-    print(cover(word, pmrs))
-    return
+    print("inv", inv)
+    max_cover = cover(word, pmrs)
+    print("max_cover", max_cover)
+    #for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
+    #    print(to_hgvs(word, e))
 
-    #print(find_pmrs("CCCCACCAT"))
-    #return
-
-    for word, pmrs, inv, max_cover, hgvs in TESTS:
-        print(word)
-        my_pmrs = find_pmrs(word)
-        assert set(pmrs) == set(my_pmrs)
-        continue
-
-
-        n = len(word)
-        assert n > sum([len(i) for i in inv])
-        assert inv == inv_array(n, pmrs)
-        assert max_cover == cover(word, pmrs)
+    #print("start bcover")
+    #print(sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs]))
+    #print(brute_cover(word, sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs])))
+    #print("end bcover")
 
 
 if __name__ == "__main__":
