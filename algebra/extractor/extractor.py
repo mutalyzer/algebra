@@ -5,7 +5,8 @@ LCS alignments with support for tandem repeats and complex variants."""
 from collections import deque
 from os.path import commonprefix
 from ..lcs import edit, lcs_graph
-from ..variants import Variant, reverse_complement
+from ..variants import Variant, reverse_complement, patch
+from ..relations.supremal_based import spanning_variant
 
 
 def canonical(observed, root):
@@ -173,13 +174,13 @@ def to_hgvs(variants, reference):
                 return f"{to_hgvs_position(variant.start + inserted_remainder, variant.start + inserted_remainder + len(inserted_unit))}dup"
             return f"{to_hgvs_position(variant.start, variant.end - deleted_remainder)}{inserted_unit}[{inserted_number}]"
 
-        # Inversion
-        if len(variant.sequence) > 1 and variant.sequence == reverse_complement(deleted):
-            return f"{to_hgvs_position(variant.start, variant.end)}inv"
-
         # Prefix and suffix trimming
         start, end = trim(deleted, variant.sequence)
         trimmed = Variant(variant.start + start, variant.end - end, variant.sequence[start:len(variant.sequence) - end])
+
+        # Inversion
+        if len(trimmed.sequence) > 1 and trimmed.sequence == reverse_complement(reference[trimmed.start : trimmed.end]):
+            return f"{to_hgvs_position(trimmed.start, trimmed.end)}inv"
 
         # Deletion/insertion with repeated insertion
         inserted_unit, inserted_number, inserted_remainder = repeats(trimmed.sequence)

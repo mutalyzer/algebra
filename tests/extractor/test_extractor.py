@@ -77,6 +77,8 @@ from algebra.extractor import extract, extract_supremal, to_hgvs
     ("CATCA", "CATCATCATCATCATCAT", [Variant(5, 5, "TCATCATCATCAT")], "5_6ins[TCA[4];T]"),
     ("CATCAT", "CATCATCATCATC", [Variant(6, 6,  "CATCATC")], "6_7ins[CAT[2];C]"),
     ("CATCAT", "CATCATCATCATCA", [Variant(6, 6,  "CATCATCA")], "6_7ins[CAT[2];CA]"),
+    ("CCTTGTCTCTTATGGGATTACATCCATGG", "CCTTGGATGTAATCCCATAAGAGACATGG", [Variant(4, 25, "GGATGTAATCCCATAAGAGAC")], "6_24inv"),
+    ("TACATATATATATGCATATATATATGCATATATATATATATATGCATATATATA", "TACATATATATATGCATATATATATATGCATATATATATATATGCATATATATA", [Variant(15, 43, "ATATATATATATGCATATATATATATAT")], "26_29inv"),
 ])
 def test_extract(reference, observed, variants, hgvs):
     canonical = list(extract(reference, observed))
