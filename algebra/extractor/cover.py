@@ -229,23 +229,23 @@ def overlapping(pmrs):
 
 def print_tables(n, word, inv, cover):
     for pos in range(n):
-        print(f"{pos:2}", end=" ")
-    print("\n", end=" ")
+        print(f"{pos:3}", end="")
+    print("\n", end="  ")
     for ch in word:
-        print(f"{ch:2}", end=" ")
+        print(f"{ch:3}", end="")
     print()
     for y in range(max([len(x) for x in inv])):
         for x in inv:
             if len(x) <= y:
                 if y == 0:
-                    print(f" .", end=" ")
+                    print(f"  .", end="")
                 else:
-                    print("  ", end=" ")
+                    print("   ", end="")
             else:
-                print(f"{x[y]:2}", end=" ")
+                print(f"{x[y]:3}", end="")
         print()
     for val in cover:
-        print(f"{val:2}", end=" ")
+        print(f"{val:3}", end="")
     print()
 
 
