@@ -225,25 +225,70 @@ def brute_cover(word, pmrs):
     return max(bcover(pmrs))
 
 
+def overlapping(pmrs):
+    def overlap(pmr_lhs, pmr_rhs):
+        start_lhs, period_lhs, count_lhs, remainder_lhs = pmr_lhs
+        end_lhs = start_lhs + period_lhs * count_lhs + remainder_lhs
+        start_rhs, period_rhs, count_rhs, remainder_rhs = pmr_rhs
+        end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
+
+        if start_lhs < start_rhs < end_lhs < end_rhs:
+            return end_lhs - start_rhs
+        return 0
+
+    result = [[] for _ in range(len(pmrs))]
+    for idx_rhs, rhs in enumerate(pmrs[1:], start=1):
+        if rhs[0] == pmrs[0][0]:
+            continue
+        for idx_lhs, lhs in enumerate(pmrs[:idx_rhs]):
+            length = overlap(lhs, rhs)
+            if length:
+                result[idx_rhs].append((idx_lhs, length))
+    return result
+
+
+def print_tables(n, word, inv, cover):
+    for pos in range(n):
+        print(f"{pos:3}", end="")
+    print("\n", end="  ")
+    for ch in word:
+        print(f"{ch:3}", end="")
+    print()
+    for y in range(max([len(x) for x in inv])):
+        for x in inv:
+            if len(x) <= y:
+                if y == 0:
+                    print(f"  .", end="")
+                else:
+                    print("   ", end="")
+            else:
+                print(f"{x[y]:3}", end="")
+        print()
+    for val in cover:
+        print(f"{val:3}", end="")
+    print()
+
+
 def main():
     if len(sys.argv) < 2:
+        print(f"usage: {sys.argv[0]} word", file=sys.stderr)
         return
+
     word = sys.argv[1]
     n = len(word)
     print(n, word)
-    pmrs = find_pmrs(word)
-    print("pmrs", pmrs)
-    inv = inv_array(n, pmrs)
-    print("inv", inv)
-    max_cover = cover(word, pmrs)
-    print("max_cover", max_cover)
-    #for e in extract_cover(len(word) - 1, pmrs, inv, max_cover, []):
-    #    print(to_hgvs(word, e))
 
-    #print("start bcover")
-    #print(sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs]))
-    #print(brute_cover(word, sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs])))
-    #print("end bcover")
+    pmrs = sorted(find_pmrs(word))
+    for idx, pmr in enumerate(pmrs):
+        print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
+
+    print(overlapping(pmrs))
+
+    inv = inv_array(n, pmrs)
+    max_cover = cover(word, pmrs)
+
+    print_tables(n, word, inv, max_cover)
+    print(brute_cover(word, pmrs))
 
 
 if __name__ == "__main__":
