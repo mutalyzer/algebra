@@ -205,6 +205,31 @@ def brute_cover(word, pmrs):
     return max(bcover(pmrs))
 
 
+def brute_cover_alt(word, pmrs, prev=None, n=0, cover=0):
+    def intersect(a, b):
+        a_start, a_period, a_count = a
+        b_start, *_ = b
+        return b_start < a_start + a_period * a_count
+
+    if n >= len(pmrs):
+        return cover
+
+    local = brute_cover_alt(word, pmrs, prev, n + 1, cover)
+
+    start, period, count, remainder = pmrs[n]
+    for i in range(remainder + 1):
+        if prev is None or not intersect(prev, (start + i, period, count)):
+            local = max(local, brute_cover_alt(word, pmrs, (start + i, period, count), n + 1, cover + period * count))
+
+    for i in range(remainder + period + 1):
+        for j in range(2, count):
+            for k in range(count - j):
+                if prev is None or not intersect(prev, (start + i + k * period, period, j)):
+                    local = max(local, brute_cover_alt(word, pmrs, (start + i + k * period, period, j), n + 1, cover + period * j))
+
+    return local
+
+
 def overlapping(pmrs):
     def overlap(pmr_lhs, pmr_rhs):
         start_lhs, period_lhs, count_lhs, remainder_lhs = pmr_lhs
@@ -227,10 +252,15 @@ def overlapping(pmrs):
     return result
 
 
+def print_array(arr):
+    for el in arr:
+        print(f"{el:3}", end="")
+    print()
+
+
 def print_tables(n, word, inv, cover):
-    for pos in range(n):
-        print(f"{pos:3}", end="")
-    print("\n", end="  ")
+    print_array(range(n))
+    print("  ", end="")
     for ch in word:
         print(f"{ch:3}", end="")
     print()
@@ -244,9 +274,7 @@ def print_tables(n, word, inv, cover):
             else:
                 print(f"{x[y]:3}", end="")
         print()
-    for val in cover:
-        print(f"{val:3}", end="")
-    print()
+    print_array(cover)
 
 
 def main():
@@ -269,6 +297,7 @@ def main():
 
     print_tables(n, word, inv, max_cover)
     print(brute_cover(word, pmrs))
+    print(brute_cover_alt(word, pmrs))
 
 
 if __name__ == "__main__":
