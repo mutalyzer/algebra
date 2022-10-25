@@ -24,7 +24,6 @@ def cover(word, pmrs, inv=None):
     max_cover = [0] * n
 
     overlap_array = [0] * len(pmrs)
-    conflict_array = [-1] * len(pmrs)
     for o, p in permutations(range(len(pmrs)), 2):
         start, period, count, remainder = pmrs[o]
         pred_start, pred_period, pred_count, pred_remainder = pmrs[p]
@@ -36,9 +35,6 @@ def cover(word, pmrs, inv=None):
             print(f"{o} overlaps {p}: {overlap}")
             if overlap > overlap_array[o]:
                 overlap_array[o] = overlap
-                conflict_array[o] = p
-
-    print("Conflict array", conflict_array)
 
     for pos in range(1, n):
         # default to the previous value ("O-class")
@@ -49,7 +45,6 @@ def cover(word, pmrs, inv=None):
             start, period, count, remainder = pmrs[idx]
             print("idx ", idx)
             print("overlap", overlap_array[idx])
-            print("conflict", conflict_array[idx])
 
             # "N-class"
             print("N class")
@@ -64,7 +59,7 @@ def cover(word, pmrs, inv=None):
 
             value = max(value, prev_value + real_length)
 
-            if conflict_array[idx] != -1:
+            if overlap_array[idx] > 0:
                 print("Conflict!")
 
                 for x in range(start, start + overlap_array[idx]):
