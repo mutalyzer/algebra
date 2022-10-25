@@ -23,17 +23,22 @@ def overlapping(pmrs):
         end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
 
         if start_lhs < start_rhs < end_lhs < end_rhs:
-            return end_lhs - start_rhs
-        return 0
+            return start_rhs, end_lhs
 
-    result = [0] * len(pmrs)
+        return None
+
+    result = [None] * len(pmrs)
     for idx_rhs, rhs in enumerate(pmrs[1:], start=1):
         if rhs[0] == pmrs[0][0]:
             continue
         for idx_lhs, lhs in enumerate(pmrs[:idx_rhs]):
-            length = overlap(lhs, rhs)
-            if length > result[idx_rhs]:
-                result[idx_rhs] = length
+            iv = overlap(lhs, rhs)
+            # print("overlap interval", idx_lhs, idx_rhs, iv)
+            if iv is not None:
+                if result[idx_rhs] is None:
+                    result[idx_rhs] = iv
+                else:
+                    result[idx_rhs] = (min(result[idx_rhs][0], iv[0]), max(result[idx_rhs][1], iv[1]))
 
     return result
 
@@ -70,27 +75,23 @@ def cover(word, pmrs, inv=None):
 
             value = max(value, prev_value + real_length)
 
-            if overlap_array[idx] > 0:
-                print("Conflict!")
+            if overlap_array[idx] is None:
+                continue
+            for x in range(*overlap_array[idx]):
+                print("x", x)
+                real_count = (pos - x) // period
+                print("real count", real_count)
 
-                for x in range(start, start + overlap_array[idx]):
-                    print("x", x)
-                    if x < start:
-                        print("skip large x")
-                        continue
-                    real_count = (pos - x) // period
-                    print("real count", real_count)
+                if real_count > 1:
+                    real_length = real_count * period
+                    print("real length", real_length)
 
-                    if real_count > 1:
-                        real_length = real_count * period
-                        print("real length", real_length)
+                    prev_value = 0
+                    if pos - real_length >= 0:
+                        prev_value = max_cover[pos - real_length]
 
-                        prev_value = 0
-                        if pos - real_length >= 0:
-                            prev_value = max_cover[pos - real_length]
-
-                        value = max(value, prev_value + real_length)
-                        print("value", value)
+                    value = max(value, prev_value + real_length)
+                    print("value", value)
 
         max_cover[pos] = value
 
