@@ -16,7 +16,6 @@ def inv_array(n, pmrs):
     return inv
 
 
-
 def cover(word, pmrs, inv=None):
     n = len(word)
     if not inv:
@@ -41,34 +40,16 @@ def cover(word, pmrs, inv=None):
 
     print("Conflict array", conflict_array)
 
-    # pred = -1
     for pos in range(1, n):
         # default to the previous value ("O-class")
         value = max_cover[pos - 1]
         print("pos", pos)
-
-        # if len(inv[pos]) == 0:
-        #     pred = -1
 
         for idx in inv[pos]:
             start, period, count, remainder = pmrs[idx]
             print("idx ", idx)
             print("overlap", overlap_array[idx])
             print("conflict", conflict_array[idx])
-
-            # overlap = 0
-            # if pred != -1:
-            #     pred_start, pred_period, pred_count, pred_remainder = pmrs[pred]
-            #     pred_end = pred_start + pred_period * pred_count + pred_remainder
-            #     end = start + period * count + remainder
-            #
-            #     if pred_end > start and pred_end < end and pred_start < start:
-            #         overlap = pred_end - start
-            #         print(f"{idx} overlaps {pred} at {pos}: {overlap}")
-            #     else:
-            #         pred = idx
-            # else:
-            #     pred = idx
 
             # "N-class"
             print("N class")
@@ -85,7 +66,6 @@ def cover(word, pmrs, inv=None):
 
             if conflict_array[idx] != -1:
                 print("Conflict!")
-                x_start, x_period, x_count, x_remainder = pmrs[conflict_array[idx]]
 
                 for x in range(start, start + overlap_array[idx]):
                     print("x", x)
@@ -105,24 +85,6 @@ def cover(word, pmrs, inv=None):
 
                         value = max(value, prev_value + real_length)
                         print("value", value)
-
-            # "N-1-class"
-            # print("N-1 class")
-            # real_count -= overlap // period
-            #
-            # if real_count > 1:
-            #     real_length = real_count * period
-            #     # print("real", real_count, real_length)
-            #
-            #     prev_value = 0
-            #     if pos - real_length >= 0:
-            #         prev_value = max_cover[pos - real_length]
-            #
-            #     # print("prev", pos - real_length, prev_value)
-            #
-            #     value = max(value, prev_value + real_length)
-            #     # print("value", value)
-
 
         max_cover[pos] = value
 
@@ -157,36 +119,6 @@ def find_pmrs(word):
                 start += remainder + 1
 
     return pmrs
-
-
-def fib_word(n):
-    fw0 = "A"
-    if n <= 0:
-        return fw0
-
-    fw1 = "C"
-    for _ in range(1, n):
-        fw0, fw1 = fw1, fw1 + fw0
-    return fw1
-
-
-def frac(n):
-    fw0 = "A"
-    if n <= 0:
-        return fw0
-    fw1 = "AC"
-    if n == 1:
-        return fw1
-    fw2 = "AG"
-    if n == 2:
-        return fw2
-    fw3 = "AT"
-    if n == 3:
-        return fw3
-
-    for _ in range(3, n):
-        fw0, fw1, fw2, fw3 = fw1, fw2, fw3, fw3 + fw2 + fw1 + fw0
-    return fw3
 
 
 def to_hgvs(word, repeats):
