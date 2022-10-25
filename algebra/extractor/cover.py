@@ -23,7 +23,7 @@ def overlapping(pmrs):
         end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
 
         if start_lhs < start_rhs < end_lhs < end_rhs:
-            return start_rhs, end_lhs
+            return max(start_rhs, start_lhs + 2 * period_lhs - 1), min(end_lhs, end_rhs - 2 * period_rhs)
 
         return None
 
