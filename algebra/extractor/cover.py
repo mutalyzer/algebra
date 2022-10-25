@@ -27,14 +27,15 @@ def overlapping(pmrs):
             return end_lhs - start_rhs
         return 0
 
-    result = [[] for _ in range(len(pmrs))]
+    result = [0] * len(pmrs)
     for idx_rhs, rhs in enumerate(pmrs[1:], start=1):
         if rhs[0] == pmrs[0][0]:
             continue
         for idx_lhs, lhs in enumerate(pmrs[:idx_rhs]):
             length = overlap(lhs, rhs)
-            if length:
-                result[idx_rhs].append((idx_lhs, length))
+            if length > result[idx_rhs]:
+                result[idx_rhs] = length
+
     return result
 
 
@@ -45,18 +46,7 @@ def cover(word, pmrs, inv=None):
 
     max_cover = [0] * n
 
-    overlap_array = [0] * len(pmrs)
-    for o, p in permutations(range(len(pmrs)), 2):
-        start, period, count, remainder = pmrs[o]
-        pred_start, pred_period, pred_count, pred_remainder = pmrs[p]
-        end = start + period * count + remainder
-        pred_end = pred_start + pred_period * pred_count + pred_remainder
-
-        if pred_start < start < pred_end < end:
-            overlap = pred_end - start
-            print(f"{o} overlaps {p}: {overlap}")
-            if overlap > overlap_array[o]:
-                overlap_array[o] = overlap
+    overlap_array = overlapping(pmrs)
 
     for pos in range(1, n):
         # default to the previous value ("O-class")
