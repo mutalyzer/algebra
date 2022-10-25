@@ -16,6 +16,28 @@ def inv_array(n, pmrs):
     return inv
 
 
+def overlapping(pmrs):
+    def overlap(pmr_lhs, pmr_rhs):
+        start_lhs, period_lhs, count_lhs, remainder_lhs = pmr_lhs
+        end_lhs = start_lhs + period_lhs * count_lhs + remainder_lhs
+        start_rhs, period_rhs, count_rhs, remainder_rhs = pmr_rhs
+        end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
+
+        if start_lhs < start_rhs < end_lhs < end_rhs:
+            return end_lhs - start_rhs
+        return 0
+
+    result = [[] for _ in range(len(pmrs))]
+    for idx_rhs, rhs in enumerate(pmrs[1:], start=1):
+        if rhs[0] == pmrs[0][0]:
+            continue
+        for idx_lhs, lhs in enumerate(pmrs[:idx_rhs]):
+            length = overlap(lhs, rhs)
+            if length:
+                result[idx_rhs].append((idx_lhs, length))
+    return result
+
+
 def cover(word, pmrs, inv=None):
     n = len(word)
     if not inv:
@@ -195,28 +217,6 @@ def brute_cover(word, pmrs):
                         cover.pop()
 
     return max(bcover(pmrs))
-
-
-def overlapping(pmrs):
-    def overlap(pmr_lhs, pmr_rhs):
-        start_lhs, period_lhs, count_lhs, remainder_lhs = pmr_lhs
-        end_lhs = start_lhs + period_lhs * count_lhs + remainder_lhs
-        start_rhs, period_rhs, count_rhs, remainder_rhs = pmr_rhs
-        end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
-
-        if start_lhs < start_rhs < end_lhs < end_rhs:
-            return end_lhs - start_rhs
-        return 0
-
-    result = [[] for _ in range(len(pmrs))]
-    for idx_rhs, rhs in enumerate(pmrs[1:], start=1):
-        if rhs[0] == pmrs[0][0]:
-            continue
-        for idx_lhs, lhs in enumerate(pmrs[:idx_rhs]):
-            length = overlap(lhs, rhs)
-            if length:
-                result[idx_rhs].append((idx_lhs, length))
-    return result
 
 
 def print_tables(n, word, inv, cover):
