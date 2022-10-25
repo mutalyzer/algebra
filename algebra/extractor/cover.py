@@ -1,5 +1,6 @@
 from os.path import commonprefix
 import sys
+from itertools import permutations
 
 
 def pmr_interval(pmr):
@@ -23,34 +24,54 @@ def cover(word, pmrs, inv=None):
 
     max_cover = [0] * n
 
-    pred = -1
+    overlap_array = [0] * len(pmrs)
+    conflict_array = [-1] * len(pmrs)
+    for o, p in permutations(range(len(pmrs)), 2):
+        start, period, count, remainder = pmrs[o]
+        pred_start, pred_period, pred_count, pred_remainder = pmrs[p]
+        end = start + period * count + remainder
+        pred_end = pred_start + pred_period * pred_count + pred_remainder
+
+        if pred_start < start < pred_end < end:
+            overlap = pred_end - start
+            print(f"{o} overlaps {p}: {overlap}")
+            if overlap > overlap_array[o]:
+                overlap_array[o] = overlap
+                conflict_array[o] = p
+
+    print("Conflict array", conflict_array)
+
+    # pred = -1
     for pos in range(1, n):
         # default to the previous value ("O-class")
         value = max_cover[pos - 1]
-        # print("pos", pos)
+        print("pos", pos)
 
         # if len(inv[pos]) == 0:
         #     pred = -1
 
         for idx in inv[pos]:
             start, period, count, remainder = pmrs[idx]
+            print("idx ", idx)
+            print("overlap", overlap_array[idx])
+            print("conflict", conflict_array[idx])
 
-            overlap = 0
-            if pred != -1:
-                pred_start, pred_period, pred_count, pred_remainder = pmrs[pred]
-                pred_end = pred_start + pred_period * pred_count + pred_remainder
-                end = start + period * count + remainder
-
-                if pred_end > start and pred_end < end and pred_start < start:
-                    overlap = pred_end - start
-                    print(f"{idx} overlaps {pred} at {pos}: {overlap}")
-                else:
-                    pred = idx
-            else:
-                pred = idx
+            # overlap = 0
+            # if pred != -1:
+            #     pred_start, pred_period, pred_count, pred_remainder = pmrs[pred]
+            #     pred_end = pred_start + pred_period * pred_count + pred_remainder
+            #     end = start + period * count + remainder
+            #
+            #     if pred_end > start and pred_end < end and pred_start < start:
+            #         overlap = pred_end - start
+            #         print(f"{idx} overlaps {pred} at {pos}: {overlap}")
+            #     else:
+            #         pred = idx
+            # else:
+            #     pred = idx
 
             # "N-class"
-            # print("N class")
+            print("N class")
             real_count = (pos - start + 1) // period
             real_length = real_count * period
 
@@ -58,25 +79,49 @@ def cover(word, pmrs, inv=None):
             if pos - real_length >= 0:  # > 0 ?
                 prev_value = max_cover[pos - real_length]
 
+            print("value", prev_value + real_length)
+
             value = max(value, prev_value + real_length)
-            # print("value", value)
+
+            if conflict_array[idx] != -1:
+                print("Conflict!")
+                x_start, x_period, x_count, x_remainder = pmrs[conflict_array[idx]]
+
+                for x in range(start, start + overlap_array[idx]):
+                    print("x", x)
+                    if x < start:
+                        print("skip large x")
+                        continue
+                    real_count = (pos - x) // period
+                    print("real count", real_count)
+
+                    if real_count > 1:
+                        real_length = real_count * period
+                        print("real length", real_length)
+
+                        prev_value = 0
+                        if pos - real_length >= 0:
+                            prev_value = max_cover[pos - real_length]
+
+                        value = max(value, prev_value + real_length)
+                        print("value", value)
 
             # "N-1-class"
             # print("N-1 class")
-            real_count -= overlap // period
-
-            if real_count > 1:
-                real_length = real_count * period
-                # print("real", real_count, real_length)
-
-                prev_value = 0
-                if pos - real_length >= 0:
-                    prev_value = max_cover[pos - real_length]
-
-                # print("prev", pos - real_length, prev_value)
-
-                value = max(value, prev_value + real_length)
-                # print("value", value)
+            # real_count -= overlap // period
+            #
+            # if real_count > 1:
+            #     real_length = real_count * period
+            #     # print("real", real_count, real_length)
+            #
+            #     prev_value = 0
+            #     if pos - real_length >= 0:
+            #         prev_value = max_cover[pos - real_length]
+            #
+            #     # print("prev", pos - real_length, prev_value)
+            #
+            #     value = max(value, prev_value + real_length)
+            #     # print("value", value)
 
 
         max_cover[pos] = value
