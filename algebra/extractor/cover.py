@@ -1,5 +1,8 @@
 from os.path import commonprefix
 import sys
+import time
+from itertools import permutations
+# from algebra.extractor.flatten import reduce_inv
 
 
 def pmr_interval(pmr):
@@ -33,37 +36,85 @@ def overlapping(pmrs):
             continue
         for idx_lhs, lhs in enumerate(pmrs[:idx_rhs]):
             iv = overlap(lhs, rhs)
-            # print("overlap interval", idx_lhs, idx_rhs, iv)
             if iv is not None:
+                # print("overlap interval", idx_rhs, idx_lhs, iv)
+                # print(nested_array[idx_lhs])
+                #
+                # if not nested_array[idx_lhs]:
+                #     if result[idx_rhs] is None:
+                #         result[idx_rhs] = iv
+                #     else:
                 if result[idx_rhs] is None:
                     result[idx_rhs] = iv
                 else:
                     result[idx_rhs] = (min(result[idx_rhs][0], iv[0]), max(result[idx_rhs][1], iv[1]))
+                # else:
+                #     print("Nested!")
 
     return result
 
 
-def cover(word, pmrs, inv=None):
+def nested(pmrs):
+    nested_array = [[] for _ in range(len(pmrs))]
+
+    for lhs, rhs in permutations(range(len(pmrs)), 2):
+        start_lhs, period_lhs, count_lhs, remainder_lhs = pmrs[lhs]
+        start_rhs, period_rhs, count_rhs, remainder_rhs = pmrs[rhs]
+        end_lhs = start_lhs + period_lhs * count_lhs + remainder_lhs
+        end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
+
+        if start_rhs >= start_lhs and end_rhs <= end_lhs:
+            print(f"skip {rhs} in {lhs}")
+            nested_array[rhs].append(lhs)
+            # overlap = pred_end - start
+            # print(f"{o} overlaps {p}: {overlap}")
+            # if overlap > overlap_array[o]:
+            #     overlap_array[o] = overlap
+    return nested_array
+
+
+def reduce(inv, pmrs):
+    results = inv.copy()
+
+    for idx, l in enumerate(results):
+        print(l)
+        if len(l) > 2:
+            new_l = l.copy()
+            for lhs, rhs in permutations(l, 2):
+                print(lhs, rhs)
+                start_lhs, period_lhs, count_lhs, remainder_lhs = pmrs[lhs]
+                start_rhs, period_rhs, count_rhs, remainder_rhs = pmrs[rhs]
+                end_lhs = start_lhs + period_lhs * count_lhs + remainder_lhs
+                end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
+
+                if start_lhs >= start_rhs and end_lhs <= end_rhs:
+                    print(f"skip {lhs} because of {rhs}")
+                    if rhs in new_l:
+                       new_l.remove(rhs)
+            results[idx] = new_l
+
+    return results
+
+
+def cover(word, pmrs, overlap_array, inv=None):
     n = len(word)
     if not inv:
         inv = inv_array(n, pmrs)
 
     max_cover = [0] * n
 
-    overlap_array = overlapping(pmrs)
-
     for pos in range(1, n):
         # default to the previous value ("O-class")
         value = max_cover[pos - 1]
-        print("pos", pos)
+        # print("pos", pos)
 
         for idx in inv[pos]:
             start, period, count, remainder = pmrs[idx]
-            print("idx ", idx)
-            print("overlap", overlap_array[idx])
+            # print("idx ", idx)
+            # print("overlap", overlap_array[idx])
 
             # "N-class"
-            print("N class")
+            # print("N class")
             real_count = (pos - start + 1) // period
             real_length = real_count * period
 
@@ -71,27 +122,25 @@ def cover(word, pmrs, inv=None):
             if pos - real_length >= 0:  # > 0 ?
                 prev_value = max_cover[pos - real_length]
 
-            print("value", prev_value + real_length)
+            # print("value", prev_value + real_length)
 
             value = max(value, prev_value + real_length)
 
             if overlap_array[idx] is None:
                 continue
             for x in range(*overlap_array[idx]):
-                print("x", x)
+                # print("x", x)
                 real_count = (pos - x) // period
-                print("real count", real_count)
+                # print("real count", real_count)
 
                 if real_count > 1:
                     real_length = real_count * period
-                    print("real length", real_length)
+                    # print("real length", real_length)
 
-                    prev_value = 0
-                    if pos - real_length >= 0:
-                        prev_value = max_cover[pos - real_length]
+                    prev_value = max_cover[pos - real_length]
 
                     value = max(value, prev_value + real_length)
-                    print("value", value)
+                    # print("value", value)
 
         max_cover[pos] = value
 
@@ -272,14 +321,31 @@ def main():
     for idx, pmr in enumerate(pmrs):
         print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
 
-    print(overlapping(pmrs))
+    #print(overlapping(pmrs))
+    # nested_array = nested(pmrs)
+    # print(nested_array)
+
+    overlap_array = overlapping(pmrs)  #, nested_array)
+    print(overlap_array)
 
     inv = inv_array(n, pmrs)
-    max_cover = cover(word, pmrs)
+    print(inv)
+    reduced = reduce(inv, pmrs)
+    print(reduced)
+    start = time.time()
+    max_cover = cover(word, pmrs, overlap_array, reduced)
+    end = time.time()
+    print(end-start)
 
-    print_tables(n, word, inv, max_cover)
-    print(brute_cover(word, pmrs))
+    print_tables(n, word, reduced, max_cover)
+    start = time.time()
     print(brute_cover_alt(word, pmrs))
+    end = time.time()
+    print(end-start)
+    start = time.time()
+    print(brute_cover(word, pmrs))
+    end = time.time()
+    print(end-start)
 
 
 if __name__ == "__main__":
