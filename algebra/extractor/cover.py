@@ -2,7 +2,6 @@ from os.path import commonprefix
 import sys
 import time
 from itertools import permutations
-# from algebra.extractor.flatten import reduce_inv
 
 
 def pmr_interval(pmr):
@@ -37,40 +36,12 @@ def overlapping(pmrs):
         for idx_lhs, lhs in enumerate(pmrs[:idx_rhs]):
             iv = overlap(lhs, rhs)
             if iv is not None:
-                # print("overlap interval", idx_rhs, idx_lhs, iv)
-                # print(nested_array[idx_lhs])
-                #
-                # if not nested_array[idx_lhs]:
-                #     if result[idx_rhs] is None:
-                #         result[idx_rhs] = iv
-                #     else:
                 if result[idx_rhs] is None:
                     result[idx_rhs] = iv
                 else:
                     result[idx_rhs] = (min(result[idx_rhs][0], iv[0]), max(result[idx_rhs][1], iv[1]))
-                # else:
-                #     print("Nested!")
 
     return result
-
-
-def nested(pmrs):
-    nested_array = [[] for _ in range(len(pmrs))]
-
-    for lhs, rhs in permutations(range(len(pmrs)), 2):
-        start_lhs, period_lhs, count_lhs, remainder_lhs = pmrs[lhs]
-        start_rhs, period_rhs, count_rhs, remainder_rhs = pmrs[rhs]
-        end_lhs = start_lhs + period_lhs * count_lhs + remainder_lhs
-        end_rhs = start_rhs + period_rhs * count_rhs + remainder_rhs
-
-        if start_rhs >= start_lhs and end_rhs <= end_lhs:
-            print(f"skip {rhs} in {lhs}")
-            nested_array[rhs].append(lhs)
-            # overlap = pred_end - start
-            # print(f"{o} overlaps {p}: {overlap}")
-            # if overlap > overlap_array[o]:
-            #     overlap_array[o] = overlap
-    return nested_array
 
 
 def reduce(inv, pmrs):
@@ -321,11 +292,7 @@ def main():
     for idx, pmr in enumerate(pmrs):
         print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
 
-    #print(overlapping(pmrs))
-    # nested_array = nested(pmrs)
-    # print(nested_array)
-
-    overlap_array = overlapping(pmrs)  #, nested_array)
+    overlap_array = overlapping(pmrs)
     print(overlap_array)
 
     inv = inv_array(n, pmrs)
