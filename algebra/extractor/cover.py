@@ -151,11 +151,9 @@ def main():
     print(n, word)
 
     pmrs = sorted(find_pmrs(word))
-    for idx, pmr in enumerate(pmrs):
-        print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]}")
-
     overlap = overlapping(pmrs)
-    print(overlap)
+    for idx, pmr in enumerate(pmrs):
+        print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]} : {overlap[idx]}")
 
     inv = inv_array(n, pmrs)
     max_cover = cover(word, pmrs)
