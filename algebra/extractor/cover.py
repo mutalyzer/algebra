@@ -48,7 +48,7 @@ def inv_array(n, pmrs):
 def overlapping(pmrs):
     overlap = [0] * len(pmrs)
     for rhs_idx, rhs in enumerate(pmrs[1:], start=1):
-        for lhs_idx, lhs in enumerate(pmrs[:rhs_idx]):
+        for lhs in pmrs[:rhs_idx]:
             lhs_start, lhs_period, lhs_count, lhs_remainder = lhs
             rhs_start, rhs_period, rhs_count, rhs_remainder = rhs
             lhs_end = lhs_start + lhs_period * lhs_count + lhs_remainder
@@ -70,59 +70,59 @@ def cover(word, pmrs, inv=None, overlap=None):
         value = max_cover[pos - 1]
 
         for idx in inv[pos]:
-            start, period, *_ = pmrs[idx]
-            real_count = (pos - start + 1) // period
-            real_length = period * real_count
+            start, period, _, remainder = pmrs[idx]
+            count = (pos - start + 1) // period
+            length = period * count
 
             prev_value = 0
-            if pos - real_length > 0:
-                prev_value = max_cover[pos - real_length]
+            if pos - length > 0:
+                prev_value = max_cover[pos - length]
 
-            value = max(value, prev_value + real_length)
+            value = max(value, prev_value + length)
 
-            for p in range(start, min(overlap[idx], pos - period * 2 + 1)):
-                real_count = (pos - p) // period
-                real_length = period * real_count
-                prev_value = max_cover[pos - real_length]
-                value = max(value, prev_value + real_length)
+            for p in range(max(start, start + remainder - 1),
+                           min(overlap[idx], pos - period * 2 + 1)):
+                count = (pos - p) // period
+                length = period * count
+                value = max(value, max_cover[pos - length] + length)
 
         max_cover[pos] = value
 
     return max_cover
 
 
-def brute_cover(word, pmrs, prev=None, n=0, cover=0):
+def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
     def intersect(lhs, rhs):
         lhs_start, lhs_period, lhs_count = lhs
         rhs_start, *_ = rhs
         return rhs_start < lhs_start + lhs_period * lhs_count
 
     if n >= len(pmrs):
-        return cover
+        return max_cover
 
-    local = brute_cover(word, pmrs, prev, n + 1, cover)
+    local = brute_cover(word, pmrs, prev, n + 1, max_cover)
 
     start, period, count, remainder = pmrs[n]
     for i in range(remainder + 1):
         if prev is None or not intersect(prev, (start + i, period, count)):
-            local = max(local, brute_cover(word, pmrs, (start + i, period, count), n + 1, cover + period * count))
+            local = max(local, brute_cover(word, pmrs, (start + i, period, count), n + 1, max_cover + period * count))
 
     for i in range(remainder + period + 1):
         for j in range(2, count):
             for k in range(count - j):
                 if prev is None or not intersect(prev, (start + i + k * period, period, j)):
-                    local = max(local, brute_cover(word, pmrs, (start + i + k * period, period, j), n + 1, cover + period * j))
+                    local = max(local, brute_cover(word, pmrs, (start + i + k * period, period, j), n + 1, max_cover + period * j))
 
     return local
 
 
-def print_array(arr):
-    for el in arr:
-        print(f"{el:3}", end="")
+def print_array(array):
+    for element in array:
+        print(f"{element:3}", end="")
     print()
 
 
-def print_tables(n, word, inv, cover):
+def print_tables(n, word, inv, max_cover):
     print_array(range(n))
     print("  ", end="")
     for ch in word:
@@ -132,13 +132,13 @@ def print_tables(n, word, inv, cover):
         for x in inv:
             if len(x) <= y:
                 if y == 0:
-                    print(f"  .", end="")
+                    print("  .", end="")
                 else:
                     print("   ", end="")
             else:
                 print(f"{x[y]:3}", end="")
         print()
-    print_array(cover)
+    print_array(max_cover)
 
 
 def main():
