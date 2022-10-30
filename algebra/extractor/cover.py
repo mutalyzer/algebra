@@ -46,7 +46,7 @@ def inv_array(n, pmrs):
 
 
 def overlapping(pmrs):
-    overlap = [(0, 0) for _ in range(len(pmrs))]
+    overlap = [0] * len(pmrs)
     for rhs_idx, rhs in enumerate(pmrs[1:], start=1):
         for lhs_idx, lhs in enumerate(pmrs[:rhs_idx]):
             lhs_start, lhs_period, lhs_count, lhs_remainder = lhs
@@ -54,7 +54,7 @@ def overlapping(pmrs):
             lhs_end = lhs_start + lhs_period * lhs_count + lhs_remainder
             rhs_end = rhs_start + rhs_period * rhs_count + rhs_remainder
             if lhs_start < rhs_start < lhs_end < rhs_end:
-                overlap[rhs_idx] = rhs_start, max(overlap[rhs_idx][1], lhs_end)
+                overlap[rhs_idx] = max(overlap[rhs_idx], lhs_end)
     return overlap
 
 
@@ -80,8 +80,7 @@ def cover(word, pmrs, inv=None, overlap=None):
 
             value = max(value, prev_value + real_length)
 
-            overlap_start, overlap_end = overlap[idx]
-            for p in range(overlap_start, min(overlap_end, pos - period * 2 + 1)):
+            for p in range(start, min(overlap[idx], pos - period * 2 + 1)):
                 real_count = (pos - p) // period
                 real_length = period * real_count
                 prev_value = max_cover[pos - real_length]
