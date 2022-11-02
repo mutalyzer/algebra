@@ -26,6 +26,7 @@ def main():
     tic()
     with Pool() as pool:
         pool.map(check_with_brute, non_isomorphic_binary_words_upto(length))
+    #list(map(check_with_brute, non_isomorphic_binary_words_upto(length)))
     toc()
 
 
