@@ -80,11 +80,13 @@ def cover(word, pmrs, inv=None, overlap=None):
 
             value = max(value, prev_value + length)
 
-            for p in range(max(start, start + remainder - 1),
-                           min(overlap[idx], pos - period * 2 + 1)):
+            for p in range(min(overlap[idx], pos - period * 2 + 1) - 1,
+                           max(start, start + remainder - 1) - 1, -1):
                 count = (pos - p) // period
                 length = period * count
-                value = max(value, max_cover[pos - length] + length)
+                if max_cover[pos - length] + length > value:
+                    value = max_cover[pos - length] + length
+                    break
 
         max_cover[pos] = value
 
@@ -110,8 +112,8 @@ def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
     for i in range(remainder + period + 1):
         for j in range(2, count):
             for k in range(count - j):
-                if prev is None or not intersect(prev, (start + i + k * period, period, j)):
-                    local = max(local, brute_cover(word, pmrs, (start + i + k * period, period, j), n + 1, max_cover + period * j))
+                if prev is None or not intersect(prev, (start + i + period * k, period, j)):
+                    local = max(local, brute_cover(word, pmrs, (start + i + period * k, period, j), n + 1, max_cover + period * j))
 
     return local
 
