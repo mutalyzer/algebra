@@ -58,8 +58,10 @@ def overlapping(pmrs):
     return overlap
 
 
-def cover(word, pmrs, inv=None, overlap=None):
+def cover(word, pmrs, inv=None, overlap=None, hgvs=False):
     n = len(word)
+    if hgvs:
+        solutions = [[] for _ in range(n)]
     if not inv:
         inv = inv_array(n, pmrs)
     if not overlap:
@@ -78,17 +80,32 @@ def cover(word, pmrs, inv=None, overlap=None):
             if pos - length > 0:
                 prev_value = max_cover[pos - length]
 
+            if hgvs and prev_value + length >= value:
+                # print(f"{idx} part of solution at {pos} with value {length} and total {prev_value + length}, prev: {pos - length}")
+                entry = (idx, period, count)
+                if entry not in solutions[pos]:
+                    solutions[pos].append(entry)
+
             value = max(value, prev_value + length)
 
             for p in range(max(start, start + remainder - 1),
                            min(overlap[idx], pos - period * 2 + 1)):
                 count = (pos - p) // period
                 length = period * count
+
+                if hgvs and max_cover[pos - length] + length >= value:
+                    # print(f"{idx} part of solution at {pos} with value {length} and total {max_cover[pos - length] + length}, prev: {pos - length}")
+                    entry = (idx, period, count)
+                    if entry not in solutions[pos]:
+                        solutions[pos].append(entry)
+
                 value = max(value, max_cover[pos - length] + length)
 
         max_cover[pos] = value
 
-    return max_cover
+    if not hgvs:
+        return max_cover
+    return max_cover, solutions
 
 
 def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
