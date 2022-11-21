@@ -262,6 +262,11 @@ TESTS = [
         "A[5];ACAAAAA[2];AC[3];A[7]",
         "AAAAAAC[3];AC[2];A[7]",
         "A[6];CAAAAAA[2];CA[3];A[6]",
+        "A[2];AAAACAA[2];A[4];CA[3];A[6]",
+        "A[3];AAACAAA[2];A[3];CA[3];A[6]",
+        "A[4];AACAAAA[2];A[2];CA[3];A[6]",
+        "A[3];AAACAAA[2];A[2];AC[3];A[7]",
+        "A[2];AAAACAA[2];A[3];AC[3];A[7]",
      },
      ),
 
