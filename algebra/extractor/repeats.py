@@ -37,8 +37,8 @@ def extract_repeats(word):
 
 
 def subswithseqs(subs, word):
-    for start, period, count, remainder in subs:
-        print(str((start, period, count, remainder)) + ",  #", word[start:start + period], word[start:start + period] * count)
+    for idx, (start, period, count, remainder) in enumerate(subs):
+        print(str((start, period, count, remainder)) + f",  # {idx}: {word[start:start + period]}")
 
 
 def powerset(iterable):
