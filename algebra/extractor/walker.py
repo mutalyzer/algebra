@@ -4,13 +4,14 @@ from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, ov
 
 def walk_sol(solutions, max_result, pos=None, path=None):
 
-    for idx, period, cnt in solutions[pos]:
+    for idx, period, max_count in solutions[pos]:
 
         # Adjacent entries from same pmrs are not part of minimal solution
         if path and idx == path[-1][3]:
             break
 
-        for count in range(cnt, 1, -1):
+        # Try all counts downwards
+        for count in range(max_count, 1, -1):
 
             # Move left until we find a position with a solution
             prev_pos = pos - period * count
@@ -34,19 +35,18 @@ def walk_sol(solutions, max_result, pos=None, path=None):
 def walk(inv, pmrs, max_cover, overlap, word, pos, path):
 
     for idx in inv[pos]:
+
         # Adjacent entries from same pmrs are not part of minimal solution
         if path and idx == path[-1][3]:
             continue
 
-        begin, period, pmrs_count, _ = pmrs[idx]
+        begin, period, _, _ = pmrs[idx]
+
+        # Don't let candidate collide with previous entry
+        max_count = (pos - begin + 1) // period
 
         # Try all counts downwards
-        for count in range(pmrs_count, 1, -1):
-            start = max(pos - period * count + 1, begin)
-
-            # Check if this candidate collides with prev
-            if path and start + count * period > path[-1][0]:
-                continue
+        for count in range(max_count, 1, -1):
 
             # Move left until we find a position with a solution
             prev_pos = pos - period * count
@@ -56,7 +56,7 @@ def walk(inv, pmrs, max_cover, overlap, word, pos, path):
                     break
 
             # The actual entry
-            entry = start, period, count, idx
+            entry = pos - period * count + 1, period, count, idx
 
             if prev_pos > 0:
                 # There is possibly more to explore
