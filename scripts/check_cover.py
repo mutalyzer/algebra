@@ -1,10 +1,8 @@
 from itertools import product
-from multiprocessing import Pool
 import sys
 
 from algebra.extractor.cover import brute_cover, cover, find_pmrs
-from algebra.extractor.perf import tic, toc
-from algebra.extractor.words import non_isomorphic_binary_words_upto
+from algebra.extractor.words import non_isomorphic_binary_words
 
 
 def check_with_brute(word):
@@ -14,6 +12,7 @@ def check_with_brute(word):
     if max_cover and max_brute_cover != max_cover[-1]:
         print(word, max_cover, max_brute_cover)
         assert False
+    print(len(word), word, len(pmrs), max_brute_cover)
 
 
 def main():
@@ -23,10 +22,8 @@ def main():
 
     length = int(sys.argv[1])
 
-    tic()
-    with Pool() as pool:
-        pool.map(check_with_brute, non_isomorphic_binary_words_upto(length))
-    toc()
+    for word in non_isomorphic_binary_words(length):
+        check_with_brute(word)
 
 
 if __name__ == "__main__":
