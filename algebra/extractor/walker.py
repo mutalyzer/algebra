@@ -112,8 +112,92 @@ def fill(subs, word):
     return desc, total
 
 
+def path2gaps(path, word):
+    gaps = 0
+    end = -1
+    for start, period, count, _ in path:
+
+        # This position already covered by previous iteration
+        if end >= start:
+            continue
+
+        # Add leading bases that were not part of a repeat
+        if end + 1 < start:
+            gaps += 1
+
+        # Set new end base
+        end = start + period * count - 1
+
+    # Add trailing bases that was not part of a repeat
+    if end + 1 < len(word):
+        gaps += 1
+
+    return gaps
+
+
 def path2hgvs(path, word):
     return ";".join(fill(path, word)[0])
+
+
+def metrics(paths, word, pmrs):
+    max_repeats = 0
+    min_repeats = len(pmrs)
+
+    min_count = len(word)
+    max_count = 0
+
+    min_period = len(word)
+    max_period = 0
+
+    for path in paths:
+        total = 0
+        p = list(path)
+        print(path2hgvs(p, word))
+        # print("Number of repeat units:", len(p))
+
+        max_repeats = max(max_repeats, len(p))
+        min_repeats = min(min_repeats, len(p))
+
+        min_entry_count = len(word)
+        max_entry_count = 0
+
+        min_entry_period = len(word)
+        max_entry_period = 0
+
+        for entry in p:
+            _, period, count, _ = entry
+            total += period * count
+
+            min_entry_count = min(min_entry_count, count)
+            max_entry_count = max(max_entry_count, count)
+
+            min_entry_period = min(min_entry_period, period)
+            max_entry_period = max(max_entry_period, period)
+
+        gaps = path2gaps(p, word)
+        print(f"length: {len(word)}")
+        print(f"cover: {total}")
+        print(f"repeat units: {len(p)}")
+        print(f"gaps: {gaps}")
+        print(f"count: {min_entry_count} - {max_entry_count}")
+        print(f"period: {min_entry_period} - {max_entry_period}")
+
+        min_count = min(min_count, min_entry_count)
+        max_count = max(max_count, max_entry_count)
+
+        min_period = min(min_period, min_entry_period)
+        max_period = max(max_period, max_entry_period)
+
+        print()
+
+    print("Min repeat units:", min_repeats)
+    print("Max repeat units:", max_repeats)
+
+    print("Min count:", min_count)
+    print("Max count:", max_count)
+
+    print("Min period:", min_period)
+    print("Max period:", max_period)
 
 
 def main():
@@ -144,7 +228,10 @@ def main():
     # print(list(paths))
     # print([path2hgvs(path, word) for path in paths])
     paths = inv2paths(inv, pmrs, max_cover, overlap, word)
-    print([path2hgvs(path, word) for path in paths])
+    #print([path2hgvs(path, word) for path in paths])
+    metrics(paths, word, pmrs)
+
+
 
 
 if __name__ == "__main__":
