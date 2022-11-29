@@ -1,24 +1,18 @@
 import sys
-from algebra.extractor.cover import cover, find_pmrs, inv_array, overlapping, print_tables, cover_length
+from algebra.extractor.cover import cover, cover_length, find_pmrs, inv_array, overlapping, print_tables
 
 
-def walk(inv, pmrs, overlap, word, pos, path):
-    # print(f"pos: {pos}")
-
+def walk(inv, pmrs, overlap, pos, path):
+    # Done!
     if pos < 1:
         yield list(reversed(path))
         return
 
-    yield from walk(inv, pmrs, overlap, word, pos - 1, path)
+    # Always try to the left
+    yield from walk(inv, pmrs, overlap, pos - 1, path)
 
-    # print(f"path: {path}")
+    # Try all pmrs at this position
     for idx in inv[pos]:
-
-        # Adjacent entries from same pmrs are not part of minimal solution
-        if path and idx == path[-1][3]:
-            # print("skip because of same pmrs")
-            continue
-
         begin, period, _, _ = pmrs[idx]
 
         # Don't let candidate collide with previous entry
@@ -26,22 +20,18 @@ def walk(inv, pmrs, overlap, word, pos, path):
 
         # Try all counts downwards
         for count in range(max_count, 1, -1):
-            # print(f"pos: {pos} count: {count}")
 
             # Move left until we find a position with a solution
             prev_pos = pos - period * count
             while not inv[prev_pos]:
                 prev_pos -= 1
-                # print(f"shifting left: {prev_pos}")
                 if prev_pos < 1:
                     break
 
             # The actual entry
-            s = word[pos - period * count + 1: pos + 1]
-            entry = pos - period * count + 1, period, count, idx, s
-            # print(f"entry: {entry} ({s})")
+            entry = pos - period * count + 1, period, count, idx
 
-            yield from walk(inv, pmrs, overlap, word, prev_pos, path + [entry])
+            yield from walk(inv, pmrs, overlap, prev_pos, path + [entry])
 
 
 def fill(subs, word):
@@ -186,12 +176,14 @@ def main():
     max_cover = cover(word, pmrs)
     print_tables(n, word, inv, max_cover)
 
-    paths = walk(inv, pmrs, overlap, word, len(max_cover) - 1, [])
+    paths = walk(inv, pmrs, overlap, len(max_cover) - 1, [])
+    print([path2hgvs(path, word) for path in paths])
+    paths = walk(inv, pmrs, overlap, len(max_cover) - 1, [])
     print([path2hgvs(path, word) for path in paths if cover_length(path) == max_cover[-1]])
-    paths = walk(inv, pmrs, overlap, word, len(max_cover) - 1, [])
+    paths = walk(inv, pmrs, overlap, len(max_cover) - 1, [])
     print([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]])
-    # paths = walk(inv, pmrs, overlap, word, len(max_cover) - 1, [])
-    # print(set([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]]))
+    paths = walk(inv, pmrs, overlap, len(max_cover) - 1, [])
+    print(set([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]]))
     # metrics(paths, word, pmrs)
 
 
