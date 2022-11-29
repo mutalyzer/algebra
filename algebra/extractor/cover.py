@@ -175,10 +175,10 @@ def brute_cover_alt(word, pmrs):
 def cartesian_cover(pmrs):
     def intersect(lhs, rhs):
         lhs_start, lhs_period, lhs_count, lhs_pmrs = lhs
-        lhs_end = lhs_start + lhs_period * lhs_count - 1
         rhs_start, rhs_period, rhs_count, rhs_pmrs = rhs
 
         if lhs_start < rhs_start:
+            lhs_end = lhs_start + lhs_period * lhs_count - 1
             return lhs_end >= rhs_start
 
         rhs_end = rhs_start + rhs_period * rhs_count - 1
