@@ -1,8 +1,8 @@
 import pytest
-from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, overlapping
+from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, overlapping, cover_length
 from algebra.extractor.repeats import extract_repeats
 from algebra.extractor.repeats_alt import _repeats as repeats_alt
-from algebra.extractor.walker import inv2paths, path2hgvs
+from algebra.extractor.walker import path2hgvs, walk
 
 
 TESTS = [
@@ -567,4 +567,4 @@ def test_brute_cover(word, pmrs, inv, max_cover, hgvs):
     "word, pmrs, inv, max_cover, hgvs", TESTS)
 def test_hgvs(word, pmrs, inv, max_cover, hgvs):
     overlap = overlapping(pmrs)
-    assert hgvs == set([path2hgvs(path, word) for path in inv2paths(inv, pmrs, max_cover, overlap, word)])
+    assert sorted(hgvs) == sorted([path2hgvs(path, word) for path in walk(inv, pmrs, overlap, word, len(max_cover) - 1, []) if cover_length(path) == max_cover[-1]])

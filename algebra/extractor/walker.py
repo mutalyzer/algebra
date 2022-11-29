@@ -44,14 +44,6 @@ def walk(inv, pmrs, overlap, word, pos, path):
             yield from walk(inv, pmrs, overlap, word, prev_pos, path + [entry])
 
 
-def inv2paths(inv, pmrs, max_cover, overlap, word):
-    for start in range(len(max_cover) - 1, 0, -1):
-        if max_cover[start] != max_cover[-1]:
-            # Don't look for paths without maximal result
-            break
-        yield from walk(inv, pmrs, overlap, word, start, [])
-
-
 def fill(subs, word):
     desc = []
 
@@ -194,12 +186,12 @@ def main():
     max_cover = cover(word, pmrs)
     print_tables(n, word, inv, max_cover)
 
-    paths = inv2paths(inv, pmrs, max_cover, overlap, word)
+    paths = walk(inv, pmrs, overlap, word, len(max_cover) - 1, [])
     print([path2hgvs(path, word) for path in paths if cover_length(path) == max_cover[-1]])
-    paths = inv2paths(inv, pmrs, max_cover, overlap, word)
+    paths = walk(inv, pmrs, overlap, word, len(max_cover) - 1, [])
     print([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]])
-    paths = inv2paths(inv, pmrs, max_cover, overlap, word)
-    print(set([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]]))
+    # paths = walk(inv, pmrs, overlap, word, len(max_cover) - 1, [])
+    # print(set([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]]))
     # metrics(paths, word, pmrs)
 
 

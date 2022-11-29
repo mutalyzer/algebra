@@ -23,7 +23,7 @@ def main():
             covers = list(cartesian_cover(pmrs))
             # print(word, covers)
             bmax = max(map(cover_length, covers))
-            brute_results = {path2hgvs(c, word) for c in covers if cover_length(c) == bmax}
+            brute_results = sorted([path2hgvs(c, word) for c in covers if cover_length(c) == bmax])
             print(brute_results)
 
             overlap = overlapping(pmrs)
@@ -31,11 +31,20 @@ def main():
             inv = inv_array(n, pmrs)
 
             max_cover = cover(word, pmrs)
-            paths = inv2paths(inv, pmrs, max_cover, overlap, word)
-            inv_results = {path2hgvs(path, word) for path in paths if unique_pmrs(path)}
-            print(inv_results)
+            paths = list(inv2paths(inv, pmrs, max_cover, overlap, word))
+            # print(paths)
+            all_max = max(map(cover_length, paths))
+            # print(all_max)
+            paths_uniq = [path for path in paths if unique_pmrs(path)]
+            uniq_max = max(map(cover_length, paths_uniq))
+            # print(paths_uniq)
+            inv_results_all = sorted([path2hgvs(path, word) for path in paths if cover_length(path) == all_max])
+            inv_results_uniq = sorted([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == uniq_max])
+            # print(inv_results_all)
+            print(inv_results_uniq)
 
-            assert brute_results == inv_results
+            assert brute_results == inv_results_uniq
+            assert bmax == all_max == uniq_max == max_cover[-1]
 
             counter += 1
 
