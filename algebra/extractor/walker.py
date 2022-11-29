@@ -2,7 +2,15 @@ import sys
 from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, overlapping, print_tables
 
 
-def walk_sol(solutions, max_result, pos=None, path=None):
+def walk_sol(word, solutions, max_result, pos=None, path=None):
+
+    if pos < 1:
+        # Yield result if it is a maximal solution
+        if sum([x[1] * x[2] for x in path]) == max_result:
+            yield reversed(path)
+        return
+
+    yield from walk_sol(word, solutions, max_result, pos - 1, path)
 
     for idx, period, max_count in solutions[pos]:
 
@@ -12,6 +20,7 @@ def walk_sol(solutions, max_result, pos=None, path=None):
 
         # Try all counts downwards
         for count in range(max_count, 1, -1):
+            # print(f"pos: {pos} count: {count}")
 
             # Move left until we find a position with a solution
             prev_pos = pos - period * count
@@ -21,23 +30,34 @@ def walk_sol(solutions, max_result, pos=None, path=None):
                     break
 
             # The actual entry
-            entry = pos - period * count + 1, period, count, idx
+            s = word[pos - period * count + 1: pos + 1]
+            entry = pos - period * count + 1, period, count, idx, s
+            # print(f"entry: {entry} ({s})")
 
-            if prev_pos > 0:
-                # There is possibly more to explore
-                yield from walk_sol(solutions, max_result, prev_pos, path + [entry])
-            else:
-                # Otherwise, yield result if it is a maximal solution
-                if sum([x[1] * x[2] for x in path + [entry]]) == max_result:
-                    yield reversed(path + [entry])
+            yield from walk_sol(word, solutions, max_result, prev_pos, path + [entry])
 
 
 def walk(inv, pmrs, max_cover, overlap, word, pos, path):
+    # print(f"pos: {pos}")
 
+    if pos < 1:
+        # Yield result if it is a maximal solution
+        if sum([x[1] * x[2] for x in path]) == max_cover[-1]:
+            # print("Done!")
+            yield list(reversed(path))
+        else:
+            # print("Non-maximal solution")
+            pass
+        return
+
+    yield from walk(inv, pmrs, max_cover, overlap, word, pos - 1, path)
+
+    # print(f"path: {path}")
     for idx in inv[pos]:
 
         # Adjacent entries from same pmrs are not part of minimal solution
         if path and idx == path[-1][3]:
+            # print("skip because of same pmrs")
             continue
 
         begin, period, _, _ = pmrs[idx]
@@ -47,32 +67,30 @@ def walk(inv, pmrs, max_cover, overlap, word, pos, path):
 
         # Try all counts downwards
         for count in range(max_count, 1, -1):
+            # print(f"pos: {pos} count: {count}")
 
             # Move left until we find a position with a solution
             prev_pos = pos - period * count
             while not inv[prev_pos]:
                 prev_pos -= 1
+                # print(f"shifting left: {prev_pos}")
                 if prev_pos < 1:
                     break
 
             # The actual entry
-            entry = pos - period * count + 1, period, count, idx
+            s = word[pos - period * count + 1: pos + 1]
+            entry = pos - period * count + 1, period, count, idx, s
+            # print(f"entry: {entry} ({s})")
 
-            if prev_pos > 0:
-                # There is possibly more to explore
-                yield from walk(inv, pmrs, max_cover, overlap, word, prev_pos, path + [entry])
-            else:
-                # Otherwise, yield result if it is a maximal solution
-                if sum([x[1] * x[2] for x in path + [entry]]) == max_cover[-1]:
-                    yield reversed(path + [entry])
+            yield from walk(inv, pmrs, max_cover, overlap, word, prev_pos, path + [entry])
 
 
-def sol2paths(solutions, max_cover):
+def sol2paths(word, solutions, max_cover):
     for start in range(len(max_cover) - 1, 0, -1):
         if max_cover[start] != max_cover[-1]:
             # Don't look for paths without maximal result
             break
-        yield from walk_sol(solutions, max_cover[-1], start, [])
+        yield from walk_sol(word, solutions, max_cover[-1], start, [])
 
 
 def inv2paths(inv, pmrs, max_cover, overlap, word):
@@ -88,7 +106,7 @@ def fill(subs, word):
 
     end = -1
     total = 0
-    for start, period, count, _ in subs:
+    for start, period, count, *_ in subs:
 
         # This position already covered by previous iteration
         if end >= start:
@@ -221,15 +239,15 @@ def main():
     print("solutions:")
     for idx, sol in enumerate(solutions):
         print(idx, sol)
-    paths = sol2paths(solutions, max_cover)
+    paths = sol2paths(word, solutions, max_cover)
     print([path2hgvs(path, word) for path in paths])
     print("New")
     # paths = walk(inv, pmrs, max_cover, overlap, word, len(word) - 1, [])
     # print(list(paths))
     # print([path2hgvs(path, word) for path in paths])
     paths = inv2paths(inv, pmrs, max_cover, overlap, word)
-    #print([path2hgvs(path, word) for path in paths])
-    metrics(paths, word, pmrs)
+    print([path2hgvs(path, word) for path in paths])
+    # metrics(paths, word, pmrs)
 
 
 
