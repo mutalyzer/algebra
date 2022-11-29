@@ -1,11 +1,11 @@
 import itertools
-from algebra.extractor.cover import cover, brute_cover_alt, cover_length, find_pmrs, overlapping, inv_array, cartesian_cover, unique_pmrs
-from algebra.extractor.walker import path2hgvs, inv2paths
+from algebra.extractor.cover import cover, brute_cover_alt, cover_length, find_pmrs, overlapping, inv_array, cartesian_cover
+from algebra.extractor.walker import path2hgvs, inv2paths, unique_pmrs
 
 
 def main():
     counter = 0
-    for length in range(20, 30):
+    for length in range(21, 22):
         for word in ["".join(x) for x in itertools.product("AC", repeat=length)]:
 
             print(counter, word)

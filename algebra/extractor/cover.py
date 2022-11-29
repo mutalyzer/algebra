@@ -3,13 +3,6 @@ from itertools import product, combinations, permutations
 import sys
 
 
-def unique_pmrs(cover):
-    pmrs = [x[3] for x in cover]
-    if sorted(pmrs) == sorted(set(pmrs)):
-        return True
-    return False
-
-
 def find_pmrs(word):
     n = len(word)
     pmrs = []

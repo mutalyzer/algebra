@@ -1,5 +1,5 @@
 import sys
-from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, overlapping, print_tables, unique_pmrs
+from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, overlapping, print_tables
 
 
 def walk(inv, pmrs, max_cover, overlap, word, pos, path):
@@ -173,6 +173,13 @@ def metrics(paths, word, pmrs):
 
     print("Min period:", min_period)
     print("Max period:", max_period)
+
+
+def unique_pmrs(cover):
+    pmrs = [x[3] for x in cover]
+    if sorted(pmrs) == sorted(set(pmrs)):
+        return True
+    return False
 
 
 def main():
