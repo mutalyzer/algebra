@@ -1,5 +1,5 @@
 from os.path import commonprefix
-from itertools import product, combinations, permutations
+from itertools import combinations, product
 import sys
 
 
@@ -230,60 +230,6 @@ def cartesian_cover(pmrs):
         else:
             # print("solution:", filtered)
             yield sorted(filtered)
-
-
-def cartesian_cover2(word, pmrs):
-
-    def complete(pmrs):
-        # print(f"pmrs: {n}")
-
-        for n in range(len(pmrs)):
-            start, period, count, remainder = pmrs[n]
-
-            for offset in range(period):
-                # print(f"offset: {offset}")
-
-                count2 = count
-                if offset > remainder:
-                    count2 -= 1
-
-                for prefix in range(count2 - 1):
-                    # print(f"prefix: {prefix}")
-
-                    for c in range(2, count2 - prefix + 1):
-                        # print(f"count: {c}")
-
-                        entry = start + offset + prefix * period, period, c, n
-                        # print(f"entry:", entry)
-                        yield entry
-
-    entries = list(complete(pmrs))
-
-    for length in range(1, (len(word) - 1) // 2 + 2):
-        for candidate in permutations(entries, length):
-            # print(f"candidate: {candidate}")
-            if len(candidate) == 1:
-                # print("single solution:", list(filtered))
-                yield sorted(candidate)
-                continue
-
-            conseq_pmrs = False
-            for i in range(1, len(candidate)):
-                if sorted(candidate)[i - 1][3] == sorted(candidate)[i][3]:
-                    # print("same pmrs")
-                    conseq_pmrs = True
-            if conseq_pmrs:
-                continue
-
-            for a, b in combinations(candidate, 2):
-                # print("combo:", a, b)
-                if intersect(a, b):
-                    # print("intersect, break")
-                    break
-                # print("No intersect")
-            else:
-                # print("solution:", candidate)
-                yield sorted(candidate)
 
 
 def print_array(array):
