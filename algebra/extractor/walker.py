@@ -162,8 +162,8 @@ def metrics(paths, word, pmrs):
 
 
 def unique_pmrs(cover):
-    pmrs = [x[3] for x in cover]
-    if sorted(pmrs) == sorted(set(pmrs)):
+    indices = [e[3] for e in cover]
+    if len(indices) == len(set(indices)):
         return True
     return False
 
