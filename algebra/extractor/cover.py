@@ -119,7 +119,7 @@ def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
 
 
 def cover_length(cover):
-    return sum([period * count for _, period, count, _ in cover])
+    return sum([period * count for _, period, count, *_ in cover])
 
 
 def brute_cover_alt(word, pmrs):

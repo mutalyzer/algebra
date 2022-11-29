@@ -1,21 +1,15 @@
 import sys
-from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, overlapping, print_tables
+from algebra.extractor.cover import cover, find_pmrs, inv_array, overlapping, print_tables, cover_length
 
 
-def walk(inv, pmrs, max_cover, overlap, word, pos, path):
+def walk(inv, pmrs, overlap, word, pos, path):
     # print(f"pos: {pos}")
 
     if pos < 1:
-        # Yield result if it is a maximal solution
-        if sum([x[1] * x[2] for x in path]) == max_cover[-1]:
-            # print("Done!")
-            yield list(reversed(path))
-        else:
-            # print("Non-maximal solution")
-            pass
+        yield list(reversed(path))
         return
 
-    yield from walk(inv, pmrs, max_cover, overlap, word, pos - 1, path)
+    yield from walk(inv, pmrs, overlap, word, pos - 1, path)
 
     # print(f"path: {path}")
     for idx in inv[pos]:
@@ -47,7 +41,7 @@ def walk(inv, pmrs, max_cover, overlap, word, pos, path):
             entry = pos - period * count + 1, period, count, idx, s
             # print(f"entry: {entry} ({s})")
 
-            yield from walk(inv, pmrs, max_cover, overlap, word, prev_pos, path + [entry])
+            yield from walk(inv, pmrs, overlap, word, prev_pos, path + [entry])
 
 
 def inv2paths(inv, pmrs, max_cover, overlap, word):
@@ -55,7 +49,7 @@ def inv2paths(inv, pmrs, max_cover, overlap, word):
         if max_cover[start] != max_cover[-1]:
             # Don't look for paths without maximal result
             break
-        yield from walk(inv, pmrs, max_cover, overlap, word, start, [])
+        yield from walk(inv, pmrs, overlap, word, start, [])
 
 
 def fill(subs, word):
@@ -201,11 +195,11 @@ def main():
     print_tables(n, word, inv, max_cover)
 
     paths = inv2paths(inv, pmrs, max_cover, overlap, word)
-    print([path2hgvs(path, word) for path in paths])
+    print([path2hgvs(path, word) for path in paths if cover_length(path) == max_cover[-1]])
     paths = inv2paths(inv, pmrs, max_cover, overlap, word)
-    print([path2hgvs(path, word) for path in paths if unique_pmrs(path)])
+    print([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]])
     paths = inv2paths(inv, pmrs, max_cover, overlap, word)
-    print(set([path2hgvs(path, word) for path in paths if unique_pmrs(path)]))
+    print(set([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]]))
     # metrics(paths, word, pmrs)
 
 

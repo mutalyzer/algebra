@@ -23,9 +23,7 @@ def main():
             covers = list(cartesian_cover(pmrs))
             # print(word, covers)
             bmax = max(map(cover_length, covers))
-            # brute_results = {path2hgvs(c, word) for c in covers}
-            # brute_results = {path2hgvs(c, word) for c in covers if cover_length(c) == bmax}
-            brute_results = {path2hgvs(c, word) for c in covers if cover_length(c) == bmax and unique_pmrs(c)}
+            brute_results = {path2hgvs(c, word) for c in covers if cover_length(c) == bmax}
             print(brute_results)
 
             overlap = overlapping(pmrs)
