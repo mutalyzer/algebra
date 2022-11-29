@@ -172,19 +172,17 @@ def brute_cover_alt(word, pmrs):
     return bcover(pmrs, 0, [])
 
 
-def intersect(lhs, rhs):
-    lhs_start, lhs_period, lhs_count, lhs_pmrs = lhs
-    lhs_end = lhs_start + lhs_period * lhs_count - 1
-    rhs_start, rhs_period, rhs_count, rhs_pmrs = rhs
-
-    if lhs_start < rhs_start:
-        return lhs_end >= rhs_start
-
-    rhs_end = rhs_start + rhs_period * rhs_count - 1
-    return rhs_end >= lhs_start
-
-
 def cartesian_cover(pmrs):
+    def intersect(lhs, rhs):
+        lhs_start, lhs_period, lhs_count, lhs_pmrs = lhs
+        lhs_end = lhs_start + lhs_period * lhs_count - 1
+        rhs_start, rhs_period, rhs_count, rhs_pmrs = rhs
+
+        if lhs_start < rhs_start:
+            return lhs_end >= rhs_start
+
+        rhs_end = rhs_start + rhs_period * rhs_count - 1
+        return rhs_end >= lhs_start
 
     def complete(pmrs, n):
         # print(f"pmrs: {n}")
