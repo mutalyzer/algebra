@@ -2,7 +2,7 @@ import pytest
 from algebra.extractor.cover import brute_cover, cover, find_pmrs, inv_array, overlapping
 from algebra.extractor.repeats import extract_repeats
 from algebra.extractor.repeats_alt import _repeats as repeats_alt
-from algebra.extractor.walker import inv2paths, path2hgvs, sol2paths
+from algebra.extractor.walker import inv2paths, path2hgvs
 
 
 TESTS = [
@@ -561,13 +561,6 @@ def test_cover(word, pmrs, inv, max_cover, hgvs):
     "word, pmrs, inv, max_cover, hgvs", TESTS)
 def test_brute_cover(word, pmrs, inv, max_cover, hgvs):
     assert max_cover[-1] == brute_cover(word, sorted([(start, period, count, remainder) for start, period, count, remainder in pmrs]))
-
-
-@pytest.mark.parametrize(
-    "word, pmrs, inv, max_cover, hgvs", TESTS)
-def test_hgvs_solutions(word, pmrs, inv, max_cover, hgvs):
-    max_cover, solutions = cover(word, pmrs, hgvs=True)
-    assert hgvs == set([path2hgvs(path, word) for path in sol2paths(word, solutions, max_cover)])
 
 
 @pytest.mark.parametrize(

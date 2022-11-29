@@ -3,6 +3,13 @@ from itertools import product, combinations, permutations
 import sys
 
 
+def unique_pmrs(cover):
+    pmrs = [x[3] for x in cover]
+    if sorted(pmrs) == sorted(set(pmrs)):
+        return True
+    return False
+
+
 def find_pmrs(word):
     n = len(word)
     pmrs = []
@@ -59,10 +66,8 @@ def overlapping(pmrs):
     return overlap
 
 
-def cover(word, pmrs, inv=None, overlap=None, hgvs=False):
+def cover(word, pmrs, inv=None, overlap=None):
     n = len(word)
-    if hgvs:
-        solutions = [[] for _ in range(n)]
     if not inv:
         inv = inv_array(n, pmrs)
     if not overlap:
@@ -81,32 +86,18 @@ def cover(word, pmrs, inv=None, overlap=None, hgvs=False):
             if pos - length > 0:
                 prev_value = max_cover[pos - length]
 
-            if hgvs and prev_value + length >= value:
-                # print(f"{idx} part of solution at {pos} with value {length} and total {prev_value + length}, prev: {pos - length}")
-                entry = (idx, period, count)
-                if entry not in solutions[pos]:
-                    solutions[pos].append(entry)
-
             value = max(value, prev_value + length)
 
             for p in range(start, min(overlap[idx], pos - period * 2 + 1)):
                 count = (pos - p) // period
                 length = period * count
 
-                if hgvs and max_cover[pos - length] + length >= value:
-                    # print(f"{idx} part of solution at {pos} with value {length} and total {max_cover[pos - length] + length}, prev: {pos - length}")
-                    entry = (idx, period, count)
-                    if entry not in solutions[pos]:
-                        solutions[pos].append(entry)
-
                 prev_value = max_cover[pos - length]
                 value = max(value, prev_value + length)
 
         max_cover[pos] = value
 
-    if not hgvs:
-        return max_cover
-    return max_cover, solutions
+    return max_cover
 
 
 def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
