@@ -185,48 +185,46 @@ def cartesian_cover(pmrs):
         return rhs_end >= lhs_start
 
     def complete(pmrs, n):
-        # print(f"pmrs: {n}")
         start, period, count, remainder = pmrs[n]
 
+        # Also return a None result for every pmrs
         yield
-        for offset in range(period):
-            # print(f"offset: {offset}")
 
+        # Shift as far as the length of the period
+        for offset in range(period):
             count2 = count
             if offset > remainder:
+                # As our offset is larger than the remainder, we are eating into the last period
                 count2 -= 1
 
+            # Skip as many initial periods so that there are at least two counts remaining
             for prefix in range(count2 - 1):
-                # print(f"prefix: {prefix}")
-
-                for c in range(2, count2 - prefix + 1):
-                    # print(f"count: {c}")
-
-                    entry = start + offset + prefix * period, period, c, n
-                    # print(f"entry:", entry)
+                # Count 3 is the actual count of the entry to be calculated
+                for count3 in range(2, count2 - prefix + 1):
+                    entry = start + offset + prefix * period, period, count3, n
                     yield entry
 
+    # Create lists of candidates for all pmrs'es
     lists = [complete(pmrs, n) for n in range(len(pmrs))]
+
+    # Cartesian product with an element from every pmrs list
     for candidate in product(*lists):
         filtered = list(filter(None, candidate))
-        # print("candidate:", filtered)
 
+        # No solution
         if len(filtered) == 0:
             continue
 
+        # Single solution
         if len(filtered) == 1:
-            # print("single solution:", list(filtered))
             yield sorted(filtered)
             continue
 
+        # Check if there is conflicting intersection
         for a, b in combinations(filtered, 2):
-            # print("combo:", a, b)
             if intersect(a, b):
-                # print("intersect, break")
                 break
-            # print("No intersect")
         else:
-            # print("solution:", filtered)
             yield sorted(filtered)
 
 
