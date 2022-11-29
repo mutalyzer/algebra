@@ -1,4 +1,5 @@
 from os.path import commonprefix
+from itertools import product, combinations, permutations
 import sys
 
 
@@ -134,7 +135,7 @@ def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
 
 
 def cover_length(cover):
-    return sum([period * count for _, period, count in cover])
+    return sum([period * count for _, period, count, _ in cover])
 
 
 def brute_cover_alt(word, pmrs):
@@ -144,7 +145,9 @@ def brute_cover_alt(word, pmrs):
         return b_start < a_start + a_period * a_count
 
     def bcover(pmrs, n, cover):
+        print(f"n: {n}, cover: {cover}")
         if n >= len(pmrs):
+            print(f"result: {cover}")
             yield list(cover)
             return
 
@@ -158,20 +161,145 @@ def brute_cover_alt(word, pmrs):
         start, period, count, remainder = pmrs[n]
         for i in range(remainder + 1):
             # the complete pmr
-            if prev is None or not intersect(prev, (start + i, period, count)):
-                cover.append((start + i, period, count))
+            entry = start + i, period, count
+            print(f"entry 1 {entry} {word[start + i: start + i + period * count]}")
+            if prev is None or not intersect(prev, entry):
+                cover.append(entry)
                 yield from bcover(pmrs, n + 1, cover)
+                # yield from bcover(pmrs, n - 1, cover)
                 cover.pop()
+            else:
+                print("skipped because of intersect")
+
+        print("yo")
 
         for i in range(remainder + period + 1):
             for j in range(2, count):
                 for k in range(count - j):
-                    if prev is None or not intersect(prev, (start + i + period * k, period, j)):
-                        cover.append((start + i + period * k, period, j))
+                    entry = start + i + period * k, period, j
+                    print(f"entry 2 {entry}")
+                    if prev is None or not intersect(prev, entry):
+                        cover.append(entry)
                         yield from bcover(pmrs, n + 1, cover)
                         cover.pop()
+                    else:
+                        print("skipped because of intersect")
 
     return bcover(pmrs, 0, [])
+
+
+def intersect(lhs, rhs):
+    lhs_start, lhs_period, lhs_count, lhs_pmrs = lhs
+    lhs_end = lhs_start + lhs_period * lhs_count - 1
+    rhs_start, rhs_period, rhs_count, rhs_pmrs = rhs
+
+    if lhs_start < rhs_start:
+        return lhs_end >= rhs_start
+
+    rhs_end = rhs_start + rhs_period * rhs_count - 1
+    return rhs_end >= lhs_start
+
+
+def cartesian_cover(pmrs):
+
+    def complete(pmrs, n):
+        # print(f"pmrs: {n}")
+        start, period, count, remainder = pmrs[n]
+
+        yield
+        for offset in range(period):
+            # print(f"offset: {offset}")
+
+            count2 = count
+            if offset > remainder:
+                count2 -= 1
+
+            for prefix in range(count2 - 1):
+                # print(f"prefix: {prefix}")
+
+                for c in range(2, count2 - prefix + 1):
+                    # print(f"count: {c}")
+
+                    entry = start + offset + prefix * period, period, c, n
+                    # print(f"entry:", entry)
+                    yield entry
+
+    lists = [complete(pmrs, n) for n in range(len(pmrs))]
+    for candidate in product(*lists):
+        filtered = list(filter(None, candidate))
+        # print("candidate:", filtered)
+
+        if len(filtered) == 0:
+            continue
+
+        if len(filtered) == 1:
+            # print("single solution:", list(filtered))
+            yield sorted(filtered)
+            continue
+
+        for a, b in combinations(filtered, 2):
+            # print("combo:", a, b)
+            if intersect(a, b):
+                # print("intersect, break")
+                break
+            # print("No intersect")
+        else:
+            # print("solution:", filtered)
+            yield sorted(filtered)
+
+
+def cartesian_cover2(word, pmrs):
+
+    def complete(pmrs):
+        # print(f"pmrs: {n}")
+
+        for n in range(len(pmrs)):
+            start, period, count, remainder = pmrs[n]
+
+            for offset in range(period):
+                # print(f"offset: {offset}")
+
+                count2 = count
+                if offset > remainder:
+                    count2 -= 1
+
+                for prefix in range(count2 - 1):
+                    # print(f"prefix: {prefix}")
+
+                    for c in range(2, count2 - prefix + 1):
+                        # print(f"count: {c}")
+
+                        entry = start + offset + prefix * period, period, c, n
+                        # print(f"entry:", entry)
+                        yield entry
+
+    entries = list(complete(pmrs))
+
+    for length in range(1, (len(word) - 1) // 2 + 2):
+        for candidate in permutations(entries, length):
+            # print(f"candidate: {candidate}")
+            if len(candidate) == 1:
+                # print("single solution:", list(filtered))
+                yield sorted(candidate)
+                continue
+
+            conseq_pmrs = False
+            for i in range(1, len(candidate)):
+                if sorted(candidate)[i - 1][3] == sorted(candidate)[i][3]:
+                    # print("same pmrs")
+                    conseq_pmrs = True
+            if conseq_pmrs:
+                continue
+
+            for a, b in combinations(candidate, 2):
+                # print("combo:", a, b)
+                if intersect(a, b):
+                    # print("intersect, break")
+                    break
+                # print("No intersect")
+            else:
+                # print("solution:", candidate)
+                yield sorted(candidate)
 
 
 def print_array(array):
@@ -218,10 +346,17 @@ def main():
     print_tables(n, word, inv, max_cover)
     print(brute_cover(word, pmrs))
 
-    covers = list(brute_cover_alt(word, pmrs))
-    bmax = max(map(cover_length, covers))
+    # covers = list(brute_cover_alt(word, pmrs))
+    # bmax = max(map(cover_length, covers))
     from walker import path2hgvs
+    # print({path2hgvs(c, word) for c in covers if cover_length(c) == bmax})
+
+    # print(list(cartesian_cover(word, pmrs, max_cover[-1])))
+    covers = list(cartesian_cover(pmrs))
+    bmax = max(map(cover_length, covers))
+    # print({path2hgvs(c, word) for c in covers})
     print({path2hgvs(c, word) for c in covers if cover_length(c) == bmax})
+
 
 if __name__ == "__main__":
     main()
