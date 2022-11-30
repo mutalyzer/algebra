@@ -5,7 +5,7 @@ from algebra.extractor.cover import cover, cover_length, find_pmrs, inv_array, o
 def walk(inv, pmrs, overlap, pos, path):
     # Done!
     if pos < 1:
-        yield list(reversed(path))
+        yield path
         return
 
     # Always try to the left
@@ -91,7 +91,7 @@ def path2gaps(path, word):
 
 
 def path2hgvs(path, word):
-    return ";".join(fill(path, word)[0])
+    return ";".join(fill(sorted(path), word)[0])
 
 
 def metrics(paths, word, pmrs):
