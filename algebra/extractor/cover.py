@@ -84,7 +84,6 @@ def cover(word, pmrs, inv=None, overlap=None):
             for p in range(start, min(overlap[idx], pos - period * 2 + 1)):
                 count = (pos - p) // period
                 length = period * count
-
                 prev_value = max_cover[pos - length]
                 value = max(value, prev_value + length)
 
