@@ -18,9 +18,13 @@ def walk(inv, pmrs, overlap, pos, path):
         # Don't let candidate collide with previous entry
         max_count = (pos - begin + 1) // period
 
-        # Try all counts downwards
-        for count in range(max_count, 1, -1):
+        # Use overlap to limit minimal repeat count
+        min_count = 1
+        if overlap[idx]:
+            min_count = max(min_count, (pos - overlap[idx]) // period - 1)
 
+        # Try all counts downwards
+        for count in range(max_count, min_count, -1):
             # Move left until we find a position with a solution
             prev_pos = pos - period * count
             while not inv[prev_pos]:
