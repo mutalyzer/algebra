@@ -31,7 +31,7 @@ def main():
             inv = inv_array(n, pmrs)
 
             max_cover = cover(word, pmrs)
-            paths = list(walk(inv, pmrs, overlap, len(max_cover) - 1, []))
+            paths = list(walk(inv, pmrs, max_cover, overlap, len(max_cover) - 1, []))
             all_max = max(map(cover_length, paths))
             paths_uniq = [path for path in paths if unique_pmrs(path)]
             uniq_max = max(map(cover_length, paths_uniq))
