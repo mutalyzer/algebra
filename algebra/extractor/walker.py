@@ -14,6 +14,10 @@ def walk(inv, pmrs, max_cover, overlap, pos, path):
 
     # Try all pmrs at this position
     for idx in inv[pos]:
+        if idx in [x[3] for x in path]:
+            # Skip if we already used this pmrs for this path
+            continue
+
         begin, period, _, _ = pmrs[idx]
 
         # Don't let candidate collide with previous entry
