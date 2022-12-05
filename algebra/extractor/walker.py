@@ -12,26 +12,15 @@ def walk(inv, pmrs, max_cover, overlap, pos, path):
     if max_cover[pos - 1] == max_cover[pos]:
         yield from walk(inv, pmrs, max_cover, overlap, pos - 1, path)
 
-    print(f"pos: {pos}")
     # Try all pmrs at this position
     for idx in inv[pos]:
-        print(f"pmrs: {idx}")
         begin, period, _, _ = pmrs[idx]
 
         # Don't let candidate collide with previous entry
         max_count = (pos - begin + 1) // period
-        print(f"max count: {max_count}")
-
-        # Use overlap to limit minimal repeat count
-        min_count = 2
-        if overlap[idx]:
-            print(f"overlap: {overlap[idx]}")
-            min_count = max(min_count, (pos - overlap[idx]) // period - 1)
-            print(f"min count: {min_count}")
 
         # Try all counts downwards
-        for count in range(max_count, min_count - 1, -1):
-            print(f"count: {count}")
+        for count in range(max_count, 1, -1):
             # Move left until we find a position with a solution
             prev_pos = pos - period * count
             while not inv[prev_pos]:
