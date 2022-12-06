@@ -630,5 +630,4 @@ def test_brute_cover(word, pmrs, inv, max_cover, hgvs):
 @pytest.mark.parametrize(
     "word, pmrs, inv, max_cover, hgvs", TESTS)
 def test_hgvs(word, pmrs, inv, max_cover, hgvs):
-    overlap = overlapping(pmrs)
-    assert sorted(hgvs) == sorted([path2hgvs(path, word) for path in walk(inv, pmrs, max_cover, overlap, len(max_cover) - 1, [])])
+    assert sorted(hgvs) == sorted([path2hgvs(path, word) for path in walk(inv, pmrs, max_cover, len(max_cover) - 1, [])])

@@ -2,7 +2,7 @@ import sys
 from algebra.extractor.cover import cover, cover_length, find_pmrs, inv_array, overlapping, print_tables
 
 
-def walk(inv, pmrs, max_cover, overlap, pos, path):
+def walk(inv, pmrs, max_cover, pos, path):
     # Done!
     if pos < 1:
         yield path
@@ -10,7 +10,7 @@ def walk(inv, pmrs, max_cover, overlap, pos, path):
 
     # Move to the next position if there is an (equally) maximal solution
     if max_cover[pos - 1] == max_cover[pos]:
-        yield from walk(inv, pmrs, max_cover, overlap, pos - 1, path)
+        yield from walk(inv, pmrs, max_cover, pos - 1, path)
 
     # Try all pmrs at this position
     for idx in inv[pos]:
@@ -36,7 +36,7 @@ def walk(inv, pmrs, max_cover, overlap, pos, path):
             if max_cover[max(0, prev_pos)] + period * count == max_cover[pos]:
                 # The actual entry
                 entry = pos - period * count + 1, period, count, idx
-                yield from walk(inv, pmrs, max_cover, overlap, prev_pos, path + [entry])
+                yield from walk(inv, pmrs, max_cover, prev_pos, path + [entry])
 
 
 def fill(subs, word):
