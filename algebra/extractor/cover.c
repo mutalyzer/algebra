@@ -29,7 +29,7 @@ struct PMR
     size_t period;
     size_t count;
     size_t remainder;
-};
+}; // PMR
 
 
 static int
@@ -392,7 +392,7 @@ main(int argc, char* argv[])
 
         for (size_t i = 0; i < n_pmrs; ++i)
         {
-            printf("(%2zu, %2zu, %2zu, %2zu),  # %2zu: %.*s: %2zu\n", pmrs[i].start, pmrs[i].period, pmrs[i].count, pmrs[i].remainder, i, (int)pmrs[i].period, argv[2] + pmrs[i].start, overlap[i]);
+            printf("(%2zu, %2zu, %2zu, %2zu),  # %2zu: %.*s: %2zu\n", pmrs[i].start, pmrs[i].period, pmrs[i].count, pmrs[i].remainder, i, (int) pmrs[i].period, argv[2] + pmrs[i].start, overlap[i]);
         } // for
 
         for (size_t i = 0; i < len; ++i)
@@ -446,7 +446,7 @@ main(int argc, char* argv[])
     } // if
 
     static char word[WORD_SIZE] = {'\0'};
-    for (size_t i = 0; i < (size_t)((1 << upto) - 1); ++i)
+    for (size_t i = 0; i < (size_t) ((1 << upto) - 1); ++i)
     {
         size_t const len = decode(WORD_SIZE, word, i);
         struct PMR pmrs[len];
