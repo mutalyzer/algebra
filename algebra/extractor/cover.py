@@ -91,6 +91,47 @@ def cover(word, pmrs, inv=None, overlap=None):
     return max_cover
 
 
+def cover_length(cover):
+    return sum([period * count for _, period, count in cover])
+
+
+def brute_cover_alt(word, pmrs):
+    def intersect(a, b):
+        a_start, a_period, a_count = a
+        b_start, *_ = b
+        return b_start < a_start + a_period * a_count
+
+    def bcover(pmrs, n, cover):
+        if n >= len(pmrs):
+            yield list(cover)
+            return
+
+        # without this pmr
+        yield from bcover(pmrs, n + 1, cover)
+
+        prev = None
+        if len(cover):
+            prev = cover[-1]
+
+        start, period, count, remainder = pmrs[n]
+        for i in range(remainder + 1):
+            # the complete pmr
+            if prev is None or not intersect(prev, (start + i, period, count)):
+                cover.append((start + i, period, count))
+                yield from bcover(pmrs, n + 1, cover)
+                cover.pop()
+
+        for i in range(remainder + period + 1):
+            for j in range(2, count):
+                for k in range(count - j):
+                    if prev is None or not intersect(prev, (start + i + period * k, period, j)):
+                        cover.append((start + i + period * k, period, j))
+                        yield from bcover(pmrs, n + 1, cover)
+                        cover.pop()
+
+    return bcover(pmrs, 0, [])
+
+
 def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
     def intersect(lhs, rhs):
         lhs_start, lhs_period, lhs_count = lhs
@@ -159,6 +200,10 @@ def main():
     max_cover = cover(word, pmrs)
     print_tables(n, word, inv, max_cover)
     print(brute_cover(word, pmrs))
+
+    covers = list(brute_cover_alt(word, pmrs))
+    bmax = max(map(cover_length, covers))
+    print([c for c in covers if cover_length(c) == bmax])
 
 
 if __name__ == "__main__":
