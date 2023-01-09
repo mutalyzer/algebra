@@ -95,10 +95,12 @@ def parse_hgvs(expression, reference=None):
 
         compound = match_optional("[")
         sequence = match_inserted_part()
+        if not compound:
+            return sequence
+
         while match_optional(";"):
             sequence += match_inserted_part()
-        if compound:
-            match("]")
+        match("]")
         return sequence
 
     def match_variant(reference):
