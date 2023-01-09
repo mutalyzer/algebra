@@ -27,7 +27,12 @@ from algebra.variants import parse_hgvs, parse_spdi, reverse_complement
     ("NG_008376.4:g.=", []),
     ("NG_008376.4:g.3del", [Variant(2, 3, "")]),
     ("NG_008376.4:3del", [Variant(2, 3, "")]),
-    ("3_4invAA", [Variant(2, 4, "AA")])
+    ("3_4invAA", [Variant(2, 4, "AA")]),
+    ("6_7ins[CAT[2];C]", [Variant(6, 6, "CATCATC")]),
+    ("6_7ins[A]", [Variant(6, 6, "A")]),
+    ("6delins[A;A]", [Variant(5, 6, "AA")]),
+    ("6delins[A[0]]", [Variant(5, 6, "")]),
+    ("[5_6insAGGT;6del]", [Variant(5, 5, "AGGT"), Variant(5, 6, "")]),
 ])
 def test_hgvs_parser(expression, variants):
     assert parse_hgvs(expression) == variants
@@ -64,6 +69,14 @@ def test_hgvs_parser(expression, variants):
     ("3_4invA", ValueError, "inconsistent inversion length at 4"),
     ("3_4A>T", ValueError, "inconstistent deletion length at 4"),
     ("[3del];", ValueError, "expected end of expression at 7"),
+    ("6_7ins[", ValueError, "unexpected end of expression"),
+    ("6_7ins[A", ValueError, "unexpected end of expression"),
+    ("6_7ins[;]", ValueError, "expected nucleotide at 8"),
+    ("6_7ins[A;]", ValueError, "expected nucleotide at 10"),
+    ("6_7ins[A;A", ValueError, "unexpected end of expression"),
+    ("6_7ins[A;A[", ValueError, "unexpected end of expression"),
+    ("6_7ins[A;A[0", ValueError, "unexpected end of expression"),
+    ("6_7ins[A;A[0]", ValueError, "unexpected end of expression"),
 ])
 def test_hgvs_parser_fail(expression, exception, message):
     with pytest.raises(exception) as exc:
@@ -79,6 +92,7 @@ def test_hgvs_parser_fail(expression, exception, message):
     ("TTGAGAGAGATT", "3GA[3]", [Variant(2, 10, "GAGAGA")]),
     ("AAA", "1delA", [Variant(0, 1, "")]),
     ("GGGG", "2_3invCC", [Variant(1, 3, "CC")]),
+    ("CAAAAC", "2_5A[8]", [Variant(1, 5, "AAAAAAAA")]),
 ])
 def test_hgvs_parser_with_reference(reference, expression, variants):
     assert parse_hgvs(expression, reference=reference) == variants

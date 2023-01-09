@@ -84,6 +84,25 @@ def parse_hgvs(expression, reference=None):
         end = match_number() if match_optional("_") else start
         return start - 1, end
 
+    def match_insertion():
+        def match_inserted_part():
+            sequence = match_sequence()
+            number = 1
+            if match_optional("["):
+                number = match_number()
+                match("]")
+            return sequence * number
+
+        compound = match_optional("[")
+        sequence = match_inserted_part()
+        if not compound:
+            return sequence
+
+        while match_optional(";"):
+            sequence += match_inserted_part()
+        match("]")
+        return sequence
+
     def match_variant(reference):
         start, end = match_location()
         ctx_pos = pos
@@ -133,13 +152,13 @@ def parse_hgvs(expression, reference=None):
                 if reference is not None and sequence != reference[start:end]:
                     raise ValueError(f"'{sequence}' not found in reference at {start}")
             if match_optional("ins"):
-                return Variant(start, end, match_sequence())
+                return Variant(start, end, match_insertion())
             return Variant(start, end, "")
 
         if match_optional("ins"):
             if end - start != 2:
                 raise ValueError(f"invalid inserted range at {pos}")
-            return Variant(start + 1, start + 1, match_sequence())
+            return Variant(start + 1, start + 1, match_insertion())
 
         try:
             sequence = match_sequence()
