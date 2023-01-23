@@ -100,6 +100,8 @@ def cover_q(word, pmrs, inv=None):
     max_cover = [0] * n
     q = [start for start, *_ in pmrs]
 
+    work = 0
+
     for pos in range(1, n):
         values = [0] * len(pmrs)
 
@@ -108,10 +110,12 @@ def cover_q(word, pmrs, inv=None):
 
             if q[idx] > start and period <= pos - q[idx] < 2 * period:
                 values[idx] = max_cover[pos - 3 * period] + 3 * period
+                work += 1
 
             values[idx] = max(values[idx], max_cover[pos - 2 * period] + 2 * period)
+            work += 1
 
-        max_cover[pos] = max(max_cover[pos - 1], max(values))
+        max_cover[pos] = max(max_cover[pos - 1], max(values, default=0))
 
         for idx in inv[pos]:
             start, period, *_ = pmrs[idx]
@@ -124,7 +128,7 @@ def cover_q(word, pmrs, inv=None):
                 elif pos - q[idx] + 1 > 2 * period:
                     q[idx] = pos
 
-    return max_cover
+    return max_cover, work
 
 
 def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
