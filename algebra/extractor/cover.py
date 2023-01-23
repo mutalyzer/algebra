@@ -92,6 +92,41 @@ def cover(word, pmrs, inv=None, overlap=None):
     return max_cover
 
 
+def cover_q(word, pmrs, inv=None):
+    n = len(word)
+    if not inv:
+        inv = inv_array(n, pmrs)
+
+    max_cover = [0] * n
+    q = [start for start, *_ in pmrs]
+
+    for pos in range(1, n):
+        values = [0] * len(pmrs)
+
+        for idx in inv[pos]:
+            start, period, *_ = pmrs[idx]
+
+            if q[idx] > start and period <= pos - q[idx] < 2 * period:
+                values[idx] = max_cover[pos - 3 * period] + 3 * period
+
+            values[idx] = max(values[idx], max_cover[pos - 2 * period] + 2 * period)
+
+        max_cover[pos] = max(max_cover[pos - 1], max(values))
+
+        for idx in inv[pos]:
+            start, period, *_ = pmrs[idx]
+
+            if q[idx] == start:
+                q[idx] = pos
+            elif values[idx] == max_cover[pos]:
+                if pos - q[idx] + 1 == 2 * period:
+                    q[idx] += period
+                elif pos - q[idx] + 1 > 2 * period:
+                    q[idx] = pos
+
+    return max_cover
+
+
 def brute_cover(word, pmrs, prev=None, n=0, max_cover=0):
     def intersect(lhs, rhs):
         lhs_start, lhs_period, lhs_count = lhs
@@ -267,7 +302,7 @@ def main():
         print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]} : {overlap[idx]}")
 
     inv = inv_array(n, pmrs)
-    max_cover = cover(word, pmrs)
+    max_cover = cover_q(word, pmrs)
     print_tables(n, word, inv, max_cover)
     print(brute_cover(word, pmrs))
 
