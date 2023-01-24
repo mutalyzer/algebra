@@ -97,36 +97,28 @@ def cover_q(word, pmrs, inv=None):
     if not inv:
         inv = inv_array(n, pmrs)
 
-    max_cover = [0] * n
-    q = [start for start, *_ in pmrs]
-
     work = 0
 
+    max_cover = [0] * n
+    value = 0
     for pos in range(1, n):
-        values = [0] * len(pmrs)
-
         for idx in inv[pos]:
             start, period, *_ = pmrs[idx]
 
-            if q[idx] > start and period <= pos - q[idx] < 2 * period:
-                values[idx] = max_cover[pos - 3 * period] + 3 * period
+            if pos - start + 1 >= 3 * period:
+                prev = 0
+                if pos > 3 * period:
+                    prev = pos - 3 * period
+                value = max(value, max_cover[prev] + 3 * period)
                 work += 1
 
-            values[idx] = max(values[idx], max_cover[pos - 2 * period] + 2 * period)
+            prev = 0
+            if pos > 2 * period:
+                prev = pos - 2 * period
+            value = max(value, max_cover[prev] + 2 * period)
             work += 1
 
-        max_cover[pos] = max(max_cover[pos - 1], max(values, default=0))
-
-        for idx in inv[pos]:
-            start, period, *_ = pmrs[idx]
-
-            if q[idx] == start:
-                q[idx] = pos
-            elif values[idx] == max_cover[pos]:
-                if pos - q[idx] + 1 == 2 * period:
-                    q[idx] += period
-                elif pos - q[idx] + 1 > 2 * period:
-                    q[idx] = pos
+        max_cover[pos] = value
 
     return max_cover, work
 
@@ -306,7 +298,7 @@ def main():
         print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]} : {overlap[idx]}")
 
     inv = inv_array(n, pmrs)
-    max_cover = cover_q(word, pmrs)
+    max_cover, _ = cover_q(word, pmrs)
     print_tables(n, word, inv, max_cover)
     print(brute_cover(word, pmrs))
 
