@@ -138,38 +138,6 @@ find_pmrs(size_t const len, char const word[len], struct PMR pmrs[len])
 
 
 static size_t
-non_isomorphic_n_ary_words(size_t const len,
-                           size_t const n,
-                           char const alphabet[n],
-                           size_t const prev,
-                           size_t const current,
-                           char word[len])
-{
-    if (current >= len)
-    {
-        struct PMR pmrs[len];
-        size_t const n_pmrs = find_pmrs(len, word, pmrs);
-        printf("%zu %.*s %zu\n", len, (int) len, word, n_pmrs);
-        return 1;
-    } // if
-
-    if (prev == (size_t) -1)
-    {
-        word[0] = alphabet[0];
-        return non_isomorphic_n_ary_words(len, n, alphabet, 0, 1, word);
-    } // if
-
-    size_t count = 0;
-    for (size_t i = 0; i <= min(n - 1, prev + 1); ++i)
-    {
-        word[current] = alphabet[i];
-        count += non_isomorphic_n_ary_words(len, n, alphabet, max(i, prev), current + 1, word);
-    } // for
-    return count;
-} // non_isomorphic_n_ary_words
-
-
-static size_t
 inv_array(size_t const len, size_t const n, struct PMR const pmrs[n], size_t inv[len][n + 1])
 {
     for (size_t i = 0; i < len; ++i)
@@ -255,6 +223,86 @@ cover(size_t const len, size_t const n, struct PMR const pmrs[n], size_t max_cov
     } // for
     return work;
 } // cover
+
+
+static size_t
+cover_q(size_t const len, size_t const n, struct PMR const pmrs[n], size_t max_cover[len])
+{
+    size_t inv[len][n + 1];
+    inv_array(len, n, pmrs, inv);
+
+    size_t work = 0;
+
+    size_t value = 0;
+    max_cover[0] = value;
+    for (size_t pos = 1; pos < len; ++pos)
+    {
+        for (size_t i = 0; i < inv[pos][0]; ++i)
+        {
+            size_t const j = inv[pos][i + 1];
+
+            if (pos - pmrs[j].start + 1 >= 3 * pmrs[j].period)
+            {
+                size_t const prev = pos > 3 * pmrs[j].period ? pos - 3 * pmrs[j].period : 0;
+                value = max(value, max_cover[prev] + 3 * pmrs[j].period);
+                work += 1;
+            } // if
+
+            size_t const prev = pos > 2 * pmrs[j].period ? pos - 2 * pmrs[j].period : 0;
+            value = max(value, max_cover[prev] + 2 * pmrs[j].period);
+            work += 1;
+        } // for
+
+        max_cover[pos] = value;
+    } // for
+
+    return work;
+} // cover_q
+
+
+static size_t
+non_isomorphic_n_ary_words(size_t const len,
+                           size_t const n,
+                           char const alphabet[n],
+                           size_t const prev,
+                           size_t const current,
+                           char word[len])
+{
+    if (current >= len)
+    {
+        if (0 == len)
+        {
+            return 1;
+        } // if
+
+        struct PMR pmrs[len];
+        size_t const n_pmrs = find_pmrs(len, word, pmrs);
+        size_t max_cover[len];
+        size_t const work_a = cover(len, n_pmrs, pmrs, max_cover);
+        size_t const max_a = max_cover[len - 1];
+        size_t const work_b = cover_q(len, n_pmrs, pmrs, max_cover);
+        size_t const max_b = max_cover[len - 1];
+        if (max_a != max_b)
+        {
+            printf("%zu %.*s %zu :: %zu vs %zu\n", len, (int) len, word, n_pmrs, max_a, max_b);
+        } // if
+        return 1;
+    } // if
+
+    if (prev == (size_t) -1)
+    {
+        word[0] = alphabet[0];
+        return non_isomorphic_n_ary_words(len, n, alphabet, 0, 1, word);
+    } // if
+
+    size_t count = 0;
+    for (size_t i = 0; i <= min(n - 1, prev + 1); ++i)
+    {
+        word[current] = alphabet[i];
+        count += non_isomorphic_n_ary_words(len, n, alphabet, max(i, prev), current + 1, word);
+    } // for
+    return count;
+} // non_isomorphic_n_ary_words
 
 
 inline static bool
@@ -351,11 +399,12 @@ read(FILE* stream)
 int
 main(int argc, char* argv[])
 {
-    for (size_t i = 0; i <= 18; ++i)
+    for (size_t i = 0; i <= 40; ++i)
     {
-        static char aword[20] = {'\0'};
-        fprintf(stderr, "%zu: %zu\n", i, non_isomorphic_n_ary_words(i, 4, "ACGT", -1, 0, aword));
+        static char word[128] = {'\0'};
+        fprintf(stderr, "%zu: %zu\n", i, non_isomorphic_n_ary_words(i, 2, "ACGT", -1, 0, word));
     } // for
+/*
     return -1;
 
     //printf("%d\n", are_isomorphic_words(4, "ACAB", "XCXC"));
@@ -455,6 +504,6 @@ main(int argc, char* argv[])
         size_t const work = cover(len, n_pmrs, pmrs, cover_array);
         printf("%zu %s %zu %zu %zu\n", len, word, n_pmrs, cover_array[len - 1], work);
     } // for
-
+*/
     return EXIT_SUCCESS;
 } // main
