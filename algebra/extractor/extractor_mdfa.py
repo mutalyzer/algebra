@@ -92,24 +92,25 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
     while predecessors:
         print(f"\nfor level {lcs_pos} to {lcs_pos + 1}")
         print("----------------")
+        print(predecessors)
+        print(successors)
+        print("----------------")
 
         while successors:
             node = successors.pop(0)
             print(f"- working with node {node} as {get_node_with_length(node)}")
 
             for pred in predecessors:
-                print(
-                    f" - predecesor node {pred} as {get_node_with_length(pred)}"
-                )
+                print(f" - predecessor node {pred} as {get_node_with_length(pred)}")
                 if variant_possible_offset(pred, node):
                     variant = get_variant_offset(pred, node, observed)
-                    print(f"  - added {variant}, {variant.to_hgvs(reference)}")
                     pred.edges.append((node, [variant]))
+                    print(f"  - added {variant}, {variant.to_hgvs(reference)}")
 
             print(" - check if current node should be added to the predecessors")
             if node.length > 1:
                 node.length -= 1
-                predecessors = sorted(predecessors + [node], key=lambda item: (item.row, item.col))
+                predecessors = sorted(predecessors + [node], key=lambda n: (n.row, n.col))
                 print(f"  - added with new predecessors {predecessors}")
 
         lcs_pos -= 1
@@ -118,11 +119,14 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
         if lcs_pos > -1:
             predecessors = lcs_nodes[lcs_pos]
         elif lcs_pos == -1:
+            if successors[0].row == 1 and successors[0].col == 1:
+                source = successors[0]
+                source.row = 0
+                source.col = 0
+                successors.pop(0)
             predecessors = [source]
         else:
             break
-
-    print("done")
 
     return source, None
 
