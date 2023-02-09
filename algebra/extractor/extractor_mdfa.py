@@ -1,9 +1,34 @@
 from argparse import ArgumentParser
+from collections import deque
 
 from algebra.lcs import edit
 from algebra.lcs.all_lcs import _Node
 from algebra.utils import to_dot
 from algebra.variants import Variant
+from algebra.variants.variant import to_hgvs
+
+
+def to_dot_(reference, root):
+    """The LCS graph in Graphviz DOT format."""
+
+    def traverse():
+        # breadth-first traversal
+        visited = {root}
+        queue = deque([root])
+        while queue:
+            node = queue.popleft()
+
+            for succ, variant in node.edges:
+                if variant:
+                    yield (
+                        f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}"'
+                        f' [label="{to_hgvs(variant, reference)}"];'
+                    )
+                if succ not in visited:
+                    visited.add(succ)
+                    queue.append(succ)
+
+    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
 
 
 def print_lcs_nodes(lcs_nodes):
@@ -77,6 +102,24 @@ def split_node(node):
                 node_to_update.edges[i] = (lower_node, e[1])
 
 
+def handle_inversions(node, variant):
+    for pre_edge in node.pre_edges:
+        if pre_edge[1][0].end == variant.end:
+            print(f"\n!!!possible inversion!!!\nshould split pred {node}")
+            split_node(node)
+
+
+def propagate_edge(pred, node, sink, variant):
+    for edge in node.edges:
+        print(f"check for empty edges: {edge} {not edge[1]}")
+        if not edge[1] and edge[0] != sink:
+            print(
+                f"------ here we should propagate to: {edge[0]}, from {pred} edge {(edge[0], [variant])}"
+            )
+            pred.edges.append((edge[0], [variant]))
+            propagate_edge(pred, edge[0], sink, variant)
+
+
 def lcs_graph_mdfa(reference, observed, lcs_nodes):
     sink = _Node(len(reference) + 1, len(observed) + 1, 1)
     source = _Node(0, 0, 1)
@@ -123,10 +166,11 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     print(f"  - pred node edges: {pred.edges}")
                     print(f"  - pred node pre edges: {pred.pre_edges}")
                     variant = get_variant_offset(pred, node, observed)
-                    for pre_edge in pred.pre_edges:
-                        if pre_edge[1][0].end == variant.end:
-                            print(f"\n!!!possible inversion!!!\nshould split pred {pred}")
-                            split_node(pred)
+
+                    handle_inversions(pred, variant)
+
+                    propagate_edge(pred, node, sink, variant)
+
                     pred.edges.append((node, [variant]))
                     node.pre_edges.append((pred, [variant]))
                     print(f"  - added {variant}, {variant.to_hgvs(reference)}")
@@ -134,9 +178,10 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
             print(" - check if current node should be added to the predecessors")
             if node.length > 1:
                 node.length -= 1
-                predecessors = sorted(predecessors + [node], key=lambda n: (n.row, n.col))
+                predecessors = sorted(
+                    predecessors + [node], key=lambda n: (n.row, n.col)
+                )
                 print(f"  - added with new predecessors {predecessors}")
-
 
         lcs_pos -= 1
         successors = predecessors
