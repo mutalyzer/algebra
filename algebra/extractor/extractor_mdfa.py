@@ -64,6 +64,19 @@ def get_node_with_length(node):
     return node.row + node.length - 1, node.col + node.length - 1
 
 
+def split_node(node):
+    lower_node = _Node(node.row + node.length, node.col + node.length)
+    lower_node.edges = node.edges
+    lower_node.pre_edges = node.pre_edges
+    node.edges = [(lower_node, [])]
+    node.pre_edges = []
+    for pre_edge in lower_node.pre_edges:
+        node_to_update = pre_edge[0]
+        for i, e in enumerate(node_to_update.edges):
+            if e[0] == node:
+                node_to_update.edges[i] = (lower_node, e[1])
+
+
 def lcs_graph_mdfa(reference, observed, lcs_nodes):
     sink = _Node(len(reference) + 1, len(observed) + 1, 1)
     source = _Node(0, 0, 1)
@@ -98,13 +111,23 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
         while successors:
             node = successors.pop(0)
-            print(f"- working with node {node} as {get_node_with_length(node)}")
+            print(f"\n- working with node {node} as {get_node_with_length(node)}")
 
             for pred in predecessors:
                 print(f" - predecessor node {pred} as {get_node_with_length(pred)}")
                 if variant_possible_offset(pred, node):
+                    print(f"  - node edges: {node.edges}")
+                    print(f"  - node pre edges: {node.pre_edges}")
+                    print(f"  - pred node edges: {pred.edges}")
+                    print(f"  - pred node pre edges: {pred.pre_edges}")
                     variant = get_variant_offset(pred, node, observed)
+                    for pre_edge in pred.pre_edges:
+                        if pre_edge[1][0].end == variant.end:
+                            print(f"\n!!!possible inversion!!!\nshould split pred {pred}")
+                            print()
+                            split_node(pred)
                     pred.edges.append((node, [variant]))
+                    node.pre_edges.append((pred, [variant]))
                     print(f"  - added {variant}, {variant.to_hgvs(reference)}")
 
             print(" - check if current node should be added to the predecessors")
