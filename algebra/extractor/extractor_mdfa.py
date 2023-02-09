@@ -112,6 +112,8 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
         while successors:
             node = successors.pop(0)
             print(f"\n- working with node {node} as {get_node_with_length(node)}")
+            if not node.edges and node != sink:
+                continue
 
             for pred in predecessors:
                 print(f" - predecessor node {pred} as {get_node_with_length(pred)}")
@@ -124,7 +126,6 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     for pre_edge in pred.pre_edges:
                         if pre_edge[1][0].end == variant.end:
                             print(f"\n!!!possible inversion!!!\nshould split pred {pred}")
-                            print()
                             split_node(pred)
                     pred.edges.append((node, [variant]))
                     node.pre_edges.append((pred, [variant]))
@@ -135,6 +136,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                 node.length -= 1
                 predecessors = sorted(predecessors + [node], key=lambda n: (n.row, n.col))
                 print(f"  - added with new predecessors {predecessors}")
+
 
         lcs_pos -= 1
         successors = predecessors
