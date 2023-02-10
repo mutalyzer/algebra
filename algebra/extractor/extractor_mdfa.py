@@ -102,32 +102,9 @@ def split_node(node):
                 node_to_update.edges[i] = (lower_node, e[1])
 
 
-def handle_inversions(node, variant):
-    for pre_edge in node.pre_edges:
-        if pre_edge[1][0].end == variant.end:
-            print(f"\n!!!possible inversion!!!\nshould split pred {node}")
-            split_node(node)
-
-
-def propagate_edge(pred, node, sink, variant):
-    for edge in node.edges:
-        print(f"check for empty edges: {edge} {not edge[1]}")
-        if not edge[1] and edge[0] != sink:
-            print(
-                f"------ here we should propagate to: {edge[0]}, from {pred} edge {(edge[0], [variant])}"
-            )
-            pred.edges.append((edge[0], [variant]))
-            propagate_edge(pred, edge[0], sink, variant)
-
-
 def lcs_graph_mdfa(reference, observed, lcs_nodes):
     sink = _Node(len(reference) + 1, len(observed) + 1, 1)
     source = _Node(0, 0, 1)
-
-    print_lcs_nodes(lcs_nodes)
-
-    print_edge(_Node(3, 3), _Node(3, 6), reference, observed)
-    print_edge(_Node(3, 3), _Node(4, 7), reference, observed)
 
     predecessors = lcs_nodes[-1]
 
@@ -139,11 +116,6 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
     successors = [sink]
 
     lcs_pos = len(lcs_nodes) - 1
-
-    print("predecessors")
-    print(predecessors)
-    print("successors")
-    print(successors)
 
     while predecessors:
         print(f"\nfor level {lcs_pos} to {lcs_pos + 1}")
@@ -158,30 +130,23 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
             if not node.edges and node != sink:
                 continue
 
-            for pred in predecessors:
+            for i, pred in enumerate(predecessors):
                 print(f" - predecessor node {pred} as {get_node_with_length(pred)}")
                 if variant_possible_offset(pred, node):
-                    print(f"  - node edges: {node.edges}")
-                    print(f"  - node pre edges: {node.pre_edges}")
-                    print(f"  - pred node edges: {pred.edges}")
-                    print(f"  - pred node pre edges: {pred.pre_edges}")
                     variant = get_variant_offset(pred, node, observed)
-
-                    handle_inversions(pred, variant)
-
-                    propagate_edge(pred, node, sink, variant)
+                    if pred.pre_edges and pred.incoming == lcs_pos:
+                        print(f"\n  - should split pred {pred}, pred.incoming = {pred.incoming}")
 
                     pred.edges.append((node, [variant]))
                     node.pre_edges.append((pred, [variant]))
-                    print(f"  - added {variant}, {variant.to_hgvs(reference)}")
+                    node.incoming = lcs_pos
+                    print(f"  - added edge ({node} [{variant}]), {variant.to_hgvs(reference)}, node.incoming = {node.incoming}")
 
             print(" - check if current node should be added to the predecessors")
             if node.length > 1:
                 node.length -= 1
-                predecessors = sorted(
-                    predecessors + [node], key=lambda n: (n.row, n.col)
-                )
-                print(f"  - added with new predecessors {predecessors}")
+                predecessors = sorted(predecessors + [node], key=lambda n: (n.row, n.col))
+                print(f"  - added {node} in the predecessors {predecessors}")
 
         lcs_pos -= 1
         successors = predecessors
