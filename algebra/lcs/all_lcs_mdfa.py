@@ -17,8 +17,7 @@ class _Node:
         self.max_length = length
 
         self.edges = []
-        self.pre_edges = []
-        self.incoming = 0
+        self.incoming = -2
 
     def __eq__(self, other):
         return (
@@ -215,7 +214,8 @@ def variant_possible(pred, succ):
 def should_merge_sink(lcs_nodes, sink):
     last_node = lcs_nodes[-1][-1]
     return (
-        last_node.row + last_node.length == sink.row and lcs_nodes[-1][-1].col + last_node.length == sink.col
+        last_node.row + last_node.length == sink.row
+        and lcs_nodes[-1][-1].col + last_node.length == sink.col
     )
 
 
@@ -236,12 +236,8 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
         source.edges = [(sink, [variant])]
         return source, sink
 
-
     predecessors = lcs_nodes[-1]
 
-    print_lcs_nodes(lcs_nodes)
-
-    print(sink)
     if should_merge_sink(lcs_nodes, sink):
         print("should merge sink")
         lcs_nodes[-1][-1].length += 1
@@ -253,7 +249,6 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
             node.max_length = node.length
 
     successors = [sink]
-
     lcs_pos = len(lcs_nodes) - 1
 
     while lcs_pos >= -1:
@@ -276,7 +271,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                 if variant_possible_offset(pred, node):
                     variant = get_variant_offset(pred, node, observed)
 
-                    if pred.pre_edges and pred.incoming == lcs_pos:
+                    if pred.incoming > -2 and pred.incoming == lcs_pos:
                         print(f"\n  - inversion")
                         upper_node = deepcopy(pred)
                         upper_node.max_length = pred.length
@@ -288,7 +283,6 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     else:
                         predecessor = pred
                         predecessor.edges.append((node, [variant]))
-                        node.pre_edges.append((predecessor, [variant]))
                     node.incoming = lcs_pos
                     print(f"  - added edge ({node} [{variant}]) {variant.to_hgvs(reference)}, to {predecessor}, predecessor max_length {predecessor.max_length}")
                     print(f"  - predecessor edges: {[(e[0], e[0].max_length) for e in predecessor.edges]}")
@@ -298,7 +292,8 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
             if node.length > 1:
                 node.length -= 1
                 predecessors = sorted(
-                    predecessors + [node], key=lambda n: (n.row + n.length, n.col + n.length)
+                    predecessors + [node],
+                    key=lambda n: (n.row + n.length, n.col + n.length),
                 )
                 print(f"  - added {node} in the predecessors {predecessors}")
 
