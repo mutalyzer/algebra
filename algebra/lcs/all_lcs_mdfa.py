@@ -226,6 +226,7 @@ def get_node_with_length(node):
 def lcs_graph_mdfa(reference, observed, lcs_nodes):
     sink = _Node(len(reference) + 1, len(observed) + 1, 1)
     source = _Node(0, 0, 1)
+    print_lcs_nodes(lcs_nodes)
 
     if reference == observed:
         source.edges = [(sink, [])]
@@ -244,49 +245,45 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
         sink = lcs_nodes[-1][-1]
         predecessors = lcs_nodes[-1][:-1]
 
-    for idx, level in enumerate(lcs_nodes):
-        for node in level:
-            node.max_length = node.length
-
     successors = [sink]
     lcs_pos = len(lcs_nodes) - 1
 
     while lcs_pos >= -1:
         print(f"\nfor level {lcs_pos} to {lcs_pos + 1}")
         print("----------------")
-        print(predecessors)
-        print(successors)
+        print([(n, n.max_length, n.incoming) for n in predecessors])
+        print([(n, n.max_length, n.incoming) for n in successors])
         print("----------------")
 
         while successors:
             node = successors.pop(0)
-            print(f"\n- working with node {node} as {get_node_with_length(node)}")
+            print(f"\n- working with node ({node}, {node.max_length}, {node.incoming}) as {get_node_with_length(node)}")
 
             if not node.edges and node != sink:
                 print(f"- skipped {node}")
                 continue
 
             for i, pred in enumerate(predecessors):
-                print(f" - predecessor node {pred} as {get_node_with_length(pred)}")
+                print(f" - predecessor node ({pred}, {pred.max_length}, {pred.incoming}) as {get_node_with_length(pred)}")
                 if variant_possible_offset(pred, node):
                     variant = get_variant_offset(pred, node, observed)
 
-                    if pred.incoming > -2 and pred.incoming == lcs_pos:
+                    if pred.incoming == lcs_pos:
                         print(f"\n  - inversion")
-                        upper_node = deepcopy(pred)
-                        upper_node.max_length = pred.length
-                        upper_node.edges.append((node, [variant]))
+                        upper_node = _Node(pred.row, pred.col, pred.length)
+                        upper_node.edges = pred.edges + [(node, [variant])]
                         predecessors[i] = upper_node
                         predecessor = upper_node
-                        print(f"   - split pred {pred}, pred.incoming = {pred.incoming}")
-                        print(f"   - upper_node: {upper_node}; upper_node max_length {upper_node.max_length} upper_node edges: {upper_node.edges}\n")
+                        print(f"   - split predecessor")
+                        print(f"   - upper node: ({upper_node}, {upper_node.max_length}, {upper_node.incoming}); edges: {upper_node.edges}\n")
                     else:
                         predecessor = pred
                         predecessor.edges.append((node, [variant]))
                     node.incoming = lcs_pos
-                    print(f"  - added edge ({node} [{variant}]) {variant.to_hgvs(reference)}, to {predecessor}, predecessor max_length {predecessor.max_length}")
-                    print(f"  - predecessor edges: {[(e[0], e[0].max_length) for e in predecessor.edges]}")
-                    print(f"  - set incoming for {node} to {node.incoming}")
+
+                    print(f"  - added edge: {variant.to_hgvs(reference)}")
+                    print(f"  - predecessor edges: {[((e[0], e[0].max_length, e[0].incoming), e[1][0].to_hgvs(reference)) for e in predecessor.edges]}")
+                    print(f"  - set incoming for working node to: {node.incoming}")
 
             print(" - check if current node should be added to the predecessors")
             if node.length > 1:
@@ -295,7 +292,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     predecessors + [node],
                     key=lambda n: (n.row + n.length, n.col + n.length),
                 )
-                print(f"  - added {node} in the predecessors {predecessors}")
+                print(f"  - added ({node}, {node.max_length}, {node.incoming}) in the predecessors {[(n, n.max_length, n.incoming) for n in predecessors]}")
 
         lcs_pos -= 1
         successors = predecessors
