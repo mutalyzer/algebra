@@ -284,6 +284,9 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     print(f"  - added edge: {variant.to_hgvs(reference)}")
                     print(f"  - predecessor edges: {[((e[0], e[0].max_length, e[0].incoming), e[1][0].to_hgvs(reference)) for e in predecessor.edges]}")
                     print(f"  - set incoming for working node to: {node.incoming}")
+                elif pred.row +  pred.length - 1 > node.row + node.length - 1 and pred.col +  pred.length -1 > node.col + node.length - 1:
+                    print(f"  - variant not possible: {i}")
+                    break
 
             print(" - check if current node should be added to the predecessors")
             if node.length > 1:
@@ -292,7 +295,14 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     predecessors + [node],
                     key=lambda n: (n.row + n.length, n.col + n.length),
                 )
-                print(f"  - added ({node}, {node.max_length}, {node.incoming}) in the predecessors {[(n, n.max_length, n.incoming) for n in predecessors]}")
+                print(f"  - added ({node}, {node.max_length}, {node.incoming}) at index {predecessors.index(node)} in the predecessors:\n    {[(n, n.max_length, n.incoming) for n in predecessors]}")
+                # if predecessors:
+                #     print(i, last_node_in)
+                #     predecessors = predecessors[:i] + [node] + predecessors[i:]
+                #     print(f"  - added ({node}, {node.max_length}, {node.incoming}) at index {predecessors.index(node)}, current i {i} in the predecessors:\n    {[(n, n.max_length, n.incoming) for n in predecessors]}")
+                # else:
+                #     predecessors = [node]
+                #     print(f"  - added ({node}, {node.max_length}, {node.incoming}) in the predecessors:\n    {[(n, n.max_length, n.incoming) for n in predecessors]}")
 
         lcs_pos -= 1
         successors = predecessors
