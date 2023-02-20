@@ -6,11 +6,27 @@ from algebra.variants import patch
 from algebra.variants.variant import to_hgvs
 
 
+def traversal_no_variant(root):
+    """
+    Traverse the LCS graph.
+    """
+    def traverse(node, path):
+        if not node.edges:
+            yield path
+
+        variants = [str(e[1]) for e in node.edges]
+        if len(variants) != len(set(variants)):
+            raise ValueError
+        for succ, variant in node.edges:
+            yield from traverse(succ, path + variant)
+
+    yield from traverse(root, [])
+
+
 def get_minimal_mdfa(reference, observed):
     _, lcs_nodes_mdfa = edit_mdfa(reference, observed)
     source_mdfa, sink_mdfa = lcs_graph_mdfa(reference, observed, lcs_nodes_mdfa)
-
-    return traversal(source_mdfa)
+    return traversal_no_variant(source_mdfa)
 
 
 def get_minimal(reference, observed):
@@ -20,7 +36,7 @@ def get_minimal(reference, observed):
     return traversal(source)
 
 
-def extract(reference, observed):
+def compare_minimal(reference, observed):
     minimal_mdfa = sorted(
         [to_hgvs(vars, reference) for vars in get_minimal_mdfa(reference, observed)],
         key=str,
@@ -40,14 +56,17 @@ def main():
     equal = True
     while equal:
         print("\n\n=====================")
-        reference = random_sequence(7, 4)
+        reference = random_sequence(100, 50)
         observed = patch(reference, list(random_variants(reference)))
-        equal = extract(reference, observed)
         print(reference, observed)
         print(observed)
+        print("===========")
+        equal = compare_minimal(reference, observed)
+        print("===========")
         print(equal)
-        print("=====================")
+        print("=====================\n\n")
         if equal:
+            # break
             continue
         else:
             print("error")

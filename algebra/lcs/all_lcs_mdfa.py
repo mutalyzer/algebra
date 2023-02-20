@@ -158,11 +158,10 @@ def to_dot(reference, source, sink):
         while queue:
             node = queue.popleft()
             for succ, variant in node.edges:
-                if variant:
-                    yield (
-                        f'"{node.row}_{node.col}_{node.max_length}" -> "{succ.row}_{succ.col}_{succ.max_length}"'
-                        f' [label="{to_hgvs(variant, reference)}"];'
-                    )
+                yield (
+                    f'"{node.row}_{node.col}_{node.max_length}" -> "{succ.row}_{succ.col}_{succ.max_length}"'
+                    f' [label="{to_hgvs(variant, reference)}"];'
+                )
                 if succ not in visited:
                     visited.add(succ)
                     queue.append(succ)
