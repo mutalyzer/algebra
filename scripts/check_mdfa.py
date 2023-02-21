@@ -18,10 +18,9 @@ def traversal_no_variant(root):
         if len(variants) != len(set(variants)):
             raise ValueError
         for succ, variant in node.edges:
-            empty_variants = [v for v in variant if len(v) == 0]
-            if empty_variants != [] or variant == []:
+            if not variant:
                 raise ValueError
-            yield from traverse(succ, path + variant)
+            yield from traverse(succ, path + [variant])
 
     yield from traverse(root, [])
 

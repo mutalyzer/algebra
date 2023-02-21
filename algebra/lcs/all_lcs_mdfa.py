@@ -160,7 +160,7 @@ def to_dot(reference, source, sink):
             for succ, variant in node.edges:
                 yield (
                     f'"{node.row}_{node.col}_{node.max_length}" -> "{succ.row}_{succ.col}_{succ.max_length}"'
-                    f' [label="{to_hgvs(variant, reference)}"];'
+                    f' [label="{variant.to_hgvs(reference)}"];'
                 )
                 if succ not in visited:
                     visited.add(succ)
@@ -229,7 +229,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
     if not lcs_nodes or lcs_nodes == [[]]:
         variant = Variant(0, len(reference), observed)
-        source.edges = [(sink, [variant])]
+        source.edges = [(sink, variant)]
         return source, sink
 
     predecessors = lcs_nodes[-1]
@@ -267,19 +267,19 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     if pred.incoming == lcs_pos:
                         print(f"\n  - inversion")
                         upper_node = _Node(pred.row, pred.col, pred.length)
-                        upper_node.edges = pred.edges + [(node, [variant])]
+                        upper_node.edges = pred.edges + [(node, variant)]
                         predecessors[i] = upper_node
                         predecessor = upper_node
                         print(f"   - split predecessor")
                         print(f"   - upper node: ({upper_node}, {upper_node.max_length}, {upper_node.incoming}); edges: {upper_node.edges}\n")
                     else:
                         predecessor = pred
-                        predecessor.edges.append((node, [variant]))
+                        predecessor.edges.append((node, variant))
                     node.incoming = lcs_pos
                     idx_pred = i
 
                     print(f"  - added edge: {variant.to_hgvs(reference)}")
-                    print(f"  - predecessor edges: {[((e[0], e[0].max_length, e[0].incoming), e[1][0].to_hgvs(reference)) for e in predecessor.edges]}")
+                    print(f"  - predecessor edges: {[((e[0], e[0].max_length, e[0].incoming), e[1].to_hgvs(reference)) for e in predecessor.edges]}")
                     print(f"  - set incoming for working node to: {node.incoming}")
 
             print(" - check if current node should be added to the predecessors")
