@@ -12,7 +12,6 @@ class _Node:
         self.row = row
         self.col = col
         self.length = length
-        self.max_length = length
 
         self.edges = []
         self.incoming = -2
@@ -25,7 +24,7 @@ class _Node:
         )
 
     def __hash__(self):
-        return hash((self.row, self.col, self.length, self.max_length))
+        return id(self)
 
     def __repr__(self):
         return f"{self.row, self.col, self.length}"
@@ -151,18 +150,22 @@ def to_dot(reference, source, sink):
 
     def traverse():
         # breadth-first traversal
-        visited = {source}
+        node_count = 0
+        visited = {source: node_count}
         queue = deque([source])
         while queue:
             node = queue.popleft()
+
+            if not node.edges:
+                yield f'"s{visited[node]}"' + "[shape=doublecircle]"
+
             for succ, variant in node.edges:
-                yield (
-                    f'"{node.row}_{node.col}_{node.max_length}" -> "{succ.row}_{succ.col}_{succ.max_length}"'
-                    f' [label="{variant.to_hgvs(reference)}"];'
-                )
                 if succ not in visited:
-                    visited.add(succ)
+                    node_count += 1
+                    visited[succ] = node_count
                     queue.append(succ)
+                yield (f'"s{visited[node]}" -> "s{visited[succ]}"'
+                       f' [label="{variant.to_hgvs(reference)}"];')
 
     return (
         "digraph {\n"
@@ -170,8 +173,7 @@ def to_dot(reference, source, sink):
         "    edge[fontname=monospace]\n"
         "    node[shape=circle]\n"
         "    si[shape=point]\n"
-        "    " + f'"{sink.row}_{sink.col}_{sink.max_length}"' + "[shape=doublecircle]\n"
-        "    si->" + f'"{source.row}_{source.col}_{source.max_length}"' + "\n"
+        "    si->" + f'"s{0}"' + "\n"
         "    " + "\n    ".join(traverse()) + "\n}"
     )
 
@@ -240,13 +242,13 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
     while lcs_pos >= -1:
         print(f"\nfor level {lcs_pos} to {lcs_pos + 1}")
         print("----------------")
-        print([(n, n.max_length, n.incoming) for n in predecessors])
-        print([(n, n.max_length, n.incoming) for n in successors])
+        print([(n, n.incoming) for n in predecessors])
+        print([(n, n.incoming) for n in successors])
         print("----------------")
 
         while successors:
             node = successors.pop(0)
-            print(f"\n- working with node ({node}, {node.max_length}, {node.incoming}) as {get_node_with_length(node)}")
+            print(f"\n- working with node ({node}, {node.incoming}) as {get_node_with_length(node)}")
 
             if not node.edges and node != sink:
                 print(f"- skipped {node}")
@@ -254,7 +256,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
             idx_pred = -1
             for i, pred in enumerate(predecessors):
-                print(f" - predecessor node ({pred}, {pred.max_length}, {pred.incoming}) as {get_node_with_length(pred)}")
+                print(f" - predecessor node ({pred}, {pred.incoming}) as {get_node_with_length(pred)}")
                 if variant_possible(pred, node):
                     variant = get_variant(pred, node, observed)
 
@@ -265,7 +267,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                         predecessors[i] = upper_node
                         predecessor = upper_node
                         print(f"   - split predecessor")
-                        print(f"   - upper node: ({upper_node}, {upper_node.max_length}, {upper_node.incoming}); edges: {upper_node.edges}\n")
+                        print(f"   - upper node: ({upper_node}, {upper_node.incoming}); edges: {upper_node.edges}\n")
                     else:
                         predecessor = pred
                         predecessor.edges.append((node, variant))
@@ -273,14 +275,14 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     idx_pred = i
 
                     print(f"  - added edge: {variant.to_hgvs(reference)}")
-                    print(f"  - predecessor edges: {[((e[0], e[0].max_length, e[0].incoming), e[1].to_hgvs(reference)) for e in predecessor.edges]}")
+                    print(f"  - predecessor edges: {[((e[0], e[0].incoming), e[1].to_hgvs(reference)) for e in predecessor.edges]}")
                     print(f"  - set incoming for working node to: {node.incoming}")
 
             print(" - check if current node should be added to the predecessors")
             if node.length > 1:
                 node.length -= 1
                 predecessors.insert(idx_pred+1, node)
-                print(f"  - added ({node}, {node.max_length}, {node.incoming}) at index {idx_pred + 1} in the predecessors:\n    {[(n, n.max_length, n.incoming) for n in predecessors]}")
+                print(f"  - added ({node}, {node.incoming}) at index {idx_pred + 1} in the predecessors:\n    {[(n, n.incoming) for n in predecessors]}")
 
         lcs_pos -= 1
         successors = predecessors
