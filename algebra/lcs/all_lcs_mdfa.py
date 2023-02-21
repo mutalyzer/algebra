@@ -1,8 +1,6 @@
 from collections import deque
-from copy import deepcopy
 
 from algebra.variants import Variant
-from algebra.variants.variant import to_hgvs
 
 
 class _Node:
@@ -191,7 +189,7 @@ def print_lcs_nodes(lcs_nodes):
     print("=========\n")
 
 
-def get_variant_offset(pred, succ, observed):
+def get_variant(pred, succ, observed):
     start = pred.row + pred.length - 1
     end = succ.row + succ.length - 2
     seq_start = pred.col + pred.length - 1
@@ -199,15 +197,11 @@ def get_variant_offset(pred, succ, observed):
     return Variant(start, end, observed[seq_start:seq_end])
 
 
-def variant_possible_offset(pred, succ):
+def variant_possible(pred, succ):
     return (
         pred.row + pred.length - 1 < succ.row + succ.length - 1
         and pred.col + pred.length - 1 < succ.col + succ.length - 1
     )
-
-
-def variant_possible(pred, succ):
-    return pred.row < succ.row and pred.col < succ.col
 
 
 def should_merge_sink(lcs_nodes, sink):
@@ -261,8 +255,8 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
             idx_pred = -1
             for i, pred in enumerate(predecessors):
                 print(f" - predecessor node ({pred}, {pred.max_length}, {pred.incoming}) as {get_node_with_length(pred)}")
-                if variant_possible_offset(pred, node):
-                    variant = get_variant_offset(pred, node, observed)
+                if variant_possible(pred, node):
+                    variant = get_variant(pred, node, observed)
 
                     if pred.incoming == lcs_pos:
                         print(f"\n  - inversion")
