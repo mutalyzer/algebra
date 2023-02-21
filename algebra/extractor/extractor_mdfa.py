@@ -5,9 +5,9 @@ from algebra.lcs.all_lcs_mdfa import edit, lcs_graph_mdfa, to_dot
 
 def extract(reference, observed):
     _, lcs_nodes = edit(reference, observed)
-    source, sink = lcs_graph_mdfa(reference, observed, lcs_nodes)
+    source, _ = lcs_graph_mdfa(reference, observed, lcs_nodes)
 
-    return to_dot(reference, source, sink)
+    return to_dot(reference, source)
 
 
 def main():

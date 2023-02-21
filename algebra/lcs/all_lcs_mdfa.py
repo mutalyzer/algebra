@@ -145,7 +145,7 @@ def edit(reference, observed):
     return abs(delta) + 2 * (it - 1), lcs_nodes[: max_lcs_pos + 1]
 
 
-def to_dot(reference, source, sink):
+def to_dot(reference, source):
     """The LCS graph in Graphviz DOT format."""
 
     def traverse():
@@ -223,10 +223,16 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
     source = _Node(0, 0, 1)
     print_lcs_nodes(lcs_nodes)
 
+    edges = []
+
+    if not reference and not observed:
+        return None, []
+
     if not lcs_nodes or lcs_nodes == [[]]:
         variant = Variant(0, len(reference), observed)
+        edges.append(variant)
         source.edges = [(sink, variant)]
-        return source, sink
+        return source, edges
 
     predecessors = lcs_nodes[-1]
 
@@ -238,6 +244,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
     successors = [sink]
     lcs_pos = len(lcs_nodes) - 1
+
 
     while lcs_pos >= -1:
         print(f"\nfor level {lcs_pos} to {lcs_pos + 1}")
@@ -259,6 +266,8 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                 print(f" - predecessor node ({pred}, {pred.incoming}) as {get_node_with_length(pred)}")
                 if variant_possible(pred, node):
                     variant = get_variant(pred, node, observed)
+
+                    edges.append(variant)
 
                     if pred.incoming == lcs_pos:
                         print(f"\n  - inversion")
@@ -299,4 +308,23 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
         else:
             break
 
-    return source, sink
+    return source, edges
+
+
+def traversal(root):
+    """
+    Traverse the LCS graph.
+    """
+    def traverse(node, path):
+        if not node.edges:
+            yield path
+
+        variants = [str(e[1]) for e in node.edges]
+        if len(variants) != len(set(variants)):
+            raise ValueError
+        for succ, variant in node.edges:
+            if not variant:
+                raise ValueError
+            yield from traverse(succ, path + [variant])
+
+    yield from traverse(root, [])
