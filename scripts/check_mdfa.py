@@ -18,6 +18,9 @@ def traversal_no_variant(root):
         if len(variants) != len(set(variants)):
             raise ValueError
         for succ, variant in node.edges:
+            empty_variants = [v for v in variant if len(v) == 0]
+            if empty_variants != [] or variant == []:
+                raise ValueError
             yield from traverse(succ, path + variant)
 
     yield from traverse(root, [])
@@ -54,10 +57,12 @@ def compare_minimal(reference, observed):
 def main():
 
     equal = True
+    count = 0
     while equal:
         print("\n\n=====================")
-        reference = random_sequence(100, 50)
-        observed = patch(reference, list(random_variants(reference)))
+        reference = random_sequence(30, 1)
+        observed = random_sequence(30, 1)
+        # observed = patch(reference, list(random_variants(reference)))
         print(reference, observed)
         print(observed)
         print("===========")
@@ -65,6 +70,9 @@ def main():
         print("===========")
         print(equal)
         print("=====================\n\n")
+        count += 1
+        print("count:", count)
+
         if equal:
             # break
             continue
