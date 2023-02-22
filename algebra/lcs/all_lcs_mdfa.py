@@ -206,11 +206,11 @@ def variant_possible(pred, succ):
     )
 
 
-def should_merge_sink(lcs_nodes, sink):
+def should_merge_sink(lcs_nodes, reference, observed):
     last_node = lcs_nodes[-1][-1]
     return (
-        last_node.row + last_node.length == sink.row
-        and lcs_nodes[-1][-1].col + last_node.length == sink.col
+        last_node.row + last_node.length == len(reference) + 1
+        and lcs_nodes[-1][-1].col + last_node.length == len(observed) + 1
     )
 
 
@@ -219,42 +219,48 @@ def get_node_with_length(node):
 
 
 def lcs_graph_mdfa(reference, observed, lcs_nodes):
-    sink = _Node(len(reference) + 1, len(observed) + 1, 1)
-    source = _Node(0, 0, 1)
     print_lcs_nodes(lcs_nodes)
 
     edges = []
 
-    if not reference and not observed:
-        return None, []
-
     if not lcs_nodes or lcs_nodes == [[]]:
+        source = _Node(0, 0, 1)
+        sink = _Node(len(reference) + 1, len(observed) + 1, 1)
         variant = Variant(0, len(reference), observed)
         edges.append(variant)
         source.edges = [(sink, variant)]
         return source, edges
 
-    predecessors = lcs_nodes[-1]
 
-    if should_merge_sink(lcs_nodes, sink):
+    if should_merge_sink(lcs_nodes, reference, observed):
         print("should merge sink")
-        lcs_nodes[-1][-1].length += 1
         sink = lcs_nodes[-1][-1]
-        predecessors = lcs_nodes[-1][:-1]
+        sink.length += 1
+        lcs_nodes[-1] = lcs_nodes[-1][:-1]
+    else:
+        print("should not merge sink")
+        sink = _Node(len(reference) + 1, len(observed) + 1, 1)
 
-    successors = [sink]
+    lcs_nodes.append([sink])
+
+    print_lcs_nodes(lcs_nodes)
+
     lcs_pos = len(lcs_nodes) - 1
 
+    print("lcs_pos:", lcs_pos)
 
-    while lcs_pos >= -1:
-        print(f"\nfor level {lcs_pos} to {lcs_pos + 1}")
+    while lcs_pos > 0:
+        print(f"\nfor level {lcs_pos - 1} to {lcs_pos}")
         print("----------------")
-        print([(n, n.incoming) for n in predecessors])
-        print([(n, n.incoming) for n in successors])
+        print(lcs_nodes)
         print("----------------")
+        print(lcs_nodes[lcs_pos-1])
+        print(lcs_nodes[lcs_pos])
+        print("----------------")
+        predecessors = lcs_nodes[lcs_pos-1]
 
-        while successors:
-            node = successors.pop(0)
+        while lcs_nodes[lcs_pos]:
+            node = lcs_nodes[lcs_pos].pop(0)
             print(f"\n- working with node ({node}, {node.incoming}) as {get_node_with_length(node)}")
 
             if not node.edges and node != sink:
@@ -274,39 +280,44 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                         upper_node = _Node(pred.row, pred.col, pred.length)
                         upper_node.edges = pred.edges + [(node, variant)]
                         predecessors[i] = upper_node
-                        predecessor = upper_node
+
                         print(f"   - split predecessor")
                         print(f"   - upper node: ({upper_node}, {upper_node.incoming}); edges: {upper_node.edges}\n")
+                        print(f"  - added edge: {variant.to_hgvs(reference)}")
+                        print(f"  - predecessor edges: {[((e[0], e[0].incoming), e[1].to_hgvs(reference)) for e in upper_node.edges]}")
                     else:
-                        predecessor = pred
-                        predecessor.edges.append((node, variant))
+                        pred.edges.append((node, variant))
+                        print(f"  - added edge: {variant.to_hgvs(reference)}")
+                        print(
+                            f"  - predecessor edges: {[((e[0], e[0].incoming), e[1].to_hgvs(reference)) for e in pred.edges]}")
                     node.incoming = lcs_pos
                     idx_pred = i
-
-                    print(f"  - added edge: {variant.to_hgvs(reference)}")
-                    print(f"  - predecessor edges: {[((e[0], e[0].incoming), e[1].to_hgvs(reference)) for e in predecessor.edges]}")
-                    print(f"  - set incoming for working node to: {node.incoming}")
+            print(f"  - set incoming for working node to: {node.incoming}")
 
             print(" - check if current node should be added to the predecessors")
             if node.length > 1:
                 node.length -= 1
                 predecessors.insert(idx_pred+1, node)
-                print(f"  - added ({node}, {node.incoming}) at index {idx_pred + 1} in the predecessors:\n    {[(n, n.incoming) for n in predecessors]}")
+                print(f"  - added ({node}, {node.incoming}) at index {idx_pred + 1} in the predecessors:\n    "
+                      f"{[(n, n.incoming) for n in predecessors]}")
 
+        lcs_nodes[lcs_pos - 1] = predecessors
         lcs_pos -= 1
-        successors = predecessors
 
-        if lcs_pos > -1:
-            predecessors = lcs_nodes[lcs_pos]
-        elif lcs_pos == -1:
-            if successors[0].row == 1 and successors[0].col == 1:
-                source = successors[0]
-                source.row = 0
-                source.col = 0
-                successors.pop(0)
-            predecessors = [source]
-        else:
-            break
+    if lcs_nodes[0][0].row == 1 == lcs_nodes[0][0].col:
+        source = lcs_nodes[0][0]
+        source.row -= 1
+        source.col -= 1
+        successors = lcs_nodes[0][1:]
+    else:
+        source = _Node(0, 0, 1)
+        successors = lcs_nodes[0]
+
+    for succ in successors:
+        if variant_possible(source, succ) and (succ == sink or succ.edges):
+            variant = get_variant(source, succ, observed)
+            source.edges.append((succ, variant))
+            edges.append(variant)
 
     return source, edges
 
