@@ -233,15 +233,25 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
     if should_merge_sink(lcs_nodes, reference, observed):
         sink = lcs_nodes[-1][-1]
         sink.length += 1
-        lcs_nodes[-1] = lcs_nodes[-1][:-1]
+        for pred in lcs_nodes[-1][:-1]:
+            if variant_possible(pred, sink):
+                variant = get_variant(pred, sink, observed)
+                pred.edges.append((sink, variant))
+                edges.append(variant)
+        sink.length -= 1
     else:
         sink = _Node(len(reference) + 1, len(observed) + 1, 1)
+        for pred in lcs_nodes[-1]:
+            if variant_possible(pred, sink):
+                variant = get_variant(pred, sink, observed)
+                pred.edges.append((sink, variant))
+                edges.append(variant)
 
-    lcs_nodes.append([sink])
+    lcs_pos = len(lcs_nodes) - 1
 
-    for idx, nodes in enumerate(lcs_nodes[:0:-1]):
+    while lcs_pos > 0:
 
-        lcs_pos = len(lcs_nodes) - idx - 1
+        nodes = lcs_nodes[lcs_pos]
 
         while nodes:
             node = nodes.pop(0)
@@ -270,6 +280,8 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
             if node.length > 1:
                 node.length -= 1
                 lcs_nodes[lcs_pos-1].insert(idx_pred+1, node)
+
+        lcs_pos -= 1
 
     if lcs_nodes[0][0].row == 1 == lcs_nodes[0][0].col:
         source = lcs_nodes[0][0]
