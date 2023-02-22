@@ -29,8 +29,8 @@ def compare_minimal(reference, observed):
         [to_hgvs(vars, reference) for vars in get_minimal(reference, observed)], key=str
     )
 
-    print(minimal_mdfa)
-    print(minimal)
+    # print(minimal_mdfa)
+    # print(minimal)
 
     return minimal_mdfa == minimal
 
