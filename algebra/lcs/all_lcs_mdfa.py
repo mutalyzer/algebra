@@ -14,7 +14,7 @@ class _Node:
         self.length = length
 
         self.edges = []
-        self.incoming = -2
+        self.incoming = 0
 
     def __eq__(self, other):
         return (
@@ -164,8 +164,10 @@ def to_dot(reference, source):
                     node_count += 1
                     visited[succ] = node_count
                     queue.append(succ)
-                yield (f'"s{visited[node]}" -> "s{visited[succ]}"'
-                       f' [label="{variant.to_hgvs(reference)}"];')
+                yield (
+                    f'"s{visited[node]}" -> "s{visited[succ]}"'
+                    f' [label="{variant.to_hgvs(reference)}"];'
+                )
 
     return (
         "digraph {\n"
@@ -261,25 +263,25 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
             idx_pred = -1
 
-            for i, pred in enumerate( lcs_nodes[lcs_pos-1]):
+            for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
 
                 if variant_possible(pred, node):
                     variant = get_variant(pred, node, observed)
                     edges.append(variant)
 
-                    if pred.incoming == lcs_pos:
+                    if pred.incoming == lcs_pos + 1:
                         upper_node = _Node(pred.row, pred.col, pred.length)
                         upper_node.edges = pred.edges + [(node, variant)]
-                        lcs_nodes[lcs_pos-1][i] = upper_node
+                        lcs_nodes[lcs_pos - 1][i] = upper_node
                     else:
                         pred.edges.append((node, variant))
 
-                    node.incoming = lcs_pos
+                    node.incoming = lcs_pos + 1
                     idx_pred = i
 
             if node.length > 1:
                 node.length -= 1
-                lcs_nodes[lcs_pos-1].insert(idx_pred+1, node)
+                lcs_nodes[lcs_pos - 1].insert(idx_pred + 1, node)
 
         lcs_pos -= 1
 
@@ -305,6 +307,7 @@ def traversal(root):
     """
     Traverse the LCS graph.
     """
+
     def traverse(node, path):
         if not node.edges:
             yield path
