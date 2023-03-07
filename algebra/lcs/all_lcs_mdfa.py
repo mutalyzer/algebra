@@ -212,7 +212,7 @@ def should_merge_sink(lcs_nodes, reference, observed):
     last_node = lcs_nodes[-1][-1]
     return (
         last_node.row + last_node.length == len(reference) + 1
-        and lcs_nodes[-1][-1].col + last_node.length == len(observed) + 1
+        and last_node.col + last_node.length == len(observed) + 1
     )
 
 
@@ -221,6 +221,8 @@ def get_node_with_length(node):
 
 
 def lcs_graph_mdfa(reference, observed, lcs_nodes):
+
+    print_lcs_nodes(lcs_nodes)
 
     edges = []
 
@@ -233,6 +235,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
         return source, edges
 
     if should_merge_sink(lcs_nodes, reference, observed):
+        print("sink merged")
         sink = lcs_nodes[-1][-1]
         sink.length += 1
         for pred in lcs_nodes[-1][:-1]:
@@ -243,8 +246,11 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
         sink.length -= 1
     else:
         sink = _Node(len(reference) + 1, len(observed) + 1, 1)
+        print("sink not merged")
+        print(sink)
         for pred in lcs_nodes[-1]:
             if variant_possible(pred, sink):
+                print(pred)
                 variant = get_variant(pred, sink, observed)
                 pred.edges.append((sink, variant))
                 edges.append(variant)
@@ -254,32 +260,59 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
     while lcs_pos > 0:
 
         nodes = lcs_nodes[lcs_pos]
+        print(f"\nlcs_pos {lcs_pos}\n------------")
+
+        idx_split = [False for e in lcs_nodes[lcs_pos - 1]]
 
         while nodes:
             node = nodes.pop(0)
+            print(f"\n- working node {node} as ({node.row + node.length - 1}, {node.col + node.length - 1})")
 
             if not node.edges and node != sink:
                 continue
 
             idx_pred = -1
+            edge_added = False
+
+            print(lcs_nodes[lcs_pos - 1])
 
             for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
+                print(f"  - pred node {pred}, as ({pred.row + pred.length - 1}, {pred.col + pred.length - 1}),  incoming {node.incoming}, idx_pred {idx_pred}, i {i}")
 
                 if variant_possible(pred, node):
                     variant = get_variant(pred, node, observed)
+                    print(f"    - variant added {variant.to_hgvs(reference)}")
                     edges.append(variant)
 
-                    if pred.incoming == lcs_pos + 1:
+                    print(i, idx_split, lcs_nodes[lcs_pos - 1])
+                    if idx_split[i] and not (pred.incoming == lcs_pos):
+                        print(i, idx_split)
+                        raise ValueError("Wrong split")
+
+                    if pred.incoming == lcs_pos:
+
+                        if not idx_split[i]:
+                            raise ValueError("Should have split")
+                        else:
+                            idx_split[i] = False
+
                         upper_node = _Node(pred.row, pred.col, pred.length)
                         upper_node.edges = pred.edges + [(node, variant)]
+                        pred.row = pred.row + pred.length
+                        pred.col = pred.col + pred.length
                         lcs_nodes[lcs_pos - 1][i] = upper_node
+                        print(f"      - split {pred} with incoming {pred.incoming}; uppper: {upper_node}")
                     else:
                         pred.edges.append((node, variant))
 
-                    node.incoming = lcs_pos + 1
+                    node.incoming = lcs_pos
+                    edge_added = True
+                    print(f"  - update incoming to {node.incoming}")
                     idx_pred = i
 
             if node.length > 1:
+                print(" - insert into predecessors")
+                idx_split.insert(idx_pred + 1, edge_added)
                 node.length -= 1
                 lcs_nodes[lcs_pos - 1].insert(idx_pred + 1, node)
 
