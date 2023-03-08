@@ -264,6 +264,8 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
         idx_split = [False for e in lcs_nodes[lcs_pos - 1]]
 
+        idx_order = -1
+
         while nodes:
             node = nodes.pop(0)
             print(f"\n- working node {node} as ({node.row + node.length - 1}, {node.col + node.length - 1})")
@@ -273,6 +275,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
             idx_pred = -1
             edge_added = False
+            print(lcs_nodes[lcs_pos - 1])
 
             for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 print(f"  - pred node {pred}, as ({pred.row + pred.length - 1}, {pred.col + pred.length - 1}),  incoming {node.incoming}, idx_pred {idx_pred}, i {i}")
@@ -308,9 +311,20 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
 
             if node.length > 1:
                 print(" - insert into predecessors")
-                idx_split.insert(idx_pred + 1, edge_added)
+                print(idx_pred, idx_order)
+                if idx_order > idx_pred:
+                    idx_insert = idx_order + 1
+                    idx_order += 1
+                else:
+                    idx_insert = idx_pred + 1
+                    idx_order = idx_pred + 1
+
+                print(idx_pred, idx_order)
+                # idx_insert = idx_pred + 1
+                print("  - at index:", idx_insert)
                 node.length -= 1
-                lcs_nodes[lcs_pos - 1].insert(idx_pred + 1, node)
+                lcs_nodes[lcs_pos - 1].insert(idx_insert, node)
+                idx_split.insert(idx_insert, edge_added)
 
         lcs_pos -= 1
 
