@@ -24,7 +24,7 @@ class _Node:
         )
 
     def __hash__(self):
-        return id(self)
+        return hash((self.row, self.col))
 
     def __repr__(self):
         return f"{self.row, self.col, self.length}"
@@ -274,8 +274,6 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
             idx_pred = -1
             edge_added = False
 
-            print(lcs_nodes[lcs_pos - 1])
-
             for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 print(f"  - pred node {pred}, as ({pred.row + pred.length - 1}, {pred.col + pred.length - 1}),  incoming {node.incoming}, idx_pred {idx_pred}, i {i}")
 
@@ -284,9 +282,7 @@ def lcs_graph_mdfa(reference, observed, lcs_nodes):
                     print(f"    - variant added {variant.to_hgvs(reference)}")
                     edges.append(variant)
 
-                    print(i, idx_split, lcs_nodes[lcs_pos - 1])
                     if idx_split[i] and not (pred.incoming == lcs_pos):
-                        print(i, idx_split)
                         raise ValueError("Wrong split")
 
                     if pred.incoming == lcs_pos:
