@@ -10,7 +10,7 @@ classification of the relation for every pair of variants by taking all
 minimal Longest Common Subsequence (LCS) alignments into account.
 
 [Jonathan K. Vis, Mark A. Santcroos, Walter A. Kosters and Jeroen F.J. Laros.
-"A Boolean Algebra for Genetic Variants." (2021)](https://arxiv.org/abs/2112.14494)
+"A Boolean Algebra for Genetic Variants." In: *Bioinformatics* (2023).](https://doi.org/10.1093/bioinformatics/btad001)
 
 Installation
 ------------
@@ -72,6 +72,6 @@ compare(reference, lhs, rhs)
 See Also
 --------
 
-A web interface with integration with [Mutalyzer](https://github.com/mutalyzer): [Mutalyzer Algebra](https://v3.mutalyzer.nl/algebra)
+A web interface with integration with [Mutalyzer](https://github.com/mutalyzer): [Mutalyzer Algebra](https://mutalyzer.nl/algebra)
 
 [Mutalyzer Algebra on PyPI](https://pypi.org/project/mutalyzer-algebra/)

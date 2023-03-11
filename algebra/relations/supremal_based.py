@@ -122,7 +122,7 @@ def find_supremal(reference, variant, offset=10):
     `spanning_variant` : The minimum spanning (delins) variant.
     """
 
-    offset = max(offset, len(variant), 1)
+    offset = max(offset, len(variant) // 2, 1)
 
     while True:
         start = max(0, variant.start - offset)
