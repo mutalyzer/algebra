@@ -46,7 +46,7 @@ def test_compare(reference, lhs, rhs, expected):
     assert compare(reference, lhs, rhs) == expected
 
 
-@pytest.mark.parametrize("reference, observed, expected_variant", [
+@pytest.mark.parametrize("reference, observed, expected", [
     ("A", "C", Variant(0, 1, "C")),
     ("", "A", Variant(0, 0, "A")),
     ("A", "", Variant(0, 1, "")),
@@ -54,15 +54,16 @@ def test_compare(reference, lhs, rhs, expected):
     ("AACCT", "AACGT", Variant(2, 4, "CG")),
     ("", "", Variant(0, 0, "")),
 ])
-def test_spanning_variant(reference, observed, expected_variant):
+def test_spanning_variant(reference, observed, expected):
     _, lcs_nodes = edit(reference, observed)
     _, edges = lcs_graph(reference, observed, lcs_nodes)
-    assert spanning_variant(reference, observed, edges) == expected_variant
+    assert spanning_variant(reference, observed, edges) == expected
 
 
-@pytest.mark.parametrize("reference, variant, supremal_variant", [
+@pytest.mark.parametrize("reference, variant, expected", [
     ("GTGTGTTTTTTTAACAGGGA", Variant(8, 9, ""), Variant(5, 12, "TTTTTT")),
     ("ACTG", Variant(0, 1, "A"), Variant(0, 0, "")),
 ])
-def test_find_supremal(reference, variant, supremal_variant):
-    assert find_supremal(reference, variant, offset=1) == supremal_variant
+def test_find_supremal(reference, variant, expected):
+    supremal, *_ = find_supremal(reference, variant, offset=1)
+    assert supremal == expected

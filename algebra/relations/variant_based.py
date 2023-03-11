@@ -49,7 +49,7 @@ def compare(reference, lhs, rhs):
         The relation between the two variant alleles.
     """
 
-    lhs_sup = find_supremal(reference, spanning_variant(reference, patch(reference, lhs), lhs))
-    rhs_sup = find_supremal(reference, spanning_variant(reference, patch(reference, rhs), rhs))
+    lhs_sup, *_ = find_supremal(reference, spanning_variant(reference, patch(reference, lhs), lhs))
+    rhs_sup, *_ = find_supremal(reference, spanning_variant(reference, patch(reference, rhs), rhs))
 
     return compare_supremal(reference, lhs_sup, rhs_sup)

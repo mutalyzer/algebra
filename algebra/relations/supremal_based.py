@@ -131,17 +131,17 @@ def find_supremal(reference, variant, offset=10):
         observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
 
         _, lcs_nodes = edit(reference[start:end], observed)
-        _, edges = lcs_graph(reference[start:end], observed, lcs_nodes)
+        root, edges = lcs_graph(reference[start:end], observed, lcs_nodes)
         supremum = spanning_variant(reference[start:end], observed, edges)
 
         if not supremum:
-            return supremum
+            return supremum, root, start, observed
 
         supremum.start += start
         supremum.end += start
 
         if ((supremum.start > start or supremum.start == 0) and
                 (supremum.end < end or supremum.end == len(reference))):
-            return supremum
+            return supremum, root, start, observed
 
         offset *= 2

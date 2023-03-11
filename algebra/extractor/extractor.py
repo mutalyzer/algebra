@@ -6,7 +6,7 @@ from collections import deque
 from os.path import commonprefix
 from ..lcs import edit, lcs_graph
 from ..variants import Variant, reverse_complement, patch
-from ..relations.supremal_based import spanning_variant
+from ..relations.supremal_based import spanning_variant, find_supremal
 
 
 def canonical(observed, root):
@@ -110,6 +110,12 @@ def extract_supremal(reference, supremal):
     """Extract the canonical variant representation (allele) for a
     supremal variant."""
     return [Variant(supremal.start + variant.start, supremal.start + variant.end, variant.sequence) for variant in extract(reference[supremal.start:supremal.end], supremal.sequence)]
+
+
+def extract_variants(reference, variants):
+    """Extract the canonical variant representation for an allele."""
+    _, root, start, observed = find_supremal(reference, spanning_variant(reference, patch(reference, variants), variants))
+    return [Variant(variant.start + start, variant.end + start, variant.sequence) for variant in canonical(observed, root)]
 
 
 def to_hgvs(variants, reference):
