@@ -2,21 +2,68 @@ import sys
 from algebra.extractor.cover import cover, cover_length, find_pmrs, inv_array, overlapping, print_tables
 
 
-def walk(inv, pmrs, max_cover, pos, path):
+def kanji(max_cover, path, inv, pmrs, word):
+    elements, total = kfill(max_cover, sorted(path), inv, pmrs, word)
+    return "".join(elements), total
+
+
+def kfill(max_cover, subs, inv, pmrs, word):
+    desc = []
+
+    end = -1
+    total = 0
+    for start, period, count, *_ in subs:
+
+        # This position already covered by previous iteration
+        if end >= start:
+            continue
+
+        print(f"start: {start}, period: {period}, count: {count}")
+
+        # Add leading bases that were not part of a repeat
+        if end + 1 < start:
+            desc.append(word[end + 1: start])
+            total += start - end - 1
+            print(f"add {start - end - 1} in the begin")
+
+        # Add repeat to description
+        if period * count > 2:
+            desc.append(f"({word[start:start + period]})^{count}")
+            total += period + 1
+            print(f"add {period + 1} because of repeat")
+        else:
+            desc.append(word[start:start + period * count])
+            total += period * count
+            print(f"add {period * count} because of small repeat")
+
+        # Set new end base
+        end = start + period * count - 1
+
+    # Add trailing bases that was not part of a repeat
+    if end + 1 < len(word):
+        desc.append(word[end + 1:])
+        total += len(word) - end - 1
+        print(f"add {len(word) - end - 1} at end")
+
+    return desc, total
+
+
+def walk(inv, pmrs, max_cover, pos, path, start):
     # Done!
-    if pos < 1:
+    if pos < start:
         yield path
         return
 
     # Move to the next position if there is an (equally) maximal solution
     if max_cover[pos - 1] == max_cover[pos]:
-        yield from walk(inv, pmrs, max_cover, pos - 1, path)
+        yield from walk(inv, pmrs, max_cover, pos - 1, path, start)
 
     # Try all pmrs at this position
     for idx in inv[pos]:
         if idx in [x[3] for x in path]:
             # Skip if we already used this pmrs for this path
             continue
+            # pass
 
         begin, period, _, _ = pmrs[idx]
 
@@ -36,7 +83,115 @@ def walk(inv, pmrs, max_cover, pos, path):
             if max_cover[max(0, prev_pos)] + period * count == max_cover[pos]:
                 # The actual entry
                 entry = pos - period * count + 1, period, count, idx
-                yield from walk(inv, pmrs, max_cover, prev_pos, path + [entry])
+                yield from walk(inv, pmrs, max_cover, prev_pos, path + [entry], start)
+
+
+def walk2(inv, pmrs, max_cover, pos, path, start, word):
+    # Done!
+    if pos <= start:
+        print(f"done: {path}")
+        if pos == start:
+            yield word[pos] + path
+        else:
+            yield path
+        return
+
+
+    # Move to the next position if there is an (equally) maximal solution
+    if max_cover[pos - 1] == max_cover[pos]:
+        print(f"word pos: {word[pos]}")
+        yield from walk2(inv, pmrs, max_cover, pos - 1, word[pos] + path, start, word)
+
+    # Try all pmrs at this position
+    for idx in inv[pos]:
+        print(f"loop {idx}")
+        # if idx in [x[3] for x in path]:
+        #     # Skip if we already used this pmrs for this path
+        #     continue
+        #     # pass
+
+        begin, period, _, _ = pmrs[idx]
+
+        # Don't let candidate collide with previous entry
+        max_count = (pos - begin + 1) // period
+
+        # Try all counts downwards
+        for count in range(max_count, 1, -1):
+            # Move left until we find a position with a solution
+            prev_pos = pos - period * count
+            while not inv[prev_pos]:
+                prev_pos -= 1
+                # if prev_pos < 0:
+                #     break
+
+            # Move to previous position if there is an (equally) maximal solution (or if we are the last)
+            if max_cover[max(0, prev_pos)] + period * count == max_cover[pos]:
+                # The actual entry
+                entry = pos - period * count + 1, period, count, idx
+                print(f"entry: {entry}")
+                for entry in walk2(inv, pmrs, max_cover, begin + period - 1, '', begin, word):
+                    print("recurse")
+                    yield from walk2(inv, pmrs, max_cover, prev_pos, f"({entry})^{count}" + path, start, word)
+
+
+class Node:
+    def __init__(self, start, period, count, pmrs):
+        self.start = start
+        self.period = period
+        self.count = count
+        self.pmrs = pmrs
+
+        self.children = []
+
+    def __str__(self):
+        return f"{self.start}, {self.period}, {self.count}, {self.pmrs}"
+
+
+def walk3(inv, pmrs, max_cover, pos, node, start, word):
+    # Done!
+    if pos <= start:
+        print(f"done: {node} ({pos})")
+        yield node
+        return
+
+    # Move to the next position if there is an (equally) maximal solution
+    if max_cover[pos - 1] == max_cover[pos]:
+        yield from walk3(inv, pmrs, max_cover, pos - 1, node, start, word)
+
+    # Try all pmrs at this position
+    for idx in inv[pos]:
+        print(f"loop {idx} pos: {pos}")
+        # if idx in [x[3] for x in path]:
+        #     # Skip if we already used this pmrs for this path
+        #     continue
+        #     # pass
+
+        begin, period, _, _ = pmrs[idx]
+
+        # Don't let candidate collide with previous entry
+        max_count = (pos - begin + 1) // period
+
+        # Try all counts downwards
+        for count in range(max_count, 1, -1):
+            # Move left until we find a position with a solution
+            prev_pos = pos - period * count
+            while not inv[prev_pos]:
+                prev_pos -= 1
+                if prev_pos < 0:
+                    break
+
+            # Move to previous position if there is an (equally) maximal solution (or if we are the last)
+            if max_cover[max(0, prev_pos)] + period * count == max_cover[pos]:
+                # The actual entry
+                entry = Node(pos - period * count + 1, period, count, idx)
+                print(f"entry: {entry}")
+                print("going to recurse", entry)
+                for x in walk3(inv, pmrs, max_cover, begin + period - 1, entry, begin, word):
+                    print(f"x: {x}")
+                    child = walk3(inv, pmrs, max_cover, prev_pos, x, start, word)
+                    print(f"child: {list(child)[0]}")
+                    print("Adding child")
+                    # entry.children.append(child)
 
 
 def fill(subs, word):
@@ -178,14 +333,24 @@ def main():
         print(f"{pmr},  # {idx:2}: {word[pmr[0]:pmr[0] + pmr[1]]} : {overlap[idx]}")
 
     inv = inv_array(n, pmrs)
+    print(inv)
     max_cover = cover(word, pmrs)
+    print(max_cover)
     print_tables(n, word, inv, max_cover)
 
-    paths = walk(inv, pmrs, max_cover, overlap, len(max_cover) - 1, [])
-    print([path2hgvs(path, word) for path in paths])
-    paths = list(walk(inv, pmrs, max_cover, overlap, len(max_cover) - 1, []))
-    print([path for path in paths if cover_length(path) == max_cover[-1]])
-    print([path2hgvs(path, word) for path in paths if cover_length(path) == max_cover[-1]])
+    paths = walk(inv, pmrs, max_cover, len(max_cover) - 1, [], 1)
+    for path in paths:
+        desc, total = kanji(max_cover, path, inv, pmrs, word)
+        print(total, desc)
+
+    # paths = walk3(inv, pmrs, max_cover, len(max_cover) - 1, None, 1, word)
+    #print([path2hgvs(path, word) for path in paths])
+    # print(list(paths))
+
+
+    # paths = list(walk(inv, pmrs, max_cover, overlap, len(max_cover) - 1, []))
+    # print([path for path in paths if cover_length(path) == max_cover[-1]])
+    # print([path2hgvs(path, word) for path in paths if cover_length(path) == max_cover[-1]])
     # paths = walk(inv, pmrs, overlap, len(max_cover) - 1, [])
     # print([path2hgvs(path, word) for path in paths if unique_pmrs(path) and cover_length(path) == max_cover[-1]])
     # paths = walk(inv, pmrs, overlap, len(max_cover) - 1, [])
