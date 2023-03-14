@@ -99,7 +99,7 @@ def test_extract_supremal(reference, supremal, variants, hgvs):
     ("GTGTGTTTTTTTAACAGGGA", [Variant(6, 11, "ATA")], "7_11delinsATA"),
 ])
 def test_extract_variants(reference, variants, hgvs):
-    extracted, _ = extract_variants(reference, variants)
+    extracted, *_ = extract_variants(reference, variants)
     assert to_hgvs(extracted, reference) == hgvs
 
 

@@ -116,7 +116,7 @@ def extract_variants(reference, variants):
     """Extract the canonical variant representation together with its
     supremal representation for an allele."""
     supremum, root, start, observed = find_supremal(reference, spanning_variant(reference, patch(reference, variants), variants))
-    return [Variant(variant.start + start, variant.end + start, variant.sequence) for variant in canonical(observed, root)], supremum
+    return [Variant(variant.start + start, variant.end + start, variant.sequence) for variant in canonical(observed, root)], supremum, root, start
 
 
 def to_hgvs(variants, reference):
