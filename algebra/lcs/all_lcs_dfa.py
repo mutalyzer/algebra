@@ -220,7 +220,7 @@ def get_node_with_length(node):
     return node.row + node.length - 1, node.col + node.length - 1
 
 
-def lcs_graph_mdfa(reference, observed, lcs_nodes):
+def lcs_graph_dfa(reference, observed, lcs_nodes):
 
     print_lcs_nodes(lcs_nodes)
 
