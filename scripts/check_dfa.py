@@ -34,7 +34,13 @@ def compare_minimal(reference, observed):
         print(minimal_dfa)
         print("\n\nminimal regular:\n")
         print(minimal)
-    return minimal_dfa == minimal
+        print("\n\n minimal - minimal_dfa:")
+        print(set(minimal) - set(minimal_dfa))
+        print("\n\n minimal_dfa - minimal:")
+        print(set(minimal_dfa) - set(minimal))
+        return False
+    else:
+        return True
 
 
 def main():
@@ -42,7 +48,8 @@ def main():
         "Check and compare the minimal descriptions with the DFA approach"
     )
     parser.add_argument(
-        "--seq",
+        "-s",
+        "--sequences",
         action="store",
         nargs=2,
         metavar=("ref", "obs"),
@@ -50,15 +57,15 @@ def main():
     )
 
     args = parser.parse_args()
-    if args.seq:
-        if compare_minimal(*args.seq):
+    if args.sequences:
+        if compare_minimal(*args.sequences):
             print("equal")
     else:
         count = 0
         while True:
             count += 1
-            ref = random_sequence(20, 3)
-            obs = random_sequence(20, 3)
+            ref = random_sequence(25, 10)
+            obs = random_sequence(25, 10)
             print(f"\n===\n{ref} {obs}\n---\n{count}")
             assert compare_minimal(ref, obs)
 
