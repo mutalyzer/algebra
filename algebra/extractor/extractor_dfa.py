@@ -21,8 +21,6 @@ def canonical(observed, root):
 
     distances = {root: 0}
 
-    multilevel_delins = set()
-
     while queue:
 
         node, parent, edge = queue.popleft()
@@ -33,11 +31,7 @@ def canonical(observed, root):
         if node in visited:
             other_parent, other_edge = visited[node]
 
-            if (
-                other_parent == parent
-                or node in multilevel_delins
-                or (parent.row - parent.col != other_parent.row - other_parent.col)
-            ):
+            if other_parent == parent or (not ((node, edge) in other_parent.edges)):
                 lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
 
                 start = min(edge_a.start, edge_b.start)
@@ -49,8 +43,6 @@ def canonical(observed, root):
                 delins = Variant(start, end, observed[lca.col + start_offset : node.col + end_offset])
 
                 visited[node] = [lca, delins]
-                if parent.row - parent.col != other_parent.row - other_parent.col:
-                    multilevel_delins.add(node)
 
             else:
                 lca, edge_a, edge_b = lowest_common_ancestor(*visited[other_parent], *visited[parent])
