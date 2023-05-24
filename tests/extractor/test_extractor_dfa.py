@@ -13,6 +13,8 @@ from algebra.extractor.extractor_dfa import extract
         ("GAAGC", "GGAAGCACGC", ["1delinsGG", "4_5delinsGCACGC"]),
         ("CTGAAT", "TCAAATTG", ["1_3delinsTCA", "6_7insTG"]),
         ("AGATAGCCTAACGT", "AGCCT", ["1_6delinsAG", "9_14delinsT"]),
+        ("GAGTTA", "AGGTATG", ["1del", "4T>G", "6_7insTG"]),
+
     ],
 )
 def test_extractor_mdfa(reference, observed, variants):
