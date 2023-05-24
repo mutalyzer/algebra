@@ -25,8 +25,8 @@ def main():
         if normal == dfa:
             print(f"equal: {[e.to_hgvs() for e in normal]}")
         else:
-            print(f"- normal:\n{normal}")
-            print(f"- dfa:\n{dfa}")
+            print(f"- normal:\n{[e.to_hgvs() for e in normal]}")
+            print(f"- dfa:\n{[e.to_hgvs() for e in dfa]}")
 
     else:
         count = 0

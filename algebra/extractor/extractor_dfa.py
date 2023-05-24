@@ -30,13 +30,12 @@ def canonical(observed, root):
 
         if node in visited:
             other_parent, other_edge = visited[node]
+            lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
+
+            start = min(edge_a.start, edge_b.start)
+            start_offset = start - lca.row
 
             if other_parent == parent or (not ((node, edge) in other_parent.edges)):
-                lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
-
-                start = min(edge_a.start, edge_b.start)
-                start_offset = start - lca.row
-
                 end = max(node.row - 1, edge.end, other_edge.end)
                 end_offset = end - node.row
 
@@ -45,11 +44,6 @@ def canonical(observed, root):
                 visited[node] = [lca, delins]
 
             else:
-                lca, edge_a, edge_b = lowest_common_ancestor(*visited[other_parent], *visited[parent])
-
-                start = min(edge_a.start, edge_b.start)
-                start_offset = start - lca.row
-
                 end = max(parent.row - 1, visited[parent][1].end, visited[other_parent][1].end)
                 end_offset = end - parent.row
 
@@ -63,7 +57,7 @@ def canonical(observed, root):
         else:
             visited[node] = [parent, edge]
 
-        for succ_node, succ_edge in reversed(node.edges):
+        for succ_node, succ_edge in node.edges:
             if (
                 succ_node not in distances
                 or distances[succ_node] == distances[node] + 1
