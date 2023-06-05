@@ -222,7 +222,7 @@ def get_node_with_length(node):
 
 def lcs_graph_dfa(reference, observed, lcs_nodes):
 
-    print_lcs_nodes(lcs_nodes)
+    # print_lcs_nodes(lcs_nodes)
 
     edges = []
 
@@ -260,25 +260,19 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
     while lcs_pos > 0:
 
         nodes = lcs_nodes[lcs_pos]
-        # print(f"\nlcs_pos {lcs_pos}\n------------")
 
         idx_split = [False for e in lcs_nodes[lcs_pos - 1]]
 
-        idx_order = -1
-
         while nodes:
             node = nodes.pop(0)
-            print(f"\n- working node {node} as ({node.row + node.length - 1}, {node.col + node.length - 1})")
 
             if not node.edges and node != sink:
                 continue
 
             idx_pred = -1
             edge_added = False
-            # print(lcs_nodes[lcs_pos - 1])
 
             for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
-                # print(f"  - pred node {pred}, as ({pred.row + pred.length - 1}, {pred.col + pred.length - 1}),  incoming {node.incoming}, idx_pred {idx_pred}, i {i}")
 
                 if variant_possible(pred, node):
                     variant = get_variant(pred, node, observed)
@@ -300,32 +294,18 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
                         pred.row = pred.row + pred.length
                         pred.col = pred.col + pred.length
                         lcs_nodes[lcs_pos - 1][i] = upper_node
-                        # print(f"      - split {pred} with incoming {pred.incoming}; uppper: {upper_node}")
                     else:
                         pred.edges.append((node, variant))
 
                     node.incoming = lcs_pos
                     edge_added = True
-                    # print(f"  - update incoming to {node.incoming}")
                     idx_pred = i
-            print(f" - stopped at index: {idx_pred}")
-            if node.length > 1:
-                # print(idx_pred, idx_order)
-                if idx_order > idx_pred:
-                    alt_idx_insert = idx_order + 1
-                    idx_order += 1
-                else:
-                    alt_idx_insert = idx_pred + 1
-                    idx_order = idx_pred + 1
 
-                # print(idx_pred, idx_order)
+            if node.length > 1:
                 idx_insert = idx_pred + 1
-                # print("  - at index:", idx_insert)
                 node.length -= 1
                 lcs_nodes[lcs_pos - 1].insert(idx_insert, node)
                 idx_split.insert(idx_insert, edge_added)
-                print(f" - insert into predecessors at index: {idx_insert}; alternative_index: {alt_idx_insert}")
-                print("  - predecessors:", lcs_nodes[lcs_pos - 1])
 
         lcs_pos -= 1
 

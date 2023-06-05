@@ -15,7 +15,7 @@ def canonical(observed, root):
                 n, e_b = visited[n]
             n_a, e_a = visited[n_a]
 
-    queue = deque([(root, None, [])])
+    queue = deque([(root, None, None)])
 
     visited = {}
 
@@ -52,18 +52,16 @@ def canonical(observed, root):
                 visited[other_parent] = [lca, delins]
                 visited[parent] = [lca, delins]
 
-            continue
-
         else:
             visited[node] = [parent, edge]
 
-        for succ_node, succ_edge in node.edges:
-            if (
-                succ_node not in distances
-                or distances[succ_node] == distances[node] + 1
-            ):
-                distances[succ_node] = distances[node] + 1
-                queue.append((succ_node, node, succ_edge))
+            for succ_node, succ_edge in node.edges:
+                if (
+                    succ_node not in distances
+                    or distances[succ_node] == distances[node] + 1
+                ):
+                    distances[succ_node] = distances[node] + 1
+                    queue.append((succ_node, node, succ_edge))
 
     variants = []
     while sink:
