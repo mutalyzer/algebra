@@ -159,16 +159,8 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
                     variant = get_variant(pred, node, observed)
                     edges.append(variant)
 
-                    if idx_split[i] and not (pred.incoming == lcs_pos):
-                        raise ValueError("Wrong split")
-
                     if pred.incoming == lcs_pos:
-
-                        if not idx_split[i]:
-                            raise ValueError("Should have split")
-                        else:
-                            idx_split[i] = False
-
+                        idx_split[i] = False
                         upper_node = _Node(pred.row, pred.col, pred.length)
                         upper_node.edges = pred.edges + [(node, variant)]
                         pred.row = pred.row + pred.length
