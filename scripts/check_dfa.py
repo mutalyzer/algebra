@@ -1,14 +1,13 @@
 from argparse import ArgumentParser
 
 from algebra.lcs import edit, lcs_graph, traversal
-from algebra.lcs.all_lcs_dfa import edit as edit_dfa
 from algebra.lcs.all_lcs_dfa import lcs_graph_dfa
 from algebra.lcs.all_lcs_dfa import traversal as traversal_no_variant
 from algebra.utils import random_sequence
 
 
 def get_minimal_dfa(reference, observed):
-    _, lcs_nodes_dfa = edit_dfa(reference, observed)
+    _, lcs_nodes_dfa = edit(reference, observed)
     source_mdfa, _ = lcs_graph_dfa(reference, observed, lcs_nodes_dfa)
 
     return traversal_no_variant(source_mdfa)

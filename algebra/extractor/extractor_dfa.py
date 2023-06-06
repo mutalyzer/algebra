@@ -1,6 +1,6 @@
 from collections import deque
 
-from ..lcs.all_lcs_dfa import edit
+from ..lcs.all_lcs import edit
 from ..lcs.all_lcs_dfa import lcs_graph_dfa as lcs_graph
 from ..variants import Variant
 
