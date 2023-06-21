@@ -35,7 +35,7 @@ def canonical(observed, root):
             start = min(edge_a.start, edge_b.start)
             start_offset = start - lca.row
 
-            if other_parent == parent or (not ((node, edge) in other_parent.edges)):
+            if other_parent == parent or (not (parent.row == other_parent.row and parent.col == other_parent.col)):
                 end = max(node.row - 1, edge.end, other_edge.end)
                 end_offset = end - node.row
 

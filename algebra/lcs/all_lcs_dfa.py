@@ -24,7 +24,7 @@ class _Node:
         )
 
     def __hash__(self):
-        return hash((self.row, self.col))
+        return hash((self.row, self.col, self.length))
 
     def __repr__(self):
         return f"{self.row, self.col, self.length}"
@@ -163,8 +163,7 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
                         idx_split[i] = False
                         upper_node = _Node(pred.row, pred.col, pred.length)
                         upper_node.edges = pred.edges + [(node, variant)]
-                        pred.row = pred.row + pred.length
-                        pred.col = pred.col + pred.length
+                        pred.length += 1
                         lcs_nodes[lcs_pos - 1][i] = upper_node
                     else:
                         pred.edges.append((node, variant))
