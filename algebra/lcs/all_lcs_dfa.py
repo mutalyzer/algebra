@@ -65,19 +65,6 @@ def to_dot(reference, source):
     )
 
 
-def print_lcs_nodes(lcs_nodes):
-    print("\n=========")
-    print("lcs nodes")
-    print("=========")
-    for idx, level in enumerate(lcs_nodes):
-        print(f"level: {idx}")
-        print("--------")
-        for node in level:
-            print(node, node.edges)
-        print("--------")
-    print("=========\n")
-
-
 def get_variant(pred, succ, observed):
     start = pred.row + pred.length - 1
     end = succ.row + succ.length - 2
@@ -101,10 +88,6 @@ def should_merge_sink(lcs_nodes, reference, observed):
     )
 
 
-def get_node_with_length(node):
-    return node.row + node.length - 1, node.col + node.length - 1
-
-
 def lcs_graph_dfa(reference, observed, lcs_nodes):
 
     edges = []
@@ -124,7 +107,8 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
         sink.length += 1
         for pred in lcs_nodes[-1][:-1]:
             if variant_possible(pred, sink):
-                variant = get_variant(pred, sink, observed)
+                # variant = get_variant(pred, sink, observed)
+                variant = Variant(pred.row + pred.length - 1, sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
                 pred.edges.append((sink, variant))
                 edges.append(variant)
         sink.length -= 1
@@ -132,7 +116,8 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
         sink = _Node(len(reference) + 1, len(observed) + 1, 1)
         for pred in lcs_nodes[-1]:
             if variant_possible(pred, sink):
-                variant = get_variant(pred, sink, observed)
+                # variant = get_variant(pred, sink, observed)
+                variant = Variant(pred.row + pred.length - 1, sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
                 pred.edges.append((sink, variant))
                 edges.append(variant)
 
@@ -155,8 +140,10 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
 
             for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
 
-                if variant_possible(pred, node):
-                    variant = get_variant(pred, node, observed)
+                # if variant_possible(pred, node):
+                #     variant = get_variant(pred, node, observed)
+                if pred.row + pred.length - 1 < node.row + node.length - 1 and pred.col + pred.length - 1 < node.col + node.length - 1:
+                    variant = Variant(pred.row + pred.length - 1, node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
                     edges.append(variant)
 
                     if pred.incoming == lcs_pos:
@@ -191,7 +178,8 @@ def lcs_graph_dfa(reference, observed, lcs_nodes):
 
     for succ in successors:
         if variant_possible(source, succ) and (succ == sink or succ.edges):
-            variant = get_variant(source, succ, observed)
+            # variant = get_variant(source, succ, observed)
+            variant = Variant(source.row + source.length - 1, succ.row + succ.length - 2, observed[source.col + source.length - 1:succ.col + succ.length - 2])
             source.edges.append((succ, variant))
             edges.append(variant)
 
