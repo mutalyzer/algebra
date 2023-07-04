@@ -15,6 +15,8 @@ from algebra.extractor import to_hgvs
         ("CTGAAT", "TCAAATTG", [Variant(0, 3, "TCA"), Variant(6, 6, "TG")]),
         ("AGATAGCCTAACGT", "AGCCT", [Variant(0, 6, "AG"), Variant(8, 14, "T")]),
         ("GAGTTA", "AGGTATG", [Variant(0, 1, ""), Variant(3, 4, "G"), Variant(6, 6, "TG")]),
+        ("AGCCCCA", "AGAGGCGCC", [Variant(1, 7, "GAGGCGCC")]),
+        ("TCTGGAAACACTGGT", "GCGAACTAGGT", [Variant(0, 4, "GC"), Variant(6, 10, "A"), Variant(12, 12, "A")]),
 
     ],
 )

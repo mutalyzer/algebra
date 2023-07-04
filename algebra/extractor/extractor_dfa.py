@@ -12,60 +12,58 @@ def canonical(observed, root):
             while n:
                 if n == n_a:
                     return n_a, e_a, e_b
-                n, e_b = visited[n]
-            n_a, e_a = visited[n_a]
+                n, e_b, _ = visited[n]
+            n_a, e_a, _ = visited[n_a]
 
-    queue = deque([(root, None, None)])
+    queue = deque([(root, None, None, 0)])
 
     visited = {}
 
-    distances = {root: 0}
-
     while queue:
 
-        node, parent, edge = queue.popleft()
+        node, parent, edge, distance = queue.popleft()
 
         if not node.edges:
             sink = node
 
         if node in visited:
-            other_parent, other_edge = visited[node]
+            other_parent, other_edge, other_distance = visited[node]
+
+            if distance > other_distance:
+                continue
+
             lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
 
             start = min(edge_a.start, edge_b.start)
             start_offset = start - lca.row
 
-            if other_parent == parent or (not (parent.row == other_parent.row and parent.col == other_parent.col)):
-                end = max(node.row - 1, edge.end, other_edge.end)
-                end_offset = end - node.row
-
-                delins = Variant(start, end, observed[lca.col + start_offset : node.col + end_offset])
-
-                visited[node] = [lca, delins]
-
-            else:
+            if other_parent != parent and parent.row == other_parent.row and parent.col == other_parent.col:
                 end = max(parent.row - 1, visited[parent][1].end, visited[other_parent][1].end)
                 end_offset = end - parent.row
 
                 delins = Variant(start, end, observed[lca.col + start_offset : parent.col + end_offset])
 
-                visited[other_parent] = [lca, delins]
-                visited[parent] = [lca, delins]
+                visited[other_parent] = (lca, delins, distance - 1)
+                # does not seem to be required to: visited[parent] = (lca, delins, distance - 1)
+
+            else:
+                end = max(node.row - 1, edge.end, other_edge.end)
+                end_offset = end - node.row
+
+                delins = Variant(start, end, observed[lca.col + start_offset : node.col + end_offset])
+
+                visited[node] = (lca, delins, distance)
+
 
         else:
-            visited[node] = [parent, edge]
+            visited[node] = (parent, edge, distance)
 
             for succ_node, succ_edge in node.edges:
-                if (
-                    succ_node not in distances
-                    or distances[succ_node] == distances[node] + 1
-                ):
-                    distances[succ_node] = distances[node] + 1
-                    queue.append((succ_node, node, succ_edge))
+                queue.append((succ_node, node, succ_edge, distance + 1))
 
     variants = []
     while sink:
-        sink, variant = visited[sink]
+        sink, variant, _ = visited[sink]
         if variant:
             variants.append(variant)
 
