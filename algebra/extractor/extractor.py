@@ -34,67 +34,67 @@ def canonical(observed, root):
     `algebra.lcs.lcs_graph` : Constructs the LCS graph.
     """
 
-    def lowest_common_ancestor(node_a, edge_a, node_b, edge_b):
-        while node_a:
-            node = node_b
-            while node:
-                if node == node_a:
-                    return node_a, edge_a, edge_b
-                node, edge_b = node.pre_edges
-            node_a, edge_a = node_a.pre_edges
+    def lowest_common_ancestor(n_a, e_a, n_b, e_b):
+        while n_a:
+            n = n_b
+            while n:
+                if n == n_a:
+                    return n_a, e_a, e_b
+                n, e_b, _ = visited[n]
+            n_a, e_a, _ = visited[n_a]
 
-    lower = deque([(root, None, [])])
-    upper = deque()
-    distance = 0
+    queue = deque([(root, None, None, 0)])
 
-    while lower or upper:
-        if not lower:
-            lower = upper
-            upper = deque()
-            distance += 1
+    visited = {}
 
-        node, parent, variant = lower.popleft()
-        if node.pre_edges:
-            if node.length == distance:
-                pred, edge = node.pre_edges
+    while queue:
 
-                end = node.row - 1
-                if edge:
-                    end = max(end, edge[0].end)
-                if variant:
-                    end = max(end, variant[0].end)
-                end_offset = end - node.row
-
-                lca, edge_a, edge_b = lowest_common_ancestor(pred, edge, parent, variant)
-
-                if edge_a and edge_b:
-                    start = min(edge_a[0].start, edge_b[0].start)
-                elif edge_a:
-                    start = edge_a[0].start
-                elif edge_b:
-                    start = edge_b[0].start
-                start_offset = start - lca.row
-
-                delins = [Variant(start, end, observed[lca.col + start_offset:node.col + end_offset])]
-                node.pre_edges = lca, delins
-            continue
-
-        node.pre_edges = parent, variant
-        node.length = distance
+        node, parent, edge, distance = queue.popleft()
 
         if not node.edges:
             sink = node
 
-        for succ, edge in reversed(node.edges):
-            if not edge:
-                lower.append((succ, node, edge))
+        if node in visited:
+            other_parent, other_edge, other_distance = visited[node]
+
+            if distance > other_distance:
+                continue
+
+            lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
+
+            start = min(edge_a.start, edge_b.start)
+            start_offset = start - lca.row
+
+            if other_parent != parent and parent.row == other_parent.row and parent.col == other_parent.col:
+                end = max(parent.row - 1, visited[parent][1].end, visited[other_parent][1].end)
+                end_offset = end - parent.row
+
+                delins = Variant(start, end, observed[lca.col + start_offset : parent.col + end_offset])
+
+                visited[other_parent] = (lca, delins, distance - 1)
+                # does not seem to be required to: visited[parent] = (lca, delins, distance - 1)
+
             else:
-                upper.append((succ, node, edge))
+                end = max(node.row - 1, edge.end, other_edge.end)
+                end_offset = end - node.row
+
+                delins = Variant(start, end, observed[lca.col + start_offset : node.col + end_offset])
+
+                visited[node] = (lca, delins, distance)
+
+
+        else:
+            visited[node] = (parent, edge, distance)
+
+            for succ_node, succ_edge in node.edges:
+                queue.append((succ_node, node, succ_edge, distance + 1))
 
     variants = []
     while sink:
-        sink, variant = sink.pre_edges
-        variants.extend(variant)
+        sink, variant, _ = visited[sink]
+        if variant:
+            variants.append(variant)
+
     return reversed(variants)
 
 

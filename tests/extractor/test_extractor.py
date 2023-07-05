@@ -83,6 +83,17 @@ from algebra.extractor import extract, extract_supremal, extract_variants, to_hg
     ("A", "", [Variant(0, 1, "")], "1del"),
     ("", "A", [Variant(0, 0, "A")], "0_1insA"),
     ("CATCAT", "", [Variant(0, 6, "")], "1_6del"),
+    ("TAA", "T", [Variant(1, 3, "")], "2_3del"),
+    ("TAACCAG", "GATCC", [Variant(0, 3, "GAT"), Variant(5, 7, "")], "[1_3delinsGAT;6_7del]"),
+    ("CGTGA", "CCGGATATT", [Variant(0, 1, "CC"), Variant(2, 3, ""), Variant(5, 5, "TATT")], "[1dup;3del;5_6insTATT]"),
+    ("GAAG", "GGAAGCACG", [Variant(0, 1, "GG"), Variant(3, 4, "GCACG")], "[1dup;4_5insCACG]"),
+    ("GAAGC", "GGAAGCACGC", [Variant(0, 1, "GG"), Variant(3, 5, "GCACGC")], "[1dup;5_6insACGC]"),
+    ("CTGAAT", "TCAAATTG", [Variant(0, 3, "TCA"), Variant(6, 6, "TG")], "[1_3delinsTCA;6_7insTG]"),
+    ("AGATAGCCTAACGT", "AGCCT", [Variant(0, 6, "AG"), Variant(8, 14, "T")], "[3_6del;10_14del]"),
+    ("GAGTTA", "AGGTATG", [Variant(0, 1, ""), Variant(3, 4, "G"), Variant(6, 6, "TG")], "[1del;4T>G;6_7insTG]"),
+    ("AGCCCCA", "AGAGGCGCC", [Variant(1, 7, "GAGGCGCC")], "3_7delinsAGGCGCC"),
+    ("TCTGGAAACACTGGT", "GCGAACTAGGT", [Variant(0, 4, "GC"), Variant(6, 10, "A"), Variant(12, 12, "A")], "[1_4delinsGC;8_10del;12_13insA]"),
+
 ])
 def test_extract(reference, observed, variants, hgvs):
     canonical = list(extract(reference, observed))

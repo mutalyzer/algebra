@@ -34,7 +34,6 @@ class _Node:
         self.length = length
 
         self.edges = []
-        self.pre_edges = []
         self.incoming = 0
 
     def __eq__(self, other):
@@ -159,104 +158,97 @@ def lcs_graph(reference, observed, lcs_nodes):
     `algebra.utils.to_dot` : Graphviz DOT format.
     """
 
-    sink = _Node(len(reference) + 1, len(observed) + 1)
-    source = _Node(0, 0)
-
-    if reference == observed:
-        source.edges = [(sink, [])]
-        return source, []
-
-    if not lcs_nodes or lcs_nodes == [[]]:
-        variant = Variant(0, len(reference), observed)
-        source.edges = [(sink, [variant])]
-        return source, [variant]
 
     edges = []
-    for node in lcs_nodes[-1]:
-        offset = node.length
-        variant = Variant(node.row + offset - 1, len(reference), observed[node.col + offset - 1:])
-        if variant:
-            node.edges = [(sink, [variant])]
-            edges.append(variant)
-        else:
-            node.edges = [(sink, [])]
 
-    for idx, nodes in enumerate(lcs_nodes[:0:-1]):
-        lcs_pos = len(lcs_nodes) - idx - 1
+    if not lcs_nodes or lcs_nodes == [[]]:
+        source = _Node(0, 0, 0)
+        if not reference and not observed:
+            return source, edges
+        sink = _Node(len(reference) + 1, len(observed) + 1, 0)
+        variant = Variant(0, len(reference), observed)
+        edges.append(variant)
+        source.edges = [(sink, variant)]
+        return source, edges
+
+    if lcs_nodes[-1][-1].row + lcs_nodes[-1][-1].length == len(reference) + 1 and lcs_nodes[-1][-1].col + lcs_nodes[-1][-1].length == len(observed) + 1:
+        sink = lcs_nodes[-1][-1]
+        sink.length += 1
+        for pred in lcs_nodes[-1][:-1]:
+            if pred.row + pred.length - 1 < sink.row + sink.length - 1 and pred.col + pred.length - 1 < sink.col + sink.length - 1:
+                variant = Variant(pred.row + pred.length - 1, sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
+                pred.edges.append((sink, variant))
+                edges.append(variant)
+        sink.length -= 1
+    else:
+        sink = _Node(len(reference) + 1, len(observed) + 1, 1)
+        for pred in lcs_nodes[-1]:
+            if pred.row + pred.length - 1 < sink.row + sink.length - 1 and pred.col + pred.length - 1 < sink.col + sink.length - 1:
+                variant = Variant(pred.row + pred.length - 1, sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
+                pred.edges.append((sink, variant))
+                edges.append(variant)
+
+    lcs_pos = len(lcs_nodes) - 1
+
+    while lcs_pos > 0:
+
+        nodes = lcs_nodes[lcs_pos]
+
+        idx_split = [False for e in lcs_nodes[lcs_pos - 1]]
 
         while nodes:
             node = nodes.pop(0)
-            if not node.edges and not node.pre_edges:
+
+            if not node.edges and node != sink:
                 continue
 
-            offset = node.length - 1
-            for pred in nodes:
-                if pred.length <= 1:
-                    continue
+            idx_pred = -1
+            edge_added = False
 
-                pred_offset = pred.length - 1
-                if node.row + offset >= pred.row + pred_offset and node.col + offset >= pred.col + pred_offset:
-                    if node.pre_edges:
-                        split = _Node(node.row, node.col, node.length - 1)
-                        split.edges = node.pre_edges + [(node, [])]
-                        node.row += offset
-                        node.col += offset
-                        node.length = 1
-                        node.pre_edges = []
-                        offset = 0
-                        lcs_nodes[lcs_pos - 1].append(split)
+            for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
 
-                    variant = Variant(pred.row + pred_offset - 1, node.row + offset - 1, observed[pred.col + pred_offset - 1:node.col + offset - 1])
-                    pred.pre_edges.append((node, [variant]))
+                if pred.row + pred.length - 1 < node.row + node.length - 1 and pred.col + pred.length - 1 < node.col + node.length - 1:
+                    variant = Variant(pred.row + pred.length - 1, node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
                     edges.append(variant)
-                    node.incoming = lcs_pos
-
-            for pred_idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
-                pred_offset = pred.length
-                if node.row + offset >= pred.row + pred_offset and node.col + offset >= pred.col + pred_offset:
-                    if node.row + offset == pred.row + pred_offset and node.col + offset == pred.col + pred_offset:
-                        continue
 
                     if pred.incoming == lcs_pos:
-                        split = _Node(pred.row, pred.col, pred.length)
-                        pred.row += pred_offset
-                        pred.col += pred_offset
-                        pred.length = 1
-                        split.edges = [(pred, [])]
-                        lcs_nodes[lcs_pos - 1][pred_idx] = split
-                        pred = split
-                    elif node.pre_edges:
-                        split = _Node(node.row, node.col, node.length - 1)
-                        split.edges = node.pre_edges + [(node, [])]
-                        node.row += offset
-                        node.col += offset
-                        node.length = 1
-                        node.pre_edges = []
-                        offset = 0
-                        lcs_nodes[lcs_pos - 1].append(split)
+                        idx_split[i] = False
+                        upper_node = _Node(pred.row, pred.col, pred.length)
+                        upper_node.edges = pred.edges + [(node, variant)]
+                        pred.length += 1
+                        lcs_nodes[lcs_pos - 1][i] = upper_node
+                    else:
+                        pred.edges.append((node, variant))
 
-                    variant = Variant(pred.row + pred_offset - 1, node.row + offset - 1, observed[pred.col + pred_offset - 1:node.col + offset - 1])
-                    pred.edges.append((node, [variant]))
-                    edges.append(variant)
                     node.incoming = lcs_pos
-
-            node.edges += node.pre_edges
-            node.pre_edges = []
+                    edge_added = True
+                    idx_pred = i
 
             if node.length > 1:
+                idx_insert = idx_pred + 1
                 node.length -= 1
-                lcs_nodes[lcs_pos - 1].append(node)
+                lcs_nodes[lcs_pos - 1].insert(idx_insert, node)
+                idx_split.insert(idx_insert, edge_added)
 
-    for node in lcs_nodes[0]:
-        if node.edges:
-            variant = Variant(0, node.row - 1, observed[:node.col - 1])
-            if variant:
-                source.edges.append((node, [variant]))
-                edges.append(variant)
-            else:
-                source.edges.append((node, []))
+        lcs_pos -= 1
+
+    if lcs_nodes[0][0].row == 1 == lcs_nodes[0][0].col:
+        source = lcs_nodes[0][0]
+        source.row -= 1
+        source.col -= 1
+        successors = lcs_nodes[0][1:]
+    else:
+        source = _Node(0, 0, 1)
+        successors = lcs_nodes[0]
+
+    for succ in successors:
+        if source.row + source.length - 1 < sink.row + sink.length - 1 and source.col + source.length - 1 < sink.col + sink.length - 1 and (succ == sink or succ.edges):
+            variant = Variant(source.row + source.length - 1, succ.row + succ.length - 2, observed[source.col + source.length - 1:succ.col + succ.length - 2])
+            source.edges.append((succ, variant))
+            edges.append(variant)
 
     return source, edges
+
 
 
 def traversal(root, atomics=False):
@@ -279,16 +271,14 @@ def traversal(root, atomics=False):
     """
 
     def traverse(node, path):
-        # depth-first traversal
         if not node.edges:
             yield path
-            return
 
         for succ, variant in node.edges:
-            if atomics and variant:
-                for atomic in variant[0].atomics():
+            if atomics:
+                for atomic in variant.atomics():
                     yield from traverse(succ, path + atomic)
             else:
-                yield from traverse(succ, path + variant)
+                yield from traverse(succ, path + [variant])
 
     yield from traverse(root, [])

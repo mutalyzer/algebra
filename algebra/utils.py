@@ -34,18 +34,34 @@ def to_dot(reference, root):
     """The LCS graph in Graphviz DOT format."""
     def traverse():
         # breadth-first traversal
-        visited = {root}
+        node_count = 0
+        visited = {root: node_count}
         queue = deque([root])
         while queue:
             node = queue.popleft()
-            for succ, variant in node.edges:
-                yield (f'"{node.row}_{node.col}" -> "{succ.row}_{succ.col}"'
-                       f' [label="{to_hgvs(variant, reference)}"];')
-                if succ not in visited:
-                    visited.add(succ)
-                    queue.append(succ)
 
-    return "digraph {\n    " + "\n    ".join(traverse()) + "\n}"
+            if not node.edges:
+                yield f'"s{visited[node]}"' + "[shape=doublecircle]"
+
+            for succ, variant in node.edges:
+                if succ not in visited:
+                    node_count += 1
+                    visited[succ] = node_count
+                    queue.append(succ)
+                yield (
+                    f'"s{visited[node]}" -> "s{visited[succ]}"'
+                    f' [label="{variant.to_hgvs(reference)}"];'
+                )
+
+    return (
+        "digraph {\n"
+        "    rankdir=LR\n"
+        "    edge[fontname=monospace]\n"
+        "    node[shape=circle]\n"
+        "    si[shape=point]\n"
+        "    si->" + f'"s{0}"' + "\n"
+        "    " + "\n    ".join(traverse()) + "\n}"
+    )
 
 
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):
