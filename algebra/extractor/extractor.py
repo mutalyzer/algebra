@@ -48,7 +48,6 @@ def canonical(observed, root):
     visited = {}
 
     while queue:
-
         node, parent, edge, distance = queue.popleft()
 
         if not node.edges:
@@ -69,19 +68,17 @@ def canonical(observed, root):
                 end = max(parent.row - 1, visited[parent][1].end, visited[other_parent][1].end)
                 end_offset = end - parent.row
 
-                delins = Variant(start, end, observed[lca.col + start_offset : parent.col + end_offset])
+                delins = Variant(start, end, observed[lca.col + start_offset:parent.col + end_offset])
 
                 visited[other_parent] = (lca, delins, distance - 1)
                 # does not seem to be required to: visited[parent] = (lca, delins, distance - 1)
-
             else:
                 end = max(node.row - 1, edge.end, other_edge.end)
                 end_offset = end - node.row
 
-                delins = Variant(start, end, observed[lca.col + start_offset : node.col + end_offset])
+                delins = Variant(start, end, observed[lca.col + start_offset:node.col + end_offset])
 
                 visited[node] = (lca, delins, distance)
-
 
         else:
             visited[node] = (parent, edge, distance)
@@ -186,7 +183,7 @@ def to_hgvs(variants, reference):
         trimmed = Variant(variant.start + start, variant.end - end, variant.sequence[start:len(variant.sequence) - end])
 
         # Inversion
-        if len(trimmed.sequence) > 1 and trimmed.sequence == reverse_complement(reference[trimmed.start : trimmed.end]):
+        if len(trimmed.sequence) > 1 and trimmed.sequence == reverse_complement(reference[trimmed.start:trimmed.end]):
             return f"{to_hgvs_position(trimmed.start, trimmed.end)}inv"
 
         # Deletion/insertion with repeated insertion

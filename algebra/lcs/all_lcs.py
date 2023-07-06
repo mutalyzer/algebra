@@ -191,10 +191,9 @@ def lcs_graph(reference, observed, lcs_nodes):
     lcs_pos = len(lcs_nodes) - 1
 
     while lcs_pos > 0:
-
         nodes = lcs_nodes[lcs_pos]
 
-        idx_split = [False for e in lcs_nodes[lcs_pos - 1]]
+        idx_split = [False for _ in lcs_nodes[lcs_pos - 1]]
 
         while nodes:
             node = nodes.pop(0)
@@ -206,7 +205,6 @@ def lcs_graph(reference, observed, lcs_nodes):
             edge_added = False
 
             for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
-
                 if pred.row + pred.length - 1 < node.row + node.length - 1 and pred.col + pred.length - 1 < node.col + node.length - 1:
                     variant = Variant(pred.row + pred.length - 1, node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
                     edges.append(variant)
@@ -248,7 +246,6 @@ def lcs_graph(reference, observed, lcs_nodes):
             edges.append(variant)
 
     return source, edges
-
 
 
 def traversal(root, atomics=False):
