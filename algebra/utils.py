@@ -5,17 +5,7 @@ from collections import deque
 from itertools import chain
 import random
 from . import Variant
-from .variants import DNA_NUCLEOTIDES, to_hgvs
-
-
-def canonical(variants, max_distance=40):
-    """Pick a canonical representation from all minimal variant
-    representations."""
-    first = next(variants)
-    if sum(map(len, first)) > max_distance:
-        return first
-
-    return min(chain([first], variants), key=len)
+from .variants import DNA_NUCLEOTIDES
 
 
 def fasta_sequence(lines):
