@@ -69,6 +69,18 @@ rhs = parse_hgvs("5_6insT")   # observed: CATATTATC
 compare(reference, lhs, rhs)
 ```
 
+Extracting variants from sequences.
+
+```python
+from algebra.extractor import extract, to_hgvs
+
+reference = "CATATATC"
+observed = "CATATATATC"
+
+# returns: 2_7AT[4]
+to_hgvs(list(extract(reference, observed)), reference)
+```
+
 See Also
 --------
 
