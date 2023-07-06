@@ -1,4 +1,4 @@
-"""Functions to find and compare supremal (minimum spanning) variants."""
+"""Functions to find, compare and construct supremal variants."""
 
 
 from operator import attrgetter
@@ -102,7 +102,8 @@ def spanning_variant(reference, observed, variants):
 
 
 def find_supremal(reference, variant, offset=10):
-    """Iteratively find the supremal variant.
+    """Iteratively find the supremal variant by repeatedly widening a
+    range of influence.
 
     Parameters
     ----------
@@ -117,9 +118,20 @@ def find_supremal(reference, variant, offset=10):
     offset : int, optional
         The minimum offset around the variant.
 
+    Returns
+    -------
+    supremal : `Variant`
+        The supremal variant.
+    root : `_Node`
+        The root of the LCS-graph in which the supremal was determined.
+    start : int
+        The start offset for the given LCS-graph.
+    observed : str
+        The observed sequence for the given LCS-graph.
+
     See Also
     --------
-    `spanning_variant` : The minimum spanning (delins) variant.
+    `spanning_variant` : The minimum spanning (delins) variant for an allele.
     """
 
     offset = max(offset, len(variant) // 2, 1)
@@ -131,14 +143,17 @@ def find_supremal(reference, variant, offset=10):
         observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
 
         _, lcs_nodes = edit(reference[start:end], observed)
-        _, edges = lcs_graph(reference[start:end], observed, lcs_nodes)
+        root, edges = lcs_graph(reference[start:end], observed, lcs_nodes)
         supremum = spanning_variant(reference[start:end], observed, edges)
+
+        if not supremum:
+            return supremum, root, start, observed
 
         supremum.start += start
         supremum.end += start
 
         if ((supremum.start > start or supremum.start == 0) and
                 (supremum.end < end or supremum.end == len(reference))):
-            return supremum
+            return supremum, root, start, observed
 
         offset *= 2

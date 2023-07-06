@@ -195,6 +195,7 @@ def test_variant_reverse_complement(variant, end, expected):
 
 @pytest.mark.parametrize("reference, variants, observed", [
     ("ACCTGC", [Variant(1, 4, "CCC")], "ACCCGC"),
+    ("CAAAAC", [Variant(1, 5, "AAAAAAAA")], "CAAAAAAAAC"),
 ])
 def test_patch(reference, variants, observed):
     assert patch(reference, variants) == observed

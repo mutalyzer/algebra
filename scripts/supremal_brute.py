@@ -15,8 +15,8 @@ def drive():
 
     lhs_span = spanning_variant(reference, lhs_seq, lhs_var)
     rhs_span = spanning_variant(reference, rhs_seq, rhs_var)
-    lhs_sup = find_supremal(reference, lhs_span, offset=1)
-    rhs_sup = find_supremal(reference, rhs_span, offset=1)
+    lhs_sup, *_ = find_supremal(reference, lhs_span, offset=1)
+    rhs_sup, *_ = find_supremal(reference, rhs_span, offset=1)
 
     rel_seq = compare_sequence(reference, lhs_seq, rhs_seq)
     rel_sup = compare_supremal(reference, lhs_sup, rhs_sup)
