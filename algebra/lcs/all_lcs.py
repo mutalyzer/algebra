@@ -158,14 +158,13 @@ def lcs_graph(reference, observed, lcs_nodes):
     `algebra.utils.to_dot` : Graphviz DOT format.
     """
 
-
     edges = []
 
     if not lcs_nodes or lcs_nodes == [[]]:
-        source = _Node(0, 0, 0)
+        source = _Node(0, 0)
         if not reference and not observed:
             return source, edges
-        sink = _Node(len(reference) + 1, len(observed) + 1, 0)
+        sink = _Node(len(reference) + 1, len(observed) + 1)
         variant = Variant(0, len(reference), observed)
         edges.append(variant)
         source.edges = [(sink, variant)]
