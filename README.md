@@ -78,7 +78,7 @@ reference = "CATATATC"
 observed = "CATATATATC"
 
 # returns: 2_7AT[4]
-to_hgvs(list(extract(reference, observed)), reference)
+to_hgvs(extract(reference, observed), reference)
 ```
 
 See Also
