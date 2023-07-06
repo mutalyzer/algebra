@@ -2,7 +2,6 @@
 
 
 from collections import deque
-from itertools import chain
 import random
 from . import Variant
 from .variants import DNA_NUCLEOTIDES
