@@ -90,9 +90,9 @@ def canonical(observed, root):
     while sink:
         sink, variant, _ = visited[sink]
         if variant:
-            variants.append(variant)
+            variants.insert(0, variant)
 
-    return reversed(variants)
+    return variants
 
 
 def extract(reference, observed):
