@@ -18,7 +18,8 @@ def main():
 
     variants = []
     for line in sys.stdin:
-        variants.append(find_supremal(reference, parse_spdi(line.strip())[0]))
+        variant, *_ = find_supremal(reference, parse_spdi(line.strip())[0])
+        variants.append(variant)
 
     for lhs, rhs in combinations(variants, 2):
         relation = compare(reference, lhs, rhs)
