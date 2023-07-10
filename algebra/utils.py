@@ -85,7 +85,7 @@ def random_variants(reference, p=None, mu_deletion=1, mu_insertion=1):
     reference : str
         The reference sequence.
     p : float, optional
-        The change per symbol of a variant (default: `1 / len(reference`).
+        The change per symbol of a variant (default: `1 / len(reference)`.
 
     Other Parameters
     ----------------
