@@ -77,8 +77,9 @@ from algebra.extractor import extract, to_hgvs
 reference = "CATATATC"
 observed = "CATATATATC"
 
+canonical = extract(reference, observed)
 # returns: 2_7AT[4]
-to_hgvs(extract(reference, observed), reference)
+to_hgvs(canonical, reference)
 ```
 
 See Also
