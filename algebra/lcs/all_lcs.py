@@ -188,37 +188,33 @@ def lcs_graph(reference, observed, lcs_nodes):
                 edges.append(variant)
 
     lcs_pos = len(lcs_nodes) - 1
-
     while lcs_pos > 0:
-        nodes = lcs_nodes[lcs_pos]
-
-        while nodes:
-            node = nodes.pop(0)
+        while lcs_nodes[lcs_pos]:
+            node = lcs_nodes[lcs_pos].pop(0)
 
             if not node.edges and node != sink:
                 continue
 
-            idx_pred = -1
-
-            for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
+            idx_pred = 0
+            for idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 if pred.row + pred.length - 1 < node.row + node.length - 1 and pred.col + pred.length - 1 < node.col + node.length - 1:
                     variant = Variant(pred.row + pred.length - 1, node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
                     edges.append(variant)
 
                     if pred.incoming == lcs_pos:
-                        upper_node = _Node(pred.row, pred.col, pred.length)
-                        upper_node.edges = pred.edges + [(node, variant)]
+                        split_node = _Node(pred.row, pred.col, pred.length)
+                        split_node.edges = pred.edges + [(node, variant)]
                         pred.length += 1
-                        lcs_nodes[lcs_pos - 1][i] = upper_node
+                        lcs_nodes[lcs_pos - 1][idx] = split_node
                     else:
                         pred.edges.append((node, variant))
 
                     node.incoming = lcs_pos
-                    idx_pred = i
+                    idx_pred = idx + 1
 
             if node.length > 1:
                 node.length -= 1
-                lcs_nodes[lcs_pos - 1].insert(idx_pred + 1, node)
+                lcs_nodes[lcs_pos - 1].insert(idx_pred, node)
 
         lcs_pos -= 1
 
