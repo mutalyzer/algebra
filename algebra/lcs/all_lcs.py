@@ -192,8 +192,6 @@ def lcs_graph(reference, observed, lcs_nodes):
     while lcs_pos > 0:
         nodes = lcs_nodes[lcs_pos]
 
-        idx_split = [False for _ in lcs_nodes[lcs_pos - 1]]
-
         while nodes:
             node = nodes.pop(0)
 
@@ -201,7 +199,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                 continue
 
             idx_pred = -1
-            edge_added = False
 
             for i, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 if pred.row + pred.length - 1 < node.row + node.length - 1 and pred.col + pred.length - 1 < node.col + node.length - 1:
@@ -209,7 +206,6 @@ def lcs_graph(reference, observed, lcs_nodes):
                     edges.append(variant)
 
                     if pred.incoming == lcs_pos:
-                        idx_split[i] = False
                         upper_node = _Node(pred.row, pred.col, pred.length)
                         upper_node.edges = pred.edges + [(node, variant)]
                         pred.length += 1
@@ -218,14 +214,11 @@ def lcs_graph(reference, observed, lcs_nodes):
                         pred.edges.append((node, variant))
 
                     node.incoming = lcs_pos
-                    edge_added = True
                     idx_pred = i
 
             if node.length > 1:
-                idx_insert = idx_pred + 1
                 node.length -= 1
-                lcs_nodes[lcs_pos - 1].insert(idx_insert, node)
-                idx_split.insert(idx_insert, edge_added)
+                lcs_nodes[lcs_pos - 1].insert(idx_pred + 1, node)
 
         lcs_pos -= 1
 
