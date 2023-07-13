@@ -63,10 +63,6 @@ class Variant:
         self.end = end
         self.sequence = sequence
 
-    def __bool__(self):
-        """Check for empty (=) variants."""
-        return len(self) > 0
-
     def __eq__(self, other):
         return (self.start == other.start and self.end == other.end and
                 self.sequence == other.sequence)
