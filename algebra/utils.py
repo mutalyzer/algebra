@@ -121,7 +121,7 @@ def random_variants(reference, p=None, mu_deletion=1, mu_insertion=1):
             del_seq = reference[pos:pos + len_del]
             ins_seq = ""
 
-            if len_ins > 0:
+            if len_ins:
                 ins_seq = "".join(random.choice(DNA_NUCLEOTIDES.replace(ch, "")) for ch in del_seq)
                 if len_ins > len(ins_seq):
                     ins_seq += "".join(random.choices(DNA_NUCLEOTIDES, k=len_ins - len(ins_seq)))
