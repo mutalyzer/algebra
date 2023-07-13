@@ -6,11 +6,13 @@ their relations.
 
 
 import argparse
-from .lcs import edit, lcs_graph, traversal
-from .relations.sequence_based import compare
-from .relations.supremal_based import spanning_variant
-from .utils import fasta_sequence, random_sequence, random_variants, to_dot
-from .variants import parse_hgvs, parse_spdi, patch, to_hgvs
+from algebra.extractor import extract, extract_variants, to_hgvs as to_hgvs_extractor
+from algebra.lcs import edit, lcs_graph, traversal
+from algebra.relations.sequence_based import compare
+from algebra.relations.supremal_based import find_supremal, spanning_variant
+from algebra.relations.variant_based import compare as compare_variants
+from algebra.utils import fasta_sequence, random_sequence, random_variants, to_dot
+from algebra.variants import parse_hgvs, parse_spdi, patch, to_hgvs
 
 
 def main():
@@ -74,91 +76,110 @@ def main():
     if not args.random_sequence_min:
         args.random_sequence_min = args.random_sequence_max
 
-    if args.reference is not None:
+    if args.reference:
         reference = args.reference
-    elif args.reference_file is not None:
+    elif args.reference_file:
         with open(args.reference_file, encoding="utf-8") as file:
-            reference = fasta_sequence(file.readlines())
+            reference = fasta_sequence(file)
     else:  # args.reference_random_sequence
         reference = random_sequence(args.random_sequence_max, args.random_sequence_min)
         print(reference)
 
     if args.command == "compare":
-        if args.lhs is not None:
+        lhs_is_variant = any([args.lhs_hgvs, args.lhs_spdi, args.lhs_random_variant])
+        if args.lhs:
             lhs = args.lhs
-        elif args.lhs_hgvs is not None:
-            lhs = patch(reference, parse_hgvs(args.lhs_hgvs, reference=reference))
-        elif args.lhs_spdi is not None:
-            lhs = patch(reference, parse_spdi(args.lhs_spdi))
-        elif args.lhs_file is not None:
+        elif args.lhs_hgvs:
+            lhs = parse_hgvs(args.lhs_hgvs, reference=reference)
+        elif args.lhs_spdi:
+            lhs = parse_spdi(args.lhs_spdi)
+        elif args.lhs_file:
             with open(args.lhs_file, encoding="utf-8") as file:
-                lhs = fasta_sequence(file.readlines())
+                lhs = fasta_sequence(file)
         elif args.lhs_random_variant:
-            variants = list(random_variants(reference, args.random_variant_p))
-            lhs = patch(reference, variants)
-            print(to_hgvs(variants, reference))
+            lhs = list(random_variants(reference, args.random_variant_p))
+            print(to_hgvs(lhs, reference))
         else:  # args.lhs_random_sequence:
             lhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
             print(lhs)
 
-        if args.rhs is not None:
+        rhs_is_variant = any([args.rhs_hgvs, args.rhs_spdi, args.rhs_random_variant])
+        if args.rhs:
             rhs = args.rhs
-        elif args.rhs_hgvs is not None:
-            rhs = patch(reference, parse_hgvs(args.rhs_hgvs, reference=reference))
-        elif args.rhs_spdi is not None:
-            rhs = patch(reference, parse_spdi(args.rhs_spdi))
-        elif args.rhs_file is not None:
+        elif args.rhs_hgvs:
+            rhs = parse_hgvs(args.rhs_hgvs, reference=reference)
+        elif args.rhs_spdi:
+            rhs = parse_spdi(args.rhs_spdi)
+        elif args.rhs_file:
             with open(args.rhs_file, encoding="utf-8") as file:
-                rhs = fasta_sequence(file.readlines())
+                rhs = fasta_sequence(file)
         elif args.rhs_random_variant:
-            variants = list(random_variants(reference, args.random_variant_p))
-            rhs = patch(reference, variants)
-            print(to_hgvs(variants, reference))
+            rhs = list(random_variants(reference, args.random_variant_p))
+            print(to_hgvs(rhs, reference))
         else:  # args.rhs_random_sequence
             rhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
             print(rhs)
 
+        if lhs_is_variant and rhs_is_variant:
+            print(compare_variants(reference, lhs, rhs))
+            return
+
+        if lhs_is_variant:
+            lhs = patch(reference, lhs)
+        elif rhs_is_variant:
+            rhs = patch(reference, rhs)
+
         print(compare(reference, lhs, rhs))
 
     elif args.command == "extract":
-        if args.observed is not None:
+        is_variant = any([args.observed_hgvs, args.observed_spdi, args.observed_random_variant])
+        if args.observed:
             observed = args.observed
-        elif args.observed_hgvs is not None:
-            observed = patch(reference, parse_hgvs(args.observed_hgvs, reference=reference))
-        elif args.observed_spdi is not None:
-            observed = patch(reference, parse_spdi(args.observed_spdi))
-        elif args.observed_file is not None:
+        elif args.observed_hgvs:
+            observed = parse_hgvs(args.observed_hgvs, reference=reference)
+        elif args.observed_spdi:
+            observed = parse_spdi(args.observed_spdi)
+        elif args.observed_file:
             with open(args.observed_file, encoding="utf-8") as file:
-                observed = fasta_sequence(file.readlines())
+                observed = fasta_sequence(file)
         elif args.observed_random_variant:
-            variants = list(random_variants(reference, args.random_variant_p))
-            observed = patch(reference, variants)
-            print(to_hgvs(variants, reference))
+            observed = list(random_variants(reference, args.random_variant_p))
+            print(to_hgvs(observed, reference))
         else:  # args.observed_random_sequence
             observed = random_sequence(args.random_sequence_max, args.random_sequence_min)
             print(observed)
 
-        distance, lcs_nodes = edit(reference, observed)
-        root, edges = lcs_graph(reference, observed, lcs_nodes)
+        if is_variant:
+            canonical, supremal, root, *_ = extract_variants(reference, observed)
+        else:  # observed sequence
+            canonical, root = extract(reference, observed)
+            supremal = None
 
+        print(to_hgvs_extractor(canonical, reference))
+
+        if args.all:
+            for variants in traversal(root, atomics=args.atomics):
+                print(to_hgvs(variants, reference))
         if args.distance:
-            print(distance)
+            first = next(traversal(root))
+            print(sum(len(variant) for variant in first))
         if args.dot:
             print(to_dot(reference, root))
         if args.supremal_variant:
-            variant = spanning_variant(reference, observed, edges)
-            print(variant.to_hgvs(reference), variant)
-        if True or args.all:
-            for variants in traversal(root, args.atomics):
-                print(to_hgvs(variants, reference))
+            if supremal is None:
+                _, lcs_nodes = edit(reference, observed)
+                _, edges = lcs_graph(reference, observed, lcs_nodes)
+                variant = spanning_variant(reference, observed, edges)
+                supremal, *_ = find_supremal(reference, variant)
+            print(supremal.to_hgvs(reference), supremal.to_spdi(), supremal)
 
     elif args.command == "patch":
-        if args.hgvs is not None:
+        if args.hgvs:
             variants = parse_hgvs(args.hgvs, reference=reference)
-        elif args.spdi is not None:
+        elif args.spdi:
             variants = parse_spdi(args.spdi)
         else:  # args.random_variant
-            variants = list(random_variants(reference, args.random_variant_p))
+            variants = random_variants(reference, args.random_variant_p)
             print(to_hgvs(variants, reference))
 
         print(patch(reference, variants))
