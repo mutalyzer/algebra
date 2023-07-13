@@ -179,7 +179,7 @@ def main():
         elif args.spdi:
             variants = parse_spdi(args.spdi)
         else:  # args.random_variant
-            variants = random_variants(reference, args.random_variant_p)
+            variants = list(random_variants(reference, args.random_variant_p))
             print(to_hgvs(variants, reference))
 
         print(patch(reference, variants))
