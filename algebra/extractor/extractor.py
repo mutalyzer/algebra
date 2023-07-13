@@ -100,13 +100,14 @@ def extract(reference, observed):
     reference and observed sequence."""
     _, lcs_nodes = edit(reference, observed)
     root, _ = lcs_graph(reference, observed, lcs_nodes)
-    return canonical(observed, root)
+    return canonical(observed, root), root
 
 
 def extract_supremal(reference, supremal):
     """Extract the canonical variant representation (allele) for a
     supremal variant."""
-    return [Variant(supremal.start + variant.start, supremal.start + variant.end, variant.sequence) for variant in extract(reference[supremal.start:supremal.end], supremal.sequence)]
+    variants, _ = extract(reference[supremal.start:supremal.end], supremal.sequence)
+    return [Variant(supremal.start + variant.start, supremal.start + variant.end, variant.sequence) for variant in variants]
 
 
 def extract_variants(reference, variants):

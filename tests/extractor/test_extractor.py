@@ -96,7 +96,7 @@ from algebra.extractor import extract, extract_supremal, extract_variants, to_hg
 
 ])
 def test_extract(reference, observed, variants, hgvs):
-    canonical = extract(reference, observed)
+    canonical, _ = extract(reference, observed)
     assert canonical == variants
     assert to_hgvs(canonical, reference) == hgvs
 
