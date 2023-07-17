@@ -110,10 +110,10 @@ def test_traversal_atomics(reference, observed, expected_variant):
 
 
 @pytest.mark.parametrize("duplicates, unique", [
-    ([_Node(0, 0), _Node(0, 0), _Node(0, 0)], [_Node(0, 0)]),
+    ([_Node(0, 0), _Node(0, 0), _Node(0, 0)], {_Node(0, 0)}),
 ])
 def test_node_hash(duplicates, unique):
-    assert set(duplicates) == set(unique)
+    assert set(duplicates) == unique
 
 
 @pytest.mark.parametrize("node, string", [

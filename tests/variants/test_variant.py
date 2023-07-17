@@ -55,10 +55,10 @@ def test_variant_equal_false(lhs, rhs):
 
 
 @pytest.mark.parametrize("duplicates, unique", [
-    ([Variant(0, 0, ""), Variant(0, 0, "")], [Variant(0, 0, "")]),
+    ([Variant(0, 0, ""), Variant(0, 0, "")], {Variant(0, 0, "")}),
 ])
 def test_variant_hash(duplicates, unique):
-    assert set(duplicates) == set(unique)
+    assert set(duplicates) == unique
 
 
 @pytest.mark.parametrize("variant, distance", [
