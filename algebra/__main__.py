@@ -49,8 +49,8 @@ def main():
     rhs_group.add_argument("--rhs-random-variant", action="store_true", help="a random variant")
     rhs_group.add_argument("--rhs-random-sequence", action="store_true", help="a random sequence (default)")
 
-    extract_parser = commands.add_parser("extract", help="extract an HGVS description from an observed sequence")
-    extract_parser.add_argument("--all", action="store_true", help="list all minimal HGVS descriptions (default)")
+    extract_parser = commands.add_parser("extract", help="extract a canonical variant")
+    extract_parser.add_argument("--all", action="store_true", help="list all minimal variants")
     extract_parser.add_argument("--atomics", action="store_true", help="only deletions and insertions")
     extract_parser.add_argument("--distance", action="store_true", help="output simple edit distance")
     extract_parser.add_argument("--dot", action="store_true", help="output Graphviz DOT")
