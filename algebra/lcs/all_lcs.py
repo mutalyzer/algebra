@@ -43,13 +43,21 @@ class _Node:
     def __hash__(self):
         return hash((self.row, self.col, self.length))
 
-    def __repr__(self):
-        return f"{self.row, self.col, self.length}"
 
-
-def edit(reference, observed):
+def edit(reference, observed, max_distance=None):
     """Calculate the simple edit distance between two strings and
     construct a collection of LCS nodes.
+
+    Parameters
+    ----------
+    max_distance : int, optional
+        Stops the calculation if the simple edit distance exceeds this
+        value.
+
+    Raises
+    ------
+    ValueError
+        If the calculation exceeds the optional maximum distance.
 
     Returns
     -------
@@ -137,6 +145,9 @@ def edit(reference, observed):
         diagonals[offset + delta] = expand(delta)
         it += 1
 
+        if max_distance and abs(delta) + 2 * (it - 1) > max_distance:
+            raise ValueError("maximum distance exceeded")
+
     return abs(delta) + 2 * (it - 1), lcs_nodes[:max_lcs_pos + 1]
 
 
@@ -218,7 +229,7 @@ def lcs_graph(reference, observed, lcs_nodes):
 
         lcs_pos -= 1
 
-    if lcs_nodes[0][0].row == 1 == lcs_nodes[0][0].col:
+    if lcs_nodes[0][0].row == lcs_nodes[0][0].col == 1:
         source = lcs_nodes[0][0]
         source.row -= 1
         source.col -= 1
