@@ -36,8 +36,7 @@ def edit(a, b):
 
     offset = m + 1
     delta = n - m
-    size = m + n + 3
-    fp = [-1] * size
+    fp = [-1] * (m + n + 3)
     p = -1
 
     while True:
