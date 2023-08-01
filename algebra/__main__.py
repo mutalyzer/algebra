@@ -6,11 +6,11 @@ their relations.
 
 
 import argparse
-from algebra.extractor import extract, extract_variants, to_hgvs as to_hgvs_extractor
-from algebra.lcs import edit, lcs_graph, traversal
-from algebra.relations.sequence_based import compare
+from algebra.extractor import extract, extract_sequence, to_hgvs as to_hgvs_extractor
+from algebra.lcs import traversal
+from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.supremal_based import find_supremal, spanning_variant
-from algebra.relations.variant_based import compare as compare_variants
+from algebra.relations.variant_based import compare
 from algebra.utils import fasta_sequence, random_sequence, random_variants, to_dot
 from algebra.variants import parse_hgvs, parse_spdi, patch, to_hgvs
 
@@ -121,7 +121,7 @@ def main():
             print(rhs)
 
         if lhs_is_variant and rhs_is_variant:
-            print(compare_variants(reference, lhs, rhs))
+            print(compare(reference, lhs, rhs))
             return
 
         if lhs_is_variant:
@@ -129,7 +129,7 @@ def main():
         elif rhs_is_variant:
             rhs = patch(reference, rhs)
 
-        print(compare(reference, lhs, rhs))
+        print(compare_sequence(reference, lhs, rhs))
 
     elif args.command == "extract":
         is_variant = any([args.observed_hgvs, args.observed_spdi, args.observed_random_variant])
@@ -150,9 +150,9 @@ def main():
             print(observed)
 
         if is_variant:
-            canonical, supremal, root, *_ = extract_variants(reference, observed)
+            canonical, supremal, root = extract(reference, observed)
         else:  # observed sequence
-            canonical, root = extract(reference, observed)
+            canonical, root = extract_sequence(reference, observed)
             supremal = None
 
         print(to_hgvs_extractor(canonical, reference))
@@ -167,9 +167,7 @@ def main():
             print(to_dot(reference, root))
         if args.supremal_variant:
             if supremal is None:
-                _, lcs_nodes = edit(reference, observed)
-                _, edges = lcs_graph(reference, observed, lcs_nodes)
-                variant = spanning_variant(reference, observed, edges)
+                variant = spanning_variant(reference, observed, canonical)
                 supremal, *_ = find_supremal(reference, variant)
             print(supremal.to_hgvs(reference), supremal.to_spdi(), supremal)
 

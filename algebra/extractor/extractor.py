@@ -4,7 +4,7 @@ LCS alignments with support for tandem repeats and complex variants."""
 
 from collections import deque
 from os.path import commonprefix
-from ..lcs import edit, lcs_graph
+from ..lcs import lcs_graph
 from ..variants import Variant, reverse_complement, patch
 from ..relations.supremal_based import spanning_variant, find_supremal
 
@@ -95,26 +95,25 @@ def canonical(observed, root):
     return variants
 
 
-def extract(reference, observed):
+def extract_sequence(reference, observed):
     """Extract the canonical variant representation (allele) for a
     reference and observed sequence."""
-    _, lcs_nodes = edit(reference, observed)
-    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    root = lcs_graph(reference, observed)
     return canonical(observed, root), root
 
 
 def extract_supremal(reference, supremal):
     """Extract the canonical variant representation (allele) for a
     supremal variant."""
-    variants, _ = extract(reference[supremal.start:supremal.end], supremal.sequence)
+    variants, _ = extract_sequence(reference[supremal.start:supremal.end], supremal.sequence)
     return [Variant(supremal.start + variant.start, supremal.start + variant.end, variant.sequence) for variant in variants]
 
 
-def extract_variants(reference, variants):
+def extract(reference, variants):
     """Extract the canonical variant representation together with its
     supremal representation for an allele."""
-    supremum, root, start, observed = find_supremal(reference, spanning_variant(reference, patch(reference, variants), variants))
-    return [Variant(variant.start + start, variant.end + start, variant.sequence) for variant in canonical(observed, root)], supremum, root, start
+    supremum, root, observed = find_supremal(reference, spanning_variant(reference, patch(reference, variants), variants))
+    return canonical(observed, root), supremum, root
 
 
 def to_hgvs(variants, reference):

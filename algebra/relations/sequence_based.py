@@ -3,7 +3,8 @@
 
 from itertools import product
 from .relation import Relation
-from ..lcs import edit, edit_distance_only, lcs_graph
+from ..lcs import edit as edit_distance_only
+from ..lcs.all_lcs import build_graph, edit
 
 
 def are_equivalent(_reference, lhs, rhs):
@@ -46,8 +47,8 @@ def are_disjoint(reference, lhs, rhs):
     if distance == abs(lhs_distance - rhs_distance):
         return False
 
-    _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
-    _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
+    _, lhs_edges = build_graph(reference, lhs, lhs_lcs_nodes)
+    _, rhs_edges = build_graph(reference, rhs, rhs_lcs_nodes)
 
     for lhs_variant, rhs_variant in product(lhs_edges, rhs_edges):
         if not lhs_variant.is_disjoint(rhs_variant):
@@ -68,8 +69,8 @@ def have_overlap(reference, lhs, rhs):
     if distance in (lhs_distance + rhs_distance, abs(lhs_distance - rhs_distance)):
         return False
 
-    _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
-    _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
+    _, lhs_edges = build_graph(reference, lhs, lhs_lcs_nodes)
+    _, rhs_edges = build_graph(reference, rhs, rhs_lcs_nodes)
 
     for lhs_variant, rhs_variant in product(lhs_edges, rhs_edges):
         if not lhs_variant.is_disjoint(rhs_variant):
@@ -112,8 +113,8 @@ def compare(reference, lhs, rhs):
     if rhs_distance - lhs_distance == distance:
         return Relation.IS_CONTAINED
 
-    _, lhs_edges = lcs_graph(reference, lhs, lhs_lcs_nodes)
-    _, rhs_edges = lcs_graph(reference, rhs, rhs_lcs_nodes)
+    _, lhs_edges = build_graph(reference, lhs, lhs_lcs_nodes)
+    _, rhs_edges = build_graph(reference, rhs, rhs_lcs_nodes)
 
     for lhs_variant, rhs_variant in product(lhs_edges, rhs_edges):
         if not lhs_variant.is_disjoint(rhs_variant):

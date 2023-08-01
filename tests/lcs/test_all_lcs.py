@@ -1,7 +1,6 @@
 import pytest
 from algebra import Variant
-from algebra.lcs import edit, lcs_graph, traversal
-from algebra.lcs.all_lcs import _Node
+from algebra.lcs.all_lcs import _Node, build_graph, edit, lcs_graph, traversal
 
 
 @pytest.mark.parametrize("reference, observed, expected_distance, expected_lcs_nodes", [
@@ -22,6 +21,23 @@ def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
     distance, lcs_nodes = edit(reference, observed)
     assert distance == expected_distance
     assert lcs_nodes == expected_lcs_nodes
+
+
+@pytest.mark.parametrize("reference, observed, max_distance, expected_distance", [
+    ("CTCGGCATTA", "GGCTGGCTGT", 6, 6),
+])
+def test_edit_max_distance(reference, observed, max_distance, expected_distance):
+    distance, _ = edit(reference, observed, max_distance=max_distance)
+    assert distance == expected_distance
+
+
+@pytest.mark.parametrize("reference, observed, max_distance, exception, message", [
+    ("CTCGGCATTA", "GGCTGGCTGT", 5, ValueError, "maximum distance exceeded"),
+])
+def test_edit_max_distance_fail(reference, observed, max_distance, exception, message):
+    with pytest.raises(exception) as exc:
+        distance, _ = edit(reference, observed, max_distance=max_distance)
+    assert str(exc.value) == message
 
 
 @pytest.mark.parametrize("reference, observed, expected_edges", [
@@ -61,9 +77,9 @@ def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
         Variant(0, 0, "GAA")
     ]),
 ])
-def test_lcs_graph(reference, observed, expected_edges):
+def test_build_graph(reference, observed, expected_edges):
     _, lcs_nodes = edit(reference, observed)
-    _, edges = lcs_graph(reference, observed, lcs_nodes)
+    _, edges = build_graph(reference, observed, lcs_nodes)
     assert edges == expected_edges
 
 
@@ -83,8 +99,7 @@ def test_lcs_graph(reference, observed, expected_edges):
     ]),
 ])
 def test_traversal(reference, observed, expected_variant):
-    _, lcs_nodes = edit(reference, observed)
-    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    root = lcs_graph(reference, observed)
     assert list(traversal(root)) == expected_variant
 
 
@@ -104,8 +119,7 @@ def test_traversal(reference, observed, expected_variant):
     ]),
 ])
 def test_traversal_atomics(reference, observed, expected_variant):
-    _, lcs_nodes = edit(reference, observed)
-    root, _ = lcs_graph(reference, observed, lcs_nodes)
+    root = lcs_graph(reference, observed)
     assert list(traversal(root, atomics=True)) == expected_variant
 
 
@@ -114,10 +128,3 @@ def test_traversal_atomics(reference, observed, expected_variant):
 ])
 def test_node_hash(duplicates, unique):
     assert set(duplicates) == unique
-
-
-@pytest.mark.parametrize("node, string", [
-    (_Node(0, 0), "(0, 0, 0)"),
-])
-def test_node_string(node, string):
-    assert str(node) == string

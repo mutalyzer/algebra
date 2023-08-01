@@ -7,7 +7,7 @@ from .sequence_based import (are_disjoint as sequence_based_are_disjoint,
                              compare as sequence_based_compare,
                              contains as sequence_based_contains,
                              have_overlap as sequence_based_have_overlap)
-from ..lcs import edit, lcs_graph
+from ..lcs.all_lcs import build_graph, edit
 from ..variants import Variant
 
 
@@ -82,7 +82,7 @@ def compare(reference, lhs, rhs):
     return sequence_based_compare(reference[start:end], lhs_observed, rhs_observed)
 
 
-def spanning_variant(reference, observed, variants):
+def spanning_variant(reference, observed, variants, shift=0):
     """Calculate the minimum spanning variant for a collection of
     variants. If the collection of variants is the collection of all
     minimal variants the minimum spanning variant is the supremal
@@ -90,7 +90,8 @@ def spanning_variant(reference, observed, variants):
 
     See Also
     --------
-    `algebra.lcs.all_lcs.lcs_graph` : The collection of all minimal variants.
+    `algebra.lcs.all_lcs.build_graph` : The collection (edges) of all
+    minimal variants.
     """
 
     if not variants:
@@ -98,7 +99,7 @@ def spanning_variant(reference, observed, variants):
 
     start = min(variants, key=attrgetter("start")).start
     end = max(variants, key=attrgetter("end")).end
-    return Variant(start, end, observed[start:len(observed) - (len(reference) - end)])
+    return Variant(start, end, observed[shift + start:shift + len(observed) - (len(reference) - end)])
 
 
 def find_supremal(reference, variant, offset=10):
@@ -124,8 +125,6 @@ def find_supremal(reference, variant, offset=10):
         The supremal variant.
     root : `_Node`
         The root of the LCS-graph in which the supremal was determined.
-    start : int
-        The start offset for the given LCS-graph.
     observed : str
         The observed sequence for the given LCS-graph.
 
@@ -143,17 +142,14 @@ def find_supremal(reference, variant, offset=10):
         observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
 
         _, lcs_nodes = edit(reference[start:end], observed)
-        root, edges = lcs_graph(reference[start:end], observed, lcs_nodes)
-        supremum = spanning_variant(reference[start:end], observed, edges)
+        root, edges = build_graph(reference[start:end], observed, lcs_nodes, start)
+        supremum = spanning_variant(reference[start:end], observed, edges, -start)
 
         if not supremum:
-            return supremum, root, start, observed
-
-        supremum.start += start
-        supremum.end += start
+            return supremum, root, observed
 
         if ((supremum.start > start or supremum.start == 0) and
                 (supremum.end < end or supremum.end == len(reference))):
-            return supremum, root, start, observed
+            return supremum, root, observed
 
         offset *= 2

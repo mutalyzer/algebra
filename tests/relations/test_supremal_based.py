@@ -1,6 +1,6 @@
 import pytest
 from algebra import Relation, Variant
-from algebra.lcs import edit, lcs_graph
+from algebra.lcs.all_lcs import build_graph, edit
 from algebra.relations.supremal_based import (are_disjoint, are_equivalent, compare, contains, find_supremal,
                                               have_overlap, is_contained, spanning_variant)
 
@@ -56,7 +56,7 @@ def test_compare(reference, lhs, rhs, expected):
 ])
 def test_spanning_variant(reference, observed, expected):
     _, lcs_nodes = edit(reference, observed)
-    _, edges = lcs_graph(reference, observed, lcs_nodes)
+    _, edges = build_graph(reference, observed, lcs_nodes)
     assert spanning_variant(reference, observed, edges) == expected
 
 
