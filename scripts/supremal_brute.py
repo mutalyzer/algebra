@@ -31,7 +31,7 @@ def main():
     while True:
         drive()
         count += 1
-        if count % 100_000 == 0:
+        if count % 10_000 == 0:
             print(count)
 
 

@@ -18,9 +18,9 @@ def main():
     for line in stdin:
         spdi = line.strip()
         variant = parse_spdi(spdi)[0]
-        print(spdi, variant, end=" ", flush=True)
+        print(spdi, variant, end=" ")
         supremal, *_ = find_supremal(reference, variant)
-        print(supremal, end=" ", flush=True)
+        print(supremal, end=" ")
         canonical = extract_supremal(reference, supremal)
         print(to_hgvs_simple([variant], reference), to_hgvs(canonical, reference))
 
