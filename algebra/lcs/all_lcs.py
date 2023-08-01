@@ -68,7 +68,7 @@ def edit(reference, observed, max_distance=None):
 
     See Also
     --------
-    `lcs_graph` : Constructs the LCS graph from LCS nodes.
+    `build_graph` : Constructs the LCS graph from LCS nodes.
     """
 
     def expand(idx):
@@ -151,9 +151,14 @@ def edit(reference, observed, max_distance=None):
     return abs(delta) + 2 * (it - 1), lcs_nodes[:max_lcs_pos + 1]
 
 
-def lcs_graph(reference, observed, lcs_nodes):
-    """Construct the compressed LCS graph. `lcs_nodes` is destroyed
-    during this process.
+def build_graph(reference, observed, lcs_nodes, shift=0):
+    """Construct the compressed LCS graph from a collection of LCS nodes.
+    `lcs_nodes` is destroyed during this process.
+
+    Other Parameters
+    ----------------
+    shift : int, optional
+        Shift all variant positions with a given offset.
 
     Returns
     -------
@@ -165,8 +170,6 @@ def lcs_graph(reference, observed, lcs_nodes):
     See Also
     --------
     `edit` : Calculates the LCS nodes.
-    `traversal` : Traverses the LS graph.
-    `algebra.utils.to_dot` : Graphviz DOT format.
     """
 
     edges = []
@@ -186,7 +189,7 @@ def lcs_graph(reference, observed, lcs_nodes):
         sink.length += 1
         for pred in lcs_nodes[-1][:-1]:
             if pred.row + pred.length - 1 < sink.row + sink.length - 1 and pred.col + pred.length - 1 < sink.col + sink.length - 1:
-                variant = Variant(pred.row + pred.length - 1, sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
+                variant = Variant(shift + pred.row + pred.length - 1, shift + sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
                 pred.edges.append((sink, variant))
                 edges.append(variant)
         sink.length -= 1
@@ -194,7 +197,7 @@ def lcs_graph(reference, observed, lcs_nodes):
         sink = _Node(len(reference) + 1, len(observed) + 1, 1)
         for pred in lcs_nodes[-1]:
             if pred.row + pred.length - 1 < sink.row + sink.length - 1 and pred.col + pred.length - 1 < sink.col + sink.length - 1:
-                variant = Variant(pred.row + pred.length - 1, sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
+                variant = Variant(shift + pred.row + pred.length - 1, shift + sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
                 pred.edges.append((sink, variant))
                 edges.append(variant)
 
@@ -209,7 +212,7 @@ def lcs_graph(reference, observed, lcs_nodes):
             idx_pred = 0
             for idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
                 if pred.row + pred.length - 1 < node.row + node.length - 1 and pred.col + pred.length - 1 < node.col + node.length - 1:
-                    variant = Variant(pred.row + pred.length - 1, node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
+                    variant = Variant(shift + pred.row + pred.length - 1, shift + node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
                     edges.append(variant)
 
                     if pred.incoming == lcs_pos:
@@ -240,18 +243,51 @@ def lcs_graph(reference, observed, lcs_nodes):
 
     for succ in successors:
         if source.row + source.length - 1 < sink.row + sink.length - 1 and source.col + source.length - 1 < sink.col + sink.length - 1 and (succ == sink or succ.edges):
-            variant = Variant(source.row + source.length - 1, succ.row + succ.length - 2, observed[source.col + source.length - 1:succ.col + succ.length - 2])
+            variant = Variant(shift + source.row + source.length - 1, shift + succ.row + succ.length - 2, observed[source.col + source.length - 1:succ.col + succ.length - 2])
             source.edges.append((succ, variant))
             edges.append(variant)
 
     return source, edges
 
 
+def lcs_graph(reference, observed, shift=0, max_distance=None):
+    """Construct the compressed LCS graph containing all minimal
+    alignments between two strings.
+
+    Other Parameters
+    ----------------
+    shift : int, optional
+        Shift all variant positions with a given offset.
+    max_distance : int, optional
+        Stops the calculation if the simple edit distance exceeds this
+        value.
+
+    Raises
+    ------
+    ValueError
+        If the calculation exceeds the optional maximum distance.
+
+    Returns
+    -------
+    `_Node` (opaque data type)
+        The root of the LCS graph.
+
+    See Also
+    --------
+    `traversal` : Traverses the LCS graph.
+    `algebra.utils.to_dot` : Graphviz DOT format.
+    """
+
+    _, lcs_nodes = edit(reference, observed, max_distance)
+    root, _ = build_graph(reference, observed, lcs_nodes, shift)
+    return root
+
+
 def traversal(root, atomics=False):
     """Traverse the LCS graph.
 
-    Parameters
-    ----------
+    Other Parameters
+    ----------------
     atomics : bool, optional
         If set to `True` the variants are represented using separate
         deletions and insertions.
