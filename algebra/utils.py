@@ -30,7 +30,7 @@ def to_dot(reference, root):
             node = queue.popleft()
 
             if not node.edges:
-                yield f'"s{visited[node]}"' + "[shape=doublecircle]"
+                yield f"s{visited[node]}[shape=doublecircle]"
 
             for succ, variant in node.edges:
                 if succ not in visited:
@@ -38,18 +38,19 @@ def to_dot(reference, root):
                     visited[succ] = node_count
                     queue.append(succ)
                 yield (
-                    f'"s{visited[node]}" -> "s{visited[succ]}"'
-                    f' [label="{variant.to_hgvs(reference)}"];'
+                    f's{visited[node]}->s{visited[succ]}'
+                    f'[label="{variant.to_hgvs(reference)}"]'
                 )
 
     return (
         "digraph {\n"
-        "    rankdir=LR\n"
-        "    edge[fontname=monospace]\n"
-        "    node[shape=circle]\n"
-        "    si[shape=point]\n"
-        "    si->" + f'"s{0}"' + "\n"
-        "    " + "\n    ".join(traverse()) + "\n}"
+        "rankdir=LR\n"
+        "edge[fontname=monospace]\n"
+        "node[shape=circle]\n"
+        "si[shape=point]\n"
+        f"si->s{0}\n" +
+        "\n".join(traverse()) +
+        "\n}"
     )
 
 
