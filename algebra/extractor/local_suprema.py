@@ -1,22 +1,22 @@
 from .. import Variant
 
 
-def find_dominators(node, start, end=0, depth=0, visited=None):
+def find_dominators(root, start, end=0, node = None, visited=None):
     """Generate the (post) dominator nodes.
 
     Parameters
     ----------
-    node : `_Node` (opaque data type)
-        The current working node (initially the root of the LCS graph).
+    root : `_Node` (opaque data type)
+        The root of the LCS graph.
     start: int
         The minimum start position of the node variants.
     end: int
         The maximum end position of the variants entering the node.
+    node : `_Node` (opaque data type)
+        The current node.
 
     Other Parameters
     ----------------
-    depth: int
-        The node BFS traversal level.
     visited: dict
         Already visited nodes.
 
@@ -26,33 +26,35 @@ def find_dominators(node, start, end=0, depth=0, visited=None):
         (dominator node, maximum start position (in), minimum end position (out))
     """
 
+    if node is None:
+        node = root
+
     if not visited:
         visited = {}
 
     if node in visited:
-        visited[node]["depth"] = min(visited[node]["depth"], depth)
         visited[node]["start"] = max(visited[node]["start"], end)
         return
 
     visited[node] = {
         "pdom": {node},
-        "depth": depth,
         "start": end,
         "end": start,
     }
 
     pdom = set()
     for child, edge in node.edges:
-        yield from find_dominators(child, start, edge.end, depth + 1, visited)
+        yield from find_dominators(root, start, edge.end, child, visited)
         if not pdom:
             pdom = visited[child]["pdom"]
         pdom = pdom.intersection(visited[child]["pdom"])
         visited[node]["end"] = min(visited[node]["end"], edge.start)
     visited[node]["pdom"] = pdom.union(visited[node]["pdom"])
 
-    if not depth:
-        for dominator in sorted(visited[node]["pdom"], key=lambda x: visited[x]["depth"]):
+    if node == root:
+        for dominator in sorted(visited[node]["pdom"], key=lambda x: x.row):
             yield dominator, visited[dominator]["start"], visited[dominator]["end"]
+
 
 def local_suprema(reference, observed, root):
     """Generate the local supremal variants.
@@ -79,6 +81,7 @@ def local_suprema(reference, observed, root):
         yield Variant(
             parent[2],
             child[1],
-            observed[parent[0].col + parent[2] - parent[0].row:child[0].col + child[1] - child[0].row]
+            observed[parent[0].col + parent[2] - parent[0].row:
+                     child[0].col + child[1] - child[0].row]
         )
         parent = child
