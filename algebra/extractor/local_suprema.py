@@ -1,17 +1,17 @@
 from .. import Variant
 
 
-def find_dominators(node, outgoing, incoming=0, depth=0, visited=None):
+def find_dominators(node, start, end=0, depth=0, visited=None):
     """Generate the (post) dominator nodes.
 
     Parameters
     ----------
     node : `_Node` (opaque data type)
         The current working node (initially the root of the LCS graph).
-    outgoing: int
+    start: int
         The minimum start position of the node variants.
-    incoming: int
-        The maximum end position of the variants pointing towards the node.
+    end: int
+        The maximum end position of the variants entering the node.
 
     Other Parameters
     ----------------
@@ -23,7 +23,7 @@ def find_dominators(node, outgoing, incoming=0, depth=0, visited=None):
     Yields
     ------
     tuple
-        (dominator node, maximum incoming position, minimum outgoing position)
+        (dominator node, maximum start position (in), minimum end position (out))
     """
 
     if not visited:
@@ -31,28 +31,28 @@ def find_dominators(node, outgoing, incoming=0, depth=0, visited=None):
 
     if node in visited:
         visited[node]["depth"] = min(visited[node]["depth"], depth)
-        visited[node]["incoming"] = max(visited[node]["incoming"], incoming)
+        visited[node]["start"] = max(visited[node]["start"], end)
         return
 
     visited[node] = {
         "pdom": {node},
         "depth": depth,
-        "incoming": incoming,
-        "outgoing": outgoing,
+        "start": end,
+        "end": start,
     }
 
     pdom = set()
     for child, edge in node.edges:
-        yield from find_dominators(child, outgoing, edge.end, depth + 1, visited)
+        yield from find_dominators(child, start, edge.end, depth + 1, visited)
         if not pdom:
             pdom = visited[child]["pdom"]
         pdom = pdom.intersection(visited[child]["pdom"])
-        visited[node]["outgoing"] = min(visited[node]["outgoing"], edge.start)
+        visited[node]["end"] = min(visited[node]["end"], edge.start)
     visited[node]["pdom"] = pdom.union(visited[node]["pdom"])
 
     if not depth:
         for dominator in sorted(visited[node]["pdom"], key=lambda x: visited[x]["depth"]):
-            yield dominator, visited[dominator]["incoming"], visited[dominator]["outgoing"]
+            yield dominator, visited[dominator]["start"], visited[dominator]["end"]
 
 def local_suprema(reference, observed, root):
     """Generate the local supremal variants.
