@@ -1,17 +1,19 @@
 import pytest
+
 from algebra import Variant
-from algebra.extractor.local_suprema import local_suprema
+from algebra.extractor.local_supremal import local_supremal
 from algebra.lcs import lcs_graph
+from algebra.variants import to_hgvs
 
 
 @pytest.mark.parametrize(
-    "reference, observed, expected_suprema, hgvs",
+    "reference, observed, expected_supremal, hgvs",
     [
         (
             "",
             "",
             [],
-            "",
+            "=",
         ),
         (
             "",
@@ -29,7 +31,7 @@ from algebra.lcs import lcs_graph
             "C",
             "C",
             [],
-            "",
+            "=",
         ),
         (
             "C",
@@ -42,13 +44,13 @@ from algebra.lcs import lcs_graph
             "GATG",
             [Variant(0, 1, "G"),
              Variant(3, 4, "G")],
-            "1C>G;4C>G",
+            "[1C>G;4C>G]",
         ),
         (
             "AGAATTGCTTGAA",
             "AGGGTTAAA",
             [Variant(1, 8, "GGG"), Variant(10, 13, "AAA")],
-            "2_8delinsGGG;11_13delinsAAA",
+            "[2_8delinsGGG;11_13delinsAAA]",
         ),
         (
             "CTCTAGAGACTTTATTTTCCAC",
@@ -58,7 +60,7 @@ from algebra.lcs import lcs_graph
              Variant(17, 17, "A"),
              Variant(18, 22, "CCCC")
              ],
-            "1_9delinsGTCTCAGA;14A>C;17_18insA;19_22delinsCCCC",
+            "[1_9delinsGTCTCAGA;14A>C;17_18insA;19_22delinsCCCC]",
         ),
         (
             "ATATACCTTTTA",
@@ -67,7 +69,7 @@ from algebra.lcs import lcs_graph
              Variant(5, 5, "G"),
              Variant(7, 12, "TTTTTC")
              ],
-            "1A>C;5_6insG;8_12delinsTTTTTC",
+            "[1A>C;5_6insG;8_12delinsTTTTTC]",
         ),
         (
             "CAGGGGAAGTG",
@@ -75,7 +77,7 @@ from algebra.lcs import lcs_graph
             [Variant(0, 0, "G"),
              Variant(2, 11, "GGGGCCTA")
              ],
-            "0_1insG;3_11delinsGGGGCCTA",
+            "[0_1insG;3_11delinsGGGGCCTA]",
         ),
         (
             "TCGTGGT",
@@ -85,7 +87,7 @@ from algebra.lcs import lcs_graph
         ),
     ],
 )
-def test_local_suprema(reference, observed, expected_suprema, hgvs):
-    suprema = list(local_suprema(reference, observed, lcs_graph(reference, observed)))
-    assert suprema == expected_suprema
-    assert ";".join([supremum.to_hgvs(reference) for supremum in suprema]) == hgvs
+def test_local_supremal(reference, observed, expected_supremal, hgvs):
+    supremal = list(local_supremal(reference, observed, lcs_graph(reference, observed)))
+    assert supremal == expected_supremal
+    assert to_hgvs(supremal, reference) == hgvs
