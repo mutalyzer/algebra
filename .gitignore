@@ -1,4 +1,5 @@
 *.egg-info/
+build/
 venv/
 **/__pycache__/
 
