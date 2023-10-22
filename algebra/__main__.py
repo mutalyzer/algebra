@@ -164,7 +164,7 @@ def main():
             first = next(dfs_traversal(root), [])
             print(sum(len(variant) for variant in first))
         if args.dot:
-            print(to_dot(reference, root))
+            print("\n".join(to_dot(reference, root)))
         if args.supremal_variant:
             if supremal is None:
                 variant = spanning_variant(reference, observed, canonical)

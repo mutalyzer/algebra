@@ -19,7 +19,7 @@ def vcf_variant(line):
     return Variant(start, start + len(deleted), inserted)
 
 
-def to_dot(graph, reference):
+def to_dot(reference, graph):
     """The LCS graph in Graphviz DOT format."""
     yield "digraph{"
     yield "rankdir=LR"
