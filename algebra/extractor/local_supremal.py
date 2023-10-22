@@ -1,5 +1,9 @@
-from operator import attrgetter
+"""Extract a local supremal variant representation. Where local supremal
+is defined as the variants between matching symbols in all minimal
+alignments."""
 
+
+from operator import attrgetter
 from .. import Variant
 
 
@@ -60,4 +64,5 @@ def local_supremal(reference, observed, root):
                 Variant(start, end, observed[start + pred.col - pred.row:end + node.col - node.row])
             )
         pred = node
+
     return variants
