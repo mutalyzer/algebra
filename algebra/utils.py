@@ -1,10 +1,10 @@
-"""Utility functions for sequences and variants."""
+"""Utility functions for sequences, variants and LCS graphs."""
 
 
-from collections import deque
 import random
 from . import Variant
-from .variants import DNA_NUCLEOTIDES
+from .lcs import bfs_traversal
+from .variants import DNA_NUCLEOTIDES, to_hgvs
 
 
 def fasta_sequence(lines):
@@ -19,39 +19,33 @@ def vcf_variant(line):
     return Variant(start, start + len(deleted), inserted)
 
 
-def to_dot(reference, root):
+def to_dot(graph, reference):
     """The LCS graph in Graphviz DOT format."""
-    def traverse():
-        # breadth-first traversal
-        node_count = 0
-        visited = {root: node_count}
-        queue = deque([root])
-        while queue:
-            node = queue.popleft()
+    yield "digraph{"
+    yield "rankdir=LR"
+    yield "node[fixedsize=true,shape=circle,width=.7]"
+    yield "si[shape=point,width=.07]"
+    yield "si->s0"
 
-            if not node.edges:
-                yield f"s{visited[node]}[shape=doublecircle]"
+    count = 0
+    nodes = {}
+    terminals = set()
+    for lhs, rhs, variant in bfs_traversal(graph):
+        if lhs not in nodes:
+            nodes[lhs] = count
+            count += 1
+        if rhs not in nodes:
+            nodes[rhs] = count
+            count += 1
+            terminals.add(rhs)
+        terminals.discard(lhs)
 
-            for succ, variant in node.edges:
-                if succ not in visited:
-                    node_count += 1
-                    visited[succ] = node_count
-                    queue.append(succ)
-                yield (
-                    f's{visited[node]}->s{visited[succ]}'
-                    f'[label="{variant.to_hgvs(reference)}"]'
-                )
+        yield f's{nodes[lhs]}->s{nodes[rhs]}[label="{to_hgvs(variant, reference)}"]'
 
-    return (
-        "digraph {\n"
-        "rankdir=LR\n"
-        "edge[fontname=monospace]\n"
-        "node[shape=circle]\n"
-        "si[shape=point]\n"
-        f"si->s{0}\n" +
-        "\n".join(traverse()) +
-        "\n}"
-    )
+    for terminal in terminals:
+        yield f"s{nodes[terminal]}[peripheries=2]"
+
+    yield "}"
 
 
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):

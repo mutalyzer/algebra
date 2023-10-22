@@ -20,6 +20,7 @@ pp. 317-323.
 """
 
 
+from collections import deque
 from ..variants import Variant
 
 
@@ -283,8 +284,51 @@ def lcs_graph(reference, observed, shift=0, max_distance=None):
     return root
 
 
-def traversal(root, atomics=False):
-    """Traverse the LCS graph.
+def bfs_traversal(graph, atomics=False):
+    """Generate all edges in the LCS graph.
+
+    Other Parameters
+    ----------------
+    atomics : bool, optional
+        If set to `True` the variants are represented using separate
+        deletions and insertions.
+
+    Yields
+    ------
+    start node : int
+        The hash of the start node.
+    end node : int
+        The hash of the end node.
+    variant : list
+        A sorted list of variants unique between the start and end nodes.
+
+    See Also
+    --------
+    `lcs_graph` : Constructs the LCS graph.
+    """
+
+    visited = set()
+    queue = deque([graph])
+    while queue:
+        node = queue.popleft()
+        if node in visited:
+            continue
+
+        for child, variant in node.edges:
+            if atomics:
+                node_hash = hash(node)
+                child_hash = hash(child)
+                for atomic in variant.atomics():
+                    yield node_hash, child_hash, atomic
+            else:
+                yield hash(node), hash(child), [variant]
+            queue.append(child)
+
+        visited.add(node)
+
+
+def dfs_traversal(graph, atomics=False, _path=None):
+    """Traverse all paths in the LCS graph.
 
     Other Parameters
     ----------------
@@ -302,15 +346,15 @@ def traversal(root, atomics=False):
     `lcs_graph` : Constructs the LCS graph.
     """
 
-    def traverse(node, path):
-        if not node.edges:
-            yield path
+    if not _path:
+        _path = []
 
-        for succ, variant in node.edges:
-            if atomics:
-                for atomic in variant.atomics():
-                    yield from traverse(succ, path + atomic)
-            else:
-                yield from traverse(succ, path + [variant])
+    if not graph.edges:
+        yield _path
 
-    yield from traverse(root, [])
+    for child, variant in graph.edges:
+        if atomics:
+            for atomic in variant.atomics():
+                yield from dfs_traversal(child, atomics, _path + atomic)
+        else:
+            yield from dfs_traversal(child, atomics, _path + [variant])

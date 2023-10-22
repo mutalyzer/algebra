@@ -7,7 +7,7 @@ their relations.
 
 import argparse
 from algebra.extractor import extract, extract_sequence, to_hgvs as to_hgvs_extractor
-from algebra.lcs import traversal
+from algebra.lcs import dfs_traversal
 from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.supremal_based import find_supremal, spanning_variant
 from algebra.relations.variant_based import compare
@@ -158,10 +158,10 @@ def main():
         print(to_hgvs_extractor(canonical, reference))
 
         if args.all:
-            for variants in traversal(root, atomics=args.atomics):
+            for variants in dfs_traversal(root, atomics=args.atomics):
                 print(to_hgvs(variants, reference))
         if args.distance:
-            first = next(traversal(root))
+            first = next(dfs_traversal(root), [])
             print(sum(len(variant) for variant in first))
         if args.dot:
             print(to_dot(reference, root))
