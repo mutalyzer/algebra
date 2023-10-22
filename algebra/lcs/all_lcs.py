@@ -35,7 +35,6 @@ class _Node:
         self.length = length
 
         self.edges = []
-        self.incoming = 0
 
     def __eq__(self, other):
         return (self.row == other.row and self.col == other.col and
@@ -202,6 +201,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                 pred.edges.append((sink, variant))
                 edges.append(variant)
 
+    incoming = {}
     lcs_pos = len(lcs_nodes) - 1
     while lcs_pos > 0:
         while lcs_nodes[lcs_pos]:
@@ -216,7 +216,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                     variant = Variant(shift + pred.row + pred.length - 1, shift + node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
                     edges.append(variant)
 
-                    if pred.incoming == lcs_pos:
+                    if incoming.get(pred, 0) == lcs_pos:
                         split_node = _Node(pred.row, pred.col, pred.length)
                         split_node.edges = pred.edges + [(node, variant)]
                         pred.length += 1
@@ -224,7 +224,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                     else:
                         pred.edges.append((node, variant))
 
-                    node.incoming = lcs_pos
+                    incoming[node] = lcs_pos
                     idx_pred = idx + 1
 
             if node.length > 1:
