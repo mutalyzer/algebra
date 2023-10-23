@@ -6,7 +6,7 @@ their relations.
 
 
 import argparse
-from algebra.extractor import extract, extract_sequence, to_hgvs as to_hgvs_extractor
+from algebra.extractor import extract, extract_sequence, local_supremal, to_hgvs as to_hgvs_extractor
 from algebra.lcs import dfs_traversal
 from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.supremal_based import find_supremal, spanning_variant
@@ -54,7 +54,8 @@ def main():
     extract_parser.add_argument("--atomics", action="store_true", help="only deletions and insertions")
     extract_parser.add_argument("--distance", action="store_true", help="output simple edit distance")
     extract_parser.add_argument("--dot", action="store_true", help="output Graphviz DOT")
-    extract_parser.add_argument("--supremal-variant", action="store_true", help="output supremal variant")
+    extract_parser.add_argument("--local-supremal", action="store_true", help="output local supremal variant")
+    extract_parser.add_argument("--supremal", action="store_true", help="output supremal variant")
 
     observed_group = extract_parser.add_mutually_exclusive_group()
     observed_group.add_argument("--observed", type=str, help="an observed sequence as string")
@@ -150,22 +151,28 @@ def main():
             print(observed)
 
         if is_variant:
-            canonical, supremal, root = extract(reference, observed)
+            canonical, supremal, graph = extract(reference, observed)
         else:  # observed sequence
-            canonical, root = extract_sequence(reference, observed)
+            canonical, graph = extract_sequence(reference, observed)
             supremal = None
 
         print(to_hgvs_extractor(canonical, reference))
 
         if args.all:
-            for variants in dfs_traversal(root, atomics=args.atomics):
+            for variants in dfs_traversal(graph, atomics=args.atomics):
                 print(to_hgvs(variants, reference))
         if args.distance:
-            first = next(dfs_traversal(root), [])
+            first = next(dfs_traversal(graph), [])
             print(sum(len(variant) for variant in first))
         if args.dot:
-            print("\n".join(to_dot(reference, root)))
-        if args.supremal_variant:
+            print("\n".join(to_dot(reference, graph)))
+        if args.local_supremal:
+            if is_variant:
+                observed_sequence = patch(reference, observed)
+            else:
+                observed_sequence = observed
+            print(to_hgvs(local_supremal(reference, observed_sequence, graph)))
+        if args.supremal:
             if supremal is None:
                 variant = spanning_variant(reference, observed, canonical)
                 supremal, *_ = find_supremal(reference, variant)

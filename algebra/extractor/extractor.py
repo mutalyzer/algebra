@@ -152,7 +152,6 @@ def to_hgvs(variants, reference):
         return f"{start + 1}_{end}"
 
     def hgvs(variant, reference):
-        # FIXME: Ultimately this code should be merge with `to_hgvs` from Variant
         inserted_unit, inserted_number, inserted_remainder = repeats(variant.sequence)
         deleted = reference[variant.start:variant.end]
         deleted_unit, deleted_number, deleted_remainder = repeats(deleted)

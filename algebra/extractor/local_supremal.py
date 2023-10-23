@@ -7,7 +7,7 @@ from operator import attrgetter
 from .. import Variant
 
 
-def local_supremal(reference, observed, root):
+def local_supremal(reference, observed, graph):
     """Extract the local supremal representation.
 
     Parameters
@@ -16,8 +16,8 @@ def local_supremal(reference, observed, root):
         The reference sequence.
     observed : str
         The observed sequence.
-    root : `_Node` (opaque data type)
-        The root of the LCS graph.
+    graph : `_Node` (opaque data type)
+        The LCS graph.
 
     Returns
     -------
@@ -52,11 +52,11 @@ def local_supremal(reference, observed, root):
         visited[node]["post"] = post.union(visited[node]["post"])
         return visited
 
-    visited = post_dominators(root, 0, {})
+    visited = post_dominators(graph, 0, {})
 
     variants = []
     pred = None
-    for node in sorted(visited[root]["post"], key=attrgetter("row")):
+    for node in sorted(visited[graph]["post"], key=attrgetter("row")):
         if pred:
             start = visited[pred]["end"]
             end = visited[node]["start"]
