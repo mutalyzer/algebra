@@ -3,13 +3,12 @@ LCS alignments with support for tandem repeats and complex variants."""
 
 
 from collections import deque
-from os.path import commonprefix
 from ..lcs import lcs_graph
-from ..variants import Variant, reverse_complement, patch
-from ..relations.supremal_based import spanning_variant, find_supremal
+from ..lcs.supremals import supremal, supremal_sequence, trim
+from ..variants import Variant, reverse_complement
 
 
-def canonical(observed, root):
+def canonical(observed, root, shift=0):
     """Traverse (BFS) the LCS graph to extract the canonical variant,
     i.e., minimize the number separate variants within an allele.
 
@@ -62,11 +61,11 @@ def canonical(observed, root):
             lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
 
             start = min(edge_a.start, edge_b.start)
-            start_offset = start - lca.row
+            start_offset = start - lca.row + shift
 
             if other_parent != parent and parent.row == other_parent.row and parent.col == other_parent.col:
                 end = max(parent.row - 1, visited[parent][1].end, visited[other_parent][1].end)
-                end_offset = end - parent.row
+                end_offset = end - parent.row + shift
 
                 delins = Variant(start, end, observed[lca.col + start_offset:parent.col + end_offset])
 
@@ -74,7 +73,7 @@ def canonical(observed, root):
                 # does not seem to be required to: visited[parent] = (lca, delins, distance - 1)
             else:
                 end = max(node.row - 1, edge.end, other_edge.end)
-                end_offset = end - node.row
+                end_offset = end - node.row + shift
 
                 delins = Variant(start, end, observed[lca.col + start_offset:node.col + end_offset])
 
@@ -98,22 +97,22 @@ def canonical(observed, root):
 def extract_sequence(reference, observed):
     """Extract the canonical variant representation (allele) for a
     reference and observed sequence."""
-    root = lcs_graph(reference, observed)
-    return canonical(observed, root), root
+    variant, root, observed, start = supremal_sequence(reference, observed)
+    return canonical(observed, root, -start), variant, root
 
 
-def extract_supremal(reference, supremal):
+def extract_supremal(reference, variant):
     """Extract the canonical variant representation (allele) for a
     supremal variant."""
-    variants, _ = extract_sequence(reference[supremal.start:supremal.end], supremal.sequence)
-    return [Variant(supremal.start + variant.start, supremal.start + variant.end, variant.sequence) for variant in variants]
+    root = lcs_graph(reference[variant.start:variant.end], variant.sequence, variant.start)
+    return canonical(variant.sequence, root, -variant.start), variant, root
 
 
 def extract(reference, variants):
     """Extract the canonical variant representation together with its
     supremal representation for an allele."""
-    supremum, root, observed = find_supremal(reference, spanning_variant(reference, patch(reference, variants), variants))
-    return canonical(observed, root), supremum, root
+    variant, root, observed, start = supremal(reference, variants)
+    return canonical(observed, root, -start), variant, root
 
 
 def to_hgvs(variants, reference):
@@ -138,11 +137,6 @@ def to_hgvs(variants, reference):
         if pattern == 0:
             return "", 0, 0
         return word[:pattern], len(word) // pattern, len(word) % pattern
-
-    def trim(word_a, word_b):
-        prefix = len(commonprefix([word_a, word_b]))
-        suffix = len(commonprefix([word_a[prefix:][::-1], word_b[prefix:][::-1]]))
-        return prefix, suffix
 
     def to_hgvs_position(start, end):
         if end - start == 1:
