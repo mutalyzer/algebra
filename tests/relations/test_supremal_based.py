@@ -1,8 +1,8 @@
 import pytest
 from algebra import Relation, Variant
 from algebra.lcs.all_lcs import build_graph, edit
-from algebra.relations.supremal_based import (are_disjoint, are_equivalent, compare, contains, find_supremal,
-                                              have_overlap, is_contained, spanning_variant)
+from algebra.relations.supremal_based import (are_disjoint, are_equivalent, compare, contains,
+                                              have_overlap, is_contained)
 
 
 TESTS = [
@@ -45,25 +45,3 @@ def test_are_disjoint(reference, lhs, rhs, expected):
 def test_compare(reference, lhs, rhs, expected):
     assert compare(reference, lhs, rhs) == expected
 
-
-@pytest.mark.parametrize("reference, observed, expected", [
-    ("A", "C", Variant(0, 1, "C")),
-    ("", "A", Variant(0, 0, "A")),
-    ("A", "", Variant(0, 1, "")),
-    ("ACCCA", "ACCA", Variant(1, 4, "CC")),
-    ("AACCT", "AACGT", Variant(2, 4, "CG")),
-    ("", "", Variant(0, 0, "")),
-])
-def test_spanning_variant(reference, observed, expected):
-    _, lcs_nodes = edit(reference, observed)
-    _, edges = build_graph(reference, observed, lcs_nodes)
-    assert spanning_variant(reference, observed, edges) == expected
-
-
-@pytest.mark.parametrize("reference, variant, expected", [
-    ("GTGTGTTTTTTTAACAGGGA", Variant(8, 9, ""), Variant(5, 12, "TTTTTT")),
-    ("ACTG", Variant(0, 1, "A"), Variant(0, 0, "")),
-])
-def test_find_supremal(reference, variant, expected):
-    supremal, *_ = find_supremal(reference, variant, offset=1)
-    assert supremal == expected

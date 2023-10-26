@@ -100,7 +100,7 @@ def test_build_graph(reference, observed, expected_edges):
 ])
 def test_bfs_traversal(reference, observed, edges):
     graph = lcs_graph(reference, observed)
-    assert [edge for _, _, edge in bfs_traversal(graph)] == edges
+    assert [edge for *_, edge in bfs_traversal(graph)] == edges
 
 
 @pytest.mark.parametrize("reference, observed, edges", [
@@ -134,7 +134,7 @@ def test_bfs_traversal(reference, observed, edges):
 ])
 def test_bfs_traversal_atomics(reference, observed, edges):
     graph = lcs_graph(reference, observed)
-    assert [edge for _, _, edge in bfs_traversal(graph, atomics=True)] == edges
+    assert [edge for *_, edge in bfs_traversal(graph, atomics=True)] == edges
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [

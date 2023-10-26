@@ -93,10 +93,9 @@ from algebra.extractor import extract, extract_sequence, extract_supremal, to_hg
     ("GAGTTA", "AGGTATG", [Variant(0, 1, ""), Variant(3, 4, "G"), Variant(6, 6, "TG")], "[1del;4T>G;6_7insTG]"),
     ("AGCCCCA", "AGAGGCGCC", [Variant(1, 7, "GAGGCGCC")], "3_7delinsAGGCGCC"),
     ("TCTGGAAACACTGGT", "GCGAACTAGGT", [Variant(0, 4, "GC"), Variant(6, 10, "A"), Variant(12, 12, "A")], "[1_4delinsGC;8_10del;12_13insA]"),
-
 ])
 def test_extract_sequence(reference, observed, variants, hgvs):
-    canonical, _ = extract_sequence(reference, observed)
+    canonical, *_ = extract_sequence(reference, observed)
     assert canonical == variants
     assert to_hgvs(canonical, reference) == hgvs
 
@@ -105,13 +104,14 @@ def test_extract_sequence(reference, observed, variants, hgvs):
     ("GTGTGTTTTTTTAACAGGGA", Variant(5, 12, "TATAT"), [Variant(6, 11, "ATA")], "7_11delinsATA"),
 ])
 def test_extract_supremal(reference, supremal, variants, hgvs):
-    canonical = extract_supremal(reference, supremal)
+    canonical, *_ = extract_supremal(reference, supremal)
     assert canonical == variants
     assert to_hgvs(canonical, reference) == hgvs
 
 
 @pytest.mark.parametrize("reference, variants, hgvs", [
     ("GTGTGTTTTTTTAACAGGGA", [Variant(6, 11, "ATA")], "7_11delinsATA"),
+    ("TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGCGTCGGTTTGAC", [Variant(24, 25, "")], "25_27T[2]"),
 ])
 def test_extract(reference, variants, hgvs):
     extracted, *_ = extract(reference, variants)

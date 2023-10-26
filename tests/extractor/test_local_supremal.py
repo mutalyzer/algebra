@@ -87,6 +87,6 @@ from algebra.variants import to_hgvs
     ],
 )
 def test_local_supremal(reference, observed, expected_supremal, hgvs):
-    supremal = list(local_supremal(reference, observed, lcs_graph(reference, observed)))
+    supremal = local_supremal(reference, observed, lcs_graph(reference, observed))
     assert supremal == expected_supremal
     assert to_hgvs(supremal, reference) == hgvs
