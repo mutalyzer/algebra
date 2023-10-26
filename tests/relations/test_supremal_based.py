@@ -1,6 +1,5 @@
 import pytest
 from algebra import Relation, Variant
-from algebra.lcs.all_lcs import build_graph, edit
 from algebra.relations.supremal_based import (are_disjoint, are_equivalent, compare, contains,
                                               have_overlap, is_contained)
 
@@ -44,4 +43,3 @@ def test_are_disjoint(reference, lhs, rhs, expected):
 @pytest.mark.parametrize("reference, lhs, rhs, expected", TESTS)
 def test_compare(reference, lhs, rhs, expected):
     assert compare(reference, lhs, rhs) == expected
-

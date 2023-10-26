@@ -19,4 +19,3 @@ def test_supremal(reference, variants, expected):
 def test_supremal_sequence(reference, observed, expected):
     variant, *_ = supremal_sequence(reference, observed)
     assert variant == expected
-
