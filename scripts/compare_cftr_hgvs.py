@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from sys import stderr
-
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs
 

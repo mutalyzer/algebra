@@ -2,7 +2,8 @@ import argparse
 from itertools import combinations
 import sys
 from algebra import Relation
-from algebra.relations.supremal_based import compare, find_supremal
+from algebra.lcs import supremal
+from algebra.relations.supremal_based import compare
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_spdi
 
@@ -18,7 +19,7 @@ def main():
 
     variants = []
     for line in sys.stdin:
-        variant, *_ = find_supremal(reference, parse_spdi(line.strip())[0])
+        variant, *_ = supremal(reference, parse_spdi(line.strip())[0])
         variants.append(variant)
 
     for lhs, rhs in combinations(variants, 2):

@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from sys import stdin
 from algebra import Variant
 from algebra.extractor import extract_supremal, to_hgvs
-from algebra.relations.supremal_based import find_supremal
+from algebra.lcs import supremal
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_spdi, to_hgvs as to_hgvs_simple
 
@@ -19,9 +19,9 @@ def main():
         spdi = line.strip()
         variant = parse_spdi(spdi)[0]
         print(spdi, variant, end=" ")
-        supremal, *_ = find_supremal(reference, variant)
-        print(supremal, end=" ")
-        canonical = extract_supremal(reference, supremal)
+        supremal_variant, *_ = supremal(reference, variant)
+        print(supremal_variant, end=" ")
+        canonical = extract_supremal(reference, supremal_variant)
         print(to_hgvs_simple([variant], reference), to_hgvs(canonical, reference))
 
 
