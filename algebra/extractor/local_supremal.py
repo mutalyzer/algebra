@@ -7,7 +7,7 @@ from operator import attrgetter
 from .. import Variant
 
 
-def local_supremal(reference, observed, graph):
+def local_supremal(reference, observed, graph, shift=0):
     """Extract the local supremal representation.
 
     Parameters
@@ -61,7 +61,7 @@ def local_supremal(reference, observed, graph):
             start = visited[pred]["end"]
             end = visited[node]["start"]
             variants.append(
-                Variant(start, end, observed[start + pred.col - pred.row:end + node.col - node.row])
+                Variant(start, end, observed[shift + start + pred.col - pred.row:shift + end + node.col - node.row])
             )
         pred = node
 
