@@ -2,8 +2,8 @@
 
 
 from .relation import Relation
-from .supremal_based import compare as compare_supremal, find_supremal, spanning_variant
-from ..variants import patch
+from .supremal_based import compare as compare_supremal
+from ..lcs import supremal
 
 
 def are_equivalent(reference, lhs, rhs):
@@ -49,7 +49,6 @@ def compare(reference, lhs, rhs):
         The relation between the two variant alleles.
     """
 
-    lhs_sup, *_ = find_supremal(reference, spanning_variant(reference, patch(reference, lhs), lhs))
-    rhs_sup, *_ = find_supremal(reference, spanning_variant(reference, patch(reference, rhs), rhs))
-
+    lhs_sup, *_ = supremal(reference, lhs)
+    rhs_sup, *_ = supremal(reference, rhs)
     return compare_supremal(reference, lhs_sup, rhs_sup)

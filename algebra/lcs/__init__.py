@@ -3,6 +3,7 @@
 
 from .all_lcs import bfs_traversal, dfs_traversal, lcs_graph
 from .distance_only import edit
+from .supremals import supremal
 
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "bfs_traversal",
     "dfs_traversal",
     "lcs_graph",
+    "supremal",
 ]

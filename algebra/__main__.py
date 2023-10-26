@@ -9,7 +9,6 @@ import argparse
 from algebra.extractor import extract, extract_sequence, local_supremal, to_hgvs as to_hgvs_extractor
 from algebra.lcs import dfs_traversal
 from algebra.relations.sequence_based import compare as compare_sequence
-from algebra.relations.supremal_based import find_supremal, spanning_variant
 from algebra.relations.variant_based import compare
 from algebra.utils import fasta_sequence, random_sequence, random_variants, to_dot
 from algebra.variants import parse_hgvs, parse_spdi, patch, to_hgvs
@@ -151,10 +150,9 @@ def main():
             print(observed)
 
         if is_variant:
-            canonical, supremal, graph = extract(reference, observed)
+            canonical, supremal_variant, graph = extract(reference, observed)
         else:  # observed sequence
-            canonical, graph = extract_sequence(reference, observed)
-            supremal = None
+            canonical, supremal_variant, graph = extract_sequence(reference, observed)
 
         print(to_hgvs_extractor(canonical, reference))
 
@@ -173,10 +171,7 @@ def main():
                 observed_sequence = observed
             print(to_hgvs(local_supremal(reference, observed_sequence, graph)))
         if args.supremal:
-            if supremal is None:
-                variant = spanning_variant(reference, observed, canonical)
-                supremal, *_ = find_supremal(reference, variant)
-            print(supremal.to_hgvs(reference), supremal.to_spdi(), supremal)
+            print(supremal_variant.to_hgvs(reference), supremal_variant.to_spdi(), supremal_variant)
 
     elif args.command == "patch":
         if args.hgvs:
