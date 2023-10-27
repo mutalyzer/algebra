@@ -84,6 +84,18 @@ from algebra.variants import to_hgvs
             [Variant(0, 7, "CTAACAT")],
             "1_7delinsCTAACAT",
         ),
+        (
+            "TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGCGTCGGTTTGAC",
+            "TGCATTAGGGCAAGGGTCTTCGACTTCCACGAAAATCGCGTCGGTTTGAC",
+            [Variant(24, 27, "TT")],
+            "25_27delinsTT",
+        ),
+        (
+            "TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGCGTCGGTTTGAC",
+            "TGCATTAGGGCAAGGGTCTTCGACTTCCACGAAAATCGCGTCGGTTGAC",
+            [Variant(24, 27, "TT"), Variant(45, 48, "TT")],
+            "[25_27delinsTT;46_48delinsTT]",
+        ),
     ],
 )
 def test_local_supremal(reference, observed, expected_supremal, hgvs):
