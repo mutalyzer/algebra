@@ -169,7 +169,7 @@ def main():
                 observed_sequence = patch(reference, observed)
             else:
                 observed_sequence = observed
-            print(to_hgvs(local_supremal(reference, observed_sequence, graph)))
+            print(to_hgvs(local_supremal(reference, observed_sequence, graph), reference))
         if args.supremal:
             print(supremal_variant.to_hgvs(reference), supremal_variant.to_spdi(), supremal_variant)
 
