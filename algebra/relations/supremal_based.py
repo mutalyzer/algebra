@@ -15,6 +15,9 @@ def are_equivalent(_reference, lhs, rhs):
 
 def contains(reference, lhs, rhs):
     """Check if `lhs` contains `rhs`."""
+    if not lhs or not rhs:
+        return False
+
     start = min(lhs.start, rhs.start)
     end = max(lhs.end, rhs.end)
     lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
@@ -29,7 +32,9 @@ def is_contained(reference, lhs, rhs):
 
 def are_disjoint(reference, lhs, rhs):
     """Check if two variants are disjoint."""
-    if lhs.is_disjoint(rhs):
+    if lhs == rhs:
+        return False
+    if not lhs or not rhs or lhs.is_disjoint(rhs):
         return True
 
     start = min(lhs.start, rhs.start)
@@ -41,6 +46,9 @@ def are_disjoint(reference, lhs, rhs):
 
 def have_overlap(reference, lhs, rhs):
     """Check if two variants overlap."""
+    if not lhs or not rhs:
+        return False
+
     start = min(lhs.start, rhs.start)
     end = max(lhs.end, rhs.end)
     lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]

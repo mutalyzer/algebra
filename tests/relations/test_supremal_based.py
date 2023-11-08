@@ -12,6 +12,9 @@ TESTS = [
     ("CCACC", Variant(2, 3, "T"), Variant(3, 3, "T"), Relation.CONTAINS),
     ("CCACC", Variant(2, 2, "T"), Variant(2, 2, "T"), Relation.EQUIVALENT),
     ("CCACC", Variant(1, 1, "T"), Variant(2, 2, "T"), Relation.DISJOINT),
+    ("CCACC", Variant(0, 0, ""), Variant(2, 2, "T"), Relation.DISJOINT),
+    ("CCACC", Variant(2, 2, "T"), Variant(0, 0, ""), Relation.DISJOINT),
+    ("CCACC", Variant(0, 0, ""), Variant(0, 0, ""), Relation.EQUIVALENT),
 ]
 
 
