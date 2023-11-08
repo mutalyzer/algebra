@@ -3,7 +3,7 @@
 
 from operator import attrgetter
 from os.path import commonprefix
-from ..lcs.all_lcs import build_graph, edit
+from ..lcs.all_lcs import _Node, build_graph, edit
 from ..variants import Variant, patch
 
 
@@ -50,7 +50,10 @@ def supremal(reference, variants, offset=10):
         end = max(variants, key=attrgetter("end")).end
         return Variant(start, end, observed[shift + start:shift + len(observed) - (len(reference) - end)])
 
-    variant = spanning_variant(reference, patch(reference, variants), variants)
+    observed = patch(reference, variants)
+    variant = spanning_variant(reference, observed, variants)
+    if not variant:
+        return variant, _Node(0, 0, len(reference)), observed, 0
 
     offset = max(offset, len(variant) // 2, 1)
 
@@ -76,5 +79,8 @@ def supremal(reference, variants, offset=10):
 
 def supremal_sequence(reference, observed):
     """The supremal variant for two sequences."""
+    if reference == observed:
+        return supremal(reference, [])
+
     prefix_len, suffix_len = trim(reference, observed)
     return supremal(reference, [Variant(prefix_len, len(reference) - suffix_len, observed[prefix_len:len(observed) - suffix_len])])
