@@ -2,9 +2,8 @@
 
 
 import random
-from . import Variant
 from .lcs import bfs_traversal
-from .variants import DNA_NUCLEOTIDES, to_hgvs
+from .variants import DNA_NUCLEOTIDES, Variant, reverse_complement, to_hgvs
 
 
 def fasta_sequence(lines):
@@ -46,6 +45,24 @@ def to_dot(reference, graph):
         yield f"s{nodes[terminal]}[peripheries=2]"
 
     yield "}"
+
+
+def slice_sequence(sequence, positions, inversion=False):
+    """Slices a sequence."""
+    def slices():
+        iterable = iter(positions)
+        while True:
+            try:
+                start = next(iterable)
+            except StopIteration:
+                break
+            end = next(iterable, len(sequence))
+            yield sequence[start:end]
+
+    observed = "".join(slices())
+    if inversion:
+        observed = reverse_complement(observed)
+    return observed
 
 
 def random_sequence(max_length, min_length=0, alphabet=DNA_NUCLEOTIDES, weights=None):
