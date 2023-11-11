@@ -1,7 +1,7 @@
 """Entry point for the Algebra package.
 
-Provides a command-line interface to interact with variants and determine
-their relations.
+Provides a command-line interface to interact with sequences and variants
+to determine their relations.
 """
 
 
@@ -10,8 +10,113 @@ from algebra.extractor import extract, extract_sequence, local_supremal, to_hgvs
 from algebra.lcs import dfs_traversal
 from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.variant_based import compare
-from algebra.utils import fasta_sequence, random_sequence, random_variants, to_dot
+from algebra.utils import fasta_sequence, random_sequence, random_variants, slice_sequence, to_dot
 from algebra.variants import parse_hgvs, parse_spdi, patch, to_hgvs
+
+
+def cli_compare(reference, args):
+    """Compare two variants."""
+    lhs_is_variant = any([args.lhs_hgvs, args.lhs_spdi, args.lhs_random_variant])
+    if args.lhs:
+        lhs = args.lhs
+    elif args.lhs_hgvs:
+        lhs = parse_hgvs(args.lhs_hgvs, reference=reference)
+    elif args.lhs_spdi:
+        lhs = parse_spdi(args.lhs_spdi)
+    elif args.lhs_file:
+        with open(args.lhs_file, encoding="utf-8") as file:
+            lhs = fasta_sequence(file)
+    elif args.lhs_random_variant:
+        lhs = list(random_variants(reference, args.random_variant_p))
+        print(to_hgvs(lhs, reference))
+    else:  # args.lhs_random_sequence:
+        lhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
+        print(lhs)
+
+    rhs_is_variant = any([args.rhs_hgvs, args.rhs_spdi, args.rhs_random_variant])
+    if args.rhs:
+        rhs = args.rhs
+    elif args.rhs_hgvs:
+        rhs = parse_hgvs(args.rhs_hgvs, reference=reference)
+    elif args.rhs_spdi:
+        rhs = parse_spdi(args.rhs_spdi)
+    elif args.rhs_file:
+        with open(args.rhs_file, encoding="utf-8") as file:
+            rhs = fasta_sequence(file)
+    elif args.rhs_random_variant:
+        rhs = list(random_variants(reference, args.random_variant_p))
+        print(to_hgvs(rhs, reference))
+    else:  # args.rhs_random_sequence
+        rhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
+        print(rhs)
+
+    if lhs_is_variant and rhs_is_variant:
+        print(compare(reference, lhs, rhs))
+        return
+
+    if lhs_is_variant:
+        lhs = patch(reference, lhs)
+    elif rhs_is_variant:
+        rhs = patch(reference, rhs)
+
+    print(compare_sequence(reference, lhs, rhs))
+
+
+def cli_extract(reference, args):
+    """Extract a canonical variant."""
+    is_variant = any([args.observed_hgvs, args.observed_spdi, args.observed_random_variant])
+    if args.observed:
+        observed = args.observed
+    elif args.observed_hgvs:
+        observed = parse_hgvs(args.observed_hgvs, reference=reference)
+    elif args.observed_spdi:
+        observed = parse_spdi(args.observed_spdi)
+    elif args.observed_file:
+        with open(args.observed_file, encoding="utf-8") as file:
+            observed = fasta_sequence(file)
+    elif args.observed_random_variant:
+        observed = list(random_variants(reference, args.random_variant_p))
+        print(to_hgvs(observed, reference))
+    else:  # args.observed_random_sequence
+        observed = random_sequence(args.random_sequence_max, args.random_sequence_min)
+        print(observed)
+
+    if is_variant:
+        canonical, supremal_variant, graph = extract(reference, observed)
+    else:  # observed sequence
+        canonical, supremal_variant, graph = extract_sequence(reference, observed)
+
+    print(to_hgvs_extractor(canonical, reference))
+
+    if args.all:
+        for variants in dfs_traversal(graph, atomics=args.atomics):
+            print(to_hgvs(variants, reference))
+    if args.distance:
+        first = next(dfs_traversal(graph), [])
+        print(sum(len(variant) for variant in first))
+    if args.dot:
+        print("\n".join(to_dot(reference, graph)))
+    if args.local_supremal:
+        if is_variant:
+            observed_sequence = patch(reference, observed)
+        else:
+            observed_sequence = observed
+        print(to_hgvs(local_supremal(reference, observed_sequence, graph), reference))
+    if args.supremal:
+        print(supremal_variant.to_hgvs(reference), supremal_variant.to_spdi(), supremal_variant)
+
+
+def cli_patch(reference, args):
+    """Patch a reference sequence with a variant."""
+    if args.hgvs:
+        variants = parse_hgvs(args.hgvs, reference=reference)
+    elif args.spdi:
+        variants = parse_spdi(args.spdi)
+    else:  # args.random_variant
+        variants = list(random_variants(reference, args.random_variant_p))
+        print(to_hgvs(variants, reference))
+
+    print(patch(reference, variants))
 
 
 def main():
@@ -71,6 +176,11 @@ def main():
     variant_group.add_argument("--spdi", type=str, help="a variant in SPDI")
     variant_group.add_argument("--random-variant", action="store_true", help="a random variant (default)")
 
+    slice_parser = commands.add_parser("slice", help="slices a reference sequence")
+
+    slice_parser.add_argument("--positions", type=int, nargs="+", required=True, help="positions to slice")
+    slice_parser.add_argument("--reverse-complement", action="store_true", help="the reverse complement of the slices")
+
     args = parser.parse_args()
 
     if not args.random_sequence_min:
@@ -86,103 +196,13 @@ def main():
         print(reference)
 
     if args.command == "compare":
-        lhs_is_variant = any([args.lhs_hgvs, args.lhs_spdi, args.lhs_random_variant])
-        if args.lhs:
-            lhs = args.lhs
-        elif args.lhs_hgvs:
-            lhs = parse_hgvs(args.lhs_hgvs, reference=reference)
-        elif args.lhs_spdi:
-            lhs = parse_spdi(args.lhs_spdi)
-        elif args.lhs_file:
-            with open(args.lhs_file, encoding="utf-8") as file:
-                lhs = fasta_sequence(file)
-        elif args.lhs_random_variant:
-            lhs = list(random_variants(reference, args.random_variant_p))
-            print(to_hgvs(lhs, reference))
-        else:  # args.lhs_random_sequence:
-            lhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
-            print(lhs)
-
-        rhs_is_variant = any([args.rhs_hgvs, args.rhs_spdi, args.rhs_random_variant])
-        if args.rhs:
-            rhs = args.rhs
-        elif args.rhs_hgvs:
-            rhs = parse_hgvs(args.rhs_hgvs, reference=reference)
-        elif args.rhs_spdi:
-            rhs = parse_spdi(args.rhs_spdi)
-        elif args.rhs_file:
-            with open(args.rhs_file, encoding="utf-8") as file:
-                rhs = fasta_sequence(file)
-        elif args.rhs_random_variant:
-            rhs = list(random_variants(reference, args.random_variant_p))
-            print(to_hgvs(rhs, reference))
-        else:  # args.rhs_random_sequence
-            rhs = random_sequence(args.random_sequence_max, args.random_sequence_min)
-            print(rhs)
-
-        if lhs_is_variant and rhs_is_variant:
-            print(compare(reference, lhs, rhs))
-            return
-
-        if lhs_is_variant:
-            lhs = patch(reference, lhs)
-        elif rhs_is_variant:
-            rhs = patch(reference, rhs)
-
-        print(compare_sequence(reference, lhs, rhs))
-
+        cli_compare(reference, args)
     elif args.command == "extract":
-        is_variant = any([args.observed_hgvs, args.observed_spdi, args.observed_random_variant])
-        if args.observed:
-            observed = args.observed
-        elif args.observed_hgvs:
-            observed = parse_hgvs(args.observed_hgvs, reference=reference)
-        elif args.observed_spdi:
-            observed = parse_spdi(args.observed_spdi)
-        elif args.observed_file:
-            with open(args.observed_file, encoding="utf-8") as file:
-                observed = fasta_sequence(file)
-        elif args.observed_random_variant:
-            observed = list(random_variants(reference, args.random_variant_p))
-            print(to_hgvs(observed, reference))
-        else:  # args.observed_random_sequence
-            observed = random_sequence(args.random_sequence_max, args.random_sequence_min)
-            print(observed)
-
-        if is_variant:
-            canonical, supremal_variant, graph = extract(reference, observed)
-        else:  # observed sequence
-            canonical, supremal_variant, graph = extract_sequence(reference, observed)
-
-        print(to_hgvs_extractor(canonical, reference))
-
-        if args.all:
-            for variants in dfs_traversal(graph, atomics=args.atomics):
-                print(to_hgvs(variants, reference))
-        if args.distance:
-            first = next(dfs_traversal(graph), [])
-            print(sum(len(variant) for variant in first))
-        if args.dot:
-            print("\n".join(to_dot(reference, graph)))
-        if args.local_supremal:
-            if is_variant:
-                observed_sequence = patch(reference, observed)
-            else:
-                observed_sequence = observed
-            print(to_hgvs(local_supremal(reference, observed_sequence, graph), reference))
-        if args.supremal:
-            print(supremal_variant.to_hgvs(reference), supremal_variant.to_spdi(), supremal_variant)
-
+        cli_extract(reference, args)
     elif args.command == "patch":
-        if args.hgvs:
-            variants = parse_hgvs(args.hgvs, reference=reference)
-        elif args.spdi:
-            variants = parse_spdi(args.spdi)
-        else:  # args.random_variant
-            variants = list(random_variants(reference, args.random_variant_p))
-            print(to_hgvs(variants, reference))
-
-        print(patch(reference, variants))
+        cli_patch(reference, args)
+    elif args.command == "slice":
+        print(slice_sequence(reference, args.positions, args.reverse_complement))
 
 
 if __name__ == "__main__":
