@@ -95,7 +95,7 @@ def cli_extract(reference, args):
         first = next(dfs_traversal(graph), [])
         print(sum(len(variant) for variant in first))
     if args.dot:
-        print("\n".join(to_dot(reference, graph)))
+        print("\n".join(to_dot(reference, graph, atomics=args.atomics)))
     if args.local_supremal:
         if is_variant:
             observed_sequence = patch(reference, observed)

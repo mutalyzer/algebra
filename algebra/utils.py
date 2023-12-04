@@ -18,7 +18,7 @@ def vcf_variant(line):
     return Variant(start, start + len(deleted), inserted)
 
 
-def to_dot(reference, graph):
+def to_dot(reference, graph, atomics=False):
     """The LCS graph in Graphviz DOT format."""
     yield "digraph{"
     yield "rankdir=LR"
@@ -29,7 +29,7 @@ def to_dot(reference, graph):
     count = 0
     nodes = {}
     terminals = set()
-    for lhs, rhs, variant in bfs_traversal(graph):
+    for lhs, rhs, variant in bfs_traversal(graph, atomics):
         if lhs not in nodes:
             nodes[lhs] = count
             count += 1
