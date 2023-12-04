@@ -88,7 +88,7 @@ def cli_extract(reference, args):
 
     print(to_hgvs_extractor(canonical, reference))
 
-    if args.all:
+    if args.all or args.atomics:
         for variants in dfs_traversal(graph, atomics=args.atomics):
             print(to_hgvs(variants, reference))
     if args.distance:
