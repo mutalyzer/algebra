@@ -197,11 +197,11 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                 pred.edges.append((sink, variant))
                 edges.append(variant)
     else:
-        sink = _Node(len(reference) + 1, len(observed) + 1, 1)
+        sink = _Node(len(reference) + 1, len(observed) + 1)
         length[id(sink)] = sink.length
         for pred in lcs_nodes[-1]:
-            if pred.row + length[id(pred)] - 1 < sink.row + length[id(sink)] - 1 and pred.col + length[id(pred)] - 1 < sink.col + length[id(sink)] - 1:
-                variant = Variant(shift + pred.row + length[id(pred)] - 1, shift + sink.row + length[id(sink)] - 2, observed[pred.col + length[id(pred)] - 1:sink.col + length[id(sink)] - 2])
+            if pred.row + length[id(pred)] - 1 < sink.row + length[id(sink)] and pred.col + length[id(pred)] - 1 < sink.col + length[id(sink)]:
+                variant = Variant(shift + pred.row + length[id(pred)] - 1, shift + sink.row + length[id(sink)] - 1, observed[pred.col + length[id(pred)] - 1:sink.col + length[id(sink)] - 1])
                 pred.edges.append((sink, variant))
                 edges.append(variant)
 
