@@ -21,6 +21,7 @@ pp. 317-323.
 
 
 from collections import deque
+from itertools import chain
 from ..variants import Variant
 
 
@@ -184,18 +185,23 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         source.edges = [(sink, variant)]
         return source, edges
 
-    if lcs_nodes[-1][-1].row + lcs_nodes[-1][-1].length == len(reference) + 1 and lcs_nodes[-1][-1].col + lcs_nodes[-1][-1].length == len(observed) + 1:
+    length = {}
+    for node in chain(*lcs_nodes):
+        length[id(node)] = node.length
+
+    if lcs_nodes[-1][-1].row + length[id(lcs_nodes[-1][-1])] == len(reference) + 1 and lcs_nodes[-1][-1].col + length[id(lcs_nodes[-1][-1])] == len(observed) + 1:
         sink = lcs_nodes[-1][-1]
         for pred in lcs_nodes[-1][:-1]:
-            if pred.row + pred.length - 1 < sink.row + sink.length and pred.col + pred.length - 1 < sink.col + sink.length:
-                variant = Variant(shift + pred.row + pred.length - 1, shift + sink.row + sink.length - 1, observed[pred.col + pred.length - 1:sink.col + sink.length - 1])
+            if pred.row + length[id(pred)] - 1 < sink.row + length[id(sink)] and pred.col + length[id(pred)] - 1 < sink.col + length[id(sink)]:
+                variant = Variant(shift + pred.row + length[id(pred)] - 1, shift + sink.row + length[id(sink)] - 1, observed[pred.col + length[id(pred)] - 1:sink.col + length[id(sink)] - 1])
                 pred.edges.append((sink, variant))
                 edges.append(variant)
     else:
         sink = _Node(len(reference) + 1, len(observed) + 1, 1)
+        length[id(sink)] = sink.length
         for pred in lcs_nodes[-1]:
-            if pred.row + pred.length - 1 < sink.row + sink.length - 1 and pred.col + pred.length - 1 < sink.col + sink.length - 1:
-                variant = Variant(shift + pred.row + pred.length - 1, shift + sink.row + sink.length - 2, observed[pred.col + pred.length - 1:sink.col + sink.length - 2])
+            if pred.row + length[id(pred)] - 1 < sink.row + length[id(sink)] - 1 and pred.col + length[id(pred)] - 1 < sink.col + length[id(sink)] - 1:
+                variant = Variant(shift + pred.row + length[id(pred)] - 1, shift + sink.row + length[id(sink)] - 2, observed[pred.col + length[id(pred)] - 1:sink.col + length[id(sink)] - 2])
                 pred.edges.append((sink, variant))
                 edges.append(variant)
 
@@ -210,14 +216,15 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
 
             idx_pred = 0
             for idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
-                if pred.row + pred.length - 1 < node.row + node.length - 1 and pred.col + pred.length - 1 < node.col + node.length - 1:
-                    variant = Variant(shift + pred.row + pred.length - 1, shift + node.row + node.length - 2, observed[pred.col + pred.length - 1:node.col + node.length - 2])
+                if pred.row + length[id(pred)] - 1 < node.row + length[id(node)] - 1 and pred.col + length[id(pred)] - 1 < node.col + length[id(node)] - 1:
+                    variant = Variant(shift + pred.row + length[id(pred)] - 1, shift + node.row + length[id(node)] - 2, observed[pred.col + length[id(pred)] - 1:node.col + length[id(node)] - 2])
                     edges.append(variant)
 
                     if incoming.get(id(pred), 0) == lcs_pos:
-                        split_node = _Node(pred.row, pred.col, pred.length)
+                        split_node = _Node(pred.row, pred.col, length[id(pred)])
+                        length[id(split_node)] = split_node.length
                         split_node.edges = pred.edges + [(node, variant)]
-                        pred.length += 1
+                        length[id(pred)] += 1
                         lcs_nodes[lcs_pos - 1][idx] = split_node
                     else:
                         pred.edges.append((node, variant))
@@ -225,8 +232,8 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                     incoming[id(node)] = lcs_pos
                     idx_pred = idx + 1
 
-            if node.length > 1:
-                node.length -= 1
+            if length[id(node)] > 1:
+                length[id(node)] -= 1
                 lcs_nodes[lcs_pos - 1].insert(idx_pred, node)
 
         lcs_pos -= 1
@@ -238,11 +245,12 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         successors = lcs_nodes[0][1:]
     else:
         source = _Node(0, 0, 1)
+        length[id(source)] = source.length
         successors = lcs_nodes[0]
 
     for succ in successors:
-        if source.row + source.length - 1 < sink.row + sink.length - 1 and source.col + source.length - 1 < sink.col + sink.length - 1 and (succ == sink or succ.edges):
-            variant = Variant(shift + source.row + source.length - 1, shift + succ.row + succ.length - 2, observed[source.col + source.length - 1:succ.col + succ.length - 2])
+        if source.row + length[id(source)] - 1 < sink.row + length[id(sink)] - 1 and source.col + length[id(source)] - 1 < sink.col + length[id(sink)] - 1 and (succ == sink or succ.edges):
+            variant = Variant(shift + source.row + length[id(source)] - 1, shift + succ.row + length[id(succ)] - 2, observed[source.col + length[id(source)] - 1:succ.col + length[id(succ)] - 2])
             source.edges.append((succ, variant))
             edges.append(variant)
 
