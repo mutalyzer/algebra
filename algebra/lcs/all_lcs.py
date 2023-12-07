@@ -245,15 +245,16 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         source = lcs_nodes[0][0]
         source.row -= 1
         source.col -= 1
+        length[id(source)] -= 1
         successors = lcs_nodes[0][1:]
     else:
-        source = _Node(0, 0, 1)
+        source = _Node(0, 0)
         length[id(source)] = source.length
         successors = lcs_nodes[0]
 
     for succ in successors:
-        if source.row + length[id(source)] - 1 < sink.row + length[id(sink)] - 1 and source.col + length[id(source)] - 1 < sink.col + length[id(sink)] - 1 and (succ == sink or succ.edges):
-            variant = Variant(shift + source.row + length[id(source)] - 1, shift + succ.row + length[id(succ)] - 2, observed[source.col + length[id(source)] - 1:succ.col + length[id(succ)] - 2])
+        if source.row + length[id(source)] - 0 < sink.row + length[id(sink)] - 1 and source.col + length[id(source)] - 0 < sink.col + length[id(sink)] - 1 and (succ == sink or succ.edges):
+            variant = Variant(shift + source.row + length[id(source)] - 0, shift + succ.row + length[id(succ)] - 2, observed[source.col + length[id(source)] - 0:succ.col + length[id(succ)] - 2])
             source.edges.append((succ, variant))
             edges.append(variant)
 
