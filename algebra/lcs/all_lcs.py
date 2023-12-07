@@ -44,6 +44,9 @@ class _Node:
     def __hash__(self):
         return hash((self.row, self.col, self.length))
 
+    def __repr__(self):
+        return f"({self.row},{self.col})[{self.length}]"
+
 
 def edit(reference, observed, max_distance=None):
     """Calculate the simple edit distance between two strings and
