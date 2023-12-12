@@ -337,12 +337,10 @@ def bfs_traversal(graph, atomics=False):
 
         for child, variant in node.edges:
             if atomics:
-                node_hash = hash(node)
-                child_hash = hash(child)
                 for atomic in variant.atomics():
-                    yield node_hash, child_hash, atomic
+                    yield node, child, atomic
             else:
-                yield hash(node), hash(child), [variant]
+                yield node, child, [variant]
             queue.append(child)
 
         visited.add(node)
