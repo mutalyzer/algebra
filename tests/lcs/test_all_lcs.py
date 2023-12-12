@@ -6,16 +6,16 @@ from algebra.lcs.all_lcs import (_Node, bfs_traversal, build_graph,
 
 @pytest.mark.parametrize("reference, observed, expected_distance, expected_lcs_nodes", [
     ("", "", 0, []),
-    ("AA", "ACA", 1, [[_Node(1, 1, 1)], [_Node(2, 3, 1)]]),
-    ("ACA", "AA", 1, [[_Node(1, 1, 1)], [_Node(3, 2, 1)]]),
+    ("AA", "ACA", 1, [[_Node(0, 0, 1)], [_Node(1, 2, 1)]]),
+    ("ACA", "AA", 1, [[_Node(0, 0, 1)], [_Node(2, 1, 1)]]),
     ("CTCGGCATTA", "GGCTGGCTGT", 6, [
-        [_Node(3, 3, 1), _Node(4, 2, 1)],
-        [_Node(1, 3, 2)],
-        [_Node(5, 5, 1), _Node(4, 1, 3), _Node(4, 6, 1)],
+        [_Node(2, 2, 1), _Node(3, 1, 1)],
+        [_Node(0, 2, 2)],
+        [_Node(4, 4, 1), _Node(3, 0, 3), _Node(3, 5, 1)],
         [],
-        [_Node(4, 5, 3)],
-        [_Node(8, 8, 1), _Node(9, 8, 1)],
-        [_Node(9, 10, 1)]
+        [_Node(3, 4, 3)],
+        [_Node(7, 7, 1), _Node(8, 7, 1)],
+        [_Node(8, 9, 1)]
     ]),
 ])
 def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
