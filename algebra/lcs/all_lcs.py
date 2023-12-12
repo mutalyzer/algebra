@@ -175,11 +175,11 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     """
 
     if not lcs_nodes or lcs_nodes == [[]]:
-        source = _Node(0, 0)
+        source = _Node(shift, shift)
         if not reference and not observed:
             return source, []
-        sink = _Node(len(reference) + 1, len(observed) + 1)
-        variant = Variant(0, len(reference), observed)
+        sink = _Node(len(reference), len(observed))
+        variant = Variant(shift, len(reference), observed)
         source.edges = [(sink, variant)]
         return source, [variant]
 
@@ -196,10 +196,13 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         print("Create new sink node", sink)
     else:
         lcs_nodes[-1].pop(-1)
-        while not lcs_nodes[-1]:
+        while len(lcs_nodes) and not lcs_nodes[-1]:
             del lcs_nodes[-1]
         sink.length = 1
         print(lcs_nodes)
+
+    if not len(lcs_nodes):
+        return sink, []
 
     for pred in lcs_nodes[-1]:
         print("pred", pred, sink)
