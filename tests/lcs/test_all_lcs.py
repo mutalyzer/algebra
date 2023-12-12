@@ -21,6 +21,7 @@ from algebra.lcs.all_lcs import (_Node, bfs_traversal, build_graph,
 def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
     distance, lcs_nodes = edit(reference, observed)
     assert distance == expected_distance
+    assert distance == len(reference) - len(lcs_nodes) + len(observed) - len(lcs_nodes)
     assert lcs_nodes == expected_lcs_nodes
 
 
