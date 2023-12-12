@@ -94,6 +94,30 @@ def canonical(observed, root, shift=0):
     return variants
 
 
+def diagonal(reference, observed, root):
+    diff = len(reference) - len(observed)
+    variants = []
+    node = root
+    while True:
+        best = None
+        best_edge = None
+        for child, edge in node.edges:
+            child_diff = child.row - child.col
+            if best is None or abs(child_diff) < abs(best.row - best.col):
+                best = child
+                best_edge = edge
+            if child_diff == diff:
+                best = child
+                best_edge = edge
+                break
+
+        if not best:
+            return variants
+
+        variants.append(best_edge)
+        node = best
+
+
 def extract_sequence(reference, observed):
     """Extract the canonical variant representation (allele) for a
     reference and observed sequence."""
