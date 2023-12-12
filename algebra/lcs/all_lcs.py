@@ -201,7 +201,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         sink.length = 1
         print(lcs_nodes)
 
-    if not len(lcs_nodes):
+    if len(lcs_nodes) == 0:
         return sink, []
 
     for pred in lcs_nodes[-1]:
@@ -272,7 +272,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                 source.edges.append((node, variant))
                 print(variant)
 
-    return source, [edge[0] for *_, edge in bfs_traversal(source)]
+    return source, {edge[0] for *_, edge in bfs_traversal(source)}
 
 
 def lcs_graph(reference, observed, shift=0, max_distance=None):
@@ -358,7 +358,7 @@ def graph_nodes(graph):
         node = queue.popleft()
         if node in visited:
             continue
-        for child, variant in node.edges:
+        for child, _ in node.edges:
             queue.append(child)
         visited.add(node)
     return visited

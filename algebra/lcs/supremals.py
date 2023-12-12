@@ -3,9 +3,8 @@
 
 from operator import attrgetter
 from os.path import commonprefix
-from ..lcs.all_lcs import _Node, build_graph, edit
+from ..lcs.all_lcs import _Node, bfs_traversal, lcs_graph
 from ..variants import Variant, patch
-from ..lcs import lcs_graph, bfs_traversal
 
 
 def trim(lhs, rhs):
@@ -55,7 +54,7 @@ def supremal(reference, variants, offset=10):
         observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
 
         graph = lcs_graph(reference[start:end], observed, shift=start)
-        edges = [edge[0] for *_, edge in bfs_traversal(graph)]
+        edges = {edge[0] for *_, edge in bfs_traversal(graph)}
 
         if not edges:
             return Variant(0, 0, ""), graph

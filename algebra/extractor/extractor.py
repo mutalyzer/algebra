@@ -95,6 +95,8 @@ def canonical(observed, root, shift=0):
 
 
 def diagonal(reference, observed, root):
+    """Experimental minimal canonical represantion.
+    """
     diff = len(reference) - len(observed)
     variants = []
     node = root
