@@ -4,7 +4,7 @@ graph in two phases.
 
 Phase 1 (`edit`) calculates the simple edit distance and a collection of
 LCS nodes.
-Phase 2 (`lcs_graph`) creates a directed acyclic (multi) graph of the LCS
+Phase 2 (`build_graph`) creates a directed acyclic (multi) graph of the LCS
 nodes. Every path in this graph is a unique and distinct embedding of an
 LCS and consequently a unique variant representation.
 
@@ -45,7 +45,7 @@ class _Node:
         return hash((self.row, self.col, self.length))
 
     def __repr__(self):
-        return f"({self.row},{self.col})[{self.length}]"
+        return f"{self.row, self.col}[{self.length}]"
 
 
 def edit(reference, observed, shift=0, max_distance=None):
