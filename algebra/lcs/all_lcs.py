@@ -48,7 +48,7 @@ class _Node:
         return f"({self.row},{self.col})[{self.length}]"
 
 
-def edit(reference, observed, max_distance=None):
+def edit(reference, observed, shift=0, max_distance=None):
     """Calculate the simple edit distance between two strings and
     construct a collection of LCS nodes.
 
@@ -103,7 +103,7 @@ def edit(reference, observed, max_distance=None):
             elif matching:
                 lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
                 max_lcs_pos = max(lcs_pos, max_lcs_pos)
-                lcs_nodes[lcs_pos].append(_Node(match_row + 1, match_col + 1, row - match_row))
+                lcs_nodes[lcs_pos].append(_Node(match_row + shift, match_col + shift, row - match_row))
                 matching = False
             row += 1
             col += 1
@@ -120,7 +120,7 @@ def edit(reference, observed, max_distance=None):
         if matching:
             lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
             max_lcs_pos = max(lcs_pos, max_lcs_pos)
-            lcs_nodes[lcs_pos].append(_Node(match_row + 1, match_col + 1, row - match_row))
+            lcs_nodes[lcs_pos].append(_Node(match_row + shift, match_col + shift, row - match_row))
 
         return steps
 
@@ -168,95 +168,108 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     -------
     `_Node` (opaque data type)
         The root of the LCS graph.
-    list
-        A list of edges (variants) in the LCS graph.
 
     See Also
     --------
     `edit` : Calculates the LCS nodes.
     """
 
-    edges = []
-
     if not lcs_nodes or lcs_nodes == [[]]:
         source = _Node(0, 0)
         if not reference and not observed:
-            return source, edges
+            return source, []
         sink = _Node(len(reference) + 1, len(observed) + 1)
         variant = Variant(0, len(reference), observed)
-        edges.append(variant)
         source.edges = [(sink, variant)]
-        return source, edges
+        return source, [variant]
 
     length = {}
     for node in chain(*lcs_nodes):
         length[id(node)] = node.length
 
-    if lcs_nodes[-1][-1].row + length[id(lcs_nodes[-1][-1])] == len(reference) + 1 and lcs_nodes[-1][-1].col + length[id(lcs_nodes[-1][-1])] == len(observed) + 1:
-        sink = lcs_nodes[-1][-1]
-        end = -1
-    else:
-        sink = _Node(len(reference) + 1, len(observed) + 1)
-        length[id(sink)] = sink.length
-        end = len(lcs_nodes[-1])
+    print("last node", lcs_nodes[-1][-1])
+    print(len(reference), len(observed), lcs_nodes[-1][-1].length)
 
-    for pred in lcs_nodes[-1][:end]:
-        if pred.row + length[id(pred)] - 1 < sink.row + length[id(sink)] and pred.col + length[id(pred)] - 1 < sink.col + length[id(sink)]:
-            variant = Variant(shift + pred.row + length[id(pred)] - 1, shift + sink.row + length[id(sink)] - 1, observed[pred.col + length[id(pred)] - 1:sink.col + length[id(sink)] - 1])
+    sink = lcs_nodes[-1][-1]
+    if sink.row + sink.length != len(reference) + shift or sink.col + sink.length != len(observed) + shift:
+        sink = _Node(len(reference) + shift, len(observed) + shift, 1)
+        print("Create new sink node", sink)
+    else:
+        lcs_nodes[-1].pop(-1)
+        while not lcs_nodes[-1]:
+            del lcs_nodes[-1]
+        sink.length = 1
+        print(lcs_nodes)
+
+    for pred in lcs_nodes[-1]:
+        print("pred", pred, sink)
+        if pred.row + pred.length < sink.row + sink.length and pred.col + pred.length < sink.col + sink.length:
+            print("dominates")
+            variant = Variant(pred.row + pred.length, sink.row + sink.length - 1,
+                              observed[pred.col + pred.length - shift:sink.col + sink.length - 1 - shift])
             pred.edges.append((sink, variant))
-            edges.append(variant)
+            print(variant.to_hgvs())
 
     incoming = {}
-    lcs_pos = len(lcs_nodes) - 1
-    while lcs_pos > 0:
-        while lcs_nodes[lcs_pos]:
-            node = lcs_nodes[lcs_pos].pop(0)
+    # lcs_pos = len(lcs_nodes) - 1
+    # print("lcs_pos", lcs_pos)
+    while len(lcs_nodes) > 1:
+        while lcs_nodes[-1]:
+            node = lcs_nodes[-1].pop(0)
+            print("node", node)
 
-            if not node.edges and node != sink:
+            if not node.edges:
                 continue
 
             idx_pred = 0
-            for idx, pred in enumerate(lcs_nodes[lcs_pos - 1]):
-                if pred.row + length[id(pred)] - 1 < node.row + length[id(node)] - 1 and pred.col + length[id(pred)] - 1 < node.col + length[id(node)] - 1:
-                    variant = Variant(shift + pred.row + length[id(pred)] - 1, shift + node.row + length[id(node)] - 2, observed[pred.col + length[id(pred)] - 1:node.col + length[id(node)] - 2])
-                    edges.append(variant)
+            for idx, pred in enumerate(lcs_nodes[-2]):
+                print("pred", pred)
 
-                    if incoming.get(id(pred), 0) == lcs_pos:
+                if pred.row + pred.length < node.row + node.length and pred.col + pred.length < node.col + node.length:
+                    print("dominates")
+                    variant = Variant(pred.row + pred.length, node.row + node.length - 1,
+                                      observed[pred.col + pred.length - shift:node.col + node.length - 1 - shift])
+                    print(variant.to_hgvs())
+
+                    if incoming.get(id(pred), 0) == len(lcs_nodes):
                         split_node = _Node(pred.row, pred.col, length[id(pred)])
                         length[id(split_node)] = split_node.length
                         split_node.edges = pred.edges + [(node, variant)]
                         length[id(pred)] += 1
-                        lcs_nodes[lcs_pos - 1][idx] = split_node
+                        lcs_nodes[-1][idx] = split_node
                     else:
                         pred.edges.append((node, variant))
 
-                    incoming[id(node)] = lcs_pos
+                    incoming[id(node)] = len(lcs_nodes)
                     idx_pred = idx + 1
 
-            if length[id(node)] > 1:
-                length[id(node)] -= 1
-                lcs_nodes[lcs_pos - 1].insert(idx_pred, node)
+            # if length[id(node)] > 1:
+            #     length[id(node)] -= 1
+            #     lcs_nodes[lcs_pos - 1].insert(idx_pred, node)
+            if node.length > 1:
+                node.length -= 1
+                lcs_nodes[-2].insert(idx_pred, node)
 
-        lcs_pos -= 1
+        del lcs_nodes[-1]
+    print("lcs_nodes after while", lcs_nodes)
 
-    if lcs_nodes[0][0].row == lcs_nodes[0][0].col == 1:
+    if lcs_nodes[0][0].row == lcs_nodes[0][0].col == shift:
+        print("we zijn er al")
         source = lcs_nodes[0][0]
-        source.row -= 1
-        source.col -= 1
-        length[id(source)] -= 1
-        successors = lcs_nodes[0][1:]
     else:
         source = _Node(0, 0)
-        length[id(source)] = source.length
-        successors = lcs_nodes[0]
 
-    for succ in successors:
-        if source.row + length[id(source)] - 0 < sink.row + length[id(sink)] - 1 and source.col + length[id(source)] - 0 < sink.col + length[id(sink)] - 1 and (succ == sink or succ.edges):
-            variant = Variant(shift + source.row + length[id(source)] - 0, shift + succ.row + length[id(succ)] - 2, observed[source.col + length[id(source)] - 0:succ.col + length[id(succ)] - 2])
-            source.edges.append((succ, variant))
-            edges.append(variant)
+        for node in lcs_nodes[0]:
+            if not node.edges:
+                continue
+            if source.row < node.row + node.length and source.col < node.col + node.length:
+                print("dominates")
+                variant = Variant(source.row, node.row + node.length - 1,
+                                  observed[source.col - shift:node.col + node.length - 1 - shift])
+                source.edges.append((node, variant))
+                print(variant)
 
-    return source, edges
+    return source, [edge[0] for *_, edge in bfs_traversal(source)]
 
 
 def lcs_graph(reference, observed, shift=0, max_distance=None):
@@ -287,7 +300,7 @@ def lcs_graph(reference, observed, shift=0, max_distance=None):
     `algebra.utils.to_dot` : Graphviz DOT format.
     """
 
-    _, lcs_nodes = edit(reference, observed, max_distance)
+    _, lcs_nodes = edit(reference, observed, shift, max_distance)
     root, _ = build_graph(reference, observed, lcs_nodes, shift)
     return root
 
@@ -333,6 +346,19 @@ def bfs_traversal(graph, atomics=False):
             queue.append(child)
 
         visited.add(node)
+
+
+def graph_nodes(graph):
+    visited = set()
+    queue = deque([graph])
+    while queue:
+        node = queue.popleft()
+        if node in visited:
+            continue
+        for child, variant in node.edges:
+            queue.append(child)
+        visited.add(node)
+    return visited
 
 
 def dfs_traversal(graph, atomics=False, _path=None):
