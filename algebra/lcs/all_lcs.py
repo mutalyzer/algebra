@@ -347,6 +347,8 @@ def bfs_traversal(graph, atomics=False):
 
 
 def graph_nodes(graph):
+    # TODO: Alternatively:
+    # return {node for node, *_ in bfs_traversal(graph)}
     visited = set()
     queue = deque([graph])
     while queue:
