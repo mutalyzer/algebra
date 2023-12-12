@@ -25,6 +25,11 @@ from algebra.lcs.all_lcs import (_Node, bfs_traversal, build_graph,
         [_Node(2, 2, 4), _Node(4, 2, 3)],
         [_Node(7, 7, 1), _Node(8, 6, 1), _Node(5, 8, 2)],
     ]),
+    ("TTT", "TTTTAT", 3, [
+        [_Node(0, 3, 1)],
+        [_Node(0, 2, 2)],
+        [_Node(0, 0, 3), _Node(0, 1, 3), _Node(2, 5, 1)],
+    ]),
 ])
 def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
     distance, lcs_nodes = edit(reference, observed)
@@ -92,6 +97,9 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(6, 7, "G"), Variant(6, 8, ""), Variant(6, 6, "GCA"),
         Variant(5, 5, "AGC"), Variant(7, 9, ""), Variant(7, 7, "AG"),
         Variant(7, 8, "A"), Variant(8, 9, "AT"), Variant(9, 9, "CAT"),
+    ]),
+    ("TTT", "TTTTAT", [
+        # TODO
     ]),
 ])
 def test_build_graph(reference, observed, expected_edges):
