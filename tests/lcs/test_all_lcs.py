@@ -58,7 +58,7 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
 @pytest.mark.parametrize("reference, observed, expected_edges", [
     ("", "", []),
     ("A", "A", []),
-    ("TTAATTGACA", "CTACTGAGTT", [
+    ("TTAATTGACA", "CTACTGAGTT", {
         Variant(8, 10, "GTT"), Variant(10, 10, "GTT"), Variant(6, 10, ""),
         Variant(7, 9, ""),  Variant(3, 4, "G"), Variant(4, 4, "G"),
         Variant(5, 6, ""), Variant(3, 4, "C"), Variant(4, 4, "C"),
@@ -66,41 +66,41 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(3, 3, "CTG"), Variant(2, 3, "G"),  Variant(1, 2, ""),
         Variant(1, 3, ""), Variant(2, 3, ""), Variant(1, 1, "AC"),
         Variant(0, 0, "C"), Variant(0, 1, "C")
-    ]),
-    ("TTT", "TATTTT", [
+    }),
+    ("TTT", "TATTTT", {
         Variant(3, 3, "TT"), Variant(3, 3, "T"), Variant(2, 2, "T"),
-        Variant(2, 2, "TT"), Variant(2, 2, "T"), Variant(1, 1, "A"),
+        Variant(2, 2, "TT"), Variant(1, 1, "A"),
         Variant(1, 1, "AT"), Variant(1, 1, "ATT"), Variant(1, 1, "T"),
         Variant(0, 0, "TA"), Variant(0, 0, "TAT")
-    ]),
-    ("TCTCTATCGTA", "TCTA", [
+    }),
+    ("TCTCTATCGTA", "TCTA", {
         Variant(6, 11, ""), Variant(3, 5, ""), Variant(3, 10, ""),
         Variant(5, 10, ""), Variant(7, 10, ""), Variant(2, 4, ""),
         Variant(2, 6, ""), Variant(4, 6, ""), Variant(2, 9, ""),
         Variant(4, 9, ""), Variant(8, 9, ""), Variant(1, 3, ""),
         Variant(1, 7, ""), Variant(3, 7, ""), Variant(5, 7, ""),
         Variant(0, 2, ""), Variant(0, 4, ""), Variant(0, 6, ""),
-    ]),
-    ("AAAATA", "GAAAAGAAA", [
+    }),
+    ("AAAATA", "GAAAAGAAA", {
         Variant(6, 6, "AA"), Variant(6, 6, "A"), Variant(4, 5, "G"),
         Variant(4, 5, "GA"), Variant(4, 5, ""), Variant(4, 5, "GAA"),
-        Variant(4, 5, "A"), Variant(4, 5, ""), Variant(3, 3, "AG"),
+        Variant(4, 5, "A"), Variant(3, 3, "AG"),
         Variant(3, 3, "G"), Variant(3, 3, "AGA"), Variant(3, 3, "GA"),
         Variant(2, 2, "A"), Variant(2, 2, "AAG"), Variant(2, 2, "AG"),
         Variant(2, 2, "G"), Variant(1, 1, "A"), Variant(1, 1, "AA"),
         Variant(1, 1, "A"), Variant(0, 0, "G"), Variant(0, 0, "GA"),
         Variant(0, 0, "GAA")
-    ]),
-    ("CATATATCG", "CTTATAGCAT", [
+    }),
+    ("CATATATCG", "CTTATAGCAT", {
         Variant(1, 1, "TT"), Variant(1 ,2, ""), Variant(1, 2, "T"),
         Variant(4, 5, "GC"), Variant(3, 3, "T"), Variant(3, 4, ""),
         Variant(6, 7, "G"), Variant(6, 8, ""), Variant(6, 6, "GCA"),
         Variant(5, 5, "AGC"), Variant(7, 9, ""), Variant(7, 7, "AG"),
         Variant(7, 8, "A"), Variant(8, 9, "AT"), Variant(9, 9, "CAT"),
-    ]),
-    ("TTT", "TTTTAT", [
+    }),
+    ("TTT", "TTTTAT", {
         # TODO
-    ]),
+    }),
 ])
 def test_build_graph(reference, observed, expected_edges):
     _, lcs_nodes = edit(reference, observed)
