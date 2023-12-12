@@ -22,27 +22,26 @@ def to_dot(reference, graph, atomics=False):
     """The LCS graph in Graphviz DOT format."""
     yield "digraph{"
     yield "rankdir=LR"
-    yield "node[fixedsize=true,shape=circle,width=.7]"
+    yield "node[fixedsize=true,shape=circle,width=.9]"
     yield "si[shape=point,width=.07]"
     yield "si->s0"
 
     count = 0
     nodes = {}
-    terminals = set()
-    for lhs, rhs, variant in bfs_traversal(graph, atomics):
-        if lhs not in nodes:
-            nodes[lhs] = count
+    for source, sink, variant in bfs_traversal(graph, atomics):
+        if source not in nodes:
+            nodes[source] = count
             count += 1
-        if rhs not in nodes:
-            nodes[rhs] = count
+            yield f's{nodes[source]}[label="{source}"]'
+        if sink not in nodes:
+            nodes[sink] = count
             count += 1
-            terminals.add(rhs)
-        terminals.discard(lhs)
+            if not sink.edges:
+                yield f's{nodes[sink]}[label="{sink}",peripheries=2]'
+            else:
+                yield f's{nodes[sink]}[label="{sink}"]'
 
-        yield f's{nodes[lhs]}->s{nodes[rhs]}[label="{to_hgvs(variant, reference)}"]'
-
-    for terminal in terminals:
-        yield f"s{nodes[terminal]}[peripheries=2]"
+        yield f's{nodes[source]}->s{nodes[sink]}[label="{to_hgvs(variant, reference)}"]'
 
     yield "}"
 
