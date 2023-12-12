@@ -5,6 +5,7 @@ from operator import attrgetter
 from os.path import commonprefix
 from ..lcs.all_lcs import _Node, build_graph, edit
 from ..variants import Variant, patch
+from ..lcs import lcs_graph, bfs_traversal
 
 
 def trim(lhs, rhs):
@@ -36,43 +37,34 @@ def supremal(reference, variants, offset=10):
         The supremal variant.
     root : `_Node`
         The LCS graph in which the supremal was determined.
-    observed : str
-        The observed sequence for the given LCS graph.
-    shift : int
-        The offset by which the variants in the LCS graph are shifted.
     """
 
-    def spanning_variant(reference, observed, variants, shift=0):
-        if not variants:
-            return Variant(0, 0, "")
+    if not variants:
+        return Variant(0, 0, ""), _Node(0, 0, len(reference))
 
-        start = min(variants, key=attrgetter("start")).start
-        end = max(variants, key=attrgetter("end")).end
-        return Variant(start, end, observed[shift + start:shift + len(observed) - (len(reference) - end)])
-
-    observed = patch(reference, variants)
-    variant = spanning_variant(reference, observed, variants)
-    if not variant:
-        return variant, _Node(0, 0, len(reference)), observed, 0
+    start = min(variants, key=attrgetter("start")).start
+    end = max(variants, key=attrgetter("end")).end
+    observed = patch(reference[start:end], [Variant(v.start - start, v.end - start, v.sequence) for v in variants])
+    variant = Variant(start, end, observed)
 
     offset = max(offset, len(variant) // 2, 1)
 
     while True:
         start = max(0, variant.start - offset)
         end = min(len(reference), variant.end + offset)
-
         observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
 
-        _, lcs_nodes = edit(reference[start:end], observed)
-        root, edges = build_graph(reference[start:end], observed, lcs_nodes, start)
-        variant = spanning_variant(reference[start:end], observed, edges, -start)
+        graph = lcs_graph(reference[start:end], observed, shift=start)
+        edges = [edge[0] for *_, edge in bfs_traversal(graph)]
 
-        if not variant:
-            return variant, root, observed, start
+        if not edges:
+            return Variant(0, 0, ""), graph
 
-        if ((variant.start > start or variant.start == 0) and
-                (variant.end < end or variant.end == len(reference))):
-            return variant, root, observed, start
+        edges_start = min(edges, key=attrgetter("start")).start
+        edges_end = max(edges, key=attrgetter("end")).end
+
+        if (edges_start > start or edges_start == 0) and (edges_end < end or edges_end == len(reference)):
+            return Variant(edges_start, edges_end, observed[edges_start - start:len(observed) - (end - edges_end)]), graph
 
         offset *= 2
 
