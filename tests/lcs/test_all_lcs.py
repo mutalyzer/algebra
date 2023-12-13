@@ -104,6 +104,9 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(0, 0, "TT"), Variant(3, 3, "AT"), Variant(2, 2, "TA"),
         Variant(2, 2, "A"), Variant(3, 3, "AT"), Variant(2, 2, "TA"),
     }),
+    ("TCTC", "TC", {
+        Variant(0, 2, ""), Variant(1, 3, ""), Variant(2, 4, ""),
+    }),
 ])
 def test_build_graph(reference, observed, expected_edges):
     _, lcs_nodes = edit(reference, observed)
