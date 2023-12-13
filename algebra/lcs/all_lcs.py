@@ -260,11 +260,12 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         print("we zijn er al")
         source = lcs_nodes[0][0]
     else:
-        source = _Node(0, 0)
+        source = _Node(shift, shift)
 
         for node in lcs_nodes[0]:
             if not node.edges:
                 continue
+
             if source.row < node.row + node.length and source.col < node.col + node.length:
                 print("dominates")
                 variant = Variant(source.row, node.row + node.length - 1,

@@ -43,7 +43,7 @@ def supremal(reference, variants, offset=10):
 
     start = min(variants, key=attrgetter("start")).start
     end = max(variants, key=attrgetter("end")).end
-    observed = patch(reference[start:end], [Variant(v.start - start, v.end - start, v.sequence) for v in variants])
+    observed = patch(reference[start:end], [Variant(variant.start - start, variant.end - start, variant.sequence) for variant in variants])
     variant = Variant(start, end, observed)
 
     offset = max(offset, len(variant) // 2, 1)
