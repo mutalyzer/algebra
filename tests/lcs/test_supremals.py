@@ -21,10 +21,22 @@ def test_supremal(reference, variants, expected):
     assert variant == expected
 
 
+@pytest.mark.parametrize("reference, variants, offset, expected", [
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 2, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 3, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 4, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 40, Variant(11, 19, "TTATAGCAT")),
+])
+def test_supremal_offset(reference, variants, offset, expected):
+    variant, *_ = supremal(reference, variants, offset)
+    assert variant == expected
+
+
 @pytest.mark.parametrize("reference, variants, expected", TESTS)
 def test_supremal_sequence(reference, variants, expected):
     variant, *_ = supremal_sequence(reference, patch(reference, variants))
     assert variant == expected
+
 
 
 @pytest.mark.parametrize("reference, observed, prefix_len, suffix_len", [
