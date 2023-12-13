@@ -56,8 +56,8 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
 
 
 @pytest.mark.parametrize("reference, observed, expected_edges", [
-    ("", "", []),
-    ("A", "A", []),
+    ("", "", set()),
+    ("A", "A", set()),
     ("TTAATTGACA", "CTACTGAGTT", {
         Variant(8, 10, "GTT"), Variant(10, 10, "GTT"), Variant(6, 10, ""),
         Variant(7, 9, ""),  Variant(3, 4, "G"), Variant(4, 4, "G"),
@@ -99,7 +99,10 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(7, 8, "A"), Variant(8, 9, "AT"), Variant(9, 9, "CAT"),
     }),
     ("TTT", "TTTTAT", {
-        # TODO
+        Variant(3, 3, "TAT"), Variant(2, 2, "T"), Variant(2, 2, "TTA"),
+        Variant(1, 1, "T"), Variant(1, 1, "TT"), Variant(0, 0, "T"),
+        Variant(0, 0, "TT"), Variant(3, 3, "AT"), Variant(2, 2, "TA"),
+        Variant(2, 2, "A"), Variant(3, 3, "AT"), Variant(2, 2, "TA"),
     }),
 ])
 def test_build_graph(reference, observed, expected_edges):
