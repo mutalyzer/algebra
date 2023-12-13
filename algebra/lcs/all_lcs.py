@@ -174,104 +174,71 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     `edit` : Calculates the LCS nodes.
     """
 
+    print(lcs_nodes)
+
     if not lcs_nodes or lcs_nodes == [[]]:
         source = _Node(shift, shift)
         if not reference and not observed:
-            return source, []
+            return source, set()
         sink = _Node(len(reference), len(observed))
         variant = Variant(shift, len(reference), observed)
         source.edges = [(sink, variant)]
-        return source, [variant]
-
-    length = {}
-    for node in chain(*lcs_nodes):
-        length[id(node)] = node.length
-
-    print("last node", lcs_nodes[-1][-1])
-    print(len(reference), len(observed), lcs_nodes[-1][-1].length)
+        return source, {variant}
 
     sink = lcs_nodes[-1][-1]
-    if sink.row + sink.length != len(reference) + shift or sink.col + sink.length != len(observed) + shift:
-        sink = _Node(len(reference) + shift, len(observed) + shift, 1)
-        print("Create new sink node", sink)
+    if sink.row + sink.length == len(reference) + shift and sink.col + sink.length == len(observed) + shift:
+        del lcs_nodes[-1][-1]
+        sink.length += 1  # FIXME
     else:
-        lcs_nodes[-1].pop(-1)
-        while len(lcs_nodes) and not lcs_nodes[-1]:
-            del lcs_nodes[-1]
-        sink.length = 1
-        print(lcs_nodes)
+        sink = _Node(len(reference) + shift, len(observed) + shift, 1)
 
-    if len(lcs_nodes) == 0:
-        return sink, []
-
-    for pred in lcs_nodes[-1]:
-        print("pred", pred, sink)
-        if pred.row + pred.length < sink.row + sink.length and pred.col + pred.length < sink.col + sink.length:
-            print("dominates")
-            variant = Variant(pred.row + pred.length, sink.row + sink.length - 1,
-                              observed[pred.col + pred.length - shift:sink.col + sink.length - 1 - shift])
-            pred.edges.append((sink, variant))
-            print(variant.to_hgvs())
+    lcs_nodes.append([sink])
 
     incoming = {}
-    # lcs_pos = len(lcs_nodes) - 1
-    # print("lcs_pos", lcs_pos)
     while len(lcs_nodes) > 1:
         while lcs_nodes[-1]:
             node = lcs_nodes[-1].pop(0)
-            print("node", node)
 
-            if not node.edges:
+            if node != sink and not node.edges:
                 continue
 
             idx_pred = 0
             for idx, pred in enumerate(lcs_nodes[-2]):
-                print("pred", pred)
-
                 if pred.row + pred.length < node.row + node.length and pred.col + pred.length < node.col + node.length:
-                    print("dominates")
                     variant = Variant(pred.row + pred.length, node.row + node.length - 1,
                                       observed[pred.col + pred.length - shift:node.col + node.length - 1 - shift])
-                    print(variant.to_hgvs())
 
                     if incoming.get(id(pred), 0) == len(lcs_nodes):
-                        split_node = _Node(pred.row, pred.col, length[id(pred)])
-                        length[id(split_node)] = split_node.length
+                        split_node = _Node(pred.row, pred.col, pred.length)
                         split_node.edges = pred.edges + [(node, variant)]
-                        length[id(pred)] += 1
-                        lcs_nodes[-1][idx] = split_node
+                        pred.length += 1
+                        lcs_nodes[-2][idx] = split_node
                     else:
                         pred.edges.append((node, variant))
 
                     incoming[id(node)] = len(lcs_nodes)
                     idx_pred = idx + 1
 
-            # if length[id(node)] > 1:
-            #     length[id(node)] -= 1
-            #     lcs_nodes[lcs_pos - 1].insert(idx_pred, node)
             if node.length > 1:
                 node.length -= 1
                 lcs_nodes[-2].insert(idx_pred, node)
 
         del lcs_nodes[-1]
-    print("lcs_nodes after while", lcs_nodes)
 
+    source = lcs_nodes[0][0]
     if lcs_nodes[0][0].row == lcs_nodes[0][0].col == shift:
-        print("we zijn er al")
-        source = lcs_nodes[0][0]
+        del lcs_nodes[0][0]
     else:
         source = _Node(shift, shift)
 
-        for node in lcs_nodes[0]:
-            if not node.edges:
-                continue
+    for node in lcs_nodes[0]:
+        if node != sink and not node.edges:
+            continue
 
-            if source.row < node.row + node.length and source.col < node.col + node.length:
-                print("dominates")
-                variant = Variant(source.row, node.row + node.length - 1,
-                                  observed[source.col - shift:node.col + node.length - 1 - shift])
-                source.edges.append((node, variant))
-                print(variant)
+        if source.row < node.row + node.length and source.col < node.col + node.length:
+            variant = Variant(source.row, node.row + node.length - 1,
+                              observed[source.col - shift:node.col + node.length - 1 - shift])
+            source.edges.append((node, variant))
 
     return source, {edge[0] for *_, edge in bfs_traversal(source)}
 
