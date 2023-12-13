@@ -174,8 +174,6 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     `edit` : Calculates the LCS nodes.
     """
 
-    print(lcs_nodes)
-
     if not lcs_nodes or lcs_nodes == [[]]:
         source = _Node(shift, shift)
         if not reference and not observed:
