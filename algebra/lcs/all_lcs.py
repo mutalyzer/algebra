@@ -212,11 +212,14 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                                       observed[pred.col + pred_length - shift:node.col + node_length - 1 - shift])
 
                     if incoming.get(id(pred), 0) == len(lcs_nodes):
-                        print("splitting")
+                        print("splitting", node, pred)
                         split_node = _Node(pred.row, pred.col, pred_length)
                         split_node.edges = pred.edges + [(node, variant)]
-                        length[id(pred)] = pred_length + 1
+                        # length[id(pred)] = pred_length + 1
                         lcs_nodes[-2][idx] = split_node
+                        pred.row += pred_length
+                        pred.col += pred_length
+                        pred.length -= pred_length
                     else:
                         pred.edges.append((node, variant))
 
