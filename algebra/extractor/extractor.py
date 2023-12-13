@@ -5,7 +5,7 @@ LCS alignments with support for tandem repeats and complex variants."""
 from collections import deque
 from ..lcs import lcs_graph
 from ..lcs.supremals import supremal, supremal_sequence, trim
-from ..variants import Variant, reverse_complement
+from ..variants import Variant, patch, reverse_complement
 
 
 def canonical(observed, root, shift=0):
@@ -123,22 +123,23 @@ def diagonal(reference, observed, root):
 def extract_sequence(reference, observed):
     """Extract the canonical variant representation (allele) for a
     reference and observed sequence."""
-    variant, root, observed, start = supremal_sequence(reference, observed)
-    return canonical(observed, root, -start), variant, root
+    variant, root = supremal_sequence(reference, observed)
+    return canonical(observed, root, 0), variant, root
 
 
 def extract_supremal(reference, variant):
     """Extract the canonical variant representation (allele) for a
     supremal variant."""
     root = lcs_graph(reference[variant.start:variant.end], variant.sequence, variant.start)
-    return canonical(variant.sequence, root, -variant.start), variant, root
+    return canonical(variant.sequence, root, 0), variant, root
 
 
 def extract(reference, variants):
     """Extract the canonical variant representation together with its
     supremal representation for an allele."""
-    variant, root, observed, start = supremal(reference, variants)
-    return canonical(observed, root, -start), variant, root
+    variant, root = supremal(reference, variants)
+    observed = patch(reference, variants)
+    return canonical(observed, root, 0), variant, root
 
 
 def to_hgvs(variants, reference):
