@@ -193,6 +193,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     lcs_nodes.append([sink])
 
     incoming = {}
+    length = {}
     while len(lcs_nodes) > 1:
         while lcs_nodes[-1]:
             node = lcs_nodes[-1].pop(0)
@@ -200,16 +201,21 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
             if node != sink and not node.edges:
                 continue
 
+            node_length = length.get(id(node), node.length)
+
             idx_pred = 0
             for idx, pred in enumerate(lcs_nodes[-2]):
-                if pred.row + pred.length < node.row + node.length and pred.col + pred.length < node.col + node.length:
-                    variant = Variant(pred.row + pred.length, node.row + node.length - 1,
-                                      observed[pred.col + pred.length - shift:node.col + node.length - 1 - shift])
+                pred_length = length.get(id(pred), pred.length)
+
+                if pred.row + pred_length < node.row + node_length and pred.col + pred_length < node.col + node_length:
+                    variant = Variant(pred.row + pred_length, node.row + node_length - 1,
+                                      observed[pred.col + pred_length - shift:node.col + node_length - 1 - shift])
 
                     if incoming.get(id(pred), 0) == len(lcs_nodes):
-                        split_node = _Node(pred.row, pred.col, pred.length)
+                        print("splitting")
+                        split_node = _Node(pred.row, pred.col, pred_length)
                         split_node.edges = pred.edges + [(node, variant)]
-                        pred.length += 1
+                        length[id(pred)] = pred_length + 1
                         lcs_nodes[-2][idx] = split_node
                     else:
                         pred.edges.append((node, variant))
@@ -217,9 +223,9 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                     incoming[id(node)] = len(lcs_nodes)
                     idx_pred = idx + 1
 
-            if node.length > 1:
-                node.length -= 1
+            if node_length > 1:
                 lcs_nodes[-2].insert(idx_pred, node)
+                length[id(node)] = node_length - 1
 
         del lcs_nodes[-1]
 
@@ -233,9 +239,10 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         if node != sink and not node.edges:
             continue
 
-        if source.row < node.row + node.length and source.col < node.col + node.length:
-            variant = Variant(source.row, node.row + node.length - 1,
-                              observed[source.col - shift:node.col + node.length - 1 - shift])
+        node_length = length.get(id(node), node.length)
+        if source.row < node.row + node_length and source.col < node.col + node_length:
+            variant = Variant(source.row, node.row + node_length - 1,
+                              observed[source.col - shift:node.col + node_length - 1 - shift])
             source.edges.append((node, variant))
 
     return source, {edge[0] for *_, edge in bfs_traversal(source)}
