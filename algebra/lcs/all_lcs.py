@@ -185,14 +185,14 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     sink = lcs_nodes[-1][-1]
     if sink.row + sink.length == len(reference) + shift and sink.col + sink.length == len(observed) + shift:
         del lcs_nodes[-1][-1]
-        sink.length += 1  # FIXME
+        sink.length += 1
     else:
         sink = _Node(len(reference) + shift, len(observed) + shift, 1)
-
     lcs_nodes.append([sink])
 
-    incoming = {}
+    max_sink = 0
     length = {}
+    incoming = {}
     while len(lcs_nodes) > 1:
         while lcs_nodes[-1]:
             node = lcs_nodes[-1].pop(0)
@@ -201,7 +201,6 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                 continue
 
             node_length = length.get(id(node), node.length)
-
             idx_pred = 0
             for idx, pred in enumerate(lcs_nodes[-2]):
                 pred_length = length.get(id(pred), pred.length)
@@ -210,12 +209,14 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                     variant = Variant(pred.row + pred_length, node.row + node_length - 1,
                                       observed[pred.col + pred_length - shift:node.col + node_length - 1 - shift])
 
+                    if node == sink:
+                        max_sink = max(max_sink, pred.row + pred_length)
+
                     if incoming.get(id(pred), 0) == len(lcs_nodes):
-                        print("splitting", node, pred)
-                        split_node = _Node(pred.row, pred.col, pred_length)
+                        split_node = _Node(pred.row, pred.col, pred.length)
                         split_node.edges = pred.edges + [(node, variant)]
-                        # length[id(pred)] = pred_length + 1
                         lcs_nodes[-2][idx] = split_node
+                        length[id(split_node)] = pred_length
                         pred.row += pred_length
                         pred.col += pred_length
                         pred.length -= pred_length
@@ -247,6 +248,11 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                               observed[source.col - shift:node.col + node_length - 1 - shift])
             source.edges.append((node, variant))
 
+    sink.length = sink.row - max_sink
+    source.row += source.length
+    source.col += source.length
+    source.length = 0
+
     return source, {edge[0] for *_, edge in bfs_traversal(source)}
 
 
@@ -274,7 +280,7 @@ def lcs_graph(reference, observed, shift=0, max_distance=None):
 
     See Also
     --------
-    `traversal` : Traverses the LCS graph.
+    `*_traversal` : Traverses the LCS graph.
     `algebra.utils.to_dot` : Graphviz DOT format.
     """
 
@@ -284,7 +290,7 @@ def lcs_graph(reference, observed, shift=0, max_distance=None):
 
 
 def bfs_traversal(graph, atomics=False):
-    """Generate all edges in the LCS graph.
+    """Generate all (nodes and) edges in the LCS graph.
 
     Other Parameters
     ----------------
@@ -294,12 +300,13 @@ def bfs_traversal(graph, atomics=False):
 
     Yields
     ------
-    start node : int
-        The hash of the start node.
-    end node : int
-        The hash of the end node.
+    source node : int
+        The source node.
+    sink node : int
+        The sink node.
     variant : list
-        A sorted list of variants unique between the start and end nodes.
+        An edge, i.e., a sorted list of variants unique between the source
+        and sink nodes.
 
     See Also
     --------
@@ -309,19 +316,19 @@ def bfs_traversal(graph, atomics=False):
     visited = set()
     queue = deque([graph])
     while queue:
-        node = queue.popleft()
-        if node in visited:
+        source = queue.popleft()
+        if source in visited:
             continue
 
-        for child, variant in node.edges:
+        for sink, variant in source.edges:
             if atomics:
                 for atomic in variant.atomics():
-                    yield node, child, atomic
+                    yield source, sink, atomic
             else:
-                yield node, child, [variant]
-            queue.append(child)
+                yield source, sink, [variant]
+            queue.append(sink)
 
-        visited.add(node)
+        visited.add(source)
 
 
 def graph_nodes(graph):
@@ -340,7 +347,7 @@ def graph_nodes(graph):
 
 
 def dfs_traversal(graph, atomics=False, _path=None):
-    """Traverse all paths in the LCS graph.
+    """Traverse all paths (alignments) in the LCS graph.
 
     Other Parameters
     ----------------
@@ -351,7 +358,7 @@ def dfs_traversal(graph, atomics=False, _path=None):
     Yields
     ------
     list
-        A sorted list of variants representing an LCS alignment.
+        A sorted list of variants representing a single LCS alignment.
 
     See Also
     --------
