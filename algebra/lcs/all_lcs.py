@@ -21,7 +21,6 @@ pp. 317-323.
 
 
 from collections import deque
-from itertools import chain
 from ..variants import Variant
 
 
@@ -30,7 +29,7 @@ class _Node:
     FOR INTERNAL USE ONLY.
     """
 
-    def __init__(self, row, col, length=0):
+    def __init__(self, row, col, length):
         self.row = row
         self.col = col
         self.length = length
@@ -175,10 +174,10 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     """
 
     if not lcs_nodes or lcs_nodes == [[]]:
-        source = _Node(shift, shift)
+        source = _Node(shift, shift, 0)
         if not reference and not observed:
             return source, set()
-        sink = _Node(len(reference), len(observed))
+        sink = _Node(len(reference), len(observed), 0)
         variant = Variant(shift, len(reference), observed)
         source.edges = [(sink, variant)]
         return source, {variant}
@@ -236,7 +235,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     if lcs_nodes[0][0].row == lcs_nodes[0][0].col == shift:
         del lcs_nodes[0][0]
     else:
-        source = _Node(shift, shift)
+        source = _Node(shift, shift, 0)
 
     for node in lcs_nodes[0]:
         if node != sink and not node.edges:
