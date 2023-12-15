@@ -18,11 +18,11 @@ def vcf_variant(line):
     return Variant(start, start + len(deleted), inserted)
 
 
-def to_dot(reference, graph, atomics=False):
+def to_dot(reference, graph, hgvs=True, atomics=False):
     """The LCS graph in Graphviz DOT format."""
     yield "digraph{"
     yield "rankdir=LR"
-    yield "node[fixedsize=true,shape=circle,width=.9]"
+    yield "node[fixedsize=true,shape=circle,width=1]"
     yield "si[shape=point,width=.07]"
     yield "si->s0"
 
@@ -41,7 +41,10 @@ def to_dot(reference, graph, atomics=False):
             else:
                 yield f's{nodes[sink]}[label="{sink}"]'
 
-        yield f's{nodes[source]}->s{nodes[sink]}[label="{to_hgvs(variant, reference)}"]'
+        if hgvs:
+            yield f's{nodes[source]}->s{nodes[sink]}[label="{to_hgvs(variant, reference)}"]'
+        else:
+            yield f's{nodes[source]}->s{nodes[sink]}[label="{variant[0]}"]'
 
     yield "}"
 

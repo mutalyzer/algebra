@@ -80,7 +80,7 @@ class Variant:
         return self.start < other.start or self.end < other.end
 
     def __repr__(self):
-        return f'"{self.start}:{self.end}/{self.sequence}"'
+        return f"{self.start}:{self.end}/{self.sequence}"
 
     def atomics(self):
         """Generate all atomic representations.
