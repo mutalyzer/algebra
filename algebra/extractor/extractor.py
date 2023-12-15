@@ -8,7 +8,7 @@ from ..lcs.supremals import supremal, supremal_sequence, trim
 from ..variants import Variant, patch, reverse_complement
 
 
-def canonical(observed, root, shift=0):
+def canonical(observed, root):
     """Traverse (BFS) the LCS graph to extract the canonical variant,
     i.e., minimize the number separate variants within an allele.
 
@@ -42,8 +42,8 @@ def canonical(observed, root, shift=0):
                 n, e_b, _ = visited[n]
             n_a, e_a, _ = visited[n_a]
 
+    shift = root.row
     queue = deque([(root, None, None, 0)])
-
     visited = {}
 
     while queue:
@@ -59,28 +59,19 @@ def canonical(observed, root, shift=0):
                 continue
 
             lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
-
             start = min(edge_a.start, edge_b.start)
-            start_offset = start - lca.row + shift
 
             if other_parent != parent and parent.row == other_parent.row and parent.col == other_parent.col:
-                end = max(parent.row - 1, visited[parent][1].end, visited[other_parent][1].end)
-                end_offset = end - parent.row + shift
-
-                delins = Variant(start, end, observed[lca.col + start_offset:parent.col + end_offset])
-
-                visited[other_parent] = (lca, delins, distance - 1)
-                # does not seem to be required to: visited[parent] = (lca, delins, distance - 1)
+                end = max(parent.row, visited[parent][1].end, visited[other_parent][1].end)
+                delins = Variant(start, end, observed[lca.col - shift:parent.col - shift])
+                visited[other_parent] = lca, delins, distance - 1
             else:
-                end = max(node.row - 1, edge.end, other_edge.end)
-                end_offset = end - node.row + shift
-
-                delins = Variant(start, end, observed[lca.col + start_offset:node.col + end_offset])
-
-                visited[node] = (lca, delins, distance)
+                end = max(node.row, edge.end, other_edge.end)
+                delins = Variant(start, end, observed[lca.col - shift:node.col - shift])
+                visited[node] = lca, delins, distance
 
         else:
-            visited[node] = (parent, edge, distance)
+            visited[node] = parent, edge, distance
 
             for succ_node, succ_edge in node.edges:
                 queue.append((succ_node, node, succ_edge, distance + 1))
@@ -124,7 +115,7 @@ def extract_sequence(reference, observed):
     """Extract the canonical variant representation (allele) for a
     reference and observed sequence."""
     variant, root = supremal_sequence(reference, observed)
-    return canonical(observed, root, 0), variant, root
+    return canonical(variant.sequence, root), variant, root
 
 
 def extract_supremal(reference, variant):
