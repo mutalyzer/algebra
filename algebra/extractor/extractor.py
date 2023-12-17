@@ -5,10 +5,10 @@ LCS alignments with support for tandem repeats and complex variants."""
 from collections import deque
 from ..lcs import lcs_graph
 from ..lcs.supremals import supremal, supremal_sequence, trim
-from ..variants import Variant, patch, reverse_complement
+from ..variants import Variant, reverse_complement
 
 
-def canonical(observed, root):
+def canonical(observed, graph):
     """Traverse (BFS) the LCS graph to extract the canonical variant,
     i.e., minimize the number separate variants within an allele.
 
@@ -20,8 +20,8 @@ def canonical(observed, root):
     ----------
     observed : str
         The observed sequence.
-    root : `_Node` (opaque data type)
-        The root of the LCS graph.
+    graph : `_Node` (opaque data type)
+        The LCS graph.
 
     Returns
     -------
@@ -33,19 +33,18 @@ def canonical(observed, root):
     `algebra.lcs.lcs_graph` : Constructs the LCS graph.
     """
 
-    def lowest_common_ancestor(n_a, e_a, n_b, e_b):
-        while n_a:
-            n = n_b
-            while n:
-                if n == n_a:
-                    return n_a, e_a, e_b
-                n, e_b, _ = visited[n]
-            n_a, e_a, _ = visited[n_a]
+    def lowest_common_ancestor(lhs_node, lhs_edge, rhs_node, rhs_edge):
+        while lhs_node:
+            node = rhs_node
+            while node:
+                if node == lhs_node:
+                    return lhs_node, lhs_edge, rhs_edge
+                node, rhs_edge, _ = visited[node]
+            lhs_node, lhs_edge, _ = visited[lhs_node]
 
-    shift = root.row
-    queue = deque([(root, None, None, 0)])
+    shift = graph.row
+    queue = deque([(graph, None, None, 0)])
     visited = {}
-
     while queue:
         node, parent, edge, distance = queue.popleft()
 
@@ -53,28 +52,23 @@ def canonical(observed, root):
             sink = node
 
         if node in visited:
-            other_parent, other_edge, other_distance = visited[node]
+            existing_parent, existing_edge, existing_distance = visited[node]
 
-            if distance > other_distance:
+            if distance > existing_distance:
                 continue
 
-            lca, edge_a, edge_b = lowest_common_ancestor(other_parent, other_edge, parent, edge)
-            start = min(edge_a.start, edge_b.start)
-
-            if other_parent != parent and parent.row == other_parent.row and parent.col == other_parent.col:
-                end = max(parent.row, visited[parent][1].end, visited[other_parent][1].end)
-                delins = Variant(start, end, observed[lca.col - shift:parent.col - shift])
-                visited[other_parent] = lca, delins, distance - 1
-            else:
-                end = max(node.row, edge.end, other_edge.end)
-                delins = Variant(start, end, observed[lca.col - shift:node.col - shift])
-                visited[node] = lca, delins, distance
+            lca, lhs_edge, rhs_edge = lowest_common_ancestor(existing_parent, existing_edge, parent, edge)
+            start = min(lhs_edge.start, rhs_edge.start)
+            end = max(existing_edge.end, edge.end)
+            delins = Variant(start, end,
+                             observed[lca.col + start - lca.row - shift:node.col + end - node.row - shift])
+            visited[node] = lca, delins, distance
 
         else:
             visited[node] = parent, edge, distance
 
-            for succ_node, succ_edge in node.edges:
-                queue.append((succ_node, node, succ_edge, distance + 1))
+            for child, edge in node.edges:
+                queue.append((child, node, edge, distance + 1))
 
     variants = []
     while sink:
@@ -86,8 +80,7 @@ def canonical(observed, root):
 
 
 def diagonal(reference, observed, root):
-    """Experimental minimal canonical represantion.
-    """
+    """Experimental minimal canonical represantion."""
     diff = len(reference) - len(observed)
     variants = []
     node = root
@@ -114,23 +107,22 @@ def diagonal(reference, observed, root):
 def extract_sequence(reference, observed):
     """Extract the canonical variant representation (allele) for a
     reference and observed sequence."""
-    variant, root = supremal_sequence(reference, observed)
-    return canonical(variant.sequence, root), variant, root
+    variant, graph = supremal_sequence(reference, observed)
+    return canonical(variant.sequence, graph), variant, graph
 
 
 def extract_supremal(reference, variant):
     """Extract the canonical variant representation (allele) for a
     supremal variant."""
-    root = lcs_graph(reference[variant.start:variant.end], variant.sequence, variant.start)
-    return canonical(variant.sequence, root, 0), variant, root
+    graph = lcs_graph(reference[variant.start:variant.end], variant.sequence, variant.start)
+    return canonical(variant.sequence, graph), variant, graph
 
 
 def extract(reference, variants):
     """Extract the canonical variant representation together with its
     supremal representation for an allele."""
-    variant, root = supremal(reference, variants)
-    observed = patch(reference, variants)
-    return canonical(observed, root, 0), variant, root
+    variant, graph = supremal(reference, variants)
+    return canonical(variant.sequence, graph), variant, graph
 
 
 def to_hgvs(variants, reference):
