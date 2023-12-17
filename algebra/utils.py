@@ -23,7 +23,7 @@ def to_dot(reference, graph, hgvs=True, atomics=False):
     yield "digraph{"
     yield "rankdir=LR"
     yield "node[fixedsize=true,shape=circle,width=1]"
-    yield "si[shape=point,width=.07]"
+    yield "si[shape=point,width=.1]"
     yield "si->s0"
 
     count = 0
