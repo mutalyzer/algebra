@@ -332,21 +332,6 @@ def bfs_traversal(graph, atomics=False):
         visited.add(source)
 
 
-def graph_nodes(graph):
-    # TODO: Alternatively:
-    # return {node for node, *_ in bfs_traversal(graph)}
-    visited = set()
-    queue = deque([graph])
-    while queue:
-        node = queue.popleft()
-        if node in visited:
-            continue
-        for child, _ in node.edges:
-            queue.append(child)
-        visited.add(node)
-    return visited
-
-
 def dfs_traversal(graph, atomics=False, _path=None):
     """Traverse all paths (alignments) in the LCS graph.
 
