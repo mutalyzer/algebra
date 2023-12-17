@@ -54,16 +54,15 @@ def local_supremal(reference, observed, graph):
 
     shift = graph.row
     visited = post_dominators(graph, 0, {})
-
     variants = []
-    pred = None
+    parent = None
     for node in sorted(visited[graph]["post"], key=attrgetter("row")):
-        if pred:
-            start = visited[pred]["end"]
+        if parent:
+            start = visited[parent]["end"]
             end = visited[node]["start"]
             variants.append(
-                Variant(start, end, observed[shift + start + pred.col - pred.row:shift + end + node.col - node.row])
-            )
-        pred = node
+                Variant(start, end,
+                        observed[parent.col + start - parent.row - shift:node.col + end - node.row - shift]))
+        parent = node
 
     return variants
