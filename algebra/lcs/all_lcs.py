@@ -248,10 +248,11 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                               observed[source.col - shift:node.col + node_length - 1 - shift])
             source.edges.append((node, variant))
 
-    sink.length = sink.row - max_sink
-    source.row += source.length
-    source.col += source.length
-    source.length = 0
+    min_source = min((edge.start for _, edge in source.edges), default=shift) - shift
+    source.row += min_source
+    source.col += min_source
+    source.length -= min_source
+    sink.length -= sink.row + sink.length - max_sink
 
     return source, {edge[0] for *_, edge in bfs_traversal(source)}
 
