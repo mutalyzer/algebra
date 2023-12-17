@@ -7,7 +7,7 @@ from operator import attrgetter
 from .. import Variant
 
 
-def local_supremal(reference, observed, graph, shift=0):
+def local_supremal(reference, observed, graph):
     """Extract the local supremal representation.
 
     Parameters
@@ -52,6 +52,7 @@ def local_supremal(reference, observed, graph, shift=0):
         visited[node]["post"] = post.union(visited[node]["post"])
         return visited
 
+    shift = graph.row
     visited = post_dominators(graph, 0, {})
 
     variants = []
