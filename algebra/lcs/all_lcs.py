@@ -166,7 +166,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     Returns
     -------
     `_Node` (opaque data type)
-        The root of the LCS graph.
+        The source of the LCS graph.
 
     See Also
     --------
@@ -201,33 +201,33 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                 continue
 
             node_length = length.get(id(node), node.length)
-            idx_pred = 0
-            for idx, pred in enumerate(lcs_nodes[-2]):
-                pred_length = length.get(id(pred), pred.length)
+            idx_parent = 0
+            for idx, parent in enumerate(lcs_nodes[-2]):
+                parent_length = length.get(id(parent), parent.length)
 
-                if pred.row + pred_length < node.row + node_length and pred.col + pred_length < node.col + node_length:
-                    variant = Variant(pred.row + pred_length, node.row + node_length - 1,
-                                      observed[pred.col + pred_length - shift:node.col + node_length - 1 - shift])
+                if parent.row + parent_length < node.row + node_length and parent.col + parent_length < node.col + node_length:
+                    variant = Variant(parent.row + parent_length, node.row + node_length - 1,
+                                      observed[parent.col + parent_length - shift:node.col + node_length - 1 - shift])
 
                     if node == sink:
-                        max_sink = max(max_sink, pred.row + pred_length)
+                        max_sink = max(max_sink, node.row + node_length - 1)
 
-                    if incoming.get(id(pred), 0) == len(lcs_nodes):
-                        split_node = _Node(pred.row, pred.col, pred.length)
-                        split_node.edges = pred.edges + [(node, variant)]
-                        lcs_nodes[-2][idx] = split_node
-                        length[id(split_node)] = pred_length
-                        pred.row += pred_length
-                        pred.col += pred_length
-                        pred.length -= pred_length
+                    if incoming.get(id(parent), 0) == len(lcs_nodes):
+                        split = _Node(parent.row, parent.col, parent.length)
+                        split.edges = parent.edges + [(node, variant)]
+                        lcs_nodes[-2][idx] = split
+                        length[id(split)] = parent_length
+                        parent.row += parent_length
+                        parent.col += parent_length
+                        parent.length -= parent_length
                     else:
-                        pred.edges.append((node, variant))
+                        parent.edges.append((node, variant))
 
                     incoming[id(node)] = len(lcs_nodes)
-                    idx_pred = idx + 1
+                    idx_parent = idx + 1
 
             if node_length > 1:
-                lcs_nodes[-2].insert(idx_pred, node)
+                lcs_nodes[-2].insert(idx_parent, node)
                 length[id(node)] = node_length - 1
 
         del lcs_nodes[-1]
@@ -277,7 +277,7 @@ def lcs_graph(reference, observed, shift=0, max_distance=None):
     Returns
     -------
     `_Node` (opaque data type)
-        The root of the LCS graph.
+        The source of the LCS graph.
 
     See Also
     --------
@@ -286,8 +286,8 @@ def lcs_graph(reference, observed, shift=0, max_distance=None):
     """
 
     _, lcs_nodes = edit(reference, observed, shift, max_distance)
-    root, _ = build_graph(reference, observed, lcs_nodes, shift)
-    return root
+    source, _ = build_graph(reference, observed, lcs_nodes, shift)
+    return source
 
 
 def bfs_traversal(graph, atomics=False):
