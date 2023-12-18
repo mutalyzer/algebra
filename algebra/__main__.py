@@ -65,7 +65,7 @@ def cli_compare(reference, args):
 def cli_extract(reference, args):
     """Extract a canonical variant."""
     is_variant = any([args.observed_hgvs, args.observed_spdi, args.observed_random_variant])
-    if args.observed:
+    if args.observed is not None:
         observed = args.observed
     elif args.observed_hgvs:
         observed = parse_hgvs(args.observed_hgvs, reference=reference)
@@ -186,7 +186,7 @@ def main():
     if not args.random_sequence_min:
         args.random_sequence_min = args.random_sequence_max
 
-    if args.reference:
+    if args.reference is not None:
         reference = args.reference
     elif args.reference_file:
         with open(args.reference_file, encoding="utf-8") as file:
