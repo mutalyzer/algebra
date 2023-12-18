@@ -40,37 +40,39 @@ def main():
             variant = delins(supremal_variant.sequence, shift, lhs, rhs)
 
             subtrahend, *_ = extract(reference, [variant])
-            if tuple(subtrahend) not in seen:
-                seen.add(tuple(subtrahend))
+            if tuple(subtrahend) in seen:
+                continue
 
-                difference = []
-                if lhs != source:
-                    prefix = delins(supremal_variant.sequence, shift, source, lhs)
-                    if prefix:
-                        difference.append(prefix)
-                if rhs != sink:
-                    suffix = delins(supremal_variant.sequence, shift, rhs, sink)
-                    if suffix:
-                        difference.append(suffix)
+            seen.add(tuple(subtrahend))
 
-                relation0 = compare(reference, minuend, subtrahend)
-                relation1 = compare(reference, minuend, difference)
-                relation2 = compare(reference, subtrahend, difference)
+            difference = []
+            if lhs != source:
+                prefix = delins(supremal_variant.sequence, shift, source, lhs)
+                if prefix:
+                    difference.append(prefix)
+            if rhs != sink:
+                suffix = delins(supremal_variant.sequence, shift, rhs, sink)
+                if suffix:
+                    difference.append(suffix)
 
-                assert relation0 != Relation.IS_CONTAINED
-                assert (relation0, relation1) in [
-                    (Relation.EQUIVALENT, Relation.DISJOINT),
-                    (Relation.DISJOINT, Relation.EQUIVALENT),
-                    (Relation.CONTAINS, Relation.CONTAINS),
-                    (Relation.OVERLAP, Relation.OVERLAP),
-                ]
-                assert compare(reference, minuend, [variant, *difference]) == Relation.EQUIVALENT
-                if relation0 == Relation.CONTAINS:
-                    assert relation2 == Relation.DISJOINT
-                if relation2 == Relation.OVERLAP:
-                    assert relation0 == Relation.OVERLAP
+            relation0 = compare(reference, minuend, subtrahend)
+            relation1 = compare(reference, minuend, difference)
+            relation2 = compare(reference, subtrahend, difference)
 
-                print(lhs, rhs, variant.to_hgvs(reference), to_hgvs(subtrahend, reference), relation0, to_hgvs(difference, reference), relation1, relation2)
+            assert relation0 != Relation.IS_CONTAINED
+            assert (relation0, relation1) in [
+                (Relation.EQUIVALENT, Relation.DISJOINT),
+                (Relation.DISJOINT, Relation.EQUIVALENT),
+                (Relation.CONTAINS, Relation.CONTAINS),
+                (Relation.OVERLAP, Relation.OVERLAP),
+            ]
+            assert compare(reference, minuend, [variant, *difference]) == Relation.EQUIVALENT
+            if relation0 == Relation.CONTAINS:
+                assert relation2 == Relation.DISJOINT
+            if relation2 == Relation.OVERLAP:
+                assert relation0 == Relation.OVERLAP
+
+            print(lhs, rhs, variant.to_hgvs(reference), to_hgvs(subtrahend, reference), relation0, to_hgvs(difference, reference), relation1, relation2)
 
 
 if __name__ == "__main__":
