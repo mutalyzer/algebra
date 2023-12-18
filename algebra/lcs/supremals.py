@@ -3,7 +3,7 @@
 
 from operator import attrgetter
 from os.path import commonprefix
-from ..lcs.all_lcs import _Node, bfs_traversal, lcs_graph
+from ..lcs.all_lcs import LCSnode, bfs_traversal, lcs_graph
 from ..variants import Variant, patch
 
 
@@ -34,12 +34,12 @@ def supremal(reference, variants, offset=10):
     -------
     supremal : `Variant`
         The supremal variant.
-    root : `_Node`
-        The LCS graph in which the supremal was determined.
+    source : `LCS_Node`
+        The source of the LCS graph in which the supremal was determined.
     """
 
     if not variants:
-        return Variant(0, 0, ""), _Node(0, 0, len(reference))
+        return Variant(0, 0, ""), LCSnode(0, 0, len(reference))
 
     start = min(variants, key=attrgetter("start")).start
     end = max(variants, key=attrgetter("end")).end

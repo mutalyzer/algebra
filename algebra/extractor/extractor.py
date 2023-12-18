@@ -20,8 +20,8 @@ def canonical(observed, graph):
     ----------
     observed : str
         The observed sequence.
-    graph : `_Node` (opaque data type)
-        The LCS graph.
+    graph : `LCS_Node`
+        The source of the LCS graph.
 
     Returns
     -------
@@ -89,11 +89,11 @@ def canonical(observed, graph):
     return variants
 
 
-def diagonal(reference, observed, root):
+def diagonal(reference, observed, graph):
     """Experimental minimal canonical represantion."""
     diff = len(reference) - len(observed)
     variants = []
-    node = root
+    node = graph
     while True:
         best = None
         best_edge = None

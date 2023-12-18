@@ -1,34 +1,34 @@
 import pytest
 from algebra import Variant
-from algebra.lcs.all_lcs import (_Node, bfs_traversal, build_graph,
+from algebra.lcs.all_lcs import (LCSnode, bfs_traversal, build_graph,
                                  dfs_traversal, edit, lcs_graph)
 
 
 @pytest.mark.parametrize("reference, observed, expected_distance, expected_lcs_nodes", [
     ("", "", 0, []),
-    ("AA", "ACA", 1, [[_Node(0, 0, 1)], [_Node(1, 2, 1)]]),
-    ("ACA", "AA", 1, [[_Node(0, 0, 1)], [_Node(2, 1, 1)]]),
+    ("AA", "ACA", 1, [[LCSnode(0, 0, 1)], [LCSnode(1, 2, 1)]]),
+    ("ACA", "AA", 1, [[LCSnode(0, 0, 1)], [LCSnode(2, 1, 1)]]),
     ("CTCGGCATTA", "GGCTGGCTGT", 6, [
-        [_Node(2, 2, 1), _Node(3, 1, 1)],
-        [_Node(0, 2, 2)],
-        [_Node(4, 4, 1), _Node(3, 0, 3), _Node(3, 5, 1)],
+        [LCSnode(2, 2, 1), LCSnode(3, 1, 1)],
+        [LCSnode(0, 2, 2)],
+        [LCSnode(4, 4, 1), LCSnode(3, 0, 3), LCSnode(3, 5, 1)],
         [],
-        [_Node(3, 4, 3)],
-        [_Node(7, 7, 1), _Node(8, 7, 1)],
-        [_Node(8, 9, 1)]
+        [LCSnode(3, 4, 3)],
+        [LCSnode(7, 7, 1), LCSnode(8, 7, 1)],
+        [LCSnode(8, 9, 1)]
     ]),
     ("CATATATCG", "CTTATAGCAT", 7, [
-        [_Node(0, 0, 1)],
-        [_Node(2, 1, 1), _Node(4, 1, 1), _Node(1, 5, 1)],
+        [LCSnode(0, 0, 1)],
+        [LCSnode(2, 1, 1), LCSnode(4, 1, 1), LCSnode(1, 5, 1)],
         [],
-        [_Node(1, 3, 3)],
-        [_Node(2, 2, 4), _Node(4, 2, 3)],
-        [_Node(7, 7, 1), _Node(8, 6, 1), _Node(5, 8, 2)],
+        [LCSnode(1, 3, 3)],
+        [LCSnode(2, 2, 4), LCSnode(4, 2, 3)],
+        [LCSnode(7, 7, 1), LCSnode(8, 6, 1), LCSnode(5, 8, 2)],
     ]),
     ("TTT", "TTTTAT", 3, [
-        [_Node(0, 3, 1)],
-        [_Node(0, 2, 2)],
-        [_Node(0, 0, 3), _Node(0, 1, 3), _Node(2, 5, 1)],
+        [LCSnode(0, 3, 1)],
+        [LCSnode(0, 2, 2)],
+        [LCSnode(0, 0, 3), LCSnode(0, 1, 3), LCSnode(2, 5, 1)],
     ]),
 ])
 def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
@@ -208,7 +208,14 @@ def test_dfs_traversal_atomics(reference, observed, expected_variant):
 
 
 @pytest.mark.parametrize("duplicates, unique", [
-    ([_Node(0, 0, 0), _Node(0, 0, 0), _Node(0, 0, 0)], {_Node(0, 0, 0)}),
+    ([LCSnode(0, 0, 0), LCSnode(0, 0, 0), LCSnode(0, 0, 0)], {LCSnode(0, 0, 0)}),
 ])
-def test_node_hash(duplicates, unique):
+def test_lcsnode_hash(duplicates, unique):
     assert set(duplicates) == unique
+
+
+@pytest.mark.parametrize("lcs_node, string", [
+    (LCSnode(0, 0, 0), "(0, 0)[0]"),
+])
+def test_lcsnode_string(lcs_node, string):
+    assert str(lcs_node) == string

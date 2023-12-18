@@ -24,11 +24,8 @@ from collections import deque
 from ..variants import Variant
 
 
-class _Node:
-    """Node class for (stretches of) matching symbols.
-    FOR INTERNAL USE ONLY.
-    """
-
+class LCSnode:
+    """Node class for (stretches of) matching symbols."""
     def __init__(self, row, col, length):
         self.row = row
         self.col = col
@@ -105,7 +102,7 @@ def edit(reference, observed, shift=0, max_distance=None):
             elif matching:
                 lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
                 max_lcs_pos = max(lcs_pos, max_lcs_pos)
-                lcs_nodes[lcs_pos].append(_Node(match_row + shift, match_col + shift, row - match_row))
+                lcs_nodes[lcs_pos].append(LCSnode(match_row + shift, match_col + shift, row - match_row))
                 matching = False
             row += 1
             col += 1
@@ -122,7 +119,7 @@ def edit(reference, observed, shift=0, max_distance=None):
         if matching:
             lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
             max_lcs_pos = max(lcs_pos, max_lcs_pos)
-            lcs_nodes[lcs_pos].append(_Node(match_row + shift, match_col + shift, row - match_row))
+            lcs_nodes[lcs_pos].append(LCSnode(match_row + shift, match_col + shift, row - match_row))
 
         return steps
 
@@ -168,7 +165,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
 
     Returns
     -------
-    `_Node` (opaque data type)
+    `LCSnode`
         The source of the LCS graph.
 
     See Also
@@ -177,10 +174,10 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     """
 
     if not lcs_nodes or lcs_nodes == [[]]:
-        source = _Node(shift, shift, 0)
+        source = LCSnode(shift, shift, 0)
         if not reference and not observed:
             return source, set()
-        sink = _Node(len(reference), len(observed), 0)
+        sink = LCSnode(len(reference), len(observed), 0)
         variant = Variant(shift, len(reference), observed)
         source.edges = [(sink, variant)]
         return source, {variant}
@@ -190,7 +187,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         del lcs_nodes[-1][-1]
         sink.length += 1
     else:
-        sink = _Node(len(reference) + shift, len(observed) + shift, 1)
+        sink = LCSnode(len(reference) + shift, len(observed) + shift, 1)
     lcs_nodes.append([sink])
 
     max_sink = 0
@@ -216,7 +213,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
                         max_sink = max(max_sink, node.row + node_length - 1)
 
                     if incoming.get(id(parent), 0) == len(lcs_nodes):
-                        split = _Node(parent.row, parent.col, parent.length)
+                        split = LCSnode(parent.row, parent.col, parent.length)
                         split.edges = parent.edges + [(node, variant)]
                         lcs_nodes[-2][idx] = split
                         length[id(split)] = parent_length
@@ -239,7 +236,7 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     if lcs_nodes[0][0].row == lcs_nodes[0][0].col == shift:
         del lcs_nodes[0][0]
     else:
-        source = _Node(shift, shift, 0)
+        source = LCSnode(shift, shift, 0)
 
     for node in lcs_nodes[0]:
         if node != sink and not node.edges:
@@ -279,7 +276,7 @@ def lcs_graph(reference, observed, shift=0, max_distance=None):
 
     Returns
     -------
-    `_Node` (opaque data type)
+    `LCSnode`
         The source of the LCS graph.
 
     See Also
