@@ -2,6 +2,7 @@ import pytest
 from algebra import Variant
 from algebra.extractor.local_supremal import local_supremal
 from algebra.lcs import lcs_graph
+from algebra.lcs.supremals import supremal_sequence
 from algebra.variants import to_hgvs
 
 
@@ -38,6 +39,7 @@ from algebra.variants import to_hgvs
     ],
 )
 def test_local_supremal(reference, observed, expected, hgvs):
-    supremal = local_supremal(reference, observed, lcs_graph(reference, observed))
+    variant, graph = supremal_sequence(reference, observed)
+    supremal = local_supremal(reference, variant.sequence, graph)
     assert supremal == expected
     assert to_hgvs(supremal, reference) == hgvs
