@@ -22,14 +22,14 @@ def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
     """The LCS graph in Graphviz DOT format."""
     def label(node):
         if labels:
-            return f"S{nodes[node]}"
+            return f"s{nodes[node]}"
         return str(node)
 
     yield "digraph{"
     yield "rankdir=LR"
     yield f"node[fixedsize=true,shape=circle,width={.7 if labels else 1}]"
-    yield "Si[shape=point,width=.1]"
-    yield "Si->S0"
+    yield "si[shape=point,width=.1]"
+    yield "si->s0"
 
     count = 0
     nodes = {}
@@ -37,19 +37,19 @@ def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
         if source not in nodes:
             nodes[source] = count
             count += 1
-            yield f'S{nodes[source]}[label="{label(source)}"]'
+            yield f's{nodes[source]}[label="{label(source)}"]'
         if sink not in nodes:
             nodes[sink] = count
             count += 1
             if not sink.edges:
-                yield f'S{nodes[sink]}[label="{label(sink)}",peripheries=2]'
+                yield f's{nodes[sink]}[label="{label(sink)}",peripheries=2]'
             else:
-                yield f'S{nodes[sink]}[label="{label(sink)}"]'
+                yield f's{nodes[sink]}[label="{label(sink)}"]'
 
         if hgvs:
-            yield f'S{nodes[source]}->S{nodes[sink]}[label="{to_hgvs(variant, reference)}"]'
+            yield f's{nodes[source]}->s{nodes[sink]}[label="{to_hgvs(variant, reference)}"]'
         else:
-            yield f'S{nodes[source]}->S{nodes[sink]}[label="{variant[0]}"]'
+            yield f's{nodes[source]}->s{nodes[sink]}[label="{variant[0]}"]'
 
     yield "}"
 
