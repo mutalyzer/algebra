@@ -3,6 +3,7 @@ from sys import argv
 from algebra import Relation, compare
 from algebra.extractor import extract, to_hgvs
 from algebra.lcs import bfs_traversal, supremal
+from algebra.lcs.all_lcs import LCSnode
 from algebra.utils import to_dot
 from algebra.variants import Variant, parse_hgvs
 
@@ -10,18 +11,17 @@ from algebra.variants import Variant, parse_hgvs
 def unique_matches(graph):
     for node in {sink for _, sink, _ in bfs_traversal(graph)} | {graph}:
         if node.length == 0:
-            if node == graph:
-                yield node.row - 1, node.col - 1
-            elif not node.edges:
-                yield node.row, node.col + 1
+            if not node.edges:
+                yield LCSnode(node.row + 1, node.col + 1, 0)
             else:
-                raise ValueError
-        for i in range(node.length):
-            yield node.row + i, node.col + i
+                yield LCSnode(node.row, node.col, 0)
+        else:
+            yield from (LCSnode(node.row + i, node.col + i, 1) for i in range(node.length))
 
 
 def delins(observed, shift, lhs, rhs):
-    return Variant(lhs[0] + 1, rhs[0], observed[lhs[1] + 1 - shift:rhs[1] - shift])
+    return Variant(lhs.row + lhs.length, rhs.row + rhs.length - 1,
+                   observed[lhs.col + lhs.length - shift:rhs.col + rhs.length - 1 - shift])
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
     source = matches[0]
     sink = matches[-1]
     for lhs, rhs in combinations(matches, 2):
-        if rhs[0] > lhs[0] and rhs[1] > lhs[1]:
+        if rhs.row > lhs.row and rhs.col > lhs.col:
             variant = delins(supremal_variant.sequence, shift, lhs, rhs)
 
             subtrahend, *_ = extract(reference, [variant])
