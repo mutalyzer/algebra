@@ -18,13 +18,18 @@ def vcf_variant(line):
     return Variant(start, start + len(deleted), inserted)
 
 
-def to_dot(reference, graph, hgvs=True, atomics=False):
+def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
     """The LCS graph in Graphviz DOT format."""
+    def label(node):
+        if labels:
+            return f"S{nodes[node]}"
+        return str(node)
+
     yield "digraph{"
     yield "rankdir=LR"
-    yield "node[fixedsize=true,shape=circle,width=1]"
-    yield "si[shape=point,width=.1]"
-    yield "si->s0"
+    yield f"node[fixedsize=true,shape=circle,width={.7 if labels else 1}]"
+    yield "Si[shape=point,width=.1]"
+    yield "Si->S0"
 
     count = 0
     nodes = {}
@@ -32,19 +37,19 @@ def to_dot(reference, graph, hgvs=True, atomics=False):
         if source not in nodes:
             nodes[source] = count
             count += 1
-            yield f's{nodes[source]}[label="{source}"]'
+            yield f'S{nodes[source]}[label="{label(source)}"]'
         if sink not in nodes:
             nodes[sink] = count
             count += 1
             if not sink.edges:
-                yield f's{nodes[sink]}[label="{sink}",peripheries=2]'
+                yield f'S{nodes[sink]}[label="{label(sink)}",peripheries=2]'
             else:
-                yield f's{nodes[sink]}[label="{sink}"]'
+                yield f'S{nodes[sink]}[label="{label(sink)}"]'
 
         if hgvs:
-            yield f's{nodes[source]}->s{nodes[sink]}[label="{to_hgvs(variant, reference)}"]'
+            yield f'S{nodes[source]}->S{nodes[sink]}[label="{to_hgvs(variant, reference)}"]'
         else:
-            yield f's{nodes[source]}->s{nodes[sink]}[label="{variant[0]}"]'
+            yield f'S{nodes[source]}->S{nodes[sink]}[label="{variant[0]}"]'
 
     yield "}"
 
