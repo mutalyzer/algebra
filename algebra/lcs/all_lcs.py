@@ -43,6 +43,9 @@ class _Node:
     def __hash__(self):
         return hash((self.row, self.col, self.length))
 
+    def __lt__(self, other):
+        return (self.row, self.col) < (other.row, other.col)
+
     def __repr__(self):
         return f"{self.row, self.col}[{self.length}]"
 

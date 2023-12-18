@@ -3,7 +3,6 @@ is defined as the variants between matching symbols in all minimal
 alignments."""
 
 
-from operator import attrgetter
 from .. import Variant
 
 
@@ -56,7 +55,7 @@ def local_supremal(reference, observed, graph):
     visited = post_dominators(graph, 0, {})
     variants = []
     parent = None
-    for node in sorted(visited[graph]["post"], key=attrgetter("row")):
+    for node in sorted(visited[graph]["post"]):
         if parent:
             start = visited[parent]["end"]
             end = visited[node]["start"]
