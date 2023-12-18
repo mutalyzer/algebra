@@ -1,7 +1,6 @@
 import pytest
 from algebra import Variant
 from algebra.extractor.local_supremal import local_supremal
-from algebra.lcs import lcs_graph
 from algebra.lcs.supremals import supremal_sequence
 from algebra.variants import to_hgvs
 
