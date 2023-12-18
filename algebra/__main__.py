@@ -97,11 +97,7 @@ def cli_extract(reference, args):
     if args.dot:
         print("\n".join(to_dot(reference, graph, atomics=args.atomics)))
     if args.local_supremal:
-        if is_variant:
-            observed_sequence = patch(reference, observed)
-        else:
-            observed_sequence = observed
-        print(to_hgvs(local_supremal(reference, observed_sequence, graph), reference))
+        print(to_hgvs(local_supremal(reference, supremal_variant.sequence, graph), reference))
     if args.supremal:
         print(supremal_variant.to_hgvs(reference), supremal_variant.to_spdi(), supremal_variant)
 
