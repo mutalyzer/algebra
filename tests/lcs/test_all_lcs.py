@@ -51,7 +51,7 @@ def test_edit_max_distance(reference, observed, max_distance, expected_distance)
 ])
 def test_edit_max_distance_fail(reference, observed, max_distance, exception, message):
     with pytest.raises(exception) as exc:
-        distance, _ = edit(reference, observed, max_distance=max_distance)
+        edit(reference, observed, max_distance=max_distance)
     assert str(exc.value) == message
 
 
