@@ -167,6 +167,8 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
     -------
     `LCSnode`
         The source of the LCS graph.
+    set
+        The set of edges (variants) in the LCS graph.
 
     See Also
     --------
