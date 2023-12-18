@@ -59,10 +59,19 @@ def canonical(observed, graph):
 
             lca, lhs_edge, rhs_edge = lowest_common_ancestor(existing_parent, existing_edge, parent, edge)
             start = min(lhs_edge.start, rhs_edge.start)
-            end = max(existing_edge.end, edge.end)
-            delins = Variant(start, end,
-                             observed[lca.col + start - lca.row - shift:node.col + end - node.row - shift])
-            visited[node] = lca, delins, distance
+
+            if (existing_parent != parent and
+                    existing_parent.row + existing_parent.length == parent.row + parent.length and
+                    existing_parent.col + existing_parent.length == parent.col + parent.length):
+                end = max(lhs_edge.end, rhs_edge.end)
+                delins = Variant(start, end,
+                                 observed[lca.col + start - lca.row - shift:parent.col + end - parent.row - shift])
+                visited[existing_parent] = lca, delins, distance - 1
+            else:
+                end = max(existing_edge.end, edge.end)
+                delins = Variant(start, end,
+                                 observed[lca.col + start - lca.row - shift:node.col + end - node.row - shift])
+                visited[node] = lca, delins, distance
 
         else:
             visited[node] = parent, edge, distance
@@ -71,10 +80,11 @@ def canonical(observed, graph):
                 queue.append((child, node, edge, distance + 1))
 
     variants = []
-    while sink:
+    while True:
         sink, variant, _ = visited[sink]
-        if variant:
-            variants.insert(0, variant)
+        if not sink:
+            break
+        variants.insert(0, variant)
 
     return variants
 
