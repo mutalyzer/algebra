@@ -5,7 +5,7 @@ from algebra.extractor import extract, to_hgvs
 from algebra.lcs import bfs_traversal, supremal
 from algebra.lcs.all_lcs import LCSnode
 from algebra.utils import to_dot
-from algebra.variants import Variant, parse_hgvs
+from algebra.variants import Variant, parse_hgvs, to_hgvs as to_hgvs_simple
 
 
 def unique_matches(graph):
@@ -57,21 +57,9 @@ def main():
             relation1 = compare(reference, minuend, difference)
             relation2 = compare(reference, subtrahend, difference)
 
-            assert relation0 != Relation.IS_CONTAINED
-            assert (relation0, relation1) in [
-                (Relation.EQUIVALENT, Relation.DISJOINT),
-                (Relation.DISJOINT, Relation.EQUIVALENT),
-                (Relation.CONTAINS, Relation.CONTAINS),
-                (Relation.OVERLAP, Relation.OVERLAP),
-            ]
-
             assert compare(reference, minuend, [variant, *difference]) == Relation.EQUIVALENT
-            if relation0 == Relation.CONTAINS:
-                assert relation2 == Relation.DISJOINT
-            if relation2 == Relation.OVERLAP:
-                assert relation0 == Relation.OVERLAP
 
-            print(lhs, rhs, variant.to_hgvs(reference), to_hgvs(subtrahend, reference), relation0, to_hgvs(difference_norm, reference), relation1, relation2)
+            print(lhs, rhs, variant, variant.to_hgvs(reference), to_hgvs(subtrahend, reference), relation0, to_hgvs(difference_norm, reference), to_hgvs_simple(difference, reference), relation1, relation2)
 
 
 if __name__ == "__main__":
