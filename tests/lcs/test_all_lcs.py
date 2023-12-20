@@ -79,7 +79,7 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(2, 6, ""), Variant(4, 6, ""), Variant(2, 9, ""),
         Variant(4, 9, ""), Variant(8, 9, ""), Variant(1, 3, ""),
         Variant(1, 7, ""), Variant(3, 7, ""), Variant(5, 7, ""),
-        Variant(0, 2, ""), Variant(0, 4, ""), Variant(0, 6, ""),
+        Variant(0, 2, ""), Variant(0, 4, ""), Variant(0, 6, "")
     }),
     ("AAAATA", "GAAAAGAAA", {
         Variant(6, 6, "AA"), Variant(6, 6, "A"), Variant(4, 5, "G"),
@@ -96,16 +96,16 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(4, 5, "GC"), Variant(3, 3, "T"), Variant(3, 4, ""),
         Variant(6, 7, "G"), Variant(6, 8, ""), Variant(6, 6, "GCA"),
         Variant(5, 5, "AGC"), Variant(7, 9, ""), Variant(7, 7, "AG"),
-        Variant(7, 8, "A"), Variant(8, 9, "AT"), Variant(9, 9, "CAT"),
+        Variant(7, 8, "A"), Variant(8, 9, "AT"), Variant(9, 9, "CAT")
     }),
     ("TTT", "TTTTAT", {
         Variant(3, 3, "TAT"), Variant(2, 2, "T"), Variant(2, 2, "TTA"),
         Variant(1, 1, "T"), Variant(1, 1, "TT"), Variant(0, 0, "T"),
         Variant(0, 0, "TT"), Variant(3, 3, "AT"), Variant(2, 2, "TA"),
-        Variant(2, 2, "A"), Variant(3, 3, "AT"), Variant(2, 2, "TA"),
+        Variant(2, 2, "A"), Variant(3, 3, "AT"), Variant(2, 2, "TA")
     }),
     ("TCTC", "TC", {
-        Variant(0, 2, ""), Variant(1, 3, ""), Variant(2, 4, ""),
+        Variant(0, 2, ""), Variant(1, 3, ""), Variant(2, 4, "")
     }),
 ])
 def test_build_graph(reference, observed, expected_edges):
