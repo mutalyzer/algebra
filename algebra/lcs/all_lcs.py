@@ -248,6 +248,10 @@ def build_graph(reference, observed, lcs_nodes, shift=0):
         if source.row < node.row + node_length and source.col < node.col + node_length:
             variant = Variant(source.row, node.row + node_length - 1,
                               observed[source.col - shift:node.col + node_length - 1 - shift])
+
+            if node == sink:
+                max_sink = max(max_sink, node.row + node_length - 1)
+
             source.edges.append((node, variant))
 
     min_source = min((edge.start for _, edge in source.edges), default=shift) - shift
