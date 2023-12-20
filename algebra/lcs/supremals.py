@@ -39,7 +39,7 @@ def supremal(reference, variants, offset=10):
     """
 
     if not variants:
-        return Variant(0, 0, ""), LCSnode(0, 0, len(reference))
+        return Variant(0, 0, ""), LCSnode(0, 0, 0)
 
     start = min(variants, key=attrgetter("start")).start
     end = max(variants, key=attrgetter("end")).end
