@@ -114,6 +114,16 @@ def test_build_graph(reference, observed, expected_edges):
     assert edges == expected_edges
 
 
+@pytest.mark.parametrize("reference, observed, expected_nodes", [
+    ("GACTACGAGACAC", "TACGAGACAC", {
+        LCSnode(0, 0, 0), LCSnode(3, 0, 0)
+    }),
+])
+def test_build_graph_lcsnodes(reference, observed, expected_nodes):
+    graph = lcs_graph(reference, observed)
+    assert {sink for _, sink, _ in bfs_traversal(graph)} | {graph} == expected_nodes
+
+
 @pytest.mark.parametrize("reference, observed, edges", [
     ("", "", []),
     ("TTGGTT", "AAGTTAG", [
