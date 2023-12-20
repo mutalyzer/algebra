@@ -214,8 +214,8 @@ def test_lcsnode_hash(duplicates, unique):
     assert set(duplicates) == unique
 
 
-@pytest.mark.parametrize("lcs_node, string", [
+@pytest.mark.parametrize("lcsnode, string", [
     (LCSnode(0, 0, 0), "(0, 0)[0]"),
 ])
-def test_lcsnode_string(lcs_node, string):
-    assert str(lcs_node) == string
+def test_lcsnode_string(lcsnode, string):
+    assert str(lcsnode) == string
