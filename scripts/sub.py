@@ -33,33 +33,30 @@ def main():
     source = matches[0]
     sink = matches[-1]
     for lhs, rhs in combinations(matches, 2):
-        if rhs.row >= lhs.row + lhs.length and rhs.col >= lhs.col + lhs.length:
-            variant = delins(supremal_variant.sequence, shift, lhs, rhs)
+        if rhs.row < lhs.row + lhs.length or rhs.col < lhs.col + lhs.length:
+            continue
 
-            subtrahend, *_ = extract(reference, [variant])
-            if tuple(subtrahend) in seen:
-                continue
+        variant = delins(supremal_variant.sequence, shift, lhs, rhs)
 
-            seen.add(tuple(subtrahend))
+        subtrahend, *_ = extract(reference, [variant])
+        if tuple(subtrahend) in seen:
+            continue
+        seen.add(tuple(subtrahend))
 
-            difference = []
-            if lhs.length:
-                prefix = delins(supremal_variant.sequence, shift, source, lhs)
-                if prefix:
-                    difference.append(prefix)
-            if rhs.length:
-                suffix = delins(supremal_variant.sequence, shift, rhs, sink)
-                if suffix:
-                    difference.append(suffix)
-            difference_norm, *_ = extract(reference, difference)
+        difference = []
+        if lhs.length:
+            difference.append(delins(supremal_variant.sequence, shift, source, lhs))
+        if rhs.length:
+            difference.append(delins(supremal_variant.sequence, shift, rhs, sink))
+        difference_norm, *_ = extract(reference, difference)
 
-            relation0 = compare(reference, minuend, subtrahend)
-            relation1 = compare(reference, minuend, difference)
-            relation2 = compare(reference, subtrahend, difference)
+        assert compare(reference, minuend, [variant, *difference]) == Relation.EQUIVALENT
 
-            assert compare(reference, minuend, [variant, *difference]) == Relation.EQUIVALENT
+        relation0 = compare(reference, minuend, subtrahend)
+        relation1 = compare(reference, minuend, difference)
+        relation2 = compare(reference, subtrahend, difference)
 
-            print(lhs, rhs, variant, variant.to_hgvs(reference), to_hgvs(subtrahend, reference), relation0, to_hgvs(difference_norm, reference), to_hgvs_simple(difference, reference), relation1, relation2)
+        print(lhs, rhs, variant, variant.to_hgvs(reference), to_hgvs(subtrahend, reference), relation0, to_hgvs(difference_norm, reference), to_hgvs_simple(difference, reference), relation1, relation2)
 
 
 if __name__ == "__main__":
