@@ -21,9 +21,8 @@ def delins(observed, shift, lhs, rhs):
     return Variant(lhs.row + lhs.length, rhs.row, observed[lhs.col + lhs.length - shift:rhs.col - shift])
 
 
-def main():
-    reference = argv[1]
-    minuend = parse_hgvs(argv[2], reference)
+def subtract(reference, minuend):
+
     supremal_variant, graph = supremal(reference, minuend)
     print("\n".join(to_dot(reference, graph, labels=False)))
 
@@ -57,6 +56,13 @@ def main():
         relation2 = compare(reference, subtrahend, difference)
 
         print(lhs, rhs, variant, variant.to_hgvs(reference), to_hgvs(subtrahend, reference), relation0, to_hgvs(difference_norm, reference), to_hgvs_simple(difference, reference), relation1, relation2)
+
+
+def main():
+    reference = argv[1]
+    minuend = parse_hgvs(argv[2], reference)
+
+    subtract(reference, minuend)
 
 
 if __name__ == "__main__":
