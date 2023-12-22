@@ -5,7 +5,7 @@ from itertools import combinations, product
 from algebra import Relation
 from algebra.lcs import bfs_traversal, dfs_traversal, edit, supremal
 from algebra.utils import fasta_sequence
-from algebra.variants import parse_hgvs
+from algebra.variants import parse_hgvs, to_hgvs
 
 
 def compare_graph(reference, lhs, lhs_graph, rhs, rhs_graph):
@@ -63,41 +63,43 @@ def benchmark(func):
 
 
 @benchmark
-def parsing(reference, raw):
-    return [parse_hgvs(variants, reference) for variants in raw.values()]
-
-
-@benchmark
 def supremals(reference, variants):
-    return [supremal(reference, variant) for variant in variants]
+    for variant in variants:
+        supremal_variant, graph = supremal(reference, variant["variants"])
+        variant["supremal"] = supremal_variant
+        variant["graph"] = graph
 
 
 @benchmark
-def pairwise(reference, supremal_variants):
-    return [compare_graph(reference, lhs_supremal, lhs_graph, rhs_supremal, rhs_graph) for (lhs_supremal, lhs_graph), (rhs_supremal, rhs_graph) in combinations(supremal_variants, 2)]
+def pairwise(reference, variants):
+    return [{"lhs": lhs["label"], "rhs": rhs["label"], "relation": compare_graph(reference, lhs["supremal"], lhs["graph"], rhs["supremal"], rhs["graph"])} for lhs, rhs in combinations(variants, 2)]
 
 
 def main():
-    with open("data/NC_000022.11.fasta", encoding="utf-8") as file:
+    ref_seq_id = "NC_000022.11"
+    with open(f"data/{ref_seq_id}.fasta", encoding="utf-8") as file:
         reference = fasta_sequence(file)
 
+    variants = []
     with open("data/benchmark.txt", encoding="utf-8") as file:
-        raw = {line.split()[0]: line.split()[1] for line in file}
+        for line in file:
+            label, hgvs = line.split()
+            variant = parse_hgvs(hgvs, reference)
+            variants.append({
+                "label": label,
+                "variants": variant,
+            })
 
-    variants = parsing(reference, raw)
-    with open("data/benchmark_variants.txt", "w", encoding="utf-8") as file:
+    supremals(reference, variants)
+
+    with open("data/benchmark_fast.txt", "w", encoding="utf-8") as file:
         for variant in variants:
-            print(variant, file=file)
+            print(variant["label"], f"{ref_seq_id}:g.{to_hgvs(variant['variants'], reference)}", variant["supremal"].to_spdi(reference_id=ref_seq_id), file=file)
 
-    supremal_variants = supremals(reference, variants)
-    with open("data/benchmark_supremals.txt", "w", encoding="utf-8") as file:
-        for variant in supremal_variants:
-            print(variant[0], file=file)
-
-    relations = pairwise(reference, supremal_variants)
-    with open("data/benchmark_relations.txt", "w", encoding="utf-8") as file:
-        for relation in relations:
-            print(relation, file=file)
+    relations = pairwise(reference, variants)
+    with open("data/benchmark_fast_relations.txt", "w", encoding="utf-8") as file:
+        for entry in relations:
+            print(entry["lhs"], entry["rhs"], entry["relation"].value, file=file)
 
 
 if __name__ == "__main__":
