@@ -22,7 +22,6 @@ def delins(observed, shift, lhs, rhs):
 
 
 def subtract(reference, minuend):
-
     supremal_variant, graph = supremal(reference, minuend)
     print("\n".join(to_dot(reference, graph, labels=False)))
 
