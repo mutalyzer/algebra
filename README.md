@@ -77,7 +77,7 @@ from algebra.extractor import extract_sequence, to_hgvs
 reference = "CATATATC"
 observed = "CATATATATC"
 
-canonical, _ = extract_sequence(reference, observed)
+canonical, *_ = extract_sequence(reference, observed)
 # returns: 2_7AT[4]
 to_hgvs(canonical, reference)
 ```
