@@ -32,6 +32,7 @@ from algebra.variants import parse_hgvs, parse_spdi, reverse_complement
     ("6_7ins[A]", [Variant(6, 6, "A")]),
     ("6delins[A;A]", [Variant(5, 6, "AA")]),
     ("6delins[A[0]]", [Variant(5, 6, "")]),
+    ("[5_6insAGGT;6del]", [Variant(5, 5, "AGGT"), Variant(5, 6, "")]),
 ])
 def test_hgvs_parser(expression, variants):
     assert parse_hgvs(expression) == variants

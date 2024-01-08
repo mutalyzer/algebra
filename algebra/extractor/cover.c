@@ -1,7 +1,7 @@
 #include <limits.h>     // CHAR_BIT
 #include <stdbool.h>    // bool
 #include <stddef.h>     // size_t
-#include <stdio.h>      // FILE, stderr, stdin, fprintf, fscanf, printf
+#include <stdio.h>      // FILE, stderr, stdin, stdout, fflush, fprintf, fscanf, printf
 #include <stdlib.h>     // EXIT_*, atoll, exit, qsort
 #include <string.h>     // strlen, strncmp
 
@@ -79,6 +79,56 @@ are_isomorphic_words(size_t const len, char const lhs[len], char const rhs[len])
 
 
 static size_t
+find_pmrs_alt(size_t const len, char const word[len], struct PMR pmrs[len])
+{
+    size_t i = 0;
+    for (size_t start = 0; start < len; ++start)
+    {
+        for (size_t period = 1; period <= (len - start) / 2; ++period)
+        {
+            size_t count = 1;
+            while (strncmp(word + start, word + start + count * period, period) == 0)
+            {
+                count += 1;
+            } // while
+            if (count < 2)
+            {
+                continue;
+            } // if
+
+            size_t remainder = 0;
+            while (word[start + remainder] == word[start + period * count + remainder])
+            {
+                remainder += 1;
+            } // while
+
+            bool uniq = true;
+            for (size_t j = 0; j < i; ++j)
+            {
+                size_t idx = i - j - 1;
+                if (period % pmrs[idx].period == 0 &&
+                    pmrs[idx].start + pmrs[idx].count * pmrs[idx].period + pmrs[idx].remainder == start + count * period + remainder)
+                {
+                    uniq = false;
+                    break;
+                } // if
+            } // for
+
+            if (uniq)
+            {
+                pmrs[i].start = start;
+                pmrs[i].period = period;
+                pmrs[i].count = count;
+                pmrs[i].remainder = remainder;
+                i += 1;
+            } // if
+        } // for
+    } // for
+    return i;
+} // find_pmrs_alt
+
+
+static size_t
 find_pmrs(size_t const len, char const word[len], struct PMR pmrs[len])
 {
     size_t inv[len];
@@ -132,7 +182,7 @@ find_pmrs(size_t const len, char const word[len], struct PMR pmrs[len])
             } // else
         } // while
     } // for
-    qsort(pmrs, i, sizeof(*pmrs), pmr_cmp);
+    // qsort(pmrs, i, sizeof(*pmrs), pmr_cmp);
     return i;
 } // find_pmrs
 
@@ -261,45 +311,94 @@ cover_q(size_t const len, size_t const n, struct PMR const pmrs[n], size_t max_c
 
 
 static size_t
+compare_cover(size_t const len, char const word[len])
+{
+    if (len == 0)
+    {
+        return 1;
+    } // if
+
+    struct PMR pmrs[len];
+    size_t const n_pmrs = find_pmrs(len, word, pmrs);
+    size_t max_cover[len];
+    size_t const work_a = cover(len, n_pmrs, pmrs, max_cover);
+    size_t const max_a = max_cover[len - 1];
+    size_t const work_b = cover_q(len, n_pmrs, pmrs, max_cover);
+    size_t const max_b = max_cover[len - 1];
+    if (max_a != max_b)
+    {
+        printf("%zu %.*s %zu :: %zu vs %zu\n", len, (int) len, word, n_pmrs, max_a, max_b);
+    } // if
+    return 1;
+} // compare_cover
+
+
+size_t find_runs(char const* word, struct PMR* pmrs);
+
+
+static size_t g_max_count = 0;
+static size_t g_max_depth = 0;
+static size_t g_max_sum = 0;
+
+
+static size_t
+count_pmrs(size_t const len, char const word[len])
+{
+    struct PMR pmrs[len];
+    size_t const n = find_pmrs_alt(len, word, pmrs);
+    //size_t const n = find_runs(word, pmrs);
+
+    g_max_count = max(g_max_count, n);
+
+    size_t depth[len];
+    for (size_t i = 0; i < len; ++i)
+    {
+        depth[i] = 0;
+    } // for
+
+    size_t sum = 0;
+    size_t max_depth = 0;
+    for (size_t i = 0; i < n; ++i)
+    {
+        for (size_t p = pmrs[i].period * 2 - 1; p < pmrs[i].period * pmrs[i].count + pmrs[i].remainder; ++p)
+        {
+            depth[pmrs[i].start + p] += 1;
+            max_depth = max(max_depth, depth[pmrs[i].start + p]);
+            sum += 1;
+        } // for
+    } // for
+    g_max_depth = max(g_max_depth, max_depth);
+    g_max_sum = max(g_max_sum, sum);
+
+    return 1;
+} // count_pmrs
+
+
+static size_t
 non_isomorphic_n_ary_words(size_t const len,
                            size_t const n,
                            char const alphabet[n],
                            size_t const prev,
                            size_t const current,
-                           char word[len])
+                           char word[len],
+                           size_t callback(size_t const n, char const word[n]))
 {
     if (current >= len)
     {
-        if (0 == len)
-        {
-            return 1;
-        } // if
-
-        struct PMR pmrs[len];
-        size_t const n_pmrs = find_pmrs(len, word, pmrs);
-        size_t max_cover[len];
-        size_t const work_a = cover(len, n_pmrs, pmrs, max_cover);
-        size_t const max_a = max_cover[len - 1];
-        size_t const work_b = cover_q(len, n_pmrs, pmrs, max_cover);
-        size_t const max_b = max_cover[len - 1];
-        if (max_a != max_b)
-        {
-            printf("%zu %.*s %zu :: %zu vs %zu\n", len, (int) len, word, n_pmrs, max_a, max_b);
-        } // if
-        return 1;
+        return callback(len, word);
     } // if
 
     if (prev == (size_t) -1)
     {
         word[0] = alphabet[0];
-        return non_isomorphic_n_ary_words(len, n, alphabet, 0, 1, word);
+        return non_isomorphic_n_ary_words(len, n, alphabet, 0, 1, word, callback);
     } // if
 
     size_t count = 0;
     for (size_t i = 0; i <= min(n - 1, prev + 1); ++i)
     {
         word[current] = alphabet[i];
-        count += non_isomorphic_n_ary_words(len, n, alphabet, max(i, prev), current + 1, word);
+        count += non_isomorphic_n_ary_words(len, n, alphabet, max(i, prev), current + 1, word, callback);
     } // for
     return count;
 } // non_isomorphic_n_ary_words
@@ -396,14 +495,44 @@ read(FILE* stream)
 } // read
 
 
+static void
+read2(FILE* stream)
+{
+    size_t len = 0;
+    char word[24] = {'\0'};
+    size_t rrs_len = 0;
+    char rrs_word[64] = {'\0'};
+    size_t count = 0;
+
+    while (fscanf(stream, "%zu %24s %zu %64s", &len, word, &rrs_len, rrs_word) == 4)
+    {
+        printf("%zu %s %zu %s\n", len, word, rrs_len, rrs_word);
+        count += 1;
+    } // while
+    fprintf(stderr, "%zu\n", count);
+} // read2
+
+
+
 int
 main(int argc, char* argv[])
 {
-    for (size_t i = 0; i <= 40; ++i)
+    read2(stdin);
+    return EXIT_SUCCESS;
+
+    /*
+    for (size_t i = 30; i <= 30; ++i)
     {
+        g_max_count = 0;
+        g_max_depth = 0;
+        g_max_sum = 0;
+
         static char word[128] = {'\0'};
-        fprintf(stderr, "%zu: %zu\n", i, non_isomorphic_n_ary_words(i, 2, "ACGT", -1, 0, word));
+        non_isomorphic_n_ary_words(i, 2, "ACGT", -1, 0, word, count_pmrs);
+        printf("%zu %zu %zu %zu\n", i, g_max_count, g_max_depth, g_max_sum);
+        fflush(stdout);
     } // for
+    */
 /*
     return -1;
 

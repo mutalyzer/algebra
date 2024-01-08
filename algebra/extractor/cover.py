@@ -264,7 +264,7 @@ def print_array(array):
     print()
 
 
-def print_tables(n, word, inv, max_cover):
+def print_tables(n, word, inv, max_cover=None):
     print_array(range(n))
     print("  ", end="")
     for ch in word:
@@ -280,7 +280,8 @@ def print_tables(n, word, inv, max_cover):
             else:
                 print(f"{x[y]:3}", end="")
         print()
-    print_array(max_cover)
+    if max_cover is not None:
+        print_array(max_cover)
 
 
 def main():
@@ -300,7 +301,10 @@ def main():
     inv = inv_array(n, pmrs)
     max_cover, _ = cover_q(word, pmrs)
     print_tables(n, word, inv, max_cover)
-    print(brute_cover(word, pmrs))
+    #print(brute_cover(word, pmrs))
+
+    print(sum([len(x) for x in inv]))
+
 
     # covers = list(brute_cover_alt(word, pmrs))
     # bmax = max(map(cover_length, covers))
@@ -308,10 +312,10 @@ def main():
     # print({path2hgvs(c, word) for c in covers if cover_length(c) == bmax})
 
     # print(list(cartesian_cover(word, pmrs, max_cover[-1])))
-    covers = list(cartesian_cover(pmrs))
-    bmax = max(map(cover_length, covers))
+    #covers = list(cartesian_cover(pmrs))
+    #bmax = max(map(cover_length, covers))
     # print({path2hgvs(c, word) for c in covers})
-    print({path2hgvs(c, word) for c in covers if cover_length(c) == bmax})
+    #print({path2hgvs(c, word) for c in covers if cover_length(c) == bmax})
 
 
 if __name__ == "__main__":

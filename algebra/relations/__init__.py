@@ -6,8 +6,7 @@ reference sequence.
 References
 ----------
 [1] J.K. Vis, M.A. Santcroos, W.A. Kosters and J.F.J. Laros.
-"A Boolean Algebra for Genetic Variants".
-In: arXiv preprint 2112.14494 (2021).
+"A Boolean Algebra for Genetic Variants." In: Bioinformatics (2023).
 """
 
 
