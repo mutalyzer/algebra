@@ -18,7 +18,7 @@ def compare_graph(reference, lhs, rhs):
     start = min(lhs.supremal.start, rhs.supremal.start)
     end = max(lhs.supremal.end, rhs.supremal.end)
 
-    # TODO: class method on LCSGraph?
+    # TODO: class method on LCSgraph?
     def observed(supremal):
         return (reference[min(start, supremal.start):supremal.start] +
                 supremal.sequence +
