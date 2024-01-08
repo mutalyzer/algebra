@@ -72,8 +72,23 @@ def supremals(reference, variants):
 
 
 @benchmark
-def pairwise(reference, variants):
-    return [{"lhs": lhs["label"], "rhs": rhs["label"], "relation": compare_graph(reference, lhs["supremal"], lhs["graph"], rhs["supremal"], rhs["graph"])} for lhs, rhs in combinations(variants, 2)]
+def pairwise(reference, graphs):
+    return [{"lhs": lhs.label, "rhs": rhs.label, "relation": compare_graph(reference, lhs, rhs)} for lhs, rhs in combinations(graphs, 2)]
+
+
+class LCSgraph:
+    def __init__(self, label, variants, supremal, graph):
+        self.label = label
+        self.variants = variants
+        self.supremal = supremal
+        self.graph = graph
+
+    def edges(self):
+        return {edge[0] for *_, edge in bfs_traversal(self.graph)}
+
+    @property
+    def distance(self):
+        return sum(len(variant) for variant in next(dfs_traversal(self.graph)))
 
 
 def main():
@@ -93,11 +108,13 @@ def main():
 
     supremals(reference, variants)
 
-    with open("data/benchmark_fast.txt", "w", encoding="utf-8") as file:
-        for variant in variants:
-            print(variant["label"], f"{ref_seq_id}:g.{to_hgvs(variant['variants'], reference)}", variant["supremal"].to_spdi(reference_id=ref_seq_id), file=file)
+    graphs = [LCSgraph(variant["label"], variant["variants"], variant["supremal"], variant["graph"]) for variant in variants]
 
-    relations = pairwise(reference, variants)
+    with open("data/benchmark_fast.txt", "w", encoding="utf-8") as file:
+        for graph in graphs:
+            print(graph.label, f"{ref_seq_id}:g.{to_hgvs(graph.variants, reference)}", graph.supremal.to_spdi(reference_id=ref_seq_id), file=file)
+
+    relations = pairwise(reference, graphs)
     with open("data/benchmark_fast_relations.txt", "w", encoding="utf-8") as file:
         for entry in relations:
             print(entry["lhs"], entry["rhs"], entry["relation"].value, file=file)
