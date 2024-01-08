@@ -13,6 +13,8 @@ from algebra.relations.variant_based import compare
 from algebra.utils import fasta_sequence, random_sequence, random_variants, slice_sequence, to_dot
 from algebra.variants import parse_hgvs, parse_spdi, patch, to_hgvs
 
+from scripts.sub import subtract
+
 
 def cli_compare(reference, args):
     """Compare two variants."""
@@ -115,6 +117,53 @@ def cli_patch(reference, args):
     print(patch(reference, variants))
 
 
+def cli_subtract(reference, args):
+    minuend_is_variant = any([args.minuend_hgvs, args.minuend_spdi, args.minuend_random_variant])
+    if args.minuend:
+        minuend = args.minuend
+    elif args.minuend_hgvs:
+        minuend = parse_hgvs(args.minuend_hgvs, reference=reference)
+    elif args.minuend_spdi:
+        minuend = parse_spdi(args.minuend_spdi)
+    elif args.minuend_file:
+        with open(args.minuend_file, encoding="utf-8") as file:
+            minuend = fasta_sequence(file)
+    elif args.minuend_random_variant:
+        minuend = list(random_variants(reference, args.random_variant_p))
+        print(to_hgvs(minuend, reference))
+    else:  # args.minuend_random_sequence:
+        minuend = random_sequence(args.random_sequence_max, args.random_sequence_min)
+
+    # subtrahend_is_variant = any([args.subtrahend_hgvs, args.subtrahend_spdi, args.subtrahend_random_variant])
+    # if args.subtrahend:
+    #     subtrahend = args.subtrahend
+    # elif args.subtrahend_hgvs:
+    #     subtrahend = parse_hgvs(args.subtrahend_hgvs, reference=reference)
+    # elif args.subtrahend_spdi:
+    #     subtrahend = parse_spdi(args.subtrahend_spdi)
+    # elif args.subtrahend_file:
+    #     with open(args.subtrahend_file, encoding="utf-8") as file:
+    #         subtrahend = fasta_sequence(file)
+    # elif args.subtrahend_random_variant:
+    #     subtrahend = list(random_variants(reference, args.random_variant_p))
+    #     print(to_hgvs(subtrahend, reference))
+    # else:  # args.subtrahend_random_sequence
+    #     subtrahend = random_sequence(args.random_sequence_max, args.random_sequence_min)
+    #     print(subtrahend)
+
+    # if minuend_is_variant and subtrahend_is_variant:
+    #     print(compare(reference, minuend, subtrahend))
+    #     return
+
+    # if minuend_is_variant:
+    #     minuend = patch(reference, minuend)
+    # elif subtrahend_is_variant:
+    #     subtrahend = patch(reference, subtrahend)
+
+    print(reference, minuend)
+    subtract(reference, minuend)
+
+
 def main():
     """Command-line interface."""
     parser = argparse.ArgumentParser(description="A Boolean Algebra for Genetic Variants")
@@ -177,6 +226,24 @@ def main():
     slice_parser.add_argument("--positions", type=int, nargs="+", required=True, help="positions to slice")
     slice_parser.add_argument("--reverse-complement", action="store_true", help="the reverse complement of the slices")
 
+    subtract_parser = commands.add_parser("subtract", help="subtract a canonical variant")
+
+    minuend_group = subtract_parser.add_mutually_exclusive_group()
+    minuend_group.add_argument("--minuend", type=str, help="an observed sequence as string (lhs)")
+    minuend_group.add_argument("--minuend-hgvs", type=str, help="a variant in HGVS (lhs)")
+    minuend_group.add_argument("--minuend-spdi", type=str, help="a variant in SPDI (lhs)")
+    minuend_group.add_argument("--minuend-file", type=str, help="an observed sequence from a file (lhs)")
+    minuend_group.add_argument("--minuend-random-variant", action="store_true", help="a random variant")
+    minuend_group.add_argument("--minuend-random-sequence", action="store_true", help="a random sequence (default)")
+
+    # subtrahend_group = subtract_parser.add_mutually_exclusive_group()
+    # subtrahend_group.add_argument("--subtrahend", type=str, help="an observed sequence as string (lhs)")
+    # subtrahend_group.add_argument("--subtrahend-hgvs", type=str, help="a variant in HGVS (lhs)")
+    # subtrahend_group.add_argument("--subtrahend-spdi", type=str, help="a variant in SPDI (lhs)")
+    # subtrahend_group.add_argument("--subtrahend-file", type=str, help="an observed sequence from a file (lhs)")
+    # subtrahend_group.add_argument("--subtrahend-random-variant", action="store_true", help="a random variant")
+    # subtrahend_group.add_argument("--subtrahend-random-sequence", action="store_true", help="a random sequence (default)")
+
     args = parser.parse_args()
 
     if not args.random_sequence_min:
@@ -197,6 +264,8 @@ def main():
         cli_extract(reference, args)
     elif args.command == "patch":
         cli_patch(reference, args)
+    elif args.command == "subtract":
+        cli_subtract(reference, args)
     elif args.command == "slice":
         print(slice_sequence(reference, args.positions, args.reverse_complement))
 
