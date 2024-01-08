@@ -8,42 +8,43 @@ from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs, to_hgvs
 
 
-def compare_graph(reference, lhs, lhs_graph, rhs, rhs_graph):
-    if lhs == rhs:
+def compare_graph(reference, lhs, rhs):
+    if lhs.supremal == rhs.supremal:
         return Relation.EQUIVALENT
 
-    if lhs.is_disjoint(rhs):
+    if lhs.supremal.is_disjoint(rhs.supremal):
         return Relation.DISJOINT
 
-    lhs_distance = sum(len(variant) for variant in next(dfs_traversal(lhs_graph), []))
-    rhs_distance = sum(len(variant) for variant in next(dfs_traversal(rhs_graph), []))
+    start = min(lhs.supremal.start, rhs.supremal.start)
+    end = max(lhs.supremal.end, rhs.supremal.end)
 
-    start = min(lhs.start, rhs.start)
-    end = max(lhs.end, rhs.end)
-    lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
-    rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
+    # TODO: class method on LCSGraph?
+    def observed(supremal):
+        return (reference[min(start, supremal.start):supremal.start] +
+                supremal.sequence +
+                reference[supremal.end:max(end, supremal.end)])
+
+    lhs_observed = observed(lhs.supremal)
+    rhs_observed = observed(rhs.supremal)
     distance = edit(lhs_observed, rhs_observed)
 
-    if lhs_distance + rhs_distance == distance:
+    if lhs.distance + rhs.distance == distance:
         return Relation.DISJOINT
 
-    if lhs_distance - rhs_distance == distance:
+    if lhs.distance - rhs.distance == distance:
         return Relation.CONTAINS
 
-    if rhs_distance - lhs_distance == distance:
+    if rhs.distance - lhs.distance == distance:
         return Relation.IS_CONTAINED
 
-    lhs_edges = {edge[0] for *_, edge in bfs_traversal(lhs_graph)}
-    rhs_edges = {edge[0] for *_, edge in bfs_traversal(rhs_graph)}
-
-    for lhs_variant, rhs_variant in product(lhs_edges, rhs_edges):
+    for lhs_variant, rhs_variant in product(lhs.edges, rhs.edges):
         if not lhs_variant.is_disjoint(rhs_variant):
             return Relation.OVERLAP
 
     return Relation.DISJOINT
 
 
-BENCHMARK_ENABLE = True
+BENCHMARK_ENABLE = False
 BENCHMARK_STATS = "tottime"
 
 
