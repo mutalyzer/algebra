@@ -1,17 +1,8 @@
 """Utility functions for sequences, variants and LCS graphs."""
 
 
-from os.path import commonprefix
 import random
-from .lcs import LCSgraph
 from .variants import DNA_NUCLEOTIDES, Variant, reverse_complement, to_hgvs
-
-
-def trim(lhs, rhs):
-    """Find the lengths of the common prefix and common suffix between
-    two sequences."""
-    idx = len(commonprefix([lhs, rhs]))
-    return idx, len(commonprefix([lhs[idx:][::-1], rhs[idx:][::-1]]))
 
 
 def fasta_sequence(lines):

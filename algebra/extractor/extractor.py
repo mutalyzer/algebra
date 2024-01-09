@@ -3,8 +3,7 @@ LCS alignments with support for tandem repeats and complex variants."""
 
 
 from collections import deque
-from ..lcs.supremals import LCSgraph, lcs_graph, lcs_graph_sequence
-from ..utils import trim
+from ..lcs.supremals import LCSgraph, lcs_graph, lcs_graph_sequence, trim
 from ..variants import Variant, reverse_complement
 
 

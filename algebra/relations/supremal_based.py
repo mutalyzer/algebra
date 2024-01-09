@@ -5,7 +5,6 @@ from ..lcs.supremals import lcs_graph_supremal
 from .graph_based import (are_disjoint as graph_based_are_disjoint,
                           compare as graph_based_compare,
                           have_overlap as graph_based_have_overlap)
-from .relation import Relation
 from .sequence_based import contains as sequence_based_contains
 
 

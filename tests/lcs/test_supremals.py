@@ -1,6 +1,5 @@
 import pytest
-from algebra.lcs.supremals import lcs_graph, lcs_graph_sequence
-from algebra.utils import trim
+from algebra.lcs.supremals import lcs_graph, lcs_graph_sequence, trim
 from algebra.variants import Variant, patch
 
 
@@ -40,7 +39,6 @@ def test_lcs_graph_sequence(reference, variants, expected):
     assert graph.supremal == expected
 
 
-#TODO: remove from here
 @pytest.mark.parametrize("reference, observed, prefix_len, suffix_len", [
     ("", "", 0, 0),
     ("A", "A", 1, 0),

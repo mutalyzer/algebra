@@ -7,7 +7,6 @@ to determine their relations.
 
 import argparse
 from algebra.extractor import extract, extract_sequence, local_supremal, to_hgvs as to_hgvs_extractor
-from algebra.lcs import LCSgraph
 from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.variant_based import compare
 from algebra.utils import fasta_sequence, random_sequence, random_variants, slice_sequence, to_dot
@@ -82,24 +81,23 @@ def cli_extract(reference, args):
         print(observed)
 
     if is_variant:
-        canonical, supremal_variant, graph = extract(reference, observed)
+        canonical, graph = extract(reference, observed)
     else:  # observed sequence
-        canonical, supremal_variant, graph = extract_sequence(reference, observed)
+        canonical, graph = extract_sequence(reference, observed)
 
     print(to_hgvs_extractor(canonical, reference))
 
     if args.all or args.atomics:
-        for variants in dfs_traversal(graph, atomics=args.atomics):
+        for variants in graph.paths(atomics=args.atomics):
             print(to_hgvs(variants, reference))
     if args.distance:
-        first = next(dfs_traversal(graph), [])
-        print(sum(len(variant) for variant in first))
+        print(graph.distance)
     if args.dot:
         print("\n".join(to_dot(reference, graph, atomics=args.atomics)))
     if args.local_supremal:
-        print(to_hgvs(local_supremal(reference, supremal_variant.sequence, graph), reference))
+        print(to_hgvs(local_supremal(reference, graph), reference))
     if args.supremal:
-        print(supremal_variant.to_hgvs(reference), supremal_variant.to_spdi(), supremal_variant)
+        print(graph.supremal.to_hgvs(reference), graph.supremal.to_spdi(), graph.supremal)
 
 
 def cli_patch(reference, args):

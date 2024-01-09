@@ -2,8 +2,8 @@
 
 
 from operator import attrgetter
+from os.path import commonprefix
 from ..lcs.lcs_graph import LCSgraph
-from ..utils import trim
 from ..variants import Variant, patch
 
 
@@ -68,3 +68,10 @@ def lcs_graph_sequence(reference, observed):
 def lcs_graph_supremal(reference, supremal):
     """The supremal LCS graph for a supremal variant."""
     return LCSgraph(reference[supremal.start:supremal.end], supremal.sequence, shift=supremal.start)
+
+
+def trim(lhs, rhs):
+    """Find the lengths of the common prefix and common suffix between
+    two sequences."""
+    idx = len(commonprefix([lhs, rhs]))
+    return idx, len(commonprefix([lhs[idx:][::-1], rhs[idx:][::-1]]))

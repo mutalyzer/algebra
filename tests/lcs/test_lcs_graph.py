@@ -1,6 +1,6 @@
 import pytest
 from algebra import Variant
-from algebra.lcs.lcs_graph import LCSgraph, _build_graph, _lcs_nodes
+from algebra.lcs.lcs_graph import LCSgraph, _lcs_nodes
 
 
 @pytest.mark.parametrize("reference, observed, expected_distance, expected_lcs_nodes", [
@@ -107,7 +107,7 @@ def test_lcs_nodes_max_distance_fail(reference, observed, max_distance, exceptio
         Variant(0, 2, ""), Variant(1, 3, ""), Variant(2, 4, "")
     }),
 ])
-def test_LCSgraph(reference, observed, expected_edges):
+def test_lcs_graph(reference, observed, expected_edges):
     graph = LCSgraph(reference, observed)
     assert graph.edges() == expected_edges
 
@@ -117,7 +117,7 @@ def test_LCSgraph(reference, observed, expected_edges):
         LCSgraph.Node(0, 0, 0), LCSgraph.Node(3, 0, 0)
     ]),
 ])
-def test_LCSgraph_nodes(reference, observed, expected_nodes):
+def test_lcs_graph_nodes(reference, observed, expected_nodes):
     graph = LCSgraph(reference, observed)
     assert list(graph.nodes()) == expected_nodes
 
@@ -218,12 +218,12 @@ def test_paths_atomics(reference, observed, expected_variant):
 @pytest.mark.parametrize("duplicates, unique", [
     ([LCSgraph.Node(0, 0, 0), LCSgraph.Node(0, 0, 0), LCSgraph.Node(0, 0, 0)], {LCSgraph.Node(0, 0, 0)}),
 ])
-def test_LCSgraph_Node_hash(duplicates, unique):
+def test_lcs_node_hash(duplicates, unique):
     assert set(duplicates) == unique
 
 
-@pytest.mark.parametrize("LCSgraph_Node, string", [
+@pytest.mark.parametrize("lcs_node, string", [
     (LCSgraph.Node(0, 0, 0), "(0, 0)[0]"),
 ])
-def test_LCSgraph_Node_string(LCSgraph_Node, string):
-    assert str(LCSgraph_Node) == string
+def test_lcs_node_string(lcs_node, string):
+    assert str(lcs_node) == string

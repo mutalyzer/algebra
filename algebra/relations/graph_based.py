@@ -8,17 +8,17 @@ from .relation import Relation
 
 def are_equivalent(reference, lhs, rhs):
     """Check if two LCS graphs are equivalent."""
-    return supremal_based_are_equivalent(reference, lhs.supremal, rhs.supremal)
+    return compare(reference, lhs, rhs) == Relation.EQUIVALENT
 
 
 def contains(reference, lhs, rhs):
     """Check if `lhs` contains `rhs`."""
-    return supremal_based_contains(reference, lhs.supremal, rhs.supremal)
+    return compare(reference, lhs, rhs) == Relation.CONTAINS
 
 
 def is_contained(reference, lhs, rhs):
     """Check if `lhs` is contained in `rhs`."""
-    return supremal_based_contains(reference, rhs.supremal, lhs.supremal)
+    return supremal_based_contains(reference, rhs, lhs) == Relation.IS_CONTAINED
 
 
 def are_disjoint(reference, lhs, rhs):
