@@ -19,7 +19,15 @@ from ..variants import Variant
 
 
 class LCSgraph:
-    """LCS graph class for storing all minimal alignments."""
+    """LCS graph class for storing all minimal alignments.
+
+    Attributes
+    ----------
+    distance : int
+        The simple edit distance.
+    supremal : `Variant`
+        The supremal variant representation.
+    """
 
     class Node:
         """Node class for (stretches of) matching symbols."""
