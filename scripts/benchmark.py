@@ -1,11 +1,11 @@
 import cProfile
 import pstats
 import sys
-from itertools import combinations, product
-from algebra import Relation
+from itertools import combinations
 from algebra.lcs import lcs_graph
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs, to_hgvs
+from algebra.relations.graph_based import compare
 
 
 BENCHMARK_ENABLE = False
@@ -28,15 +28,16 @@ def benchmark(func):
 
 
 @benchmark
-def supremals(reference, variants):
+def graphs(reference, variants):
     for variant in variants:
         graph = lcs_graph(reference, variant["variants"])
         variant["graph"] = graph
 
 
 @benchmark
-def pairwise(reference, graphs):
-    return [{"lhs": lhs.label, "rhs": rhs.label, "relation": compare_graph(reference, lhs, rhs)} for lhs, rhs in combinations(graphs, 2)]
+def pairwise(reference, variants):
+    return [{"lhs": lhs["label"], "rhs": rhs["label"], "relation": compare(reference, lhs["graph"], rhs["graph"])}
+            for lhs, rhs in combinations(variants, 2)]
 
 
 def main():
@@ -54,15 +55,13 @@ def main():
                 "variants": variant,
             })
 
-    supremals(reference, variants)
-
-    graphs = [LCSgraph(variant["label"], variant["variants"], variant["supremal"], variant["graph"]) for variant in variants]
+    graphs(reference, variants)
 
     with open("data/benchmark_fast.txt", "w", encoding="utf-8") as file:
-        for graph in graphs:
-            print(graph.label, f"{ref_seq_id}:g.{to_hgvs(graph.variants, reference)}", graph.supremal.to_spdi(reference_id=ref_seq_id), file=file)
+        for variant in variants:
+            print(variant["label"], f"{ref_seq_id}:g.{to_hgvs(variant['variants'], reference)}", variant["graph"].supremal.to_spdi(reference_id=ref_seq_id), file=file)
 
-    relations = pairwise(reference, graphs)
+    relations = pairwise(reference, variants)
     with open("data/benchmark_fast_relations.txt", "w", encoding="utf-8") as file:
         for entry in relations:
             print(entry["lhs"], entry["rhs"], entry["relation"].value, file=file)
