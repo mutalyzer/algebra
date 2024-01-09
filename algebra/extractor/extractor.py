@@ -90,7 +90,7 @@ def canonical(graph):
 
 
 def diagonal(reference, observed, graph):
-    """Experimental minimal canonical represantion."""
+    """Experimental minimal canonical representation."""
     diff = len(reference) - len(observed)
     variants = []
     node = graph._source
