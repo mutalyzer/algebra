@@ -43,11 +43,9 @@ class LCSgraph:
         def __repr__(self):
             return f"{self.row, self.col}[{self.length}]"
 
-
     def __init__(self, reference, observed, shift=0, max_distance=None):
         self.distance, lcs_nodes = _lcs_nodes(reference, observed, shift, max_distance)
         self._source, self.supremal = _build_graph(reference, observed, lcs_nodes, shift)
-
 
     def bfs_traversal(self, atomics=False):
         """Generate all (nodes and) edges in the LCS graph.
@@ -86,7 +84,6 @@ class LCSgraph:
 
             visited.add(source)
 
-
     def nodes(self):
         """Generate all nodes in the LCS graph in topological order."""
         visited = {self._source}
@@ -99,11 +96,9 @@ class LCSgraph:
                 visited.add(sink)
                 stack.append(sink)
 
-
     def edges(self):
         """Set of all edges in the LCS graph."""
         return {edge[0] for *_, edge in self.bfs_traversal(atomics=False)}
-
 
     def paths(self, atomics=False):
         """Traverse all paths (alignments) in the LCS graph.

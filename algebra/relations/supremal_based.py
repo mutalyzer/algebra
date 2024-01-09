@@ -1,11 +1,12 @@
 """Functions to compare supremal variants."""
 
 
+from ..lcs.supremals import lcs_graph_supremal
+from .graph_based import (are_disjoint as graph_based_are_disjoint,
+                          compare as graph_based_compare,
+                          have_overlap as graph_based_have_overlap)
 from .relation import Relation
-from .sequence_based import (are_disjoint as sequence_based_are_disjoint,
-                             compare as sequence_based_compare,
-                             contains as sequence_based_contains,
-                             have_overlap as sequence_based_have_overlap)
+from .sequence_based import contains as sequence_based_contains
 
 
 def are_equivalent(_reference, lhs, rhs):
@@ -32,28 +33,12 @@ def is_contained(reference, lhs, rhs):
 
 def are_disjoint(reference, lhs, rhs):
     """Check if two variants are disjoint."""
-    if lhs == rhs:
-        return False
-    if not lhs or not rhs or lhs.is_disjoint(rhs):
-        return True
-
-    start = min(lhs.start, rhs.start)
-    end = max(lhs.end, rhs.end)
-    lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
-    rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
-    return sequence_based_are_disjoint(reference[start:end], lhs_observed, rhs_observed)
+    return graph_based_are_disjoint(reference, lcs_graph_supremal(reference, lhs), lcs_graph_supremal(reference, rhs))
 
 
 def have_overlap(reference, lhs, rhs):
     """Check if two variants overlap."""
-    if not lhs or not rhs:
-        return False
-
-    start = min(lhs.start, rhs.start)
-    end = max(lhs.end, rhs.end)
-    lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
-    rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
-    return sequence_based_have_overlap(reference[start:end], lhs_observed, rhs_observed)
+    return graph_based_have_overlap(reference, lcs_graph_supremal(reference, lhs), lcs_graph_supremal(reference, rhs))
 
 
 def compare(reference, lhs, rhs):
@@ -74,14 +59,4 @@ def compare(reference, lhs, rhs):
         The relation between the two supremal variants.
     """
 
-    if lhs == rhs:
-        return Relation.EQUIVALENT
-
-    if lhs.is_disjoint(rhs):
-        return Relation.DISJOINT
-
-    start = min(lhs.start, rhs.start)
-    end = max(lhs.end, rhs.end)
-    lhs_observed = reference[min(start, lhs.start):lhs.start] + lhs.sequence + reference[lhs.end:max(end, lhs.end)]
-    rhs_observed = reference[min(start, rhs.start):rhs.start] + rhs.sequence + reference[rhs.end:max(end, rhs.end)]
-    return sequence_based_compare(reference[start:end], lhs_observed, rhs_observed)
+    return graph_based_compare(reference, lcs_graph_supremal(reference, lhs), lcs_graph_supremal(reference, rhs))

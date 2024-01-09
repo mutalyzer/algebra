@@ -56,11 +56,6 @@ def lcs_graph(reference, variants, offset=10):
         offset *= 2
 
 
-def lcs_graph_supremal(reference, supremal):
-    """The supremal LCS graph for a given supremal variant."""
-    return LCSgraph(reference, supremal.sequence)
-
-
 def lcs_graph_sequence(reference, observed):
     """The supremal LCS graph for two sequences."""
     if reference == observed:
@@ -68,3 +63,8 @@ def lcs_graph_sequence(reference, observed):
 
     prefix_len, suffix_len = trim(reference, observed)
     return lcs_graph(reference, [Variant(prefix_len, len(reference) - suffix_len, observed[prefix_len:len(observed) - suffix_len])])
+
+
+def lcs_graph_supremal(reference, supremal):
+    """The supremal LCS graph for a supremal variant."""
+    return LCSgraph(reference, supremal.sequence)

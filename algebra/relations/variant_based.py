@@ -49,6 +49,4 @@ def compare(reference, lhs, rhs):
         The relation between the two variant alleles.
     """
 
-    lhs_graph = lcs_graph(reference, lhs)
-    rhs_graph = lcs_graph(reference, rhs)
-    return compare_graph(reference, lhs_graph, rhs_graph)
+    return compare_graph(reference, lcs_graph(reference, lhs), lcs_graph(reference, rhs))
