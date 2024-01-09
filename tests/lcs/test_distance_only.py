@@ -1,5 +1,4 @@
 import pytest
-from algebra import Variant
 from algebra.lcs import edit_distance
 
 

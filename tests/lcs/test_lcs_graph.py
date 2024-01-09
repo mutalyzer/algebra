@@ -91,7 +91,7 @@ def test_lcs_nodes_max_distance_fail(reference, observed, max_distance, exceptio
         Variant(0, 0, "GAA")
     }),
     ("CATATATCG", "CTTATAGCAT", {
-        Variant(1, 1, "TT"), Variant(1 ,2, ""), Variant(1, 2, "T"),
+        Variant(1, 1, "TT"), Variant(1, 2, ""), Variant(1, 2, "T"),
         Variant(4, 5, "GC"), Variant(3, 3, "T"), Variant(3, 4, ""),
         Variant(6, 7, "G"), Variant(6, 8, ""), Variant(6, 6, "GCA"),
         Variant(5, 5, "AGC"), Variant(7, 9, ""), Variant(7, 7, "AG"),
