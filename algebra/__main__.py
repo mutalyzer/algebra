@@ -7,7 +7,7 @@ to determine their relations.
 
 import argparse
 from algebra.extractor import extract, extract_sequence, local_supremal, to_hgvs as to_hgvs_extractor
-from algebra.lcs import dfs_traversal
+from algebra.lcs import LCSgraph
 from algebra.relations.sequence_based import compare as compare_sequence
 from algebra.relations.variant_based import compare
 from algebra.utils import fasta_sequence, random_sequence, random_variants, slice_sequence, to_dot

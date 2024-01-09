@@ -2,8 +2,8 @@
 
 
 from .relation import Relation
-from .supremal_based import compare as compare_supremal
-from ..lcs import supremal
+from .graph_based import compare as compare_graph
+from ..lcs import lcs_graph
 
 
 def are_equivalent(reference, lhs, rhs):
@@ -49,6 +49,6 @@ def compare(reference, lhs, rhs):
         The relation between the two variant alleles.
     """
 
-    lhs_sup, *_ = supremal(reference, lhs)
-    rhs_sup, *_ = supremal(reference, rhs)
-    return compare_supremal(reference, lhs_sup, rhs_sup)
+    lhs_graph = lcs_graph(reference, lhs)
+    rhs_graph = lcs_graph(reference, rhs)
+    return compare_graph(reference, lhs_graph, rhs_graph)

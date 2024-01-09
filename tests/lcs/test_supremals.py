@@ -1,5 +1,6 @@
 import pytest
-from algebra.lcs.supremals import supremal, supremal_sequence, trim
+from algebra.lcs.supremals import lcs_graph, lcs_graph_sequence
+from algebra.utils import trim
 from algebra.variants import Variant, patch
 
 
@@ -16,9 +17,9 @@ TESTS = [
 
 
 @pytest.mark.parametrize("reference, variants, expected", TESTS)
-def test_supremal(reference, variants, expected):
-    variant, *_ = supremal(reference, variants)
-    assert variant == expected
+def test_lcs_graph(reference, variants, expected):
+    graph = lcs_graph(reference, variants)
+    assert graph.supremal == expected
 
 
 @pytest.mark.parametrize("reference, variants, offset, expected", [
@@ -27,18 +28,18 @@ def test_supremal(reference, variants, expected):
     ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 4, Variant(11, 19, "TTATAGCAT")),
     ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 40, Variant(11, 19, "TTATAGCAT")),
 ])
-def test_supremal_offset(reference, variants, offset, expected):
-    variant, *_ = supremal(reference, variants, offset)
-    assert variant == expected
+def test_lcs_graph_offset(reference, variants, offset, expected):
+    graph = lcs_graph(reference, variants, offset)
+    assert graph.supremal == expected
 
 
 @pytest.mark.parametrize("reference, variants, expected", TESTS)
-def test_supremal_sequence(reference, variants, expected):
-    variant, *_ = supremal_sequence(reference, patch(reference, variants))
-    assert variant == expected
+def test_lcs_graph_sequence(reference, variants, expected):
+    graph = lcs_graph_sequence(reference, patch(reference, variants))
+    assert graph.supremal == expected
 
 
-
+#TODO: remove from here
 @pytest.mark.parametrize("reference, observed, prefix_len, suffix_len", [
     ("", "", 0, 0),
     ("A", "A", 1, 0),

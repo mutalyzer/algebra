@@ -1,15 +1,13 @@
 """Longest Common Subsequence alignments."""
 
 
-from .all_lcs import bfs_traversal, dfs_traversal, lcs_graph
-from .distance_only import edit
-from .supremals import supremal
+from .lcs_graph import LCSgraph
+from .distance_only import edit_distance
+from .supremals import lcs_graph
 
 
 __all__ = [
-    "edit",
-    "bfs_traversal",
-    "dfs_traversal",
+    "LCSgraph",
+    "edit_distance",
     "lcs_graph",
-    "supremal",
 ]

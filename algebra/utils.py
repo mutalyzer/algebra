@@ -1,9 +1,17 @@
 """Utility functions for sequences, variants and LCS graphs."""
 
 
+from os.path import commonprefix
 import random
-from .lcs import bfs_traversal
+from .lcs import LCSgraph
 from .variants import DNA_NUCLEOTIDES, Variant, reverse_complement, to_hgvs
+
+
+def trim(lhs, rhs):
+    """Find the lengths of the common prefix and common suffix between
+    two sequences."""
+    idx = len(commonprefix([lhs, rhs]))
+    return idx, len(commonprefix([lhs[idx:][::-1], rhs[idx:][::-1]]))
 
 
 def fasta_sequence(lines):
@@ -33,7 +41,7 @@ def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
 
     count = 0
     nodes = {}
-    for source, sink, variant in bfs_traversal(graph, atomics):
+    for source, sink, variant in graph.bfs_traversal(atomics):
         if source not in nodes:
             nodes[source] = count
             count += 1

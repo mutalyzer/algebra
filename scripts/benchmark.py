@@ -3,45 +3,9 @@ import pstats
 import sys
 from itertools import combinations, product
 from algebra import Relation
-from algebra.lcs import bfs_traversal, dfs_traversal, edit, supremal
+from algebra.lcs import lcs_graph
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs, to_hgvs
-
-
-def compare_graph(reference, lhs, rhs):
-    if lhs.supremal == rhs.supremal:
-        return Relation.EQUIVALENT
-
-    if lhs.supremal.is_disjoint(rhs.supremal):
-        return Relation.DISJOINT
-
-    start = min(lhs.supremal.start, rhs.supremal.start)
-    end = max(lhs.supremal.end, rhs.supremal.end)
-
-    # TODO: class method on LCSgraph?
-    def observed(supremal):
-        return (reference[min(start, supremal.start):supremal.start] +
-                supremal.sequence +
-                reference[supremal.end:max(end, supremal.end)])
-
-    lhs_observed = observed(lhs.supremal)
-    rhs_observed = observed(rhs.supremal)
-    distance = edit(lhs_observed, rhs_observed)
-
-    if lhs.distance + rhs.distance == distance:
-        return Relation.DISJOINT
-
-    if lhs.distance - rhs.distance == distance:
-        return Relation.CONTAINS
-
-    if rhs.distance - lhs.distance == distance:
-        return Relation.IS_CONTAINED
-
-    for lhs_variant, rhs_variant in product(lhs.edges(), rhs.edges()):
-        if not lhs_variant.is_disjoint(rhs_variant):
-            return Relation.OVERLAP
-
-    return Relation.DISJOINT
 
 
 BENCHMARK_ENABLE = False
@@ -66,29 +30,13 @@ def benchmark(func):
 @benchmark
 def supremals(reference, variants):
     for variant in variants:
-        supremal_variant, graph = supremal(reference, variant["variants"])
-        variant["supremal"] = supremal_variant
+        graph = lcs_graph(reference, variant["variants"])
         variant["graph"] = graph
 
 
 @benchmark
 def pairwise(reference, graphs):
     return [{"lhs": lhs.label, "rhs": rhs.label, "relation": compare_graph(reference, lhs, rhs)} for lhs, rhs in combinations(graphs, 2)]
-
-
-class LCSgraph:
-    def __init__(self, label, variants, supremal, graph):
-        self.label = label
-        self.variants = variants
-        self.supremal = supremal
-        self.graph = graph
-
-    def edges(self):
-        return {edge[0] for *_, edge in bfs_traversal(self.graph)}
-
-    @property
-    def distance(self):
-        return sum(len(variant) for variant in next(dfs_traversal(self.graph)))
 
 
 def main():

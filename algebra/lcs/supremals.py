@@ -1,21 +1,14 @@
-"""Functions to find supremal variants."""
+"""Functions to find supremal LCS graphs."""
 
 
 from operator import attrgetter
-from os.path import commonprefix
-from ..lcs.all_lcs import LCSnode, bfs_traversal, lcs_graph
+from ..lcs.lcs_graph import LCSgraph
+from ..utils import trim
 from ..variants import Variant, patch
 
 
-def trim(lhs, rhs):
-    """Find the lengths of the common prefix and common suffix between
-    two sequences."""
-    idx = len(commonprefix([lhs, rhs]))
-    return idx, len(commonprefix([lhs[idx:][::-1], rhs[idx:][::-1]]))
-
-
-def supremal(reference, variants, offset=10):
-    """Iteratively find the supremal variant for an allele by repeatedly
+def lcs_graph(reference, variants, offset=10):
+    """Iteratively find the supremal LCS graph for an allele by repeatedly
     widening a range of influence.
 
     Parameters
@@ -32,14 +25,12 @@ def supremal(reference, variants, offset=10):
 
     Returns
     -------
-    supremal : `Variant`
-        The supremal variant.
-    source : `LCS_Node`
-        The source of the LCS graph in which the supremal was determined.
+    graph : `LCSgraph`
+        The LCS graph.
     """
 
     if not variants:
-        return Variant(0, 0, ""), LCSnode(0, 0, 0)
+        return LCSgraph("", "")
 
     start = min(variants, key=attrgetter("start")).start
     end = max(variants, key=attrgetter("end")).end
@@ -53,25 +44,27 @@ def supremal(reference, variants, offset=10):
         end = min(len(reference), variant.end + offset)
         observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
 
-        graph = lcs_graph(reference[start:end], observed, shift=start)
-        edges = {edge[0] for *_, edge in bfs_traversal(graph)}
+        graph = LCSgraph(reference[start:end], observed, shift=start)
 
-        if not edges:
-            return Variant(0, 0, ""), graph
+        if not graph.supremal:
+            return graph
 
-        edges_start = min(edges, key=attrgetter("start")).start
-        edges_end = max(edges, key=attrgetter("end")).end
-
-        if (edges_start > start or edges_start == 0) and (edges_end < end or edges_end == len(reference)):
-            return Variant(edges_start, edges_end, observed[edges_start - start:len(observed) - (end - edges_end)]), graph
+        if ((graph.supremal.start > start or graph.supremal.start == 0) and
+                (graph.supremal.end < end or graph.supremal.end == len(reference))):
+            return graph
 
         offset *= 2
 
 
-def supremal_sequence(reference, observed):
-    """The supremal variant for two sequences."""
+def lcs_graph_supremal(reference, supremal):
+    """The supremal LCS graph for a given supremal variant."""
+    return LCSgraph(reference, supremal.sequence)
+
+
+def lcs_graph_sequence(reference, observed):
+    """The supremal LCS graph for two sequences."""
     if reference == observed:
-        return supremal(reference, [])
+        return LCSgraph("", "")
 
     prefix_len, suffix_len = trim(reference, observed)
-    return supremal(reference, [Variant(prefix_len, len(reference) - suffix_len, observed[prefix_len:len(observed) - suffix_len])])
+    return lcs_graph(reference, [Variant(prefix_len, len(reference) - suffix_len, observed[prefix_len:len(observed) - suffix_len])])
