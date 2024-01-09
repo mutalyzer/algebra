@@ -18,7 +18,7 @@ def contains(reference, lhs, rhs):
 
 def is_contained(reference, lhs, rhs):
     """Check if `lhs` is contained in `rhs`."""
-    return supremal_based_contains(reference, rhs, lhs) == Relation.IS_CONTAINED
+    return compare(reference, lhs, rhs) == Relation.IS_CONTAINED
 
 
 def are_disjoint(reference, lhs, rhs):
@@ -49,6 +49,11 @@ def compare(reference, lhs, rhs):
         The relation between the two LCS graphs.
     """
 
+    def observed(supremal):
+        return (reference[min(start, supremal.start):supremal.start] +
+                supremal.sequence +
+                reference[supremal.end:max(end, supremal.end)])
+
     if lhs.supremal == rhs.supremal:
         return Relation.EQUIVALENT
 
@@ -57,12 +62,6 @@ def compare(reference, lhs, rhs):
 
     start = min(lhs.supremal.start, rhs.supremal.start)
     end = max(lhs.supremal.end, rhs.supremal.end)
-
-    # TODO: class method on LCSgraph?
-    def observed(supremal):
-        return (reference[min(start, supremal.start):supremal.start] +
-                supremal.sequence +
-                reference[supremal.end:max(end, supremal.end)])
 
     lhs_observed = observed(lhs.supremal)
     rhs_observed = observed(rhs.supremal)
