@@ -39,7 +39,7 @@ def pairwise(reference, variants):
     return [{"lhs": lhs["label"],
              "rhs": rhs["label"],
              "relation": compare(reference, lhs["graph"], rhs["graph"])
-            } for lhs, rhs in combinations(variants, 2)]
+             } for lhs, rhs in combinations(variants, 2)]
 
 
 def main():

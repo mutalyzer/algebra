@@ -2,19 +2,18 @@ from itertools import combinations
 from sys import argv
 from algebra import Relation, compare
 from algebra.extractor import extract, to_hgvs
-from algebra.lcs import bfs_traversal, supremal
-from algebra.lcs.all_lcs import LCSnode
+from algebra.lcs import LCSgraph, lcs_graph
 from algebra.utils import to_dot
 from algebra.variants import Variant, parse_hgvs, to_hgvs as to_hgvs_simple
 
 
 def unique_matches(graph):
-    for node in {sink for _, sink, _ in bfs_traversal(graph)} | {graph}:
-        if node == graph:
-            yield LCSnode(node.row, node.col, 0)
+    for node in graph.nodes():
+        if node == graph._source:
+            yield LCSgraph.Node(node.row, node.col, 0)
         if not node.edges:
-            yield LCSnode(node.row + node.length, node.col + node.length, 0)
-        yield from (LCSnode(node.row + i, node.col + i, 1) for i in range(node.length))
+            yield LCSgraph.Node(node.row + node.length, node.col + node.length, 0)
+        yield from (LCSgraph.Node(node.row + i, node.col + i, 1) for i in range(node.length))
 
 
 def delins(observed, shift, lhs, rhs):
@@ -22,31 +21,31 @@ def delins(observed, shift, lhs, rhs):
 
 
 def subtract(reference, minuend):
-    supremal_variant, graph = supremal(reference, minuend)
+    graph = lcs_graph(reference, minuend)
     print("\n".join(to_dot(reference, graph, labels=False)))
 
     seen = set()
-    shift = graph.row
     matches = sorted(unique_matches(graph))
     source = matches[0]
     sink = matches[-1]
+    shift = source.row
     for lhs, rhs in combinations(matches, 2):
         if rhs.row < lhs.row + lhs.length or rhs.col < lhs.col + lhs.length:
             continue
 
-        variant = delins(supremal_variant.sequence, shift, lhs, rhs)
+        variant = delins(graph.supremal.sequence, shift, lhs, rhs)
 
-        subtrahend, *_ = extract(reference, [variant])
+        subtrahend, _ = extract(reference, [variant])
         if tuple(subtrahend) in seen:
             continue
         seen.add(tuple(subtrahend))
 
         difference = []
         if lhs.length:
-            difference.append(delins(supremal_variant.sequence, shift, source, lhs))
+            difference.append(delins(graph.supremal.sequence, shift, source, lhs))
         if rhs.length:
-            difference.append(delins(supremal_variant.sequence, shift, rhs, sink))
-        difference_norm, *_ = extract(reference, difference)
+            difference.append(delins(graph.supremal.sequence, shift, rhs, sink))
+        difference_norm, _ = extract(reference, difference)
 
         assert compare(reference, minuend, [variant, *difference]) == Relation.EQUIVALENT
 
