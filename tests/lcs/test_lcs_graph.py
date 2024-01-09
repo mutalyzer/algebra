@@ -222,6 +222,13 @@ def test_lcs_node_hash(duplicates, unique):
     assert set(duplicates) == unique
 
 
+@pytest.mark.parametrize("lhs, rhs", [
+    ([LCSgraph.Node(0, 0, 0), LCSgraph.Node(1, 2, 0)]),
+])
+def test_lcs_node_less_than(lhs, rhs):
+    assert lhs < rhs
+
+
 @pytest.mark.parametrize("lcs_node, string", [
     (LCSgraph.Node(0, 0, 0), "(0, 0)[0]"),
 ])
