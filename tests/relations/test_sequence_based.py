@@ -77,5 +77,4 @@ def test_are_disjoint(reference, lhs, rhs, expected):
 
 @pytest.mark.parametrize("reference, lhs, rhs, expected", TESTS)
 def test_compare(reference, lhs, rhs, expected):
-    relation = compare(reference, lhs, rhs)
-    assert relation == expected
+    assert compare(reference, lhs, rhs) == expected
