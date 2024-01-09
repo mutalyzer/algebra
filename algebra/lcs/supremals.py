@@ -67,4 +67,4 @@ def lcs_graph_sequence(reference, observed):
 
 def lcs_graph_supremal(reference, supremal):
     """The supremal LCS graph for a supremal variant."""
-    return LCSgraph(reference, supremal.sequence)
+    return LCSgraph(reference[supremal.start:supremal.end], supremal.sequence, shift=supremal.start)

@@ -262,7 +262,7 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
         if not reference and not observed:
             return source, Variant(0, 0, "")
         sink = LCSgraph.Node(len(reference), len(observed), 0)
-        variant = Variant(shift, len(reference), observed)
+        variant = Variant(shift, shift + len(reference), observed)
         source.edges = [(sink, variant)]
         return source, variant
 
