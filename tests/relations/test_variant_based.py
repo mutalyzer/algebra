@@ -8,8 +8,9 @@ TESTS = [
     ("CC", [Variant(0, 0, "C"), Variant(1, 2, "")], [Variant(0, 0, "C"), Variant(1, 1, "T")], Relation.DISJOINT),
     ("CTCCG", [Variant(4, 4, "TCC")], [Variant(0, 0, "GT")], Relation.OVERLAP),
     ("CCCCC", [Variant(4, 5, "")], [Variant(0, 1, "")], Relation.EQUIVALENT),
-    ('AACCCCTTGTTC', [Variant(2, 2, "C")], [Variant(6, 7, "C")], Relation.IS_CONTAINED),
-    ('AACATTTC', [Variant(1, 1, "AC")], [Variant(4, 5, "C")], Relation.OVERLAP),
+    ("AACCCCTTGTTC", [Variant(2, 2, "C")], [Variant(6, 7, "C")], Relation.IS_CONTAINED),
+    ("AACATTTC", [Variant(1, 1, "AC")], [Variant(4, 5, "C")], Relation.OVERLAP),
+    ("AAA", [Variant(1, 1, "T")], [Variant(1, 1, "C")], Relation.DISJOINT),
 ]
 
 

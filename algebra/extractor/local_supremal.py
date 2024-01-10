@@ -6,16 +6,14 @@ alignments."""
 from .. import Variant
 
 
-def local_supremal(reference, observed, graph):
+def local_supremal(reference, graph):
     """Extract the local supremal representation.
 
     Parameters
     ----------
     reference : str
         The reference sequence.
-    observed : str
-        The observed sequence.
-    graph : `_Node` (opaque data type)
+    graph : `LCSgraph`
         The LCS graph.
 
     Returns
@@ -25,7 +23,7 @@ def local_supremal(reference, observed, graph):
 
     See Also
     --------
-    `algebra.lcs.lcs_graph` : Constructs the LCS graph.
+    `algebra.lcs.LCSgraph` : Construct the LCS graph.
     """
 
     def post_dominators(node, start, visited):
@@ -51,11 +49,13 @@ def local_supremal(reference, observed, graph):
         visited[node]["post"] = post.union(visited[node]["post"])
         return visited
 
-    shift = graph.row
-    visited = post_dominators(graph, 0, {})
+    observed = graph.supremal.sequence
+    source = graph._source
+    shift = source.row
+    visited = post_dominators(source, 0, {})
     variants = []
     parent = None
-    for node in sorted(visited[graph]["post"]):
+    for node in sorted(visited[source]["post"]):
         if parent:
             start = visited[parent]["end"]
             end = visited[node]["start"]
