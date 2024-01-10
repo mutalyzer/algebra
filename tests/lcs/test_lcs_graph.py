@@ -1,38 +1,50 @@
 import pytest
-from algebra import Variant
-from algebra.lcs.all_lcs import (LCSnode, bfs_traversal, build_graph,
-                                 dfs_traversal, edit, lcs_graph)
+from algebra.variants import Variant, patch
+from algebra.lcs.lcs_graph import LCSgraph, trim, _lcs_nodes
+
+
+TESTS = [
+    # reference, variants, supremal
+    ("GTGTGTTTTTTTAACAGGGA", [Variant(8, 9, "")], Variant(5, 12, "TTTTTT")),
+    ("ACTG", [Variant(0, 1, "A")], Variant(0, 0, "")),
+    ("TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGCGTCGGTTTGAC", [Variant(24, 25, "")], Variant(24, 27, "TT")),
+    ("TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGC", [Variant(24, 25, "")], Variant(24, 27, "TT")),
+    ("GGGTCTTCGACTTTCCACGAAAATCGC", [Variant(11, 12, "")], Variant(11, 14, "TT")),
+    ("AAA", [Variant(0, 1, "")], Variant(0, 3, "AA")),
+    ("A", [Variant(0, 1, "")], Variant(0, 1, "")),
+    ("A", [], Variant(0, 0, "")),
+]
 
 
 @pytest.mark.parametrize("reference, observed, expected_distance, expected_lcs_nodes", [
     ("", "", 0, []),
-    ("AA", "ACA", 1, [[LCSnode(0, 0, 1)], [LCSnode(1, 2, 1)]]),
-    ("ACA", "AA", 1, [[LCSnode(0, 0, 1)], [LCSnode(2, 1, 1)]]),
+    ("AA", "ACA", 1, [[LCSgraph.Node(0, 0, 1)], [LCSgraph.Node(1, 2, 1)]]),
+    ("ACA", "AA", 1, [[LCSgraph.Node(0, 0, 1)], [LCSgraph.Node(2, 1, 1)]]),
     ("CTCGGCATTA", "GGCTGGCTGT", 6, [
-        [LCSnode(2, 2, 1), LCSnode(3, 1, 1)],
-        [LCSnode(0, 2, 2)],
-        [LCSnode(4, 4, 1), LCSnode(3, 0, 3), LCSnode(3, 5, 1)],
+        [LCSgraph.Node(2, 2, 1), LCSgraph.Node(3, 1, 1)],
+        [LCSgraph.Node(0, 2, 2)],
+        [LCSgraph.Node(4, 4, 1), LCSgraph.Node(3, 0, 3), LCSgraph.Node(3, 5, 1)],
         [],
-        [LCSnode(3, 4, 3)],
-        [LCSnode(7, 7, 1), LCSnode(8, 7, 1)],
-        [LCSnode(8, 9, 1)]
+        [LCSgraph.Node(3, 4, 3)],
+        [LCSgraph.Node(7, 7, 1), LCSgraph.Node(8, 7, 1)],
+        [LCSgraph.Node(8, 9, 1)]
     ]),
     ("CATATATCG", "CTTATAGCAT", 7, [
-        [LCSnode(0, 0, 1)],
-        [LCSnode(2, 1, 1), LCSnode(4, 1, 1), LCSnode(1, 5, 1)],
+        [LCSgraph.Node(0, 0, 1)],
+        [LCSgraph.Node(2, 1, 1), LCSgraph.Node(4, 1, 1), LCSgraph.Node(1, 5, 1)],
         [],
-        [LCSnode(1, 3, 3)],
-        [LCSnode(2, 2, 4), LCSnode(4, 2, 3)],
-        [LCSnode(7, 7, 1), LCSnode(8, 6, 1), LCSnode(5, 8, 2)],
+        [LCSgraph.Node(1, 3, 3)],
+        [LCSgraph.Node(2, 2, 4), LCSgraph.Node(4, 2, 3)],
+        [LCSgraph.Node(7, 7, 1), LCSgraph.Node(8, 6, 1), LCSgraph.Node(5, 8, 2)],
     ]),
     ("TTT", "TTTTAT", 3, [
-        [LCSnode(0, 3, 1)],
-        [LCSnode(0, 2, 2)],
-        [LCSnode(0, 0, 3), LCSnode(0, 1, 3), LCSnode(2, 5, 1)],
+        [LCSgraph.Node(0, 3, 1)],
+        [LCSgraph.Node(0, 2, 2)],
+        [LCSgraph.Node(0, 0, 3), LCSgraph.Node(0, 1, 3), LCSgraph.Node(2, 5, 1)],
     ]),
 ])
-def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
-    distance, lcs_nodes = edit(reference, observed)
+def test_lcs_nodes(reference, observed, expected_distance, expected_lcs_nodes):
+    distance, lcs_nodes = _lcs_nodes(reference, observed)
     assert distance == expected_distance
     assert distance == len(reference) - len(lcs_nodes) + len(observed) - len(lcs_nodes)
     assert lcs_nodes == expected_lcs_nodes
@@ -41,17 +53,17 @@ def test_edit(reference, observed, expected_distance, expected_lcs_nodes):
 @pytest.mark.parametrize("reference, observed, max_distance, expected_distance", [
     ("CTCGGCATTA", "GGCTGGCTGT", 6, 6),
 ])
-def test_edit_max_distance(reference, observed, max_distance, expected_distance):
-    distance, _ = edit(reference, observed, max_distance=max_distance)
+def test_lcs_nodes_max_distance(reference, observed, max_distance, expected_distance):
+    distance, _ = _lcs_nodes(reference, observed, max_distance=max_distance)
     assert distance == expected_distance
 
 
 @pytest.mark.parametrize("reference, observed, max_distance, exception, message", [
     ("CTCGGCATTA", "GGCTGGCTGT", 5, ValueError, "maximum distance exceeded"),
 ])
-def test_edit_max_distance_fail(reference, observed, max_distance, exception, message):
+def test_lcs_nodes_max_distance_fail(reference, observed, max_distance, exception, message):
     with pytest.raises(exception) as exc:
-        edit(reference, observed, max_distance=max_distance)
+        _lcs_nodes(reference, observed, max_distance=max_distance)
     assert str(exc.value) == message
 
 
@@ -92,7 +104,7 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(0, 0, "GAA")
     }),
     ("CATATATCG", "CTTATAGCAT", {
-        Variant(1, 1, "TT"), Variant(1 ,2, ""), Variant(1, 2, "T"),
+        Variant(1, 1, "TT"), Variant(1, 2, ""), Variant(1, 2, "T"),
         Variant(4, 5, "GC"), Variant(3, 3, "T"), Variant(3, 4, ""),
         Variant(6, 7, "G"), Variant(6, 8, ""), Variant(6, 6, "GCA"),
         Variant(5, 5, "AGC"), Variant(7, 9, ""), Variant(7, 7, "AG"),
@@ -108,20 +120,49 @@ def test_edit_max_distance_fail(reference, observed, max_distance, exception, me
         Variant(0, 2, ""), Variant(1, 3, ""), Variant(2, 4, "")
     }),
 ])
-def test_build_graph(reference, observed, expected_edges):
-    _, lcs_nodes = edit(reference, observed)
-    _, edges = build_graph(reference, observed, lcs_nodes)
-    assert edges == expected_edges
+def test_lcs_graph(reference, observed, expected_edges):
+    graph = LCSgraph(reference, observed)
+    assert graph.edges() == expected_edges
+
+
+@pytest.mark.parametrize("reference, variants, expected", TESTS)
+def test_lcs_graph_from_sequence(reference, variants, expected):
+    graph = LCSgraph.from_sequence(reference, patch(reference, variants))
+    assert graph.supremal == expected
+
+
+@pytest.mark.parametrize("reference, supremal", [(reference, supremal) for reference, _, supremal in TESTS])
+def test_lcs_graph_from_supremal(reference, supremal):
+    graph = LCSgraph.from_supremal(reference, supremal)
+    assert graph.supremal == supremal
+
+
+@pytest.mark.parametrize("reference, variants, expected", TESTS)
+def test_lcs_graph_from_variant(reference, variants, expected):
+    graph = LCSgraph.from_variant(reference, variants)
+    assert graph.supremal == expected
+
+
+@pytest.mark.parametrize("reference, variants, offset, expected", [
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 2, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 3, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 4, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 40, Variant(11, 19, "TTATAGCAT")),
+    ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", [Variant(20, 21, "T")], 1, Variant(0, 74, "AAAAAAAAAAAAAAAAAAAATAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")),
+])
+def test_lcs_graph_from_variant_offset(reference, variants, offset, expected):
+    graph = LCSgraph.from_variant(reference, variants, offset)
+    assert graph.supremal == expected
 
 
 @pytest.mark.parametrize("reference, observed, expected_nodes", [
-    ("GACTACGAGACAC", "TACGAGACAC", {
-        LCSnode(0, 0, 0), LCSnode(3, 0, 0)
-    }),
+    ("GACTACGAGACAC", "TACGAGACAC", [
+        LCSgraph.Node(0, 0, 0), LCSgraph.Node(3, 0, 0)
+    ]),
 ])
-def test_build_graph_lcsnodes(reference, observed, expected_nodes):
-    graph = lcs_graph(reference, observed)
-    assert {sink for _, sink, _ in bfs_traversal(graph)} | {graph} == expected_nodes
+def test_lcs_graph_nodes(reference, observed, expected_nodes):
+    graph = LCSgraph(reference, observed)
+    assert list(graph.nodes()) == expected_nodes
 
 
 @pytest.mark.parametrize("reference, observed, edges", [
@@ -139,8 +180,8 @@ def test_build_graph_lcsnodes(reference, observed, expected_nodes):
      ]),
 ])
 def test_bfs_traversal(reference, observed, edges):
-    graph = lcs_graph(reference, observed)
-    assert [edge for *_, edge in bfs_traversal(graph)] == edges
+    graph = LCSgraph(reference, observed)
+    assert [edge for *_, edge in graph.bfs_traversal()] == edges
 
 
 @pytest.mark.parametrize("reference, observed, edges", [
@@ -173,8 +214,8 @@ def test_bfs_traversal(reference, observed, edges):
      ]),
 ])
 def test_bfs_traversal_atomics(reference, observed, edges):
-    graph = lcs_graph(reference, observed)
-    assert [edge for *_, edge in bfs_traversal(graph, atomics=True)] == edges
+    graph = LCSgraph(reference, observed)
+    assert [edge for *_, edge in graph.bfs_traversal(atomics=True)] == edges
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [
@@ -192,9 +233,9 @@ def test_bfs_traversal_atomics(reference, observed, edges):
         [Variant(0, 0, "TAT")]
     ]),
 ])
-def test_dfs_traversal(reference, observed, expected_variant):
-    graph = lcs_graph(reference, observed)
-    assert list(dfs_traversal(graph)) == expected_variant
+def test_paths(reference, observed, expected_variant):
+    graph = LCSgraph(reference, observed)
+    assert list(graph.paths()) == expected_variant
 
 
 @pytest.mark.parametrize("reference, observed, expected_variant", [
@@ -212,20 +253,41 @@ def test_dfs_traversal(reference, observed, expected_variant):
         [Variant(0, 0, "TAT")]
     ]),
 ])
-def test_dfs_traversal_atomics(reference, observed, expected_variant):
-    graph = lcs_graph(reference, observed)
-    assert list(dfs_traversal(graph, atomics=True)) == expected_variant
+def test_paths_atomics(reference, observed, expected_variant):
+    graph = LCSgraph(reference, observed)
+    assert list(graph.paths(atomics=True)) == expected_variant
 
 
 @pytest.mark.parametrize("duplicates, unique", [
-    ([LCSnode(0, 0, 0), LCSnode(0, 0, 0), LCSnode(0, 0, 0)], {LCSnode(0, 0, 0)}),
+    ([LCSgraph.Node(0, 0, 0), LCSgraph.Node(0, 0, 0), LCSgraph.Node(0, 0, 0)], {LCSgraph.Node(0, 0, 0)}),
 ])
-def test_lcsnode_hash(duplicates, unique):
+def test_lcs_node_hash(duplicates, unique):
     assert set(duplicates) == unique
 
 
-@pytest.mark.parametrize("lcsnode, string", [
-    (LCSnode(0, 0, 0), "(0, 0)[0]"),
+@pytest.mark.parametrize("lhs, rhs", [
+    ([LCSgraph.Node(0, 0, 0), LCSgraph.Node(1, 2, 0)]),
 ])
-def test_lcsnode_string(lcsnode, string):
-    assert str(lcsnode) == string
+def test_lcs_node_less_than(lhs, rhs):
+    assert lhs < rhs
+
+
+@pytest.mark.parametrize("lcs_node, string", [
+    (LCSgraph.Node(0, 0, 0), "(0, 0)[0]"),
+])
+def test_lcs_node_string(lcs_node, string):
+    assert str(lcs_node) == string
+
+
+@pytest.mark.parametrize("reference, observed, prefix_len, suffix_len", [
+    ("", "", 0, 0),
+    ("A", "A", 1, 0),
+    ("AA", "A", 1, 0),
+    ("AAA", "AA", 2, 0),
+    ("A", "C", 0, 0),
+    ("AAATAAA", "T", 0, 0),
+    ("AAATAAA", "AAACAAA", 3, 3),
+    ("AAATAAA", "AAATAAA", 7, 0),
+])
+def test_trim(reference, observed, prefix_len, suffix_len):
+    assert trim(reference, observed) == (prefix_len, suffix_len)

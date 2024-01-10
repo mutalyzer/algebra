@@ -1,6 +1,14 @@
 import pytest
-from algebra import Variant
-from algebra.extractor import extract, extract_sequence, extract_supremal, to_hgvs
+from algebra import LCSgraph, Variant
+from algebra.extractor.extractor import (diagonal, extract, extract_sequence,
+                                         extract_supremal, to_hgvs)
+
+
+@pytest.mark.parametrize("reference, observed, variants", [
+    ("CATATATCG", "CTTATAGCAT", [Variant(1, 2, "T"), Variant(6, 7, "G"), Variant(8, 9, "AT")]),
+])
+def test_diagonal(reference, observed, variants):
+    assert diagonal(reference, observed, LCSgraph.from_sequence(reference, observed)) == variants
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
@@ -95,7 +103,7 @@ from algebra.extractor import extract, extract_sequence, extract_supremal, to_hg
     ("TCTGGAAACACTGGT", "GCGAACTAGGT", [Variant(0, 4, "GC"), Variant(6, 10, "A"), Variant(12, 12, "A")], "[1_4delinsGC;8_10del;12_13insA]"),
 ])
 def test_extract_sequence(reference, observed, variants, hgvs):
-    canonical, *_ = extract_sequence(reference, observed)
+    canonical, _ = extract_sequence(reference, observed)
     assert canonical == variants
     assert to_hgvs(canonical, reference) == hgvs
 
@@ -104,7 +112,7 @@ def test_extract_sequence(reference, observed, variants, hgvs):
     ("GTGTGTTTTTTTAACAGGGA", Variant(5, 12, "TATAT"), [Variant(6, 11, "ATA")], "7_11delinsATA"),
 ])
 def test_extract_supremal(reference, supremal, variants, hgvs):
-    canonical, *_ = extract_supremal(reference, supremal)
+    canonical, _ = extract_supremal(reference, supremal)
     assert canonical == variants
     assert to_hgvs(canonical, reference) == hgvs
 
@@ -114,7 +122,7 @@ def test_extract_supremal(reference, supremal, variants, hgvs):
     ("TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGCGTCGGTTTGAC", [Variant(24, 25, "")], "25_27T[2]"),
 ])
 def test_extract(reference, variants, hgvs):
-    extracted, *_ = extract(reference, variants)
+    extracted, _ = extract(reference, variants)
     assert to_hgvs(extracted, reference) == hgvs
 
 

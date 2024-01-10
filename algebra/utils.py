@@ -2,7 +2,6 @@
 
 
 import random
-from .lcs import bfs_traversal
 from .variants import DNA_NUCLEOTIDES, Variant, reverse_complement, to_hgvs
 
 
@@ -33,7 +32,7 @@ def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
 
     count = 0
     nodes = {}
-    for source, sink, variant in bfs_traversal(graph, atomics):
+    for source, sink, variant in graph.bfs_traversal(atomics):
         if source not in nodes:
             nodes[source] = count
             count += 1

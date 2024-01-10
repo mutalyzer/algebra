@@ -7,7 +7,7 @@ an or all alignments).
 
 See Also
 --------
-algebra.lcs.all_lcs : Calculates all LCS alignments.
+algebra.lcs.lcs_graph : Calculate all LCS alignments.
 
 References
 ----------
@@ -18,7 +18,7 @@ pp. 317-323.
 """
 
 
-def edit(a, b):
+def edit_distance(a, b):
     """Calculate the simple edit distance between two strings."""
     def snake(m, n, k, pp, ppp):
         y = max(pp, ppp)
