@@ -2,7 +2,7 @@ import cProfile
 import pstats
 import sys
 from itertools import combinations
-from algebra.lcs import lcs_graph
+from algebra.lcs import LCSgraph
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs, to_hgvs
 from algebra.relations.graph_based import compare
@@ -30,7 +30,7 @@ def benchmark(func):
 @benchmark
 def graphs(reference, variants):
     for variant in variants:
-        graph = lcs_graph(reference, variant["variants"])
+        graph = LCSgraph.from_variant(reference, variant["variants"])
         variant["graph"] = graph
 
 

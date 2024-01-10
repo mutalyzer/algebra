@@ -1,8 +1,7 @@
 from itertools import combinations
 from sys import argv
-from algebra import Relation, compare
+from algebra import LCSgraph, Relation, compare
 from algebra.extractor import extract, to_hgvs
-from algebra.lcs import LCSgraph, lcs_graph
 from algebra.utils import to_dot
 from algebra.variants import Variant, parse_hgvs, to_hgvs as to_hgvs_simple
 
@@ -21,7 +20,7 @@ def delins(observed, shift, lhs, rhs):
 
 
 def subtract(reference, minuend):
-    graph = lcs_graph(reference, minuend)
+    graph = LCSgraph.from_variant(reference, minuend)
     print("\n".join(to_dot(reference, graph, labels=False)))
 
     seen = set()
