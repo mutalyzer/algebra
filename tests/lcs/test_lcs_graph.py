@@ -159,6 +159,9 @@ def test_lcs_graph_from_variant_offset(reference, variants, offset, expected):
     ("GACTACGAGACAC", "TACGAGACAC", [
         LCSgraph.Node(0, 0, 0), LCSgraph.Node(3, 0, 0)
     ]),
+    ("AAAA", "AAA", [
+        LCSgraph.Node(0, 0, 3), LCSgraph.Node(1, 0, 3)
+    ]),
 ])
 def test_lcs_graph_nodes(reference, observed, expected_nodes):
     graph = LCSgraph(reference, observed)

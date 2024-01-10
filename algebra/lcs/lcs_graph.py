@@ -169,8 +169,9 @@ class LCSgraph:
             yield source
 
             for sink, _ in source.edges:
-                visited.add(sink)
-                stack.append(sink)
+                if sink not in visited:
+                    visited.add(sink)
+                    stack.append(sink)
 
     def paths(self, atomics=False):
         """Traverse all paths (alignments) in the LCS graph.
