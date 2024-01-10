@@ -415,10 +415,10 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
 
             source.edges.append((node, variant))
 
-    min_source = min((edge.start for _, edge in source.edges), default=shift) - shift
-    source.row += min_source
-    source.col += min_source
-    source.length -= min_source
+    source_offset = min((edge.start for _, edge in source.edges), default=shift) - shift
+    source.row += source_offset
+    source.col += source_offset
+    source.length -= source_offset
     sink.length -= sink.row + sink.length - max_sink
 
-    return source, Variant(min_source + shift, max_sink, observed[min_source:max_sink + len(observed) - len(reference) - shift])
+    return source, Variant(source.row, sink.row + sink.length, observed[source.col - shift:sink.col + sink.length - shift])
