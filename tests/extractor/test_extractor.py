@@ -1,6 +1,5 @@
 import pytest
-from algebra import Variant
-from algebra.lcs.supremals import lcs_graph_sequence
+from algebra import LCSgraph, Variant
 from algebra.extractor.extractor import (diagonal, extract, extract_sequence,
                                          extract_supremal, to_hgvs)
 
@@ -9,7 +8,7 @@ from algebra.extractor.extractor import (diagonal, extract, extract_sequence,
     ("CATATATCG", "CTTATAGCAT", [Variant(1, 2, "T"), Variant(6, 7, "G"), Variant(8, 9, "AT")]),
 ])
 def test_diagonal(reference, observed, variants):
-    assert diagonal(reference, observed, lcs_graph_sequence(reference, observed)) == variants
+    assert diagonal(reference, observed, LCSgraph.from_sequence(reference, observed)) == variants
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [

@@ -49,11 +49,6 @@ def compare(reference, lhs, rhs):
         The relation between the two LCS graphs.
     """
 
-    def observed(supremal):
-        return (reference[min(start, supremal.start):supremal.start] +
-                supremal.sequence +
-                reference[supremal.end:max(end, supremal.end)])
-
     if lhs.supremal == rhs.supremal:
         return Relation.EQUIVALENT
 
@@ -62,9 +57,12 @@ def compare(reference, lhs, rhs):
 
     start = min(lhs.supremal.start, rhs.supremal.start)
     end = max(lhs.supremal.end, rhs.supremal.end)
-
-    lhs_observed = observed(lhs.supremal)
-    rhs_observed = observed(rhs.supremal)
+    lhs_observed = "".join([reference[start:lhs.supremal.start],
+                            lhs.supremal.sequence,
+                            reference[lhs.supremal.end:end]])
+    rhs_observed = "".join([reference[start:rhs.supremal.start],
+                            rhs.supremal.sequence,
+                            reference[rhs.supremal.end:end]])
     distance = edit_distance(lhs_observed, rhs_observed)
 
     if lhs.distance + rhs.distance == distance:

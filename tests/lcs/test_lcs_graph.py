@@ -1,6 +1,19 @@
 import pytest
-from algebra import Variant
-from algebra.lcs.lcs_graph import LCSgraph, _lcs_nodes
+from algebra.variants import Variant, patch
+from algebra.lcs.lcs_graph import LCSgraph, trim, _lcs_nodes
+
+
+TESTS = [
+    # reference, variants, supremal
+    ("GTGTGTTTTTTTAACAGGGA", [Variant(8, 9, "")], Variant(5, 12, "TTTTTT")),
+    ("ACTG", [Variant(0, 1, "A")], Variant(0, 0, "")),
+    ("TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGCGTCGGTTTGAC", [Variant(24, 25, "")], Variant(24, 27, "TT")),
+    ("TGCATTAGGGCAAGGGTCTTCGACTTTCCACGAAAATCGC", [Variant(24, 25, "")], Variant(24, 27, "TT")),
+    ("GGGTCTTCGACTTTCCACGAAAATCGC", [Variant(11, 12, "")], Variant(11, 14, "TT")),
+    ("AAA", [Variant(0, 1, "")], Variant(0, 3, "AA")),
+    ("A", [Variant(0, 1, "")], Variant(0, 1, "")),
+    ("A", [], Variant(0, 0, "")),
+]
 
 
 @pytest.mark.parametrize("reference, observed, expected_distance, expected_lcs_nodes", [
@@ -110,6 +123,36 @@ def test_lcs_nodes_max_distance_fail(reference, observed, max_distance, exceptio
 def test_lcs_graph(reference, observed, expected_edges):
     graph = LCSgraph(reference, observed)
     assert graph.edges() == expected_edges
+
+
+@pytest.mark.parametrize("reference, variants, expected", TESTS)
+def test_lcs_graph_from_sequence(reference, variants, expected):
+    graph = LCSgraph.from_sequence(reference, patch(reference, variants))
+    assert graph.supremal == expected
+
+
+@pytest.mark.parametrize("reference, supremal", [(reference, supremal) for reference, _, supremal in TESTS])
+def test_lcs_graph_from_supremal(reference, supremal):
+    graph = LCSgraph.from_supremal(reference, supremal)
+    assert graph.supremal == supremal
+
+
+@pytest.mark.parametrize("reference, variants, expected", TESTS)
+def test_lcs_graph_from_variant(reference, variants, expected):
+    graph = LCSgraph.from_variant(reference, variants)
+    assert graph.supremal == expected
+
+
+@pytest.mark.parametrize("reference, variants, offset, expected", [
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 2, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 3, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 4, Variant(11, 19, "TTATAGCAT")),
+    ("XXXXXXXXXXCATATATCGXXXXXXXXXX", [Variant(11, 12, "T"), Variant(16, 17, "G"), Variant(18, 19, "AT")], 40, Variant(11, 19, "TTATAGCAT")),
+    ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", [Variant(20, 21, "T")], 1, Variant(0, 74, "AAAAAAAAAAAAAAAAAAAATAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")),
+])
+def test_lcs_graph_from_variant_offset(reference, variants, offset, expected):
+    graph = LCSgraph.from_variant(reference, variants, offset)
+    assert graph.supremal == expected
 
 
 @pytest.mark.parametrize("reference, observed, expected_nodes", [
@@ -234,3 +277,17 @@ def test_lcs_node_less_than(lhs, rhs):
 ])
 def test_lcs_node_string(lcs_node, string):
     assert str(lcs_node) == string
+
+
+@pytest.mark.parametrize("reference, observed, prefix_len, suffix_len", [
+    ("", "", 0, 0),
+    ("A", "A", 1, 0),
+    ("AA", "A", 1, 0),
+    ("AAA", "AA", 2, 0),
+    ("A", "C", 0, 0),
+    ("AAATAAA", "T", 0, 0),
+    ("AAATAAA", "AAACAAA", 3, 3),
+    ("AAATAAA", "AAATAAA", 7, 0),
+])
+def test_trim(reference, observed, prefix_len, suffix_len):
+    assert trim(reference, observed) == (prefix_len, suffix_len)

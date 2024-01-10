@@ -1,9 +1,9 @@
 """Functions to compare variant alleles."""
 
 
+from ..lcs import LCSgraph
 from .relation import Relation
 from .graph_based import compare as compare_graph
-from ..lcs import lcs_graph
 
 
 def are_equivalent(reference, lhs, rhs):
@@ -49,4 +49,4 @@ def compare(reference, lhs, rhs):
         The relation between the two variant alleles.
     """
 
-    return compare_graph(reference, lcs_graph(reference, lhs), lcs_graph(reference, rhs))
+    return compare_graph(reference, LCSgraph.from_variant(reference, lhs), LCSgraph.from_variant(reference, rhs))

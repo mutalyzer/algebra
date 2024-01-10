@@ -4,7 +4,7 @@ graph.
 
 See Also
 --------
-algebra.lcs.distance_only : Calculate only the simple edit distance.
+algebra.lcs.edit_distance : Calculate only the simple edit distance.
 
 References
 ----------
@@ -15,7 +15,9 @@ pp. 317-323.
 
 
 from collections import deque
-from ..variants import Variant
+from operator import attrgetter
+from os.path import commonprefix
+from ..variants import Variant, patch
 
 
 class LCSgraph:
@@ -55,6 +57,68 @@ class LCSgraph:
         self.distance, lcs_nodes = _lcs_nodes(reference, observed, shift, max_distance)
         self._source, self.supremal = _build_graph(reference, observed, lcs_nodes, shift)
 
+    @classmethod
+    def from_sequence(cls, reference, observed):
+        """The supremal LCS graph for two sequences."""
+        if reference == observed:
+            return cls("", "")
+
+        prefix_len, suffix_len = trim(reference, observed)
+        return cls.from_variant(reference, [Variant(prefix_len, len(reference) - suffix_len, observed[prefix_len:len(observed) - suffix_len])])
+
+    @classmethod
+    def from_supremal(cls, reference, supremal):
+        """The supremal LCS graph for a supremal variant."""
+        return cls(reference[supremal.start:supremal.end], supremal.sequence, shift=supremal.start)
+
+    @classmethod
+    def from_variant(cls, reference, variants, offset=10):
+        """Iteratively find the supremal LCS graph for an allele by
+        repeatedly widening a range of influence.
+
+        Parameters
+        ----------
+        reference : str
+            The reference sequence.
+        variants : list of `Variant`s
+            The allele of interest.
+
+        Other Parameters
+        ----------------
+        offset : int, optional
+            The minimum offset around the variants.
+
+        Returns
+        -------
+        graph : `LCSgraph`
+            The LCS graph.
+        """
+
+        if not variants:
+            return cls("", "")
+
+        start = min(variants, key=attrgetter("start")).start
+        end = max(variants, key=attrgetter("end")).end
+        observed = patch(reference[start:end], [Variant(variant.start - start, variant.end - start, variant.sequence) for variant in variants])
+        variant = Variant(start, end, observed)
+
+        offset = max(offset, len(variant) // 2, 1)
+
+        while True:
+            start = max(0, variant.start - offset)
+            end = min(len(reference), variant.end + offset)
+            observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
+
+            graph = cls(reference[start:end], observed, shift=start)
+            if graph.distance == 0:
+                return graph
+
+            if ((graph.supremal.start > start or graph.supremal.start == 0) and
+                    (graph.supremal.end < end or graph.supremal.end == len(reference))):
+                return graph
+
+            offset *= 2
+
     def bfs_traversal(self, atomics=False):
         """Generate all (nodes and) edges in the LCS graph.
 
@@ -92,6 +156,10 @@ class LCSgraph:
 
             visited.add(source)
 
+    def edges(self):
+        """Set of all edges in the LCS graph."""
+        return {edge[0] for *_, edge in self.bfs_traversal(atomics=False)}
+
     def nodes(self):
         """Generate all nodes in the LCS graph in topological order."""
         visited = {self._source}
@@ -103,10 +171,6 @@ class LCSgraph:
             for sink, _ in source.edges:
                 visited.add(sink)
                 stack.append(sink)
-
-    def edges(self):
-        """Set of all edges in the LCS graph."""
-        return {edge[0] for *_, edge in self.bfs_traversal(atomics=False)}
 
     def paths(self, atomics=False):
         """Traverse all paths (alignments) in the LCS graph.
@@ -135,6 +199,13 @@ class LCSgraph:
                     yield from traversal(child, path + [variant])
 
         return traversal(self._source, [])
+
+
+def trim(lhs, rhs):
+    """Find the lengths of the common prefix and common suffix between
+    two sequences."""
+    idx = len(commonprefix([lhs, rhs]))
+    return idx, len(commonprefix([lhs[idx:][::-1], rhs[idx:][::-1]]))
 
 
 def _lcs_nodes(reference, observed, shift=0, max_distance=None):
