@@ -51,8 +51,8 @@ def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
             yield f's{nodes[source]}->s{nodes[sink]}[label="{variant[0]}"]'
 
     if not count:
-        nodes[graph] = count
-        yield f's{nodes[graph]}[label="{label(graph)}",peripheries=2]'
+        nodes[graph._source] = count
+        yield f's{nodes[graph._source]}[label="{label(graph._source)}",peripheries=2]'
 
     yield "}"
 
