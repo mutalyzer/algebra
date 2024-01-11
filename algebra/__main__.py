@@ -12,7 +12,7 @@ from algebra.relations.variant_based import compare
 from algebra.utils import fasta_sequence, random_sequence, random_variants, slice_sequence, to_dot
 from algebra.variants import parse_hgvs, parse_spdi, patch, to_hgvs
 
-from scripts.sub import subtract
+from scripts.subtract import subtract
 
 
 def cli_compare(reference, args):
