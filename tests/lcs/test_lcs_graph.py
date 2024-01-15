@@ -13,6 +13,7 @@ TESTS = [
     ("AAA", [Variant(0, 1, "")], Variant(0, 3, "AA")),
     ("A", [Variant(0, 1, "")], Variant(0, 1, "")),
     ("A", [], Variant(0, 0, "")),
+    ("CCTTGCTCTGCGATGGACTAT", [Variant(15, 16, "G")], Variant(0, 0, "")),
 ]
 
 

@@ -416,6 +416,9 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
 
             source.edges.append((node, variant))
 
+    if id(source) == id(sink):
+        return LCSgraph.Node(shift, shift, 0), Variant(0, 0, "")
+
     source_offset = min((edge.start for _, edge in source.edges), default=shift) - shift
     source.row += source_offset
     source.col += source_offset
