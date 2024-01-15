@@ -113,8 +113,8 @@ class LCSgraph:
             observed = reference[start:variant.start] + variant.sequence + reference[variant.end:end]
 
             graph = cls(reference[start:end], observed, shift=start)
-            if graph.distance == 0 or ((graph.supremal.start > start or graph.supremal.start == 0) and
-                                       (graph.supremal.end < end or graph.supremal.end == len(reference))):
+            if ((graph.supremal.start > start or graph.supremal.start == 0) and
+                    (graph.supremal.end < end or graph.supremal.end == len(reference))):
                 return graph
 
             offset *= 2
