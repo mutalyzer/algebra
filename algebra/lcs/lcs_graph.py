@@ -105,7 +105,6 @@ class LCSgraph:
             return cls("", "")
 
         variant = Variant(start, end, observed)
-
         offset = max(offset, len(variant) // 2, 1)
 
         while True:
