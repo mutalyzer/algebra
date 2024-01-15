@@ -100,6 +100,10 @@ class LCSgraph:
         start = min(variants, key=attrgetter("start")).start
         end = max(variants, key=attrgetter("end")).end
         observed = patch(reference[start:end], [Variant(variant.start - start, variant.end - start, variant.sequence) for variant in variants])
+
+        if reference[start:end] == observed:
+            return cls("", "")
+
         variant = Variant(start, end, observed)
 
         offset = max(offset, len(variant) // 2, 1)
@@ -415,9 +419,6 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
                 max_sink = max(max_sink, node.row + node_length - 1)
 
             source.edges.append((node, variant))
-
-    if id(source) == id(sink):
-        return LCSgraph.Node(shift, shift, 0), Variant(0, 0, "")
 
     source_offset = min((edge.start for _, edge in source.edges), default=shift) - shift
     source.row += source_offset
