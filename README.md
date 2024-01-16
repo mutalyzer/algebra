@@ -34,7 +34,7 @@ Testing
 Run the tests.
 
 ```bash
-python -m coverage run -m pytest
+python -m coverage run
 ```
 
 Usage
