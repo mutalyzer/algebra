@@ -1,3 +1,5 @@
-from algebra import edit
+from algebra.lcs import edit
 
-print(edit("aa"))
+
+def test_edit():
+    assert edit(4, 5) == 9
