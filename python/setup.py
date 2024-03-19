@@ -1,12 +1,13 @@
 from setuptools import setup, Extension
 
+
 setup(
-    name = 'variant-algebra',
+    name = "algebra",
     ext_modules = [
-        Extension('algebra', 
+        Extension("algebra",
             sources = [
-                'src/edit.c',
-                'ext/wrapper.c',
+                "src/edit.c",
+                "ext/wrapper.c",
             ],
             extra_compile_args = [
                 "-Wextra",
