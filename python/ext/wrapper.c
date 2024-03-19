@@ -3,7 +3,7 @@
 
 #include <stddef.h>     // NULL, size_t
 
-#include "../include/edit.h" // varalg_edit
+#include "../include/edit.h"    // varalg_edit
 
 
 static PyObject*
