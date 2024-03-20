@@ -1,7 +1,6 @@
 #include <stddef.h>     // NULL, size_t
 
 #include "wasm.h"   // WASM_EXPORT
-
 #include "../include/edit.h"    // varalg_edit
 
 
