@@ -1,19 +1,17 @@
-from setuptools import setup, Extension
+from setuptools import Extension, setup
 
 
 setup(
-    name = "algebra",
     ext_modules = [
-        Extension("algebra",
-            sources = [
-                "src/edit.c",
-                "ext/wrapper.c",
-            ],
-            extra_compile_args = [
-                "-Wextra",
-                "-Wpedantic",
-                "-std=c11",
-            ],
-        )
+        Extension("algebra_ext",
+                  sources=[
+                    "ext/algebra_ext.c"
+                  ],
+                 ),
+        Extension("lcs_ext",
+                  sources=[
+                    "ext/lcs_ext.c", "src/edit.c"
+                  ],
+                 ),
     ],
 )
