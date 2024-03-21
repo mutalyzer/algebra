@@ -9,6 +9,7 @@ size_t
 edit(size_t const lhs, size_t const rhs)
 {
     console_log(13, "Hello, World!");
+    console_log(42, NULL);
 
     return varalg_edit(lhs, rhs);
 } // edit

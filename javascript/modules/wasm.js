@@ -8,8 +8,8 @@ export function wasmInstance(path, initial_pages=2) {
         }),
 
         console_log: function(len, msg) {
-            if (len === 0) {
-                console.log(msg);
+            if (msg === 0) {
+                console.log(len);
                 return;
             } // if
             console.log(utf8decoder.decode(new Uint8Array(imports.env.memory.buffer, msg, len)));
