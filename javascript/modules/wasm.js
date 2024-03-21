@@ -104,7 +104,7 @@ export function wasmInstance(path, initial_pages=2) {
             } // catch
             const buffer = memory.buffer;
             const buffer_size = buffer.byteLength;
-            memory.words = new Uint32Array(buffer, 0, buffer_size / env.word_size);
+            memory.words = new Uint32Array(buffer, 0, buffer_size / word_size);
             memory.bytes = new Uint8Array(buffer, 0, buffer_size);
             console.log(`total memory: ${memory.buffer.byteLength / (1024 * 1024)} MiB`);
             const heap_block = heap_blocks[heap_blocks.length - 1];
