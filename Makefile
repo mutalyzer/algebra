@@ -17,10 +17,10 @@ CFLAGS   = -std=c11 -march=native -Wall -Wextra -Wpedantic -O0 -g -DDEBUG
 all: $(TARGET)
 
 
-check: CFLAGS += --coverage -fprofile-arcs -fprofile-dir=$(TEST_DIR)
+check: CFLAGS += -ftest-coverage -fprofile-arcs -fprofile-dir=$(TEST_DIR) -fkeep-inline-functions -fkeep-static-functions
 check: $(TESTS:.c=.out)
 	valgrind -q ./$^
-	gcov $(^:.out=.gcda)
+	gcov $(^:.out=.gcno)
 	mv *.gcov $(TEST_DIR)
 
 
