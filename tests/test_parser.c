@@ -33,7 +33,7 @@ test_is_digit(void)
         {   'a', false},
         {   'A', false},
         {'\xFF', false},
-    }; // TESTS
+    }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
@@ -62,7 +62,7 @@ test_is_dna_nucleotide(void)
         {   'T',  true},
         {   'B', false},
         {'\xFF', false},
-    }; // TESTS
+    }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
@@ -94,7 +94,7 @@ test_match_number(void)
         {10, "1234567890", 10, 1234567890},
         {10, "4294967295", 10, UINT32_MAX},
         {10, "4294967296", 10,          0},  // overflow
-    }; // TESTS
+    }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
@@ -123,7 +123,7 @@ test_match_sequence(void)
         {1,    "A", 1},
         {4, "ACGT", 4},
         {4, "acgt", 0},
-    }; // TESTS
+    }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
@@ -159,7 +159,7 @@ test_match_location(void)
         { 3,        "1_1",  0,    1,     1},
         { 3,        "1_0",  0,    1,     0},
         {10, "1234_56789", 10, 1234, 56789},
-    }; // TESTS
+    }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
@@ -186,14 +186,14 @@ test_match(void)
         size_t const      matched;
     } const tests[] =
     {
-        { 0,       NULL,    "", 0},
-        { 0,         "",    "", 0},
-        { 1,        "a",    "", 0},
-        { 1,        "a",  "aa", 0},
-        { 1,        "a",   "a", 1},
-        { 3,      "del", "del", 3},
-        { 8, "deletion", "del", 3},
-    }; // TESTS
+        {0,       NULL,    "", 0},
+        {0,         "",    "", 0},
+        {1,        "a",    "", 0},
+        {1,        "a",  "aa", 0},
+        {1,        "a",   "a", 1},
+        {3,      "del", "del", 3},
+        {8, "deletion", "del", 3},
+    }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
@@ -206,6 +206,157 @@ test_match(void)
 } // test_match
 
 
+static void
+test_match_until(void)
+{
+    static struct {
+        size_t const      len;
+        char const* const expression;
+        char const        delim;
+        size_t const      matched;
+    } const tests[] =
+    {
+        {0,       NULL, '\0', 0},
+        {0,         "", '\0', 0},
+        {1,        "1",  ':', 0},
+        {1,        ":",  ':', 0},
+        {8, "AATT:ATT",  ':', 4},
+        {3,      ":::",  ':', 0},
+    }; // tests
+
+    fprintf(stderr, "%s:%s: ", __FILE__, __func__);
+    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
+    {
+        size_t const tok = match_until(tests[i].len, tests[i].expression, tests[i].delim);
+        assert(tok == tests[i].matched);
+        fprintf(stderr, ".");
+    } // for
+    fprintf(stderr, "  passed\n");
+} // test_match_until
+
+
+static void
+test_match_variant(void)
+{
+    static struct {
+        size_t const      len;
+        char const* const expression;
+        size_t const      matched;
+    } const tests[] =
+    {
+        {0,        NULL, 0},
+        {0,          "", 0},
+        {1,         "1", 0},
+        {4,      "1del", 4},
+        {4,      "0del", 0},
+        {5,     "1delT", 5},
+        {7,   "1delins", 0},
+        {8,  "1delinsA", 8},
+        {9, "1delAinsA", 9},
+        {6,    "1_2ins", 0},
+        {4,      "1ins", 0},
+        {6,    "0_1ins", 0},
+        {6,    "1_3ins", 0},
+        {7,   "1_2insT", 7},
+        {2,        "1>", 0},
+        {3,       "1A>", 0},
+        {4,      "1A>T", 4},
+    }; // tests
+
+    fprintf(stderr, "%s:%s: ", __FILE__, __func__);
+    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
+    {
+        size_t const tok = va_parse_hgvs(tests[i].len, tests[i].expression);
+        assert(tok == tests[i].matched);
+        fprintf(stderr, ".");
+    } // for
+    fprintf(stderr, "  passed\n");
+} // test_match_variant
+
+
+static void
+test_va_parse_hgvs(void)
+{
+    static struct {
+        size_t const      len;
+        char const* const expression;
+        size_t const      matched;
+    } const tests[] =
+    {
+        { 0,          NULL,  0},
+        { 0,            "",  0},
+        { 1,           "A",  0},
+        { 1,           ":",  0},
+        { 1,           "g",  0},
+        { 2,          "g.",  0},
+        { 3,         ":g.",  0},
+        { 1,           "1",  0},
+        { 3,         "A:1",  0},
+        { 5,       "A:g.1",  0},
+        { 7,     "A:g.1_2",  0},
+        { 1,           "=",  1},
+        { 3,         "g.=",  3},
+        { 4,        "1del",  4},
+        { 6,      "g.1del",  6},
+        { 6,      "A:1del",  6},
+        { 8,    "A:g.1del",  8},
+        { 1,           "[",  0},
+        { 5,       "[1del",  0},
+        { 6,      "[1del;",  0},
+        { 6,      "[1del]",  6},
+        {10,  "[1del;2del",  0},
+        {11, "[1del;2del]", 11},
+        {10,  "[1del2del]",  0},
+    }; // tests
+
+    fprintf(stderr, "%s:%s: ", __FILE__, __func__);
+    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
+    {
+        size_t const tok = va_parse_hgvs(tests[i].len, tests[i].expression);
+        assert(tok == tests[i].matched);
+        fprintf(stderr, ".");
+    } // for
+    fprintf(stderr, "  passed\n");
+} // test_va_parse_hgvs
+
+
+static void
+test_va_parse_spdi(void)
+{
+    static struct {
+        size_t const      len;
+        char const* const expression;
+        size_t const      matched;
+    } const tests[] =
+    {
+        {0,       NULL, 0},
+        {0,         "", 0},
+        {1,        "A", 0},
+        {1,        ":", 0},
+        {2,       "A:", 0},
+        {3,      "A:1", 0},
+        {4,     "A:1:", 0},
+        {5,    "A:1:1", 0},
+        {5,    "A:1:A", 0},
+        {6,   "A:1:1:", 0},
+        {6,   "A:1:A:", 0},
+        {7,  "A:1:1:A", 7},
+        {7,  "A:1:A:A", 7},
+        {8, "A:1:A:A ", 0},
+        {6,   ":1:A:A", 6},
+    }; // tests
+
+    fprintf(stderr, "%s:%s: ", __FILE__, __func__);
+    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
+    {
+        size_t const tok = va_parse_spdi(tests[i].len, tests[i].expression);
+        assert(tok == tests[i].matched);
+        fprintf(stderr, ".");
+    } // for
+    fprintf(stderr, "  passed\n");
+} // test_va_parse_spdi
+
+
 int
 main(void)
 {
@@ -215,5 +366,9 @@ main(void)
     test_match_sequence();
     test_match_location();
     test_match();
+    test_match_until();
+    test_match_variant();
+    test_va_parse_hgvs();
+    test_va_parse_spdi();
     return EXIT_SUCCESS;
 } // main
