@@ -6,6 +6,7 @@ extern "C"
 {
 #endif
 
+#include <stdbool.h>    // bool
 #include <stddef.h>     // size_t
 #include <stdint.h>     // uint32_t
 
@@ -17,6 +18,10 @@ typedef struct VA_Variant
     uint32_t obs_start;
     uint32_t obs_end;
 } VA_Variant;
+
+
+bool
+va_variant_eq(VA_Variant const lhs, VA_Variant const rhs);
 
 
 size_t
