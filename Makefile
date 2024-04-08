@@ -13,22 +13,24 @@ TEST_COVS  = $(TESTS:.c=.c.gcov)
 
 TARGET     = a.out
 
-CC       = gcc
-CFLAGS   = -std=c11 -march=native -Wall -Wextra -Wpedantic
+CC         = gcc
+CFLAGS     = -std=c11 -march=native -Wall -Wextra -Wpedantic
+
+MEMCHECK   = valgrind -q --leak-check=full --error-exitcode=1
 
 
 .PHONY: check clean debug release
 
 
 debug:   CFLAGS+=-O0 -g -DDEBUG
-release: CFLAGS+=-O3 -DNDEBUG
+release: CFLAGS+=-O3
 
 
 debug release: $(TARGET)
 
 
 check: CFLAGS+=-O0 -g -DDEBUG -ftest-coverage -fprofile-arcs \
-		#-fkeep-inline-functions -fkeep-static-functions
+		-fkeep-inline-functions -fkeep-static-functions
 check: $(TEST_BINS) $(TESTS_GCNOS) $(TEST_GCDAS) $(TEST_COVS)
 
 
@@ -49,7 +51,7 @@ $(TARGET): $(OBJECTS)
 	mv $(notdir $(@:.out=.gcno)) $(TEST_DIR)
 
 %.gcda: %.out
-	./$<
+	$(MEMCHECK) ./$<
 	mv $(notdir $@) $(TEST_DIR)
 
 %.c.gcov: %.gcda
