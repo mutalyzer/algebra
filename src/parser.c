@@ -116,6 +116,7 @@ match_variant(size_t const len, char const expression[static len],
             return 0;  // invalid location
         } // if
         idx += tok;
+        variant->start -= 1;
 
         // optional sequence
         idx += match_sequence(len - idx, expression + idx);
@@ -125,13 +126,15 @@ match_variant(size_t const len, char const expression[static len],
         {
             idx += tok;
 
+            variant->obs_start = idx;  // OVERFLOW
             tok = match_sequence(len - idx, expression + idx);
             if (tok == 0)
             {
                 return 0;  // expected sequence;
             } // if
+            idx += tok;
 
-            return idx + tok;
+            variant->obs_end = idx;  // OVERFLOW
         } // if
 
         return idx;
@@ -147,14 +150,23 @@ match_variant(size_t const len, char const expression[static len],
         idx += tok;
         variant->end = variant->start;
 
+        variant->obs_start = idx;  // OVERFLOW
         tok = match_sequence(len - idx, expression + idx);
         if (tok == 0)
         {
             return 0;  // expected sequence
         } // if
+        idx += tok;
+        variant->obs_end = idx;  // OVERFLOW
 
-        return idx + tok;
+        return idx;
     } // if
+
+    if (variant->start == 0)
+    {
+        return 0;  // invalid location
+    } // if
+    variant->start -= 1;
 
     // optional sequence
     idx += match_sequence(len - idx, expression + idx);
@@ -163,13 +175,16 @@ match_variant(size_t const len, char const expression[static len],
     {
         idx += 1;  // '>'
 
+        variant->obs_start = idx;  // OVERFLOW
         tok = match_sequence(len - idx, expression + idx);
         if (tok == 0)
         {
             return 0;  // expected sequence
         } // if
+        idx += tok;
+        variant->obs_end = idx;  // OVERFLOW
 
-        return idx + tok;
+        return idx;
     } // if
 
     return 0;
@@ -177,7 +192,8 @@ match_variant(size_t const len, char const expression[static len],
 
 
 size_t
-va_parse_hgvs(size_t const len, char const expression[static len])
+va_parse_hgvs(size_t const len, char const expression[static len],
+              size_t const len_var, VA_Variant variants[static len_var])
 {
     size_t idx = match_until(len, expression, ':');
     if (idx >= len)
@@ -188,38 +204,36 @@ va_parse_hgvs(size_t const len, char const expression[static len])
     {
         idx += 1;  // ':'
     } // if
-
-    VA_Variant variant = {0};
-
     idx += match(len - idx, expression + idx, "g.");
-
-    if (idx < len && expression[idx] == '=')
-    {
-        idx += 1;
-        return idx == len ? idx : 0;
-    } // if
 
     if (idx < len && expression[idx] == '[')
     {
         idx += 1;
 
-        size_t tok = match_variant(len - idx, expression + idx, &variant);
+        size_t tok = match_variant(len - idx, expression + idx, &variants[0]);
         if (tok == 0)
         {
             return 0;  // expected variant
         } // if
         idx += tok;
 
+        size_t count = 1;
         while (idx < len && expression[idx] == ';')
         {
             idx += 1;  // ';'
 
-            tok = match_variant(len - idx, expression + idx, &variant);
+            if (count >= len_var)
+            {
+                return 0;  // too many variants
+            } // if
+
+            tok = match_variant(len - idx, expression + idx, &variants[count]);
             if (tok == 0)
             {
                 return 0;  // expected variant
             } // if
             idx += tok;
+            count += 1;
         } // while
 
         if (idx >= len || expression[idx] != ']')
@@ -228,22 +242,31 @@ va_parse_hgvs(size_t const len, char const expression[static len])
         } // if
         idx += 1;  // ']'
 
-        return idx == len ? idx : 0;
+        return idx == len ? count : 0;
     } // if
 
-    size_t tok = match_variant(len - idx, expression + idx, &variant);
+    if (idx < len && expression[idx] == '=')
+    {
+        idx += 1;
+        return idx == len;
+    } // if
+
+    size_t tok = match_variant(len - idx, expression + idx, &variants[0]);
     if (tok == 0)
     {
         return 0;  // expected variant
     } // if
+    idx += tok;
 
-    return idx + tok;
+    return idx == len;
 } // va_parse_hgvs
 
 
 size_t
-va_parse_spdi(size_t const len, char const expression[static len])
+va_parse_spdi(size_t const len, char const expression[static len],
+              VA_Variant variants[static 1])
 {
+    // sequence
     size_t idx = match_until(len, expression, ':');
     if (idx >= len)
     {
@@ -251,8 +274,7 @@ va_parse_spdi(size_t const len, char const expression[static len])
     } // if
     idx += 1;  // ':'
 
-    uint32_t pos = 0;
-    size_t tok = match_number(len - idx, expression + idx, &pos);
+    size_t tok = match_number(len - idx, expression + idx, &variants[0].start);
     if (tok == 0)
     {
         return 0;  // expected number (location)
@@ -265,8 +287,7 @@ va_parse_spdi(size_t const len, char const expression[static len])
     } // if
     idx += 1;
 
-    uint32_t del = 0;
-    tok = match_number(len - idx, expression + idx, &del);
+    tok = match_number(len - idx, expression + idx, &variants[0].end);
     if (tok == 0)
     {
         tok = match_sequence(len - idx, expression + idx);
@@ -274,8 +295,10 @@ va_parse_spdi(size_t const len, char const expression[static len])
         {
             return 0;  // expected number (length) or sequence
         } // if
+        variants[0].end = tok;  // OVERFLOW
     } // if
     idx += tok;
+    variants[0].end += variants[0].start;
 
     if (idx >= len || expression[idx] != ':')
     {
@@ -283,12 +306,14 @@ va_parse_spdi(size_t const len, char const expression[static len])
     } // if
     idx += 1;
 
+    variants[0].obs_start = idx;  // OVERFLOW
     tok = match_sequence(len - idx, expression + idx);
     if (tok == 0)
     {
         return 0;  // expected sequence
     } // if
     idx += tok;
+    variants[0].obs_end = idx;
 
-    return idx == len ? idx : 0;
+    return idx == len;
 } // va_parse_spdi

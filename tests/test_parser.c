@@ -9,6 +9,17 @@
 #include "../src/parser.c"
 
 
+#define MAX_VARIANTS 2
+
+
+static inline bool
+variant_eq(VA_Variant const lhs, VA_Variant const rhs)
+{
+    return lhs.start == rhs.start && lhs.end == rhs.end &&
+           lhs.obs_start == rhs.obs_start && lhs.obs_end == rhs.obs_end;
+} // variant_eq
+
+
 static void
 test_is_digit(void)
 {
@@ -123,6 +134,7 @@ test_match_sequence(void)
         {1,    "A", 1},
         {4, "ACGT", 4},
         {4, "acgt", 0},
+        {4, "ACgt", 2},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -186,13 +198,14 @@ test_match(void)
         size_t const      matched;
     } const tests[] =
     {
-        {0,       NULL,    "", 0},
-        {0,         "",    "", 0},
-        {1,        "a",    "", 0},
-        {1,        "a",  "aa", 0},
-        {1,        "a",   "a", 1},
-        {3,      "del", "del", 3},
-        {8, "deletion", "del", 3},
+        {0,       NULL,         "", 0},
+        {0,         "",         "", 0},
+        {1,        "a",         "", 0},
+        {1,        "a",       "aa", 0},
+        {1,        "a",        "a", 1},
+        {3,      "del",      "del", 3},
+        {8, "deletion",      "del", 3},
+        {3,      "del", "deletion", 0},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -242,32 +255,37 @@ test_match_variant(void)
         size_t const      len;
         char const* const expression;
         size_t const      matched;
+        VA_Variant const  variant;
     } const tests[] =
     {
-        {0,        NULL, 0},
-        {0,          "", 0},
-        {1,         "1", 0},
-        {4,      "1del", 4},
-        {4,      "0del", 0},
-        {5,     "1delT", 5},
-        {7,   "1delins", 0},
-        {8,  "1delinsA", 8},
-        {9, "1delAinsA", 9},
-        {6,    "1_2ins", 0},
-        {4,      "1ins", 0},
-        {6,    "0_1ins", 0},
-        {6,    "1_3ins", 0},
-        {7,   "1_2insT", 7},
-        {2,        "1>", 0},
-        {3,       "1A>", 0},
-        {4,      "1A>T", 4},
+        {0,        NULL, 0, {0}},
+        {0,          "", 0, {0}},
+        {1,         "1", 0, {0, 1, 0, 0}},
+        {4,      "1del", 4, {0, 1, 0, 0}},
+        {4,      "0del", 0, {0}},
+        {5,     "1delT", 5, {0, 1, 0, 0}},
+        {7,   "1delins", 0, {0, 1, 7, 0}},
+        {8,  "1delinsA", 8, {0, 1, 7, 8}},
+        {9, "1delAinsA", 9, {0, 1, 8, 9}},
+        {6,    "1_2ins", 0, {1, 1, 6, 0}},
+        {4,      "1ins", 0, {1, 1, 0, 0}},
+        {6,    "0_1ins", 0, {0, 0, 6, 0}},
+        {7,   "0_1insA", 7, {0, 0, 6, 7}},
+        {6,    "1_3ins", 0, {1, 3, 0, 0}},
+        {7,   "1_2insT", 7, {1, 1, 6, 7}},
+        {2,        "0>", 0, {0}},
+        {2,        "1>", 0, {0, 1, 2, 0}},
+        {3,       "1A>", 0, {0, 1, 3, 0}},
+        {4,      "1A>T", 4, {0, 1, 3, 4}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
-        size_t const tok = va_parse_hgvs(tests[i].len, tests[i].expression);
+        VA_Variant var = {0};
+        size_t const tok = match_variant(tests[i].len, tests[i].expression, &var);
         assert(tok == tests[i].matched);
+        assert(variant_eq(var, tests[i].variant));
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
@@ -280,40 +298,49 @@ test_va_parse_hgvs(void)
     static struct {
         size_t const      len;
         char const* const expression;
-        size_t const      matched;
+        size_t const      count;
+        VA_Variant const  variants[MAX_VARIANTS];
     } const tests[] =
     {
-        { 0,          NULL,  0},
-        { 0,            "",  0},
-        { 1,           "A",  0},
-        { 1,           ":",  0},
-        { 1,           "g",  0},
-        { 2,          "g.",  0},
-        { 3,         ":g.",  0},
-        { 1,           "1",  0},
-        { 3,         "A:1",  0},
-        { 5,       "A:g.1",  0},
-        { 7,     "A:g.1_2",  0},
-        { 1,           "=",  1},
-        { 3,         "g.=",  3},
-        { 4,        "1del",  4},
-        { 6,      "g.1del",  6},
-        { 6,      "A:1del",  6},
-        { 8,    "A:g.1del",  8},
-        { 1,           "[",  0},
-        { 5,       "[1del",  0},
-        { 6,      "[1del;",  0},
-        { 6,      "[1del]",  6},
-        {10,  "[1del;2del",  0},
-        {11, "[1del;2del]", 11},
-        {10,  "[1del2del]",  0},
+        { 0,               NULL, 0, {{0}}},
+        { 0,                 "", 0, {{0}}},
+        { 1,                "A", 0, {{0}}},
+        { 1,                ":", 0, {{0}}},
+        { 1,                "g", 0, {{0}}},
+        { 2,               "g.", 0, {{0}}},
+        { 3,              ":g.", 0, {{0}}},
+        { 1,                "1", 0, {{0}}},
+        { 3,              "A:1", 0, {{0}}},
+        { 5,            "A:g.1", 0, {{0}}},
+        { 7,          "A:g.1_2", 0, {{0}}},
+        { 1,                "=", 1, {{0}}},
+        { 3,              "g.=", 1, {{0}}},
+        { 4,             "1del", 1, {{0, 1, 0, 0}}},
+        { 6,           "g.1del", 1, {{0, 1, 0, 0}}},
+        { 6,           "A:1del", 1, {{0, 1, 0, 0}}},
+        { 8,         "A:g.1del", 1, {{0, 1, 0, 0}}},
+        { 5,            "1del ", 0, {{0}}},
+        { 1,                "[", 0, {{0}}},
+        { 5,            "[1del", 0, {{0}}},
+        { 6,           "[1del;", 0, {{0}}},
+        { 6,           "[1del]", 1, {{0, 1, 0, 0}}},
+        { 7,          "[1del] ", 0, {{0}}},
+        {10,       "[1del;2del", 0, {{0}}},
+        {11,      "[1del;2del]", 2, {{0, 1, 0, 0}, {1, 2, 0, 0}}},
+        {10,       "[1del2del]", 0, {{0}}},
+        {16, "[1del;2del;3del]", 0, {{0}}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
-        size_t const tok = va_parse_hgvs(tests[i].len, tests[i].expression);
-        assert(tok == tests[i].matched);
+        VA_Variant variants[MAX_VARIANTS] = {{0}};
+        size_t const tok = va_parse_hgvs(tests[i].len, tests[i].expression, MAX_VARIANTS, variants);
+        assert(tok == tests[i].count);
+        for (size_t j = 0; j < tests[i].count; ++j)
+        {
+            assert(variant_eq(variants[j], tests[i].variants[j]));
+        } // for
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
@@ -326,31 +353,34 @@ test_va_parse_spdi(void)
     static struct {
         size_t const      len;
         char const* const expression;
-        size_t const      matched;
+        size_t const      count;
+        VA_Variant const  variant;
     } const tests[] =
     {
-        {0,       NULL, 0},
-        {0,         "", 0},
-        {1,        "A", 0},
-        {1,        ":", 0},
-        {2,       "A:", 0},
-        {3,      "A:1", 0},
-        {4,     "A:1:", 0},
-        {5,    "A:1:1", 0},
-        {5,    "A:1:A", 0},
-        {6,   "A:1:1:", 0},
-        {6,   "A:1:A:", 0},
-        {7,  "A:1:1:A", 7},
-        {7,  "A:1:A:A", 7},
-        {8, "A:1:A:A ", 0},
-        {6,   ":1:A:A", 6},
+        {0,       NULL, 0, {0}},
+        {0,         "", 0, {0}},
+        {1,        "A", 0, {0}},
+        {1,        ":", 0, {0}},
+        {2,       "A:", 0, {0}},
+        {3,      "A:1", 0, {1, 0, 0, 0}},
+        {4,     "A:1:", 0, {1, 0, 0, 0}},
+        {5,    "A:1:1", 0, {1, 2, 0, 0}},
+        {5,    "A:1:A", 0, {1, 2, 0, 0}},
+        {6,   "A:1:1:", 0, {1, 2, 6, 0}},
+        {6,   "A:1:A:", 0, {1, 2, 6, 0}},
+        {7,  "A:1:1:A", 1, {1, 2, 6, 7}},
+        {7,  "A:1:A:A", 1, {1, 2, 6, 7}},
+        {8, "A:1:A:A ", 0, {1, 2, 6, 7}},
+        {6,   ":1:A:A", 1, {1, 2, 5, 6}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
-        size_t const tok = va_parse_spdi(tests[i].len, tests[i].expression);
-        assert(tok == tests[i].matched);
+        VA_Variant variants[1] = {{0}};
+        size_t const tok = va_parse_spdi(tests[i].len, tests[i].expression, variants);
+        assert(tok == tests[i].count);
+        assert(variant_eq(variants[0], tests[i].variant));
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
