@@ -28,6 +28,13 @@ size_t
 va_variant_len(VA_Variant const variant);
 
 
+size_t
+va_patch(size_t const len_ref, char const reference[static len_ref],
+         size_t const len_obs, char const observed[static len_obs],
+         size_t const len_var, VA_Variant const variants[len_var],
+         size_t const len, char string[static len]);
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
