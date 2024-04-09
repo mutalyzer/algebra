@@ -3,21 +3,48 @@
 
 #include <stddef.h>     // NULL, size_t
 
+#include "../include/parser.h"      // va_parse_*
+#include "../include/variant.h"     // VA_Variant
+
 
 static PyObject*
-hello(PyObject* self, PyObject* args, PyObject* kwargs)
+parse_hgvs(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     (void) self;
 
-    size_t lhs = 0;
-    size_t rhs = 40;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|i:hello", (char*[3]) {"lhs", "rhs", NULL}, &lhs, &rhs))
+    char const* expression = NULL;
+    size_t len = 0;
+    char const* reference = NULL;
+    size_t len_ref = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|z#:parse_hgvs", (char*[3]) {"expression", "reference", NULL}, &expression, &len, &reference, &len_ref))
     {
         return NULL;
     } // if
 
-    return Py_BuildValue("i", lhs * rhs);
-} // hello
+    VA_Variant variants[256] = {{0}};
+    size_t const count = va_parse_hgvs(len, expression, 256, variants);
+
+    return Py_BuildValue("i", count);
+} // parse_hgvs
+
+
+static PyObject*
+parse_spdi(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+    (void) self;
+
+    char const* expression = NULL;
+    size_t len = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#:parse_spdi", (char*[2]) {"expression", NULL}, &expression, &len))
+    {
+        return NULL;
+    } // if
+
+    VA_Variant variants[1] = {{0}};
+    size_t const count = va_parse_spdi(len, expression, variants);
+
+    return Py_BuildValue("i", count);
+} // parse_spdi
 
 
 static struct PyModuleDef def =
@@ -27,7 +54,8 @@ static struct PyModuleDef def =
     .m_doc = "Algebra C extension",
     .m_size = -1,
     .m_methods = (PyMethodDef[]) {
-        {"hello", (PyCFunction) (void(*)(void)) hello, METH_VARARGS | METH_KEYWORDS, "Hello from parent"},
+        {"parse_hgvs", (PyCFunction) (void(*)(void)) parse_hgvs, METH_VARARGS | METH_KEYWORDS, "Parse HGVS expression"},
+        {"parse_spdi", (PyCFunction) (void(*)(void)) parse_spdi, METH_VARARGS | METH_KEYWORDS, "Parse SPDI expression"},
         {NULL, NULL, 0, NULL}
     },
 };
