@@ -5,8 +5,8 @@
 
 
 static void
-string_copy(size_t const len, char const source[static len],
-            char dest[static len])
+string_copy(size_t const len, char const source[static restrict len],
+            char dest[static restrict len])
 {
     for (size_t i = 0; i < len; ++i)
     {
@@ -31,10 +31,10 @@ va_variant_len(VA_Variant const variant)
 
 
 size_t
-va_patch(size_t const len_ref, char const reference[static len_ref],
-         size_t const len_obs, char const observed[static len_obs],
+va_patch(size_t const len_ref, char const reference[static restrict len_ref],
+         size_t const len_obs, char const observed[static restrict len_obs],
          size_t const len_var, VA_Variant const variants[len_var],
-         size_t const len, char string[static len])
+         size_t const len, char string[static restrict len])
 {
     size_t idx = 0;
     size_t start = 0;
@@ -43,15 +43,25 @@ va_patch(size_t const len_ref, char const reference[static len_ref],
         size_t len_slice = variants[i].start - start;
         if (len - idx < len_slice)
         {
-            return 0;  // not enough space
+            return 0;  // not enough space in dest
+        } // if
+        if (len_ref - start < len_slice)
+        {
+            return 0;  // not in reference
         } // if
         string_copy(len_slice, reference + start, string + idx);
         idx += len_slice;
 
         len_slice = variants[i].obs_end - variants[i].obs_start;
+        printf("%zu\n", len_slice);
+        printf("%zu\n", idx);
         if (len - idx < len_slice)
         {
-            return 0;  // not enough space
+            return 0;  // not enough space in dest
+        } // if
+        if (len_obs - variants[i].obs_start < len_slice)
+        {
+            return 0;  // not in observed
         } // if
         string_copy(len_slice, observed + variants[i].obs_start, string + idx);
         idx += len_slice;
