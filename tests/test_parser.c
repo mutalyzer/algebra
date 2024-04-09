@@ -4,20 +4,13 @@
 #include <stdint.h>     // UINT32_MAX, uint32_t
 #include <stdio.h>      // stderr, fprintf
 #include <stdlib.h>     // EXIT_SUCCESS
+#include <string.h>     // memcmp
 
 
 #include "../src/parser.c"
 
 
 #define MAX_VARIANTS 2
-
-
-static inline bool
-variant_eq(VA_Variant const lhs, VA_Variant const rhs)
-{
-    return lhs.start == rhs.start && lhs.end == rhs.end &&
-           lhs.obs_start == rhs.obs_start && lhs.obs_end == rhs.obs_end;
-} // variant_eq
 
 
 static void
@@ -282,10 +275,10 @@ test_match_variant(void)
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
-        VA_Variant var = {0};
-        size_t const tok = match_variant(tests[i].len, tests[i].expression, &var);
+        VA_Variant variant = {0};
+        size_t const tok = match_variant(tests[i].len, tests[i].expression, &variant);
         assert(tok == tests[i].matched);
-        assert(variant_eq(var, tests[i].variant));
+        assert(memcmp(&variant, &tests[i].variant, sizeof(variant)) == 0);
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
@@ -337,10 +330,7 @@ test_va_parse_hgvs(void)
         VA_Variant variants[MAX_VARIANTS] = {{0}};
         size_t const tok = va_parse_hgvs(tests[i].len, tests[i].expression, MAX_VARIANTS, variants);
         assert(tok == tests[i].count);
-        for (size_t j = 0; j < tests[i].count; ++j)
-        {
-            assert(variant_eq(variants[j], tests[i].variants[j]));
-        } // for
+        assert(memcmp(&variants, &tests[i].variants, sizeof(variants[0]) * tests[i].count) == 0);
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
@@ -354,7 +344,7 @@ test_va_parse_spdi(void)
         size_t const      len;
         char const* const expression;
         size_t const      count;
-        VA_Variant const  variant;
+        VA_Variant const  variants;
     } const tests[] =
     {
         {0,       NULL, 0, {0}},
@@ -380,7 +370,7 @@ test_va_parse_spdi(void)
         VA_Variant variants[1] = {{0}};
         size_t const tok = va_parse_spdi(tests[i].len, tests[i].expression, variants);
         assert(tok == tests[i].count);
-        assert(variant_eq(variants[0], tests[i].variant));
+        assert(memcmp(&variants, &tests[i].variants, sizeof(variants[0])) == 0);
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
