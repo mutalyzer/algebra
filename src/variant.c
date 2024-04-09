@@ -53,8 +53,6 @@ va_patch(size_t const len_ref, char const reference[static restrict len_ref],
         idx += len_slice;
 
         len_slice = variants[i].obs_end - variants[i].obs_start;
-        printf("%zu\n", len_slice);
-        printf("%zu\n", idx);
         if (len - idx < len_slice)
         {
             return 0;  // not enough space in dest
