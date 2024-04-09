@@ -14,7 +14,7 @@ TEST_COVS  = $(TESTS:.c=.c.gcov)
 TARGET     = a.out
 
 CC         = gcc-11
-CFLAGS     = -std=c11 -march=native -Wall -Wextra -Wpedantic
+CFLAGS     = -std=c11 -march=native -Wall -Wextra -Wpedantic -fanalyzer
 
 MEMCHECK   = valgrind -q --leak-check=full --error-exitcode=1
 
@@ -53,7 +53,8 @@ $(TARGET): $(OBJECTS)
 	$(MEMCHECK) ./$<
 
 %.c.gcov: %.gcda
-	cd $(TEST_DIR) && gcov $(notdir $<)
+	gcov $<
+	mv *.c.gcov $(TEST_DIR)
 
 
 -include $(DEPS)
