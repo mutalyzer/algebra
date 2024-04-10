@@ -53,7 +53,7 @@ $(TARGET): $(OBJECTS)
 	$(MEMCHECK) ./$<
 
 %.c.gcov: %.gcda
-	gcov $<
+	gcov-11 $<
 	mv *.c.gcov $(TEST_DIR)
 
 
