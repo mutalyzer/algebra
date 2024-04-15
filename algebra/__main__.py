@@ -93,7 +93,7 @@ def cli_extract(reference, args):
     if args.distance:
         print(graph.distance)
     if args.dot:
-        print("\n".join(to_dot(reference, graph, atomics=args.atomics)))
+        print("\n".join(to_dot(reference, graph, atomics=args.atomics, labels=not args.internal_labels)))
     if args.local_supremal:
         print(to_hgvs(local_supremal(reference, graph), reference))
     if args.supremal:
@@ -152,6 +152,7 @@ def main():
     extract_parser.add_argument("--atomics", action="store_true", help="only deletions and insertions")
     extract_parser.add_argument("--distance", action="store_true", help="output simple edit distance")
     extract_parser.add_argument("--dot", action="store_true", help="output Graphviz DOT")
+    extract_parser.add_argument("--internal-labels", action="store_true", help="use internal representation as labels in DOT output")
     extract_parser.add_argument("--local-supremal", action="store_true", help="output local supremal variant")
     extract_parser.add_argument("--supremal", action="store_true", help="output supremal variant")
 
