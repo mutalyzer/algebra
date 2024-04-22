@@ -30,8 +30,10 @@ va_array_ensure(void* const self, size_t const count)
         return self;
     } // if
 
-    size_t const capacity = count - free > 2 * header->capacity ? count - free + 16 / header->item_size : 2 * header->capacity;  // OVERFLOW
-    header = header->allocator->alloc(header->allocator->context, header, sizeof(*header) + header->capacity * header->item_size, sizeof(*header) + capacity * header->item_size);
+    // TODO: proper reallocation scheme
+    static size_t const extra = 16;
+    size_t const capacity = count - free + extra > 2 * header->capacity ? count - free + extra : 2 * header->capacity;  // OVERFLOW
+    header = header->allocator->alloc(header->allocator->context, header, sizeof(*header) + header->capacity * header->item_size, sizeof(*header) + (header->capacity + capacity) * header->item_size);
     if (header == NULL)
     {
         return NULL;

@@ -1,9 +1,10 @@
 #include <stddef.h>     // NULL, size_t
-#include <stdio.h>      // stderr, printf
-#include <stdlib.h>     // EXIT_*, free, realloc
+#include <stdlib.h>     // EXIT_SUCCESS, free, realloc
 
 #include "../include/alloc.h"   // VA_Allocator
-#include "../include/array.h"   // va_array_*
+
+
+#include "../src/array.c"
 
 
 static inline void*
@@ -24,17 +25,12 @@ static VA_Allocator const std_allocator = { .alloc = std_alloc };
 
 
 int
-main(int argc, char* argv[argc + 1])
+main(void)
 {
-    (void) argv;
-
     int* a = va_array_init(&std_allocator, 1, sizeof(*a));
     va_array_append(a, 42);
     va_array_append(a, 43);
     va_array_append(a, 44);
-
-    printf("%d\n", a[2]);
-
     a = va_array_destroy(a);
 
     return EXIT_SUCCESS;
