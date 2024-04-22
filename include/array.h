@@ -36,7 +36,8 @@ va_array_destroy(void* const self);
 va_array_append(self, value) ( \
     (self) = va_array_ensure(self, 1), \
     (self)[((VA_Array*)(self) - 1)->length] = (value), \
-    &(self)[((VA_Array*)(self) - 1)->length++])
+    &(self)[((VA_Array*)(self) - 1)->length++] \
+) // va_array_append
 
 
 #ifdef __cplusplus
