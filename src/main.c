@@ -1,23 +1,41 @@
-#include <stdio.h>      // stderr, fprintf, printf
-#include <stdlib.h>     // EXIT_*
-#include <string.h>     // strlen
+#include <stddef.h>     // NULL, size_t
+#include <stdio.h>      // stderr, printf
+#include <stdlib.h>     // EXIT_*, free, realloc
 
-#include "../include/parser.h"      // va_parse_*
-#include "../include/variant.h"     // VA_Variant
+#include "../include/alloc.h"   // VA_Allocator
+#include "../include/array.h"   // va_array_*
+
+
+static inline void*
+std_alloc(void* const context, void* const ptr, size_t const old_size, size_t const size)
+{
+    (void) context;
+    (void) old_size;
+    if (size == 0)
+    {
+        free(ptr);
+        return NULL;
+    } // if
+    return realloc(ptr, size);
+} // std_alloc
+
+
+static VA_Allocator const std_allocator = { .alloc = std_alloc };
 
 
 int
 main(int argc, char* argv[argc + 1])
 {
-    if (argc < 2)
-    {
-        fprintf(stderr, "usage %s expression\n", argv[0]);
-        return EXIT_FAILURE;
-    } // if
+    (void) argv;
 
-    VA_Variant variants[1] = {{0}};
+    int* a = va_array_init(&std_allocator, 1, sizeof(*a));
 
-    printf("%zu\n", va_parse_spdi(strlen(argv[1]), argv[1], variants));
+    va_array_append(a, 42);
+    va_array_append(a, 43);
+
+    printf("%d\n", a[1]);
+
+    a = va_array_destroy(a);
 
     return EXIT_SUCCESS;
 } // main

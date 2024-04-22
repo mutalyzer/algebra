@@ -8,7 +8,7 @@
 
 
 static PyObject*
-parse_hgvs(PyObject* self, PyObject* args, PyObject* kwargs)
+parse_hgvs(PyObject* const self, PyObject* const args, PyObject* const kwargs)
 {
     (void) self;
 
@@ -29,7 +29,7 @@ parse_hgvs(PyObject* self, PyObject* args, PyObject* kwargs)
 
 
 static PyObject*
-parse_spdi(PyObject* self, PyObject* args, PyObject* kwargs)
+parse_spdi(PyObject* const self, PyObject* const args, PyObject* const kwargs)
 {
     (void) self;
 
@@ -47,7 +47,7 @@ parse_spdi(PyObject* self, PyObject* args, PyObject* kwargs)
 } // parse_spdi
 
 
-static struct PyModuleDef def =
+static struct PyModuleDef const def =
 {
     .m_base = PyModuleDef_HEAD_INIT,
     .m_name = "algebra_ext",
@@ -56,7 +56,7 @@ static struct PyModuleDef def =
     .m_methods = (PyMethodDef[]) {
         {"parse_hgvs", (PyCFunction) (void(*)(void)) parse_hgvs, METH_VARARGS | METH_KEYWORDS, "Parse HGVS expression"},
         {"parse_spdi", (PyCFunction) (void(*)(void)) parse_spdi, METH_VARARGS | METH_KEYWORDS, "Parse SPDI expression"},
-        {NULL, NULL, 0, NULL}
+        {NULL, NULL, 0, NULL}  // sentinel
     },
 };
 

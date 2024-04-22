@@ -11,7 +11,7 @@ extern "C"
 #include <stdint.h>     // uint32_t
 
 
-typedef struct VA_Variant
+typedef struct
 {
     uint32_t start;
     uint32_t end;
