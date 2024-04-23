@@ -13,7 +13,6 @@ extern "C"
 
 typedef struct
 {
-    VA_Allocator const* allocator;
     size_t capacity;
     size_t item_size;
     size_t length;
@@ -25,18 +24,18 @@ va_array_init(VA_Allocator const* const allocator, size_t const capacity, size_t
 
 
 void*
-va_array_ensure(void* const self, size_t const count);
+va_array_ensure(VA_Allocator const* const allocator, void* const ptr, size_t const count);
 
 
 void*
-va_array_destroy(void* const self);
+va_array_destroy(VA_Allocator const* const allocator, void* const ptr);
 
 
 #define \
-va_array_append(self, value) ( \
-    (self) = va_array_ensure(self, 1), \
-    (self)[((VA_Array*)(self) - 1)->length] = (value), \
-    &(self)[((VA_Array*)(self) - 1)->length++] \
+va_array_append(allocator, ptr, value) (                    \
+    (ptr) = va_array_ensure(allocator, ptr, 1),             \
+    (ptr)[((VA_Array*)(ptr) - 1)->length] = (value),        \
+    &(ptr)[((VA_Array*)(ptr) - 1)->length++]                \
 ) // va_array_append
 
 

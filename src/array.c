@@ -7,13 +7,13 @@
 void*
 va_array_init(VA_Allocator const* const allocator, size_t const capacity, size_t const item_size)
 {
-    VA_Array* const header = allocator->alloc(allocator->context, NULL, 0, sizeof(*header) + capacity * item_size);  // OVERFLOW
+    size_t const min_capacity = capacity < 4 ? 4 : capacity;
+    VA_Array* const header = allocator->alloc(allocator->context, NULL, 0, sizeof(*header) + min_capacity * item_size);  // OVERFLOW
     if (header == NULL)
     {
         return NULL;
     } // if
-    header->allocator = allocator;
-    header->capacity = capacity;
+    header->capacity = min_capacity;
     header->item_size = item_size;
     header->length = 0;
     return header + 1;
@@ -21,31 +21,37 @@ va_array_init(VA_Allocator const* const allocator, size_t const capacity, size_t
 
 
 void*
-va_array_ensure(void* const self, size_t const count)
+va_array_ensure(VA_Allocator const* const allocator, void* const ptr, size_t const count)
 {
-    VA_Array* header = (VA_Array*)(self) - 1;
-    size_t const free = header->capacity - header->length;
-    if (free >= count)
+    VA_Array* header = (VA_Array*)(ptr) - 1;
+    if (header->capacity - header->length >= count)
     {
-        return self;
+        return ptr;
     } // if
 
-    // TODO: proper reallocation scheme
-    static size_t const extra = 16;
-    size_t const capacity = count - free + extra > 2 * header->capacity ? count - free + extra : 2 * header->capacity;  // OVERFLOW
-    header = header->allocator->alloc(header->allocator->context, header, sizeof(*header) + header->capacity * header->item_size, sizeof(*header) + (header->capacity + capacity) * header->item_size);
+    size_t const old_size = sizeof(*header) + header->capacity * header->item_size;
+    header->capacity *= 2;  // OVERFLOW
+    while (header->capacity - header->length < count)
+    {
+        header->capacity *= 2;  // OVERFLOW
+    } // while
+
+    header = allocator->alloc(allocator->context, header, old_size, sizeof(*header) + header->capacity * header->item_size);  // OVERFLOW
     if (header == NULL)
     {
         return NULL;
     } // if
-    header->capacity += capacity;
     return header + 1;
 } // va_array_ensure
 
 
 void*
-va_array_destroy(void* const self)
+va_array_destroy(VA_Allocator const* const allocator, void* const ptr)
 {
-    VA_Array* const header = (VA_Array*)(self) - 1;
-    return header->allocator->alloc(header->allocator->context, header, sizeof(*header) + header->capacity * header->item_size, 0);
+    if (ptr == NULL)
+    {
+        return NULL;
+    } // if
+    VA_Array* const header = (VA_Array*)(ptr) - 1;
+    return allocator->alloc(allocator->context, header, sizeof(*header) + header->capacity * header->item_size, 0);
 } // va_array_destroy
