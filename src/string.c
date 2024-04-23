@@ -25,9 +25,18 @@ va_string_concat(VA_Allocator const* const allocator, VA_String lhs, VA_String c
 VA_String
 va_string_slice(VA_Allocator const* const allocator, VA_String const string, size_t const start, size_t const end)
 {
-    (void) allocator;
-    (void) string;
-    (void) start;
-    (void) end;
-    return (VA_String) {0, NULL};
+    size_t const clamped_end = end > string.length ? string.length : end;
+    size_t const clamped_start = start > clamped_end ? clamped_end : start;
+
+    VA_String slice = {clamped_end - clamped_start, allocator->alloc(allocator->context, NULL, 0, clamped_end - clamped_start)};
+    if (slice.data == NULL)
+    {
+        return (VA_String) {0, NULL};
+    } // if
+
+    for (size_t i = 0; i < slice.length; ++i)
+    {
+        slice.data[i] = string.data[clamped_start + i];
+    } // for
+    return slice;
 } // va_string_slice

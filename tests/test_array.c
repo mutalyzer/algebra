@@ -2,7 +2,7 @@
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint32_t
 #include <stdio.h>      // stderr, fprintf
-#include <stdlib.h>     // EXIT_SUCCESS, free, realloc
+#include <stdlib.h>     // EXIT_SUCCESS
 #include <string.h>     // memcmp
 
 #include "../include/alloc.h"       // VA_Allocator

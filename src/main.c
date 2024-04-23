@@ -1,4 +1,4 @@
-#include <stddef.h>     // size_t
+#include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // printf
 #include <stdlib.h>     // EXIT_*
 
