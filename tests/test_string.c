@@ -28,7 +28,14 @@ test_va_string_concat(void)
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
         VA_String const result = va_string_concat(tests[i].allocator, tests[i].lhs, tests[i].rhs);
-        assert(memcmp(result.data, tests[i].expected.data, tests[i].expected.length) == 0);
+        if (result.data == NULL || tests[i].expected.data == NULL)
+        {
+            assert(tests[i].expected.data == NULL);
+        } // if
+        else
+        {
+            assert(memcmp(result.data, tests[i].expected.data, tests[i].expected.length) == 0);
+        } // else
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
@@ -53,7 +60,14 @@ test_va_string_slice(void)
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
         VA_String const result = va_string_slice(tests[i].allocator, tests[i].string, tests[i].start, tests[i].end);
-        assert(memcmp(result.data, tests[i].expected.data, tests[i].expected.length) == 0);
+        if (result.data == NULL || tests[i].expected.data == NULL)
+        {
+            assert(tests[i].expected.data == NULL);
+        } // if
+        else
+        {
+            assert(memcmp(result.data, tests[i].expected.data, tests[i].expected.length) == 0);
+        } // else
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
