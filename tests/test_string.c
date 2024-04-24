@@ -22,6 +22,7 @@ test_va_string_concat(void)
     } const tests[] =
     {
         {&std_allocator, {0, NULL}, {0, NULL}, {0, NULL}},
+        {&std_allocator, {0, NULL}, {1,  "A"}, {1,  "A"}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -35,6 +36,7 @@ test_va_string_concat(void)
         else
         {
             assert(memcmp(result.data, tests[i].expected.data, tests[i].expected.length) == 0);
+            tests[i].allocator->alloc(tests[i].allocator->context, result.data, result.length, 0);
         } // else
         fprintf(stderr, ".");
     } // for
@@ -54,6 +56,8 @@ test_va_string_slice(void)
     } const tests[] =
     {
         {&std_allocator, {0, NULL}, 0, 0, {0, NULL}},
+        {&std_allocator, {1,  "A"}, 0, 0, {0, NULL}},
+        {&std_allocator, {1,  "A"}, 0, 1, {1,  "A"}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -67,6 +71,7 @@ test_va_string_slice(void)
         else
         {
             assert(memcmp(result.data, tests[i].expected.data, tests[i].expected.length) == 0);
+            tests[i].allocator->alloc(tests[i].allocator->context, result.data, result.length, 0);
         } // else
         fprintf(stderr, ".");
     } // for
