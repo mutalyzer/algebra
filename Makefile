@@ -37,7 +37,7 @@ check: $(TEST_BINS) $(TESTS_GCNOS) $(TEST_GCDAS) $(TEST_COVS)
 clean:
 	$(RM) $(TARGET) $(OBJECTS) $(DEPS) \
 		$(TEST_BINS) $(TEST_DEPS) $(TEST_GCNOS) $(TEST_GCDAS) \
-		$(TEST_DIR)/*.c.gcov
+		$(TEST_DIR)/*.gcov
 
 
 $(TARGET): $(OBJECTS)
@@ -54,7 +54,7 @@ $(TARGET): $(OBJECTS)
 
 %.c.gcov: %.gcda
 	gcov-11 $<
-	mv *.c.gcov $(TEST_DIR)
+	mv *.gcov $(TEST_DIR)
 
 
 -include $(DEPS)
