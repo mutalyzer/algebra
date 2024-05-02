@@ -3,31 +3,69 @@
 #include <stdlib.h>     // EXIT_*
 
 #include "../include/alloc.h"       // VA_Allocator
-#include "../include/array.h"       // va_array_*
-#include "../include/string.h"      // VA_String, va_string_*
-#include "../include/variant.h"     // VA_Variant
-#include "../include/std_alloc.h"   // std_allocator
+#include "../include/array.h"       // VA_Array
 
 
-static VA_String
-patch(VA_String const reference, size_t const len, VA_Variant variants[len], VA_String const external)
+#define KiB(size) ((size_t) size * 1024ULL)
+#define MiB(size) (KiB(size) * 1024ULL)
+#define GiB(size) (MiB(size) * 1024ULL)
+
+
+typedef struct
 {
-    VA_String observed = {0, NULL};
+    size_t _size;
+    size_t free;
+    char buffer[MiB(50)];
+} Static_Buffer;
 
-    size_t start = 0;
-    for (size_t i = 0; i < len; ++i)
-    {
-        observed = va_string_concat(&std_allocator, observed, (VA_String) {variants[i].start - start, reference.data + start});
-        observed = va_string_concat(&std_allocator, observed, (VA_String) {variants[i].obs_end - variants[i].obs_start, external.data + variants[i].obs_start});
-        start = variants[i].end;
-    } // for
 
-    if (start < reference.length)
+static Static_Buffer static_buffer = { ._size = sizeof(static_buffer) };
+
+
+static void*
+static_alloc(void* const context, void* const ptr, size_t const old_size, size_t const size)
+{
+    Static_Buffer* const buffer = (Static_Buffer*) context;
+
+    if (size == 0)
     {
-        observed = va_string_concat(&std_allocator, observed, (VA_String) {reference.length - start, reference.data + start});
+        return NULL;
     } // if
-    return observed;
-} // patch
+
+    if (old_size >= size)
+    {
+        return ptr;
+    } // if
+
+    if (ptr != NULL && old_size > 0)
+    {
+        if (sizeof(buffer->buffer) - buffer->free < old_size)
+        {
+            return NULL;  // OOM
+        } // if
+        char const* const src = ptr;
+        for (size_t i = 0; i < old_size; ++i)
+        {
+            buffer->buffer[buffer->free + i] = src[i];
+        } // for
+    } // if
+
+    if (sizeof(buffer->buffer) - buffer->free < size)
+    {
+        return NULL;  // OOM
+    } // if
+
+    void* const here = buffer->buffer + buffer->free;
+    buffer->free += size;
+    return here;
+} // static_alloc
+
+
+static VA_Allocator const static_allocator =
+{
+    static_alloc,
+    &static_buffer
+};
 
 
 int
@@ -35,11 +73,16 @@ main(int argc, char* argv[argc + 1])
 {
     (void) argv;
 
-    VA_String const observed = patch((VA_String) {10, "ATTACCATTA"}, 1, (VA_Variant[]) {{3, 4, 0, 1}}, (VA_String) {1, "G"});
 
-    printf("%.*s\n", (int) observed.length, observed.data);
+    int* a = va_array_init(&static_allocator, 100, sizeof(*a));
 
-    std_allocator.alloc(NULL, observed.data, 0, 0);
+    a[0] = 42;
+
+    printf("%p\n", (void*) a);
+    printf("%d\n", a[0]);
+    printf("%d\n", a[1]);
+
+    a = va_array_destroy(&static_allocator, a);
 
     return EXIT_SUCCESS;
 } // main
