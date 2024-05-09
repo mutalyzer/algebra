@@ -14,12 +14,12 @@ static size_t count = 0;
 
 static inline size_t
 wu_snake(size_t const m,
-      char const a[static m],
-      size_t const n,
-      char const b[static n],
-      ptrdiff_t const k,
-      ptrdiff_t const lower,
-      ptrdiff_t const upper)
+         char const a[static m],
+         size_t const n,
+         char const b[static n],
+         ptrdiff_t const k,
+         ptrdiff_t const lower,
+         ptrdiff_t const upper)
 {
     size_t col = lower > upper ? lower : upper;
     size_t row = col - k;
@@ -117,8 +117,20 @@ expand(size_t const len_ref,
         end = umax(diagonals[offset + idx - 1], diagonals[offset + idx + 1]);
     } // else
 
+#ifdef VA_ALL_LCS
+    for (size_t i = diagonals[offset + idx]; i < end; ++i)
+    {
+        if (reference[row] == observed[col])
+        {
+            count += 1;
+        } // if
+        row += 1;
+        col += 1;
+    } // for
+#else
     row += end - diagonals[offset + idx];
     col += end - diagonals[offset + idx];
+#endif
 
     size_t steps = end + 1;
     while (row < len_ref && col < len_obs && reference[row] == observed[col])
