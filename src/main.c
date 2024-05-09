@@ -15,7 +15,7 @@ typedef struct
 {
     size_t _size;
     size_t free;
-    char buffer[MiB(50)];
+    char data[MiB(50)];
 } Static_Buffer;
 
 
@@ -39,23 +39,23 @@ static_alloc(void* const context, void* const ptr, size_t const old_size, size_t
 
     if (ptr != NULL && old_size > 0)
     {
-        if (sizeof(buffer->buffer) - buffer->free < old_size)
+        if (sizeof(buffer->data) - buffer->free < old_size)
         {
             return NULL;  // OOM
         } // if
         char const* const src = ptr;
         for (size_t i = 0; i < old_size; ++i)
         {
-            buffer->buffer[buffer->free + i] = src[i];
+            buffer->data[buffer->free + i] = src[i];
         } // for
     } // if
 
-    if (sizeof(buffer->buffer) - buffer->free < size)
+    if (sizeof(buffer->data) - buffer->free < size)
     {
         return NULL;  // OOM
     } // if
 
-    void* const here = buffer->buffer + buffer->free;
+    void* const here = buffer->data + buffer->free;
     buffer->free += size;
     return here;
 } // static_alloc
