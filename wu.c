@@ -5,6 +5,9 @@
 #include <stdlib.h>     // EXIT_*, free, malloc
 #include <string.h>     // strlen
 
+#include "include/alloc.h"      // VA_Allocator
+#include "include/std_alloc.h"  // std_allocator
+
 
 static size_t count = 0;
 
@@ -68,16 +71,7 @@ wu_compare(size_t const m,
         fp[delta + offset] = wu_snake(m, a, n, b, delta, fp[delta - 1 + offset] + 1, fp[delta + 1 + offset]);
         p += 1;
     } // while
-/*
-    for (size_t i = 1; i < size - 1; ++i)
-    {
-        if (fp[i] > 0)
-        {
-            printf("%zu ", fp[i]);
-        } // if
-    } // for
-    printf("\n");
-*/
+
     free(fp);
 
     return delta + 2 * (p - 1);
@@ -143,7 +137,8 @@ expand(size_t const len_ref,
 
 
 static size_t
-edit(size_t const len_ref,
+edit(VA_Allocator const* const allocator,
+     size_t const len_ref,
      char const reference[static len_ref],
      size_t const len_obs,
      char const observed[static len_obs])
@@ -152,7 +147,7 @@ edit(size_t const len_ref,
     size_t const offset = len_ref + 1;
     size_t const size = len_ref + len_obs + 3;
 
-    size_t* const diagonals = calloc(size, sizeof(*diagonals));
+    size_t* const diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*diagonals));
     if (diagonals == NULL)
     {
         return -1;
@@ -178,7 +173,7 @@ edit(size_t const len_ref,
         it += 1;
     } // while
 
-    free(diagonals);
+    allocator->alloc(allocator->context, diagonals, size * sizeof(*diagonals), 0);
 
     return imaxabs(delta) + 2 * it - 2;
 } // edit
@@ -215,14 +210,14 @@ test_wu_compare(void)
         size_t const n = strlen(tests[i].b);
 
         count = 0;
-        size_t const distance = m > n ?
+        size_t const wu_distance = m > n ?
             wu_compare(n, tests[i].b, m, tests[i].a) :
             wu_compare(m, tests[i].a, n, tests[i].b);
-        assert(distance == tests[i].distance);
+        assert(wu_distance == tests[i].distance);
         assert(count == tests[i].count);
 
         count = 0;
-        size_t const edit_distance = edit(m, tests[i].a, n, tests[i].b);
+        size_t const edit_distance = edit(&std_allocator, m, tests[i].a, n, tests[i].b);
         assert(edit_distance == tests[i].distance);
         assert(count == tests[i].count);
 
@@ -245,18 +240,15 @@ main(int argc, char* argv[argc + 1])
 
     size_t const m = strlen(argv[1]);
     size_t const n = strlen(argv[2]);
-    count = 0;
-    size_t const distance = m > n ?
-        wu_compare(n, argv[2], m, argv[1]) :
-        wu_compare(m, argv[1], n, argv[2]);
-    printf("  wu distance: %zu (%zu)\n", distance, count);
-    if (m > n)
-    {
-        printf("swapped\n");
-    } // if
 
     count = 0;
-    size_t const edit_distance = edit(m, argv[1], n, argv[2]);
+    size_t const wu_distance = m > n ?
+        wu_compare(n, argv[2], m, argv[1]) :
+        wu_compare(m, argv[1], n, argv[2]);
+    printf("  wu distance: %zu (%zu)\n", wu_distance, count);
+
+    count = 0;
+    size_t const edit_distance = edit(&std_allocator, m, argv[1], n, argv[2]);
     printf("edit distance: %zu (%zu)\n", edit_distance, count);
 
     return EXIT_SUCCESS;
