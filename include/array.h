@@ -20,15 +20,15 @@ typedef struct
 
 
 void*
-va_array_init(VA_Allocator const* const allocator, size_t const capacity, size_t const item_size);
+va_array_init(VA_Allocator const allocator[static 1], size_t const capacity, size_t const item_size);
 
 
 void*
-va_array_ensure(VA_Allocator const* const allocator, void* const ptr, size_t const count);
+va_array_ensure(VA_Allocator const allocator[static 1], void* const ptr, size_t const count);
 
 
 void*
-va_array_destroy(VA_Allocator const* const allocator, void* const ptr);
+va_array_destroy(VA_Allocator const allocator[static 1], void* const ptr);
 
 
 #define \

@@ -6,7 +6,7 @@
 #include <string.h>     // memcmp
 
 #include "../include/alloc.h"       // VA_Allocator
-#include "../include/std_alloc.h"   // std_allocator
+#include "../include/std_alloc.h"   // va_std_allocator
 
 
 #include "../src/array.c"
@@ -35,11 +35,11 @@ test_va_array_init(void)
         VA_Array const header;
     } const tests[] =
     {
-        {&std_allocator,   0, {  4, 4, 0}},
-        {&std_allocator,   1, {  4, 4, 0}},
-        {&std_allocator,   4, {  4, 4, 0}},
-        {&std_allocator,   5, {  5, 4, 0}},
-        {&std_allocator, 100, {100, 4, 0}},
+        {&va_std_allocator,   0, {  4, 4, 0}},
+        {&va_std_allocator,   1, {  4, 4, 0}},
+        {&va_std_allocator,   4, {  4, 4, 0}},
+        {&va_std_allocator,   5, {  5, 4, 0}},
+        {&va_std_allocator, 100, {100, 4, 0}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -84,13 +84,13 @@ test_va_array_ensure(void)
         VA_Array const header;
     } const tests[] =
     {
-        {&std_allocator,   0,   0, {  4, 4, 0}},
-        {&std_allocator,   0,   1, {  4, 4, 0}},
-        {&std_allocator,   0,   4, {  4, 4, 0}},
-        {&std_allocator,   0,   5, {  8, 4, 0}},
-        {&std_allocator, 100, 100, {100, 4, 0}},
-        {&std_allocator, 100, 101, {200, 4, 0}},
-        {&std_allocator,   0, 100, {128, 4, 0}},
+        {&va_std_allocator,   0,   0, {  4, 4, 0}},
+        {&va_std_allocator,   0,   1, {  4, 4, 0}},
+        {&va_std_allocator,   0,   4, {  4, 4, 0}},
+        {&va_std_allocator,   0,   5, {  8, 4, 0}},
+        {&va_std_allocator, 100, 100, {100, 4, 0}},
+        {&va_std_allocator, 100, 101, {200, 4, 0}},
+        {&va_std_allocator,   0, 100, {128, 4, 0}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -120,9 +120,9 @@ test_va_array_ensure_null(void)
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
-        uint32_t* array = va_array_init(&std_allocator, tests[i].capacity, sizeof(*array));
+        uint32_t* array = va_array_init(&va_std_allocator, tests[i].capacity, sizeof(*array));
         assert(va_array_ensure(&null_allocator, array, tests[i].count) == NULL);
-        array = va_array_destroy(&std_allocator, array);
+        array = va_array_destroy(&va_std_allocator, array);
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
@@ -137,7 +137,7 @@ test_va_array_destroy(void)
         size_t const capacity;
     } const tests[] =
     {
-        {&std_allocator, 0},
+        {&va_std_allocator, 0},
         {&null_allocator, 0},
     }; // tests
 
@@ -145,7 +145,7 @@ test_va_array_destroy(void)
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
     {
         uint32_t* array = va_array_init(tests[i].allocator, tests[i].capacity, sizeof(*array));
-        array = va_array_destroy(&std_allocator, array);
+        array = va_array_destroy(tests[i].allocator, array);
         assert(array == NULL);
         fprintf(stderr, ".");
     } // for
@@ -163,9 +163,9 @@ test_va_array_append(void)
         VA_Array const header;
     } const tests[] =
     {
-        {&std_allocator, 0,  0, { 4, 4,  0}},
-        {&std_allocator, 0, 10, {16, 4, 10}},
-        {&std_allocator, 5, 10, {10, 4, 10}},
+        {&va_std_allocator, 0,  0, { 4, 4,  0}},
+        {&va_std_allocator, 0, 10, {16, 4, 10}},
+        {&va_std_allocator, 5, 10, {10, 4, 10}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -181,7 +181,7 @@ test_va_array_append(void)
         {
             assert(array[j] == j);
         } // for
-        array = va_array_destroy(&std_allocator, array);
+        array = va_array_destroy(tests[i].allocator, array);
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");

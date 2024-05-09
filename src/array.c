@@ -5,7 +5,7 @@
 
 
 void*
-va_array_init(VA_Allocator const* const allocator, size_t const capacity, size_t const item_size)
+va_array_init(VA_Allocator const allocator[static 1], size_t const capacity, size_t const item_size)
 {
     size_t const min_capacity = capacity < 4 ? 4 : capacity;
     VA_Array* const header = allocator->alloc(allocator->context, NULL, 0, sizeof(*header) + min_capacity * item_size);  // OVERFLOW
@@ -21,7 +21,7 @@ va_array_init(VA_Allocator const* const allocator, size_t const capacity, size_t
 
 
 void*
-va_array_ensure(VA_Allocator const* const allocator, void* const ptr, size_t const count)
+va_array_ensure(VA_Allocator const allocator[static 1], void* const ptr, size_t const count)
 {
     VA_Array* header = (VA_Array*)(ptr) - 1;
     if (header->capacity - header->length >= count)
@@ -46,7 +46,7 @@ va_array_ensure(VA_Allocator const* const allocator, void* const ptr, size_t con
 
 
 void*
-va_array_destroy(VA_Allocator const* const allocator, void* const ptr)
+va_array_destroy(VA_Allocator const allocator[static 1], void* const ptr)
 {
     if (ptr == NULL)
     {

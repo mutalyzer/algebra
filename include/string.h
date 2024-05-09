@@ -19,11 +19,11 @@ typedef struct
 
 
 VA_String
-va_string_concat(VA_Allocator const* const allocator, VA_String lhs, VA_String const rhs);
+va_string_concat(VA_Allocator const allocator[static 1], VA_String lhs, VA_String const rhs);
 
 
 VA_String
-va_string_slice(VA_Allocator const* const allocator, VA_String const string, size_t const start, size_t const end);
+va_string_slice(VA_Allocator const allocator[static 1], VA_String const string, size_t const start, size_t const end);
 
 
 #ifdef __cplusplus

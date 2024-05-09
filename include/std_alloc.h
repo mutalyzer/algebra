@@ -14,7 +14,7 @@ extern "C"
 
 
 static inline void*
-std_alloc(void* const context, void* const ptr, size_t const old_size, size_t const size)
+va_std_alloc(void* const context, void* const ptr, size_t const old_size, size_t const size)
 {
     (void) context;
     (void) old_size;
@@ -29,10 +29,10 @@ std_alloc(void* const context, void* const ptr, size_t const old_size, size_t co
         (void) memset(here + old_size, 0, size - old_size);
     } // if
     return here;
-} // std_alloc
+} // va_std_alloc
 
 
-static VA_Allocator const std_allocator = { .alloc = std_alloc };
+static VA_Allocator const va_std_allocator = { .alloc = va_std_alloc };
 
 
 #ifdef __cplusplus

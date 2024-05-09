@@ -5,7 +5,7 @@
 #include <string.h>     // memcmp
 
 #include "../include/alloc.h"       // VA_Allocator
-#include "../include/std_alloc.h"   // std_allocator
+#include "../include/std_alloc.h"   // va_std_allocator
 
 
 #include "../src/string.c"
@@ -21,8 +21,8 @@ test_va_string_concat(void)
         VA_String const expected;
     } const tests[] =
     {
-        {&std_allocator, {0, NULL}, {0, NULL}, {0, NULL}},
-        {&std_allocator, {0, NULL}, {1,  "A"}, {1,  "A"}},
+        {&va_std_allocator, {0, NULL}, {0, NULL}, {0, NULL}},
+        {&va_std_allocator, {0, NULL}, {1,  "A"}, {1,  "A"}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);
@@ -55,9 +55,9 @@ test_va_string_slice(void)
         VA_String const expected;
     } const tests[] =
     {
-        {&std_allocator, {0, NULL}, 0, 0, {0, NULL}},
-        {&std_allocator, {1,  "A"}, 0, 0, {0, NULL}},
-        {&std_allocator, {1,  "A"}, 0, 1, {1,  "A"}},
+        {&va_std_allocator, {0, NULL}, 0, 0, {0, NULL}},
+        {&va_std_allocator, {1,  "A"}, 0, 0, {0, NULL}},
+        {&va_std_allocator, {1,  "A"}, 0, 1, {1,  "A"}},
     }; // tests
 
     fprintf(stderr, "%s:%s: ", __FILE__, __func__);

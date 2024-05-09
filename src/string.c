@@ -5,7 +5,7 @@
 
 
 VA_String
-va_string_concat(VA_Allocator const* const allocator, VA_String lhs, VA_String const rhs)
+va_string_concat(VA_Allocator const allocator[static 1], VA_String lhs, VA_String const rhs)
 {
     lhs.data = allocator->alloc(allocator->context, lhs.data, lhs.length, lhs.length + rhs.length);  // OVERFLOW
     if (lhs.data == NULL)
@@ -23,7 +23,7 @@ va_string_concat(VA_Allocator const* const allocator, VA_String lhs, VA_String c
 
 
 VA_String
-va_string_slice(VA_Allocator const* const allocator, VA_String const string, size_t const start, size_t const end)
+va_string_slice(VA_Allocator const allocator[static 1], VA_String const string, size_t const start, size_t const end)
 {
     size_t const clamped_end = end > string.length ? string.length : end;
     size_t const clamped_start = start > clamped_end ? clamped_end : start;
