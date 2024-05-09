@@ -8,6 +8,7 @@ extern "C"
 
 #include <stddef.h>     // NULL, size_t
 #include <stdlib.h>     // free, realloc
+#include <string.h>     // memset
 
 #include "alloc.h"      // VA_Allocator
 
@@ -22,7 +23,12 @@ std_alloc(void* const context, void* const ptr, size_t const old_size, size_t co
         free(ptr);
         return NULL;
     } // if
-    return realloc(ptr, size);
+    char* const here = realloc(ptr, size);
+    if (size > old_size)
+    {
+        (void) memset(here + old_size, 0, size - old_size);
+    } // if
+    return here;
 } // std_alloc
 
 
