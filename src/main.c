@@ -14,9 +14,9 @@ static size_t count = 0;
 
 static inline size_t
 wu_snake(size_t const m,
-         char const a[static m],
+         char const a[static restrict m],
          size_t const n,
-         char const b[static n],
+         char const b[static restrict n],
          ptrdiff_t const k,
          ptrdiff_t const lower,
          ptrdiff_t const upper)
@@ -38,16 +38,16 @@ wu_snake(size_t const m,
 
 
 static size_t
-wu_compare(VA_Allocator const allocator[static 1],
+wu_compare(VA_Allocator const allocator[static restrict 1],
            size_t const m,
-           char const a[static m],
+           char const a[static restrict m],
            size_t const n,
-           char const b[static n])
+           char const b[static restrict n])
 {
     ptrdiff_t const delta = n - m;
     size_t const offset = m + 1;
     size_t const size = m + n + 3;
-    ptrdiff_t* const fp = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*fp));
+    ptrdiff_t* const restrict fp = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*fp));
     if (fp == NULL)
     {
         return -1;
@@ -88,12 +88,12 @@ umax(size_t const a, size_t const b)
 
 static size_t
 expand(size_t const len_ref,
-       char const reference[static len_ref],
+       char const reference[static restrict len_ref],
        size_t const len_obs,
-       char const observed[static len_obs],
+       char const observed[static restrict len_obs],
        ptrdiff_t const idx,
        size_t const offset,
-       size_t const diagonals[static len_ref + len_obs + 3])
+       size_t const diagonals[static restrict len_ref + len_obs + 3])
 {
     size_t row;
     size_t col;
@@ -150,17 +150,17 @@ expand(size_t const len_ref,
 
 
 static size_t
-edit(VA_Allocator const allocator[static 1],
+edit(VA_Allocator const allocator[static restrict 1],
      size_t const len_ref,
-     char const reference[static len_ref],
+     char const reference[static restrict len_ref],
      size_t const len_obs,
-     char const observed[static len_obs])
+     char const observed[static restrict len_obs])
 {
     ptrdiff_t const delta = len_obs - len_ref;
     size_t const offset = len_ref + 1;
     size_t const size = len_ref + len_obs + 3;
 
-    size_t* const diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*diagonals));
+    size_t* const restrict diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*diagonals));
     if (diagonals == NULL)
     {
         return -1;
@@ -197,8 +197,8 @@ test_wu_compare(void)
 {
     static struct
     {
-        char const* const a;
-        char const* const b;
+        char const* const restrict a;
+        char const* const restrict b;
         size_t const distance;
         size_t const count;
     } const tests[] =
