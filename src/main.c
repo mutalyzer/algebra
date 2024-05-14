@@ -7,7 +7,9 @@
 #include <string.h>     // strlen
 
 #include "../include/alloc.h"           // VA_Allocator
+#include "../include/array.h"           // 
 #include "../include/static_alloc.h"    // va_static_allocator
+#include "../include/std_alloc.h"       // va_std_allocator
 
 
 static size_t count = 0;
@@ -80,11 +82,26 @@ wu_compare(VA_Allocator const allocator[static restrict 1],
 } // wu_compare
 
 
+typedef struct
+{
+    size_t row;
+    size_t col;
+    size_t length;
+} VA_LCS_Node;
+
+
 static inline size_t
 umax(size_t const a, size_t const b)
 {
     return a > b ? a : b;
 } // umax
+
+
+static inline size_t
+umin(size_t const a, size_t const b)
+{
+    return a < b ? a : b;
+} // umin
 
 
 static size_t
@@ -143,7 +160,8 @@ expand(size_t const len_ref,
             ptrdiff_t const d_row = len_ref - row;
             ptrdiff_t const d_col = len_obs - col;
             size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * it + imaxabs(d_row - d_col)) / 2 - 1;
-            printf("%zu: (%zu, %zu, %zu)\n", lcs_pos, match_row, match_col, row - match_row);
+            size_t const length = row - match_row;
+            printf("%zu: (%zu, %zu, %zu):: %zu\n", lcs_pos, match_row, match_col, length, lcs_pos + 1 - length);
             matching = false;
         } // if
         count += 1;
@@ -169,7 +187,8 @@ expand(size_t const len_ref,
         ptrdiff_t const d_row = len_ref - row;
         ptrdiff_t const d_col = len_obs - col;
         size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * it + imaxabs(d_row - d_col)) / 2 - 1;
-        printf("%zu: (%zu, %zu, %zu)\n", lcs_pos, match_row, match_col, row - match_row);
+        size_t const length = row - match_row;
+        printf("%zu: (%zu, %zu, %zu):: %zu\n", lcs_pos, match_row, match_col, length, lcs_pos + 1 - length);
     } // if
 #else
     (void) delta;
@@ -208,6 +227,13 @@ edit(VA_Allocator const allocator[static restrict 1],
     size_t* const restrict diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*diagonals));
     if (diagonals == NULL)
     {
+        return -1;
+    } // if
+
+    VA_LCS_Node* const lcs_nodes = allocator->alloc(allocator->context, NULL, 0, umin(len_ref, len_obs) * sizeof(*lcs_nodes));
+    if (lcs_nodes == NULL)
+    {
+        allocator->alloc(allocator->context, diagonals, size * sizeof(*diagonals), 0);
         return -1;
     } // if
 
@@ -306,7 +332,7 @@ main(int argc, char* argv[argc + 1])
     printf("  wu distance: %zu (%zu)\n", wu_distance, count);
 
     count = 0;
-    size_t const edit_distance = edit(&va_static_allocator, m, argv[1], n, argv[2]);
+    size_t const edit_distance = edit(&va_std_allocator, m, argv[1], n, argv[2]);
     printf("edit distance: %zu (%zu)\n", edit_distance, count);
 
     return EXIT_SUCCESS;
