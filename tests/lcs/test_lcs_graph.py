@@ -120,6 +120,13 @@ def test_lcs_nodes_max_distance_fail(reference, observed, max_distance, exceptio
     ("TCTC", "TC", {
         Variant(0, 2, ""), Variant(1, 3, ""), Variant(2, 4, "")
     }),
+    ("TTGTA", "TTTGTGTT", {
+        Variant(1, 1, "TTG"), Variant(2, 2, "TGT"), Variant(3, 3, "T"),
+        Variant(4, 5, "T"), Variant(3, 3, "TGT"), Variant(4, 5, "GTT"),
+        Variant(2, 2, "T"), Variant(1, 1, "G"), Variant(0, 0, "T"),
+        Variant(1, 1, "T"), Variant(2, 2, "GT"), Variant(0, 0, "TT"),
+        Variant(4, 5, ""), Variant(1, 1, "TG"), Variant(3, 3, "TG")
+    }),
 ])
 def test_lcs_graph(reference, observed, expected_edges):
     graph = LCSgraph(reference, observed)
