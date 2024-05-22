@@ -284,7 +284,7 @@ def test_lcs_node_less_than(lhs, rhs):
 
 
 @pytest.mark.parametrize("lcs_node, string", [
-    (LCSgraph.Node(0, 0, 0), "(0, 0)[0]"),
+    (LCSgraph.Node(0, 0, 0), "(0, 0, 0)"),
 ])
 def test_lcs_node_string(lcs_node, string):
     assert str(lcs_node) == string
