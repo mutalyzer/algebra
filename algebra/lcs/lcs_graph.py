@@ -51,7 +51,7 @@ class LCSgraph:
             return (self.row, self.col) < (other.row, other.col)
 
         def __repr__(self):
-            return f"{self.row, self.col}[{self.length}]"
+            return f"{self.row, self.col, self.length}"
 
     def __init__(self, reference, observed, shift=0, max_distance=None):
         self.distance, lcs_nodes = _lcs_nodes(reference, observed, shift, max_distance)

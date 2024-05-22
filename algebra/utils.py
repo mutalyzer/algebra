@@ -25,6 +25,8 @@ def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
         return str(node)
 
     yield "digraph{"
+    yield f'comment="reference:{reference[graph.supremal.start:graph.supremal.end]}"'
+    yield f'comment="observed:{graph.supremal.sequence}"'
     yield "rankdir=LR"
     yield 'edge[fontname="monospace"]'
     yield f'node[fixedsize=true,fontname="serif",shape=circle,width={".8" if labels else "1"}]'
