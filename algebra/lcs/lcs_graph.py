@@ -378,6 +378,7 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
                         max_sink = max(max_sink, node.row + node_length - 1)
 
                     if id(parent) in incoming:
+                        incoming -= {id(parent)}
                         split = LCSgraph.Node(parent.row, parent.col, parent.length)
                         split.edges = parent.edges + [(node, variant)]
                         lcs_nodes[-2][idx] = split
@@ -388,12 +389,12 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
                     else:
                         parent.edges.append((node, variant))
 
-                    incoming.add(id(node))
                     idx_parent = idx + 1
 
             if node_length > 1:
                 lcs_nodes[-2].insert(idx_parent, node)
                 length[id(node)] = node_length - 1
+                incoming.add(id(node))
 
         del lcs_nodes[-1]
 
