@@ -158,7 +158,7 @@ class LCSgraph:
 
     def edges(self):
         """Set of all edges in the LCS graph."""
-        return {edge[0] for *_, edge in self.bfs_traversal(atomics=False)}
+        return {edge[0] for *_, edge in self.bfs_traversal()}
 
     def nodes(self):
         """Generate all nodes in the LCS graph in topological order."""
