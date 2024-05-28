@@ -38,6 +38,9 @@ class LCSgraph:
             self.col = col
             self.length = length
 
+            self._length = length
+            self._incoming = 0
+
             self.edges = []
 
         def __eq__(self, other):
@@ -349,54 +352,49 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
     sink = lcs_nodes[-1][-1]
     if sink.row + sink.length == len(reference) + shift and sink.col + sink.length == len(observed) + shift:
         del lcs_nodes[-1][-1]
-        sink.length += 1
+        sink = LCSgraph.Node(sink.row, sink.col, sink.length + 1)
     else:
         sink = LCSgraph.Node(len(reference) + shift, len(observed) + shift, 1)
     lcs_nodes.append([sink])
 
     max_sink = 0
-    length = {}
-    while len(lcs_nodes) > 1:
-        incoming = set()
-
+    len_lcs_nodes = len(lcs_nodes)
+    while len_lcs_nodes > 1:
         while lcs_nodes[-1]:
             node = lcs_nodes[-1].pop(0)
 
-            if node != sink and not node.edges:
+            if node is not sink and not node.edges:
                 continue
 
-            node_length = length.get(id(node), node.length)
             idx_parent = 0
             for idx, parent in enumerate(lcs_nodes[-2]):
-                parent_length = length.get(id(parent), parent.length)
+                if parent.row + parent._length < node.row + node._length and parent.col + parent._length < node.col + node._length:
+                    variant = Variant(parent.row + parent._length, node.row + node._length - 1,
+                                      observed[parent.col + parent._length - shift:node.col + node._length - 1 - shift])
 
-                if parent.row + parent_length < node.row + node_length and parent.col + parent_length < node.col + node_length:
-                    variant = Variant(parent.row + parent_length, node.row + node_length - 1,
-                                      observed[parent.col + parent_length - shift:node.col + node_length - 1 - shift])
+                    if node is sink:
+                        max_sink = max(max_sink, node.row + node._length - 1)
 
-                    if node == sink:
-                        max_sink = max(max_sink, node.row + node_length - 1)
-
-                    if parent in incoming:
-                        incoming -= {parent}
+                    if parent._incoming == len_lcs_nodes:
                         split = LCSgraph.Node(parent.row, parent.col, parent.length)
+                        split._length = parent._length
                         split.edges = parent.edges + [(node, variant)]
                         lcs_nodes[-2][idx] = split
-                        length[id(split)] = parent_length
-                        parent.row += parent_length
-                        parent.col += parent_length
-                        parent.length -= parent_length
+                        parent.row += parent._length
+                        parent.col += parent._length
+                        parent.length -= parent._length
                     else:
                         parent.edges.append((node, variant))
 
                     idx_parent = idx + 1
 
-            if node_length > 1:
+            if node._length > 1:
+                node._length -= 1
+                node._incoming = len_lcs_nodes
                 lcs_nodes[-2].insert(idx_parent, node)
-                length[id(node)] = node_length - 1
-                incoming.add(node)
 
         del lcs_nodes[-1]
+        len_lcs_nodes = len(lcs_nodes)
 
     source = lcs_nodes[0][0]
     if lcs_nodes[0][0].row == lcs_nodes[0][0].col == shift:
@@ -405,16 +403,15 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
         source = LCSgraph.Node(shift, shift, 0)
 
     for node in lcs_nodes[0]:
-        if node != sink and not node.edges:
+        if node is not sink and not node.edges:
             continue
 
-        node_length = length.get(id(node), node.length)
-        if source.row < node.row + node_length and source.col < node.col + node_length:
-            variant = Variant(source.row, node.row + node_length - 1,
-                              observed[source.col - shift:node.col + node_length - 1 - shift])
+        if source.row < node.row + node._length and source.col < node.col + node._length:
+            variant = Variant(source.row, node.row + node._length - 1,
+                              observed[source.col - shift:node.col + node._length - 1 - shift])
 
-            if node == sink:
-                max_sink = max(max_sink, node.row + node_length - 1)
+            if node is sink:
+                max_sink = max(max_sink, node.row + node._length - 1)
 
             source.edges.append((node, variant))
 
