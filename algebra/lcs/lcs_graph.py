@@ -257,6 +257,7 @@ def _lcs_nodes(reference, observed, shift=0, max_distance=None):
             col = row + idx
             end = max(diagonals[offset + idx - 1], diagonals[offset + idx + 1])
 
+        remaining = abs((len_reference - row) - (len_observed - col))
         matching = False
         match_row = 0
         match_col = 0
@@ -267,7 +268,7 @@ def _lcs_nodes(reference, observed, shift=0, max_distance=None):
                     match_col = col
                 matching = True
             elif matching:
-                lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
+                lcs_pos = ((row + col) - (abs_delta + 2 * it - remaining)) // 2 - 1
                 max_lcs_pos = max(lcs_pos, max_lcs_pos)
                 lcs_nodes[lcs_pos].append(LCSgraph.Node(match_row + shift, match_col + shift, row - match_row))
                 matching = False
@@ -278,24 +279,27 @@ def _lcs_nodes(reference, observed, shift=0, max_distance=None):
         if not matching:
             match_row = row
             match_col = col
-        while row < len(reference) and col < len(observed) and reference[row] == observed[col]:
+        while row < len_reference and col < len_observed and reference[row] == observed[col]:
             matching = True
             row += 1
             col += 1
             steps += 1
         if matching:
-            lcs_pos = ((row + col) - (abs(delta) + 2 * it - abs((len(reference) - row) - (len(observed) - col)))) // 2 - 1
+            lcs_pos = ((row + col) - (abs_delta + 2 * it - remaining)) // 2 - 1
             max_lcs_pos = max(lcs_pos, max_lcs_pos)
             lcs_nodes[lcs_pos].append(LCSgraph.Node(match_row + shift, match_col + shift, row - match_row))
 
         return steps
 
-    lcs_nodes = [[] for _ in range(min(len(reference), len(observed)))]
+    len_reference = len(reference)
+    len_observed = len(observed)
+    lcs_nodes = [[] for _ in range(min(len_reference, len_observed))]
     max_lcs_pos = 0
 
-    delta = len(observed) - len(reference)
-    offset = len(reference) + 1
-    diagonals = [0] * (len(reference) + len(observed) + 3)
+    delta = len_observed - len_reference
+    abs_delta = abs(delta)
+    offset = len_reference + 1
+    diagonals = [0] * (len_reference + len_observed + 3)
     it = 0
 
     if delta >= 0:
@@ -305,7 +309,7 @@ def _lcs_nodes(reference, observed, shift=0, max_distance=None):
         lower = delta
         upper = 0
 
-    while diagonals[offset + delta] <= max(len(reference), len(observed)) - abs(delta):
+    while diagonals[offset + delta] <= max(len_reference, len_observed) - abs_delta:
         for idx in range(lower - it, delta):
             diagonals[offset + idx] = expand(idx)
 
@@ -315,10 +319,10 @@ def _lcs_nodes(reference, observed, shift=0, max_distance=None):
         diagonals[offset + delta] = expand(delta)
         it += 1
 
-        if max_distance and abs(delta) + 2 * (it - 1) > max_distance:
+        if max_distance and abs_delta + 2 * (it - 1) > max_distance:
             raise ValueError("maximum distance exceeded")
 
-    return abs(delta) + 2 * (it - 1), lcs_nodes[:max_lcs_pos + 1]
+    return abs_delta + 2 * (it - 1), lcs_nodes[:max_lcs_pos + 1]
 
 
 def _build_graph(reference, observed, lcs_nodes, shift=0):
@@ -394,7 +398,7 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
                 lcs_nodes[-2].insert(idx_parent, node)
 
         del lcs_nodes[-1]
-        len_lcs_nodes = len(lcs_nodes)
+        len_lcs_nodes -= 1
 
     source = lcs_nodes[0][0]
     if lcs_nodes[0][0].row == lcs_nodes[0][0].col == shift:

@@ -20,7 +20,7 @@ def test_variant(args, expected):
 ])
 def test_variant_fail(args, exception, message):
     with pytest.raises(exception) as exc:
-        Variant(*args)
+        Variant.create_safe(*args)
     assert str(exc.value) == message
 
 

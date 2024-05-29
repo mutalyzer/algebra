@@ -27,6 +27,12 @@ class Variant:
     """Variant class for deletion/insertions."""
 
     def __init__(self, start, end, sequence):
+        self.start = start
+        self.end = end
+        self.sequence = sequence
+
+    @classmethod
+    def create_safe(cls, start, end, sequence):
         """Create a variant.
 
         Parameters
@@ -59,9 +65,7 @@ class Variant:
         if start > end:
             raise ValueError("start must not be after end")
 
-        self.start = start
-        self.end = end
-        self.sequence = sequence
+        return cls(start, end, sequence)
 
     def __eq__(self, other):
         return (self.start == other.start and self.end == other.end and

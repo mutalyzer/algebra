@@ -121,7 +121,7 @@ def parse_hgvs(expression, reference=None):
                     raise ValueError(f"inconsistent duplicated length at {pos}")
                 if reference is not None and sequence != reference[start:end]:
                     raise ValueError(f"'{sequence}' not found in reference at {start}")
-            return Variant(start, end, 2 * sequence)
+            return Variant.create_safe(start, end, 2 * sequence)
 
         if match_optional("inv"):
             try:
@@ -137,7 +137,7 @@ def parse_hgvs(expression, reference=None):
                     raise ValueError(f"inconsistent inversion length at {ctx_pos + 1}")
                 if reference is not None and sequence != reverse_complement(reference[start:end]):
                     raise ValueError(f"'{sequence}' not found in reference at {start}")
-            return Variant(start, end, sequence)
+            return Variant.create_safe(start, end, sequence)
 
         if match_optional("del"):
             if start == end:
@@ -152,13 +152,13 @@ def parse_hgvs(expression, reference=None):
                 if reference is not None and sequence != reference[start:end]:
                     raise ValueError(f"'{sequence}' not found in reference at {start}")
             if match_optional("ins"):
-                return Variant(start, end, match_insertion())
-            return Variant(start, end, "")
+                return Variant.create_safe(start, end, match_insertion())
+            return Variant.create_safe(start, end, "")
 
         if match_optional("ins"):
             if end - start != 2:
                 raise ValueError(f"invalid inserted range at {pos}")
-            return Variant(start + 1, start + 1, match_insertion())
+            return Variant.create_safe(start + 1, start + 1, match_insertion())
 
         try:
             sequence = match_sequence()
@@ -171,10 +171,10 @@ def parse_hgvs(expression, reference=None):
                     raise ValueError(f"inconstistent deletion length at {ctx_pos + 1}")
                 if reference is not None and sequence != reference[start:end]:
                     raise ValueError(f"'{sequence}' not found in reference at {start}")
-            return Variant(start, end, match_sequence())
+            return Variant.create_safe(start, end, match_sequence())
 
         if match_optional("="):
-            return Variant(0, 0, "")
+            return Variant.create_safe(0, 0, "")
 
         if match_optional("["):
             repeat = match_number()
@@ -188,10 +188,10 @@ def parse_hgvs(expression, reference=None):
                     found += 1
                 if found == 0:
                     raise ValueError(f"'{sequence}' not found in reference at {start}")
-                return Variant(start, start + found * len(sequence), repeat * sequence)
+                return Variant.create_safe(start, start + found * len(sequence), repeat * sequence)
 
             # HGVS style repeat
-            return Variant(start, end, repeat * sequence)
+            return Variant.create_safe(start, end, repeat * sequence)
 
         raise NotImplementedError(f"unsupported variant at {ctx_pos + 1}")
 
@@ -254,4 +254,4 @@ def parse_spdi(expression):
         length = int(deletion)
     except ValueError:
         length = len(deletion)
-    return [Variant(start, start + length, insertion)]
+    return [Variant.create_safe(start, start + length, insertion)]
