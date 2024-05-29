@@ -44,6 +44,7 @@ def canonical(graph):
     shift = source.row
     queue = deque([(source, None, None, 0)])
     visited = {}
+    sink = None
     while queue:
         node, parent, edge, distance = queue.popleft()
 
