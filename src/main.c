@@ -104,49 +104,55 @@ umin(size_t const a, size_t const b)
 } // umin
 
 
-static size_t
-expand(size_t const len_ref,
-       char const reference[static restrict len_ref],
-       size_t const len_obs,
-       char const observed[static restrict len_obs],
-       ptrdiff_t const idx,
-       size_t const offset,
-       size_t const diagonals[static restrict len_ref + len_obs + 3],
-       ptrdiff_t const delta,
-       size_t const it)
+typedef struct
 {
+    size_t const len_ref;
+    char const* const restrict reference;
+    size_t const len_obs;
+    char const* const restrict observed;
+    size_t* const restrict diagonals;
+} Expand_Context;
+
+
+static size_t
+expand(Expand_Context const context,
+       ptrdiff_t const idx,
+       size_t const p)
+{
+    ptrdiff_t const delta = context.len_obs - context.len_ref;
+    size_t const offset = context.len_ref + 1;
+
     size_t row;
     size_t col;
     size_t end;
     if (idx > 0)
     {
-        row = diagonals[offset + idx];
+        row = context.diagonals[offset + idx];
         col = row + idx;
-        end = umax(diagonals[offset + idx - 1] - 1, diagonals[offset + idx + 1]);
+        end = umax(context.diagonals[offset + idx - 1] - 1, context.diagonals[offset + idx + 1]);
     } // if
     else if (idx < 0)
     {
-        col = diagonals[offset + idx];
+        col = context.diagonals[offset + idx];
         row = col - idx;
-        end = umax(diagonals[offset + idx - 1], diagonals[offset + idx + 1] - 1);
+        end = umax(context.diagonals[offset + idx - 1], context.diagonals[offset + idx + 1] - 1);
     } // if
     else
     {
-        row = diagonals[offset + idx];
+        row = context.diagonals[offset + idx];
         col = row + idx;
-        end = umax(diagonals[offset + idx - 1], diagonals[offset + idx + 1]);
+        end = umax(context.diagonals[offset + idx - 1], context.diagonals[offset + idx + 1]);
     } // else
 
     size_t steps = end + 1;
 
-#ifdef VA_ALL_LCS
     bool matching = false;
     size_t match_row = 0;
     size_t match_col = 0;
 
-    for (size_t i = diagonals[offset + idx]; i < end; ++i)
+    for (size_t i = context.diagonals[offset + idx]; i < end; ++i)
     {
-        if (reference[row] == observed[col])
+        if (context.reference[row] == context.observed[col])
         {
             if (!matching)
             {
@@ -157,14 +163,13 @@ expand(size_t const len_ref,
         } // if
         else if (matching)
         {
-            ptrdiff_t const d_row = len_ref - row;
-            ptrdiff_t const d_col = len_obs - col;
-            size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * it + imaxabs(d_row - d_col)) / 2 - 1;
+            ptrdiff_t const d_row = context.len_ref - row;
+            ptrdiff_t const d_col = context.len_obs - col;
+            size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
             size_t const length = row - match_row;
-            printf("%zu: (%zu, %zu, %zu):: %zu\n", lcs_pos, match_row, match_col, length, lcs_pos + 1 - length);
+            printf("%2zu: (%zu, %zu, %zu)\n", lcs_pos, match_row, match_col, length);
             matching = false;
         } // if
-        count += 1;
         row += 1;
         col += 1;
     } // for
@@ -174,39 +179,20 @@ expand(size_t const len_ref,
         match_row = row;
         match_col = col;
     } // if
-    while (row < len_ref && col < len_obs && reference[row] == observed[col])
+    while (row < context.len_ref && col < context.len_obs && context.reference[row] == context.observed[col])
     {
         matching = true;
-        count += 1;
         row += 1;
         col += 1;
         steps += 1;
     } // while
     if (matching)
     {
-        ptrdiff_t const d_row = len_ref - row;
-        ptrdiff_t const d_col = len_obs - col;
-        size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * it + imaxabs(d_row - d_col)) / 2 - 1;
+        ptrdiff_t const d_row = context.len_ref - row;
+        ptrdiff_t const d_col = context.len_obs - col;
+        size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
         size_t const length = row - match_row;
-        printf("%zu: (%zu, %zu, %zu):: %zu\n", lcs_pos, match_row, match_col, length, lcs_pos + 1 - length);
-    } // if
-#else
-    (void) delta;
-    (void) it;
-    row += end - diagonals[offset + idx];
-    col += end - diagonals[offset + idx];
-    while (row < len_ref && col < len_obs && reference[row] == observed[col])
-    {
-        count += 1;
-        row += 1;
-        col += 1;
-        steps += 1;
-    } // while
-#endif
-
-    if (row < len_ref && col < len_obs)
-    {
-        count += 1;
+        printf("%2zu: (%zu, %zu, %zu)\n", lcs_pos, match_row, match_col, length);
     } // if
 
     return steps;
@@ -224,16 +210,16 @@ edit(VA_Allocator const allocator[static restrict 1],
     size_t const offset = len_ref + 1;
     size_t const size = len_ref + len_obs + 3;
 
-    size_t* const restrict diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*diagonals));
-    if (diagonals == NULL)
+    Expand_Context const context =
     {
-        return -1;
-    } // if
-
-    VA_LCS_Node* const lcs_nodes = allocator->alloc(allocator->context, NULL, 0, umin(len_ref, len_obs) * sizeof(*lcs_nodes));
-    if (lcs_nodes == NULL)
+        len_ref,
+        reference,
+        len_obs,
+        observed,
+        .diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*context.diagonals)),
+    };
+    if (context.diagonals == NULL)
     {
-        allocator->alloc(allocator->context, diagonals, size * sizeof(*diagonals), 0);
         return -1;
     } // if
 
@@ -241,25 +227,25 @@ edit(VA_Allocator const allocator[static restrict 1],
     size_t const upper = delta > 0 ? delta : 0;
 
     size_t const len = umax(len_ref, len_obs) - imaxabs(delta);
-    size_t it = 0;
-    while (diagonals[offset + delta] <= len)
+    size_t p = 0;
+    while (context.diagonals[offset + delta] <= len)
     {
-        for (ptrdiff_t idx = lower - it; idx < delta; ++idx)
+        for (ptrdiff_t idx = lower - p; idx < delta; ++idx)
         {
-            diagonals[offset + idx] = expand(len_ref, reference, len_obs, observed, idx, offset, diagonals, delta, it);
+            context.diagonals[offset + idx] = expand(context, idx, p);
         } // for
-        for (ptrdiff_t idx = upper + it; idx > delta; --idx)
+        for (ptrdiff_t idx = upper + p; idx > delta; --idx)
         {
-            diagonals[offset + idx] = expand(len_ref, reference, len_obs, observed, idx, offset, diagonals, delta, it);
+            context.diagonals[offset + idx] = expand(context, idx, p);
         } // for
-        diagonals[offset + delta] = expand(len_ref, reference, len_obs, observed, delta, offset, diagonals, delta, it);
+        context.diagonals[offset + delta] = expand(context, delta, p);
 
-        it += 1;
+        p += 1;
     } // while
 
-    allocator->alloc(allocator->context, diagonals, size * sizeof(*diagonals), 0);
+    allocator->alloc(allocator->context, context.diagonals, size * sizeof(*context.diagonals), 0);
 
-    return imaxabs(delta) + 2 * it - 2;
+    return imaxabs(delta) + 2 * p - 2;
 } // edit
 
 
@@ -300,11 +286,6 @@ test_wu_compare(void)
         assert(wu_distance == tests[i].distance);
         assert(count == tests[i].count);
 
-        count = 0;
-        size_t const edit_distance = edit(&va_static_allocator, m, tests[i].a, n, tests[i].b);
-        assert(edit_distance == tests[i].distance);
-        //assert(count == tests[i].count);
-
         fprintf(stderr, ".");
     } // for
     fprintf(stderr, "  passed\n");
@@ -314,7 +295,7 @@ test_wu_compare(void)
 int
 main(int argc, char* argv[argc + 1])
 {
-    //test_wu_compare();
+    test_wu_compare();
 
     if (argc < 3)
     {
@@ -324,12 +305,6 @@ main(int argc, char* argv[argc + 1])
 
     size_t const m = strlen(argv[1]);
     size_t const n = strlen(argv[2]);
-
-    count = 0;
-    size_t const wu_distance = m > n ?
-        wu_compare(&va_static_allocator, n, argv[2], m, argv[1]) :
-        wu_compare(&va_static_allocator, m, argv[1], n, argv[2]);
-    printf("  wu distance: %zu (%zu)\n", wu_distance, count);
 
     count = 0;
     size_t const edit_distance = edit(&va_std_allocator, m, argv[1], n, argv[2]);
