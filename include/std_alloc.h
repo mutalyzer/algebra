@@ -14,7 +14,7 @@ extern "C"
 
 
 static inline void*
-va_std_alloc(void* const context, void* const ptr, size_t const old_size, size_t const size)
+va_std_alloc(void* const restrict context, void* const restrict ptr, size_t const old_size, size_t const size)
 {
     (void) context;
     (void) old_size;
@@ -23,7 +23,7 @@ va_std_alloc(void* const context, void* const ptr, size_t const old_size, size_t
         free(ptr);
         return NULL;
     } // if
-    char* const here = realloc(ptr, size);
+    char* const restrict here = realloc(ptr, size);
     if (size > old_size)
     {
         (void) memset(here + old_size, 0, size - old_size);

@@ -11,7 +11,7 @@ extern "C"
 
 typedef struct
 {
-    void* (*alloc)(void* const context, void* const ptr, size_t const old_size, size_t const size);
+    void* (*alloc)(void* const restrict context, void* const restrict ptr, size_t const old_size, size_t const size);
     void* context;
 } VA_Allocator;
 

@@ -29,9 +29,9 @@ static VA_Static_Buffer va_static_buffer = { ._size = sizeof(va_static_buffer) }
 
 
 static void*
-va_static_alloc(void* const context, void* const ptr, size_t const old_size, size_t const size)
+va_static_alloc(void* const restrict context, void* const restrict ptr, size_t const old_size, size_t const size)
 {
-    VA_Static_Buffer* const buffer = (VA_Static_Buffer*) context;
+    VA_Static_Buffer* const restrict buffer = (VA_Static_Buffer*) context;
 
     if (size == 0)
     {
@@ -49,7 +49,7 @@ va_static_alloc(void* const context, void* const ptr, size_t const old_size, siz
         {
             return NULL;  // OOM
         } // if
-        char const* const src = ptr;
+        char const* const restrict src = ptr;
         for (size_t i = 0; i < old_size; ++i)
         {
             buffer->data[buffer->free + i] = src[i];
@@ -61,7 +61,7 @@ va_static_alloc(void* const context, void* const ptr, size_t const old_size, siz
         return NULL;  // OOM
     } // if
 
-    void* const here = buffer->data + buffer->free;
+    void* const restrict here = buffer->data + buffer->free;
     buffer->free += size;
     return here;
 } // va_static_alloc

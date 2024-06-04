@@ -24,11 +24,11 @@ va_array_init(VA_Allocator const allocator[static 1], size_t const capacity, siz
 
 
 void*
-va_array_ensure(VA_Allocator const allocator[static 1], void* const ptr, size_t const count);
+va_array_ensure(VA_Allocator const allocator[static restrict 1], void* const restrict ptr, size_t const count);
 
 
 void*
-va_array_destroy(VA_Allocator const allocator[static 1], void* const ptr);
+va_array_destroy(VA_Allocator const allocator[static restrict 1], void* const restrict ptr);
 
 
 #define \
