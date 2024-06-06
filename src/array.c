@@ -23,7 +23,7 @@ va_array_init(VA_Allocator const allocator[static 1], size_t const capacity, siz
 void*
 va_array_ensure(VA_Allocator const allocator[static restrict 1], void* const restrict ptr, size_t const count)
 {
-    VA_Array* header = (VA_Array*)(ptr) - 1;
+    VA_Array* header = (VA_Array*) (ptr) - 1;
     if (header->capacity - header->length >= count)
     {
         return ptr;
@@ -55,3 +55,14 @@ va_array_destroy(VA_Allocator const allocator[static restrict 1], void* const re
     VA_Array* const header = (VA_Array*)(ptr) - 1;
     return allocator->alloc(allocator->context, header, sizeof(*header) + header->capacity * header->item_size, 0);
 } // va_array_destroy
+
+
+inline size_t
+va_array_length(void* const ptr)
+{
+    if (ptr == NULL)
+    {
+        return 0;
+    } // if
+    return ((VA_Array*) (ptr) - 1)->length;
+} // va_array_length

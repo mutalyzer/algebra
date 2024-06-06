@@ -31,6 +31,10 @@ void*
 va_array_destroy(VA_Allocator const allocator[static restrict 1], void* const restrict ptr);
 
 
+size_t
+va_array_length(void* const ptr);
+
+
 #define \
 va_array_append(allocator, ptr, value) (                    \
     (ptr) = va_array_ensure(allocator, ptr, 1),             \
