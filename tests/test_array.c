@@ -154,6 +154,30 @@ test_va_array_destroy(void)
 
 
 static void
+test_va_array_length(void)
+{
+    static struct {
+        VA_Allocator const* const allocator;
+        size_t const capacity;
+    } const tests[] =
+    {
+        {&va_std_allocator, 0},
+        {&null_allocator, 0},
+    }; // tests
+
+    fprintf(stderr, "%s:%s: ", __FILE__, __func__);
+    for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); ++i)
+    {
+        uint32_t* array = va_array_init(tests[i].allocator, tests[i].capacity, sizeof(*array));
+        assert(va_array_length(array) == 0);
+        array = va_array_destroy(tests[i].allocator, array);
+        fprintf(stderr, ".");
+    } // for
+    fprintf(stderr, "  passed\n");
+} // test_va_array_length
+
+
+static void
 test_va_array_append(void)
 {
     static struct {
@@ -196,6 +220,7 @@ main(void)
     test_va_array_ensure();
     test_va_array_ensure_null();
     test_va_array_destroy();
+    test_va_array_length();
     test_va_array_append();
     return EXIT_SUCCESS;
 } // main
