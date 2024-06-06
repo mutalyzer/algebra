@@ -7,7 +7,7 @@
 #include <string.h>     // strlen
 
 #include "../include/alloc.h"           // VA_Allocator
-#include "../include/array.h"           // 
+#include "../include/array.h"           // va_array_*
 #include "../include/static_alloc.h"    // va_static_allocator
 #include "../include/std_alloc.h"       // va_std_allocator
 
@@ -87,7 +87,7 @@ typedef struct
     size_t row;
     size_t col;
     size_t length;
-} VA_LCS_Node;
+} LCS_Node;
 
 
 static inline size_t
@@ -106,18 +106,21 @@ umin(size_t const a, size_t const b)
 
 typedef struct
 {
+    VA_Allocator const* const restrict allocator;
     size_t const len_ref;
     char const* const restrict reference;
     size_t const len_obs;
     char const* const restrict observed;
     size_t* const restrict diagonals;
-} Expand_Context;
+    LCS_Node** const restrict lcs_nodes;
+} Context;
 
 
 static size_t
-expand(Expand_Context const context,
+expand(Context const context,
        ptrdiff_t const idx,
-       size_t const p)
+       size_t const p,
+       size_t* const max_lcs_pos)
 {
     ptrdiff_t const delta = context.len_obs - context.len_ref;
     size_t const offset = context.len_ref + 1;
@@ -166,8 +169,16 @@ expand(Expand_Context const context,
             ptrdiff_t const d_row = context.len_ref - row;
             ptrdiff_t const d_col = context.len_obs - col;
             size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
+            if (lcs_pos > *max_lcs_pos)
+            {
+                *max_lcs_pos = lcs_pos + 1;
+            } // if
             size_t const length = row - match_row;
-            printf("%2zu: (%zu, %zu, %zu)\n", lcs_pos, match_row, match_col, length);
+            if (context.lcs_nodes[lcs_pos] == NULL)
+            {
+                context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 1, sizeof(*context.lcs_nodes[lcs_pos]));
+            } // if
+            va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((LCS_Node) {match_row, match_col, length}));
             matching = false;
         } // if
         row += 1;
@@ -191,8 +202,16 @@ expand(Expand_Context const context,
         ptrdiff_t const d_row = context.len_ref - row;
         ptrdiff_t const d_col = context.len_obs - col;
         size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
+        if (lcs_pos > *max_lcs_pos)
+        {
+            *max_lcs_pos = lcs_pos + 1;
+        } // if
         size_t const length = row - match_row;
-        printf("%2zu: (%zu, %zu, %zu)\n", lcs_pos, match_row, match_col, length);
+        if (context.lcs_nodes[lcs_pos] == NULL)
+        {
+            context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 1, sizeof(*context.lcs_nodes[lcs_pos]));
+        } // if
+        va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((LCS_Node) {match_row, match_col, length}));
     } // if
 
     return steps;
@@ -210,16 +229,20 @@ edit(VA_Allocator const allocator[static restrict 1],
     size_t const offset = len_ref + 1;
     size_t const size = len_ref + len_obs + 3;
 
-    Expand_Context const context =
+    Context const context =
     {
+        allocator,
         len_ref,
         reference,
         len_obs,
         observed,
         .diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*context.diagonals)),
+        .lcs_nodes = allocator->alloc(allocator->context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes)),
     };
-    if (context.diagonals == NULL)
+    if (context.diagonals == NULL || context.lcs_nodes == NULL)
     {
+        allocator->alloc(allocator->context, context.diagonals, size * sizeof(*context.diagonals), 0);
+        allocator->alloc(allocator->context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
         return -1;
     } // if
 
@@ -228,22 +251,39 @@ edit(VA_Allocator const allocator[static restrict 1],
 
     size_t const len = umax(len_ref, len_obs) - imaxabs(delta);
     size_t p = 0;
+    size_t max_lcs_pos = 0;
     while (context.diagonals[offset + delta] <= len)
     {
         for (ptrdiff_t idx = lower - p; idx < delta; ++idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos);
         } // for
         for (ptrdiff_t idx = upper + p; idx > delta; --idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos);
         } // for
-        context.diagonals[offset + delta] = expand(context, delta, p);
+        context.diagonals[offset + delta] = expand(context, delta, p, &max_lcs_pos);
 
         p += 1;
     } // while
 
     allocator->alloc(allocator->context, context.diagonals, size * sizeof(*context.diagonals), 0);
+
+    for (size_t i = 0; i < max_lcs_pos; ++i)
+    {
+        if (context.lcs_nodes[i] != NULL)
+        {
+            printf("%zu: ", i);
+            for (size_t j = 0; j < va_array_length(context.lcs_nodes[i]); ++j)
+            {
+                printf("(%zu, %zu, %zu) ", context.lcs_nodes[i][j].row, context.lcs_nodes[i][j].col, context.lcs_nodes[i][j].length);
+            } // for
+            printf("\n");
+        } // if
+        context.lcs_nodes[i] = va_array_destroy(allocator, context.lcs_nodes[i]);
+    } // for
+
+    allocator->alloc(allocator->context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
 
     return imaxabs(delta) + 2 * p - 2;
 } // edit
@@ -295,7 +335,7 @@ test_wu_compare(void)
 int
 main(int argc, char* argv[argc + 1])
 {
-    test_wu_compare();
+    // test_wu_compare();
 
     if (argc < 3)
     {
