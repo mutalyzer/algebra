@@ -106,7 +106,7 @@ umin(size_t const a, size_t const b)
 
 typedef struct
 {
-    VA_Allocator const* const restrict allocator;
+    VA_Allocator const allocator;
     size_t const len_ref;
     char const* const restrict reference;
     size_t const len_obs;
@@ -219,7 +219,7 @@ expand(Context const context,
 
 
 static size_t
-edit(VA_Allocator const allocator[static restrict 1],
+edit(VA_Allocator const allocator,
      size_t const len_ref,
      char const reference[static restrict len_ref],
      size_t const len_obs,
@@ -236,13 +236,13 @@ edit(VA_Allocator const allocator[static restrict 1],
         reference,
         len_obs,
         observed,
-        .diagonals = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*context.diagonals)),
-        .lcs_nodes = allocator->alloc(allocator->context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes)),
+        .diagonals = allocator.alloc(allocator.context, NULL, 0, size * sizeof(*context.diagonals)),
+        .lcs_nodes = allocator.alloc(allocator.context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes)),
     };
     if (context.diagonals == NULL || context.lcs_nodes == NULL)
     {
-        allocator->alloc(allocator->context, context.diagonals, size * sizeof(*context.diagonals), 0);
-        allocator->alloc(allocator->context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
+        allocator.alloc(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
+        allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
         return -1;
     } // if
 
@@ -267,7 +267,7 @@ edit(VA_Allocator const allocator[static restrict 1],
         p += 1;
     } // while
 
-    allocator->alloc(allocator->context, context.diagonals, size * sizeof(*context.diagonals), 0);
+    allocator.alloc(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
 
     for (size_t i = 0; i < max_lcs_pos; ++i)
     {
@@ -283,7 +283,7 @@ edit(VA_Allocator const allocator[static restrict 1],
         context.lcs_nodes[i] = va_array_destroy(allocator, context.lcs_nodes[i]);
     } // for
 
-    allocator->alloc(allocator->context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
+    allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
 
     return imaxabs(delta) + 2 * p - 2;
 } // edit
@@ -347,7 +347,7 @@ main(int argc, char* argv[argc + 1])
     size_t const n = strlen(argv[2]);
 
     count = 0;
-    size_t const edit_distance = edit(&va_std_allocator, m, argv[1], n, argv[2]);
+    size_t const edit_distance = edit(va_std_allocator, m, argv[1], n, argv[2]);
     printf("edit distance: %zu (%zu)\n", edit_distance, count);
 
     return EXIT_SUCCESS;

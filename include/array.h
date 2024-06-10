@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-#include <stddef.h>     // size_t
+#include <stddef.h>     // NULL, size_t
 
 #include "alloc.h"      // VA_Allocator
 
@@ -14,33 +14,42 @@ extern "C"
 typedef struct
 {
     size_t capacity;
-    size_t item_size;
     size_t length;
 } VA_Array;
 
 
 void*
-va_array_init(VA_Allocator const allocator[static 1], size_t const capacity, size_t const item_size);
+va_array_init(VA_Allocator const allocator, size_t const capcity, size_t const item_size);
 
 
-void*
-va_array_ensure(VA_Allocator const allocator[static restrict 1], void* const restrict ptr, size_t const count);
-
-
-void*
-va_array_destroy(VA_Allocator const allocator[static restrict 1], void* const restrict ptr);
+VA_Array*
+va_array_header(void* const ptr);
 
 
 size_t
 va_array_length(void* const ptr);
 
 
-#define \
-va_array_append(allocator, ptr, value) (                    \
-    (ptr) = va_array_ensure(allocator, ptr, 1),             \
-    (ptr)[((VA_Array*)(ptr) - 1)->length] = (value),        \
-    &(ptr)[((VA_Array*)(ptr) - 1)->length++]                \
-) // va_array_append
+void*
+va_array_grow(VA_Allocator const allocator, void* const restrict ptr, size_t const capacity, size_t const item_size);
+
+
+size_t
+va_array_shift(void* const ptr, size_t const index, size_t const item_size);
+
+
+#define va_array_destroy(allocator, ptr) ((ptr) == NULL ? NULL : allocator.alloc(allocator.context, va_array_header(ptr), va_array_header(ptr)->capacity * sizeof(*(ptr)), 0))
+
+
+#define va_array_insert(allocator, ptr, value, index) do {              \
+    (ptr) = va_array_grow(allocator, ptr, 1, sizeof(*ptr));             \
+    if ((ptr) == NULL) break;                                           \
+    (ptr)[va_array_shift(ptr, index, sizeof(*ptr))] = (value);          \
+    ++va_array_header(ptr)->length;                                     \
+} while (0)
+
+
+#define va_array_append(allocator, ptr, value) va_array_insert(allocator, ptr, value, va_array_length(ptr))
 
 
 #ifdef __cplusplus
