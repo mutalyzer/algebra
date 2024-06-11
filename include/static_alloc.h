@@ -31,7 +31,7 @@ static VA_Static_Buffer va_static_buffer = { ._size = sizeof(va_static_buffer) }
 static void*
 va_static_alloc(void* const restrict context, void* const restrict ptr, size_t const old_size, size_t const size)
 {
-    VA_Static_Buffer* const restrict buffer = (VA_Static_Buffer*) context;
+    VA_Static_Buffer* const restrict buffer = context;
 
     if (size == 0)
     {
@@ -61,9 +61,9 @@ va_static_alloc(void* const restrict context, void* const restrict ptr, size_t c
         return NULL;  // OOM
     } // if
 
-    void* const restrict here = buffer->data + buffer->free;
+    void* const restrict new_ptr = buffer->data + buffer->free;
     buffer->free += size;
-    return here;
+    return new_ptr;
 } // va_static_alloc
 
 

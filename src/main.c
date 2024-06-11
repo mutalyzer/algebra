@@ -8,11 +8,7 @@
 
 #include "../include/alloc.h"           // VA_Allocator
 #include "../include/array.h"           // va_array_*
-#include "../include/static_alloc.h"    // va_static_allocator
 #include "../include/std_alloc.h"       // va_std_allocator
-
-
-static size_t count = 0;
 
 
 static inline size_t
@@ -28,20 +24,15 @@ wu_snake(size_t const m,
     size_t row = col - k;
     while (row < m && col < n && a[row] == b[col])
     {
-        count += 1;
         row += 1;
         col += 1;
     } // while
-    if (row < m && col < n)
-    {
-        count += 1;
-    } // if
     return col;
 } // wu_snake
 
 
 static size_t
-wu_compare(VA_Allocator const allocator[static restrict 1],
+wu_compare(VA_Allocator const allocator,
            size_t const m,
            char const a[static restrict m],
            size_t const n,
@@ -50,7 +41,7 @@ wu_compare(VA_Allocator const allocator[static restrict 1],
     ptrdiff_t const delta = n - m;
     size_t const offset = m + 1;
     size_t const size = m + n + 3;
-    ptrdiff_t* const restrict fp = allocator->alloc(allocator->context, NULL, 0, size * sizeof(*fp));
+    ptrdiff_t* const restrict fp = allocator.alloc(allocator.context, NULL, 0, size * sizeof(*fp));
     if (fp == NULL)
     {
         return -1;
@@ -76,7 +67,7 @@ wu_compare(VA_Allocator const allocator[static restrict 1],
         p += 1;
     } // while
 
-    allocator->alloc(allocator->context, fp, size * sizeof(*fp), 0);
+    allocator.alloc(allocator.context, fp, size * sizeof(*fp), 0);
 
     return delta + 2 * (p - 1);
 } // wu_compare
@@ -223,7 +214,8 @@ edit(VA_Allocator const allocator,
      size_t const len_ref,
      char const reference[static restrict len_ref],
      size_t const len_obs,
-     char const observed[static restrict len_obs])
+     char const observed[static restrict len_obs],
+     LCS_Node*** restrict lcs_nodes)
 {
     ptrdiff_t const delta = len_obs - len_ref;
     size_t const offset = len_ref + 1;
@@ -269,23 +261,9 @@ edit(VA_Allocator const allocator,
 
     allocator.alloc(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
 
-    for (size_t i = 0; i < max_lcs_pos; ++i)
-    {
-        if (context.lcs_nodes[i] != NULL)
-        {
-            printf("%zu: ", i);
-            for (size_t j = 0; j < va_array_length(context.lcs_nodes[i]); ++j)
-            {
-                printf("(%zu, %zu, %zu) ", context.lcs_nodes[i][j].row, context.lcs_nodes[i][j].col, context.lcs_nodes[i][j].length);
-            } // for
-            printf("\n");
-        } // if
-        context.lcs_nodes[i] = va_array_destroy(allocator, context.lcs_nodes[i]);
-    } // for
-
-    allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
-
-    return imaxabs(delta) + 2 * p - 2;
+    // transfer ownership
+    *lcs_nodes = allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), max_lcs_pos * sizeof(*context.lcs_nodes));
+    return max_lcs_pos;
 } // edit
 
 
@@ -319,12 +297,10 @@ test_wu_compare(void)
         size_t const m = strlen(tests[i].a);
         size_t const n = strlen(tests[i].b);
 
-        count = 0;
         size_t const wu_distance = m > n ?
-            wu_compare(&va_static_allocator, n, tests[i].b, m, tests[i].a) :
-            wu_compare(&va_static_allocator, m, tests[i].a, n, tests[i].b);
+            wu_compare(va_std_allocator, n, tests[i].b, m, tests[i].a) :
+            wu_compare(va_std_allocator, m, tests[i].a, n, tests[i].b);
         assert(wu_distance == tests[i].distance);
-        assert(count == tests[i].count);
 
         fprintf(stderr, ".");
     } // for
@@ -332,10 +308,45 @@ test_wu_compare(void)
 } // test_wu_compare
 
 
-int
-main(int argc, char* argv[argc + 1])
+static void
+test_large(void)
 {
-    // test_wu_compare();
+    char const* const restrict reference = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTTGGGCTCAGATCTGTGATAGAACAGTTTCCTGGGAAGCTTGACTTTGTCCTTGTGGATGGGGGCTGTGTCCTAAGCCATGGCCACAAGCAGTTGATGTGCTTGGCTAGATCTGTTCTCAGTAAGGCGAAGATCTTGCTGCTTGATGAACCCAGTGCTCATTTGGATCCAGTGTGAGTTTCAGATGTTCTGTTACTTAATAGCACAGTGGGAACAGAATCATTATGCCTGCTTCATGGTGACACATATTTCTATTAGGCTGTCATGTCTGCGTGTGGGGGTCTCCCCCAAGATATGAAATAATTGCCCAGTGGAAATGAGCATAAATGCATATTTCCTTGCTAAGAGTCTTGTGTTTTCTTCCGAAGATAGTTTTTAGTTTCATACAAACTCTTCCCCCTTGTCAACACATGATGAAGCTTTTAAATACATGGGCCTAATCTGATCCTTATGATTTGCCTTTGTATCCCATTTATACCATAAGCATGTTTATAGCCCCAAATAAAGAAGTACTGGTGATTCTACATAATGAAAAATGTACTCATTTATTAAAGTTTCTTTGAAATATTTGTCCTGTTTATTTATGGATACTTAGAGTCTACCCCATGGTTGAAAAGCTGATTGTGGCTAACGCTATATCAACATTATGTGAAAAGAACTTAAAGAAATAAGTAATTTAAAGAGATAATAGAACAATAGACATATTATCAAGGTAAATACAGATCATTACTGTTCTGTGATATTATGTGTGGTATTTTCTTTCTTTTCTAGAACATACCAAATAATTAGAAGAACTCTAAAACAAGCATTTGCTGATTGCACAGTAATTCTCTGTGAACACAGGATAGAAGCAATGCTGGAATGCCAACAATTTTTGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
+    char const* const restrict observed = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
+    size_t const len_ref = strlen(reference);
+    size_t const len_obs = strlen(observed);
+
+    LCS_Node** lcs_nodes = NULL;
+    size_t const len_lcs = edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
+    if (lcs_nodes == NULL)
+    {
+        printf("OOM\n");
+        return;
+    } // if
+    printf("len lcs: %zu\n", len_lcs);
+    for (size_t i = 0; i < len_lcs; ++i)
+    {
+        //printf("  %zu (%zu): ", i, va_array_length(lcs_nodes[i]));
+        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
+        {
+            //printf("(%zu, %zu, %zu) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+        } // for
+        //printf("\n");
+        lcs_nodes[i] = va_array_destroy(va_std_allocator, lcs_nodes[i]);
+    } // for
+    lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs * sizeof(*lcs_nodes), 0);
+} // test_large
+
+
+int
+main(int argc, char* argv[static argc + 1])
+{
+    test_large();
+    return 0;
+
+
+
+    test_wu_compare();
 
     if (argc < 3)
     {
@@ -346,9 +357,20 @@ main(int argc, char* argv[argc + 1])
     size_t const m = strlen(argv[1]);
     size_t const n = strlen(argv[2]);
 
-    count = 0;
-    size_t const edit_distance = edit(va_std_allocator, m, argv[1], n, argv[2]);
-    printf("edit distance: %zu (%zu)\n", edit_distance, count);
+    LCS_Node** lcs_nodes = NULL;
+    size_t const len_lcs = edit(va_std_allocator, m, argv[1], n, argv[2], &lcs_nodes);
+    printf("len lcs: %zu\n", len_lcs);
+    for (size_t i = 0; i < len_lcs; ++i)
+    {
+        printf("  %zu (%zu): ", i, va_array_length(lcs_nodes[i]));
+        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
+        {
+            printf("(%zu, %zu, %zu) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+        } // for
+        printf("\n");
+        lcs_nodes[i] = va_array_destroy(va_std_allocator, lcs_nodes[i]);
+    } // for
+    lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs * sizeof(*lcs_nodes), 0);
 
     return EXIT_SUCCESS;
 } // main
