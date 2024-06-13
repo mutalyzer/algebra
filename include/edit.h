@@ -16,6 +16,8 @@ typedef struct
     size_t row;
     size_t col;
     size_t length;
+    size_t incoming;
+    size_t idx;
 } VA_LCS_Node;
 
 
