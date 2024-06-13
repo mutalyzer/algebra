@@ -19,7 +19,7 @@ typedef struct
 
 
 void*
-va_array_init(VA_Allocator const allocator, size_t const capcity, size_t const item_size);
+va_array_init(VA_Allocator const allocator, size_t const capacity, size_t const item_size);
 
 
 VA_Array*
