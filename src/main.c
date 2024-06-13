@@ -84,9 +84,10 @@ destroy(VA_Allocator const allocator, Graph* const graph)
 } // destroy
 
 
-static void
-doit(VA_Allocator const allocator, Graph* const graph, VA_LCS_Node const sink, VA_LCS_Node* const sources, size_t const shift)
+static size_t
+doit(VA_Allocator const allocator, Graph* const graph, VA_LCS_Node const sink, VA_LCS_Node* const sources, size_t const lcs_idx, size_t const shift)
 {
+    size_t idx = 0;
     for (size_t i = 0; i < va_array_length(sources); ++i)
     {
         if (sources[i].row + sources[i].length < sink.row + sink.length && sources[i].col + sources[i].length < sink.col + sink.length)
@@ -94,15 +95,35 @@ doit(VA_Allocator const allocator, Graph* const graph, VA_LCS_Node const sink, V
             VA_Variant const variant = {sources[i].row + sources[i].length, sink.row + sink.length - 1, sources[i].col + sources[i].length - shift, sink.col + sink.length - 1 - shift};
             printf("(%zu, %zu, %zu) -> (%zu, %zu, %zu)\n", sources[i].row, sources[i].col, sources[i].length, sink.row, sink.col, sink.length);
 
-            if (sources[i].idx == 0)
+            if (sources[i].incoming == lcs_idx)
             {
-                sources[i].idx = add_node(allocator, graph, sources[i].row, sources[i].col, sources[i].length);
+                printf("SPLIT: (%zu, %zu, %zu)\n", sources[i].row, sources[i].col, sources[i].length);
+                size_t const split_idx = sources[i].idx - 1;
+                sources[i].idx = add_node(allocator, graph, sources[i].row, sources[i].col, graph->nodes[split_idx].length);
+
+                graph->nodes[sources[i].idx - 1].edges = va_array_init(allocator, va_array_length(graph->nodes[split_idx].edges) + 1, sizeof(*graph->nodes[sources[i].idx].edges));
+                for (size_t j = 0; j < va_array_length(graph->nodes[split_idx].edges); ++j)
+                {
+                    va_array_append(allocator, graph->nodes[sources[i].idx - 1].edges, graph->nodes[split_idx].edges[j]);
+                } // for
+                add_edge(allocator, graph, sources[i].idx - 1, sink.idx - 1, variant);
+
+                graph->nodes[split_idx].row += sources[i].length;
+                graph->nodes[split_idx].col += sources[i].length;
+                graph->nodes[split_idx].length -= sources[i].length;
             } // if
-
-            add_edge(allocator, graph, sources[i].idx - 1, sink.idx - 1, variant);
-
+            else
+            {
+                if (sources[i].idx == 0)
+                {
+                    sources[i].idx = add_node(allocator, graph, sources[i].row, sources[i].col, sources[i].length);
+                } // if
+                add_edge(allocator, graph, sources[i].idx - 1, sink.idx - 1, variant);
+            } // else
+            idx = i + 1;
         } // if
     } // for
+    return idx;
 } // doit
 
 
@@ -139,19 +160,39 @@ build_graph(VA_Allocator const allocator,
     printf("sink: (%zu, %zu, %zu)\n", sink.row, sink.col, sink.length);
 
     sink.idx = add_node(allocator, &graph, sink.row, sink.col, sink.length - 1);
-    doit(allocator, &graph, sink, lcs_nodes[len_lcs - 1], shift);
-
-    for (size_t i = 0; i < len_lcs; ++i)
+    size_t const here = doit(allocator, &graph, sink, lcs_nodes[len_lcs - 1], len_lcs - 1, shift);
+    if (sink.length > 1)
     {
-        size_t const idx = len_lcs - 1 - i;
-        printf("%zu (%zu): ", idx, va_array_length(lcs_nodes[idx]));
-        for (size_t j = 0; j < va_array_length(lcs_nodes[idx]); ++j)
+        sink.length -= 1;
+        sink.incoming = len_lcs - 1;
+        va_array_insert(allocator, lcs_nodes[len_lcs - 1], sink, here);
+    } // if
+
+    for (size_t i = len_lcs - 1; i >= 1; --i)
+    {
+        printf("idx %zu\n", i);
+        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
         {
-            printf("(%zu, %zu, %zu) ", lcs_nodes[idx][j].row, lcs_nodes[idx][j].col, lcs_nodes[idx][j].length);
+            if (lcs_nodes[i][j].idx == 0)
+            {
+                continue;
+            } // if
+            size_t const here = doit(allocator, &graph, lcs_nodes[i][j], lcs_nodes[i - 1], i, shift);
+            if (lcs_nodes[i][j].length > 1)
+            {
+                lcs_nodes[i][j].length -= 1;
+                if (here > 0)
+                {
+                    lcs_nodes[i][j].incoming = i;
+                } // if
+                va_array_insert(allocator, lcs_nodes[i - 1], lcs_nodes[i][j], here);
+            } // if
         } // for
-        printf("\n");
-        lcs_nodes[idx] = va_array_destroy(allocator, lcs_nodes[idx]);
+        lcs_nodes[i] = va_array_destroy(allocator, lcs_nodes[i]);
     } // for
+
+    lcs_nodes[0] = va_array_destroy(allocator, lcs_nodes[0]);
+
 
     lcs_nodes = allocator.alloc(allocator.context, lcs_nodes, len_lcs * sizeof(*lcs_nodes), 0);
 
