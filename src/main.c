@@ -49,13 +49,22 @@ add_edge(VA_Allocator const allocator, Graph* const graph, size_t const source, 
 static void
 to_dot(Graph const* const graph, char const observed[static 1])
 {
+    printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\n");
     if (graph->nodes == NULL)
     {
+        printf("}\n");
         return;
     } // if
     for (size_t i = 0; i < va_array_length(graph->nodes); ++i)
     {
-        printf("s%zu[label=\"(%zu, %zu, %zu)\"]\n", i, graph->nodes[i].row, graph->nodes[i].col, graph->nodes[i].length);
+        if (va_array_length(graph->nodes[i].edges) == 0)
+        {
+            printf("s%zu[label=\"(%zu, %zu, %zu)\",peripheries=2]\n", i, graph->nodes[i].row, graph->nodes[i].col, graph->nodes[i].length);
+        } // if
+        else
+        {
+            printf("s%zu[label=\"(%zu, %zu, %zu)\"]\n", i, graph->nodes[i].row, graph->nodes[i].col, graph->nodes[i].length);
+        } // else
     } // for
 
     for (size_t i = 0; i < va_array_length(graph->nodes); ++i)
@@ -66,6 +75,7 @@ to_dot(Graph const* const graph, char const observed[static 1])
             printf("s%zu->s%zu[label=\"%u:%u/%.*s\"]\n", i, graph->nodes[i].edges[j].node, graph->nodes[i].edges[j].variant.start, graph->nodes[i].edges[j].variant.end, (int) len, observed + graph->nodes[i].edges[j].variant.obs_start);
         } // for
     } // for
+    printf("}\n");
 } // to_dot
 
 
@@ -191,8 +201,36 @@ build_graph(VA_Allocator const allocator,
         lcs_nodes[i] = va_array_destroy(allocator, lcs_nodes[i]);
     } // for
 
-    lcs_nodes[0] = va_array_destroy(allocator, lcs_nodes[0]);
+    VA_LCS_Node source = lcs_nodes[0][0];
 
+    printf("source: (%zu, %zu, %zu)\n", source.row, source.col, source.length);
+    size_t start = 0;
+    if (source.row == shift && source.col == shift)
+    {
+        // assert source.idx != 0
+        start = 1;
+    } // if
+    else
+    {
+        source = (VA_LCS_Node) {.row = shift, .col = shift, .length = 0};
+        source.idx = add_node(allocator, &graph, shift, shift, 0);
+    } // else
+
+    for (size_t i = start; i < va_array_length(lcs_nodes[0]); ++i)
+    {
+        if (lcs_nodes[0][i].idx == 0)
+        {
+            continue;
+        } // if
+
+        if (source.row < lcs_nodes[0][i].row + lcs_nodes[0][i].length && source.col < lcs_nodes[0][i].col + lcs_nodes[0][i].length)
+        {
+            VA_Variant const variant = {source.row, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1, source.col - shift, lcs_nodes[0][i].col + lcs_nodes[0][i].length - 1 - shift};
+            printf("(%zu, %zu, %zu) -> (%zu, %zu, %zu)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
+            add_edge(allocator, &graph, source.idx - 1, lcs_nodes[0][i].idx - 1, variant);
+        } // if
+    } // for
+    lcs_nodes[0] = va_array_destroy(allocator, lcs_nodes[0]);
 
     lcs_nodes = allocator.alloc(allocator.context, lcs_nodes, len_lcs * sizeof(*lcs_nodes), 0);
 
