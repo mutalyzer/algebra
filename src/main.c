@@ -13,7 +13,8 @@
 
 typedef struct
 {
-    uint32_t node;
+    uint32_t source;
+    uint32_t sink;
     VA_Variant variant;
 } Edge;
 
@@ -23,28 +24,29 @@ typedef struct
     uint32_t row;
     uint32_t col;
     uint32_t length;
-    Edge* edges;
 } Node;
 
 
 typedef struct
 {
     Node* nodes;
+    Edge* edges;
 } Graph;
 
 
 static inline size_t
 add_node(VA_Allocator const allocator, Graph* const graph, size_t const row, size_t const col, size_t const length)
 {
-    va_array_append(allocator, graph->nodes, ((Node) {row, col, length, NULL}));
+    va_array_append(allocator, graph->nodes, ((Node) {row, col, length}));
     return va_array_length(graph->nodes);
 } // add_node
 
 
-static inline void
+static inline size_t
 add_edge(VA_Allocator const allocator, Graph* const graph, size_t const source, size_t const sink, VA_Variant const variant)
 {
-    va_array_append(allocator, graph->nodes[source].edges, ((Edge) {sink, variant}));
+    va_array_append(allocator, graph->edges, ((Edge) {source, sink, variant}));
+    return va_array_length(graph->edges);
 } // add_edge
 
 
@@ -59,23 +61,13 @@ to_dot(Graph const* const graph, size_t const len_obs, char const observed[stati
     } // if
     for (size_t i = 0; i < va_array_length(graph->nodes); ++i)
     {
-        if (va_array_length(graph->nodes[i].edges) == 0)
-        {
-            printf("s%zu[label=\"(%u, %u, %u)\",peripheries=2]\n", i, graph->nodes[i].row, graph->nodes[i].col, graph->nodes[i].length);
-        } // if
-        else
-        {
-            printf("s%zu[label=\"(%u, %u, %u)\"]\n", i, graph->nodes[i].row, graph->nodes[i].col, graph->nodes[i].length);
-        } // else
+        printf("s%zu[label=\"(%u, %u, %u)\"]\n", i, graph->nodes[i].row, graph->nodes[i].col, graph->nodes[i].length);
     } // for
 
-    for (size_t i = 0; i < va_array_length(graph->nodes); ++i)
+    for (size_t i = 0; i < va_array_length(graph->edges); ++i)
     {
-        for (size_t j = 0; j < va_array_length(graph->nodes[i].edges); ++j)
-        {
-            size_t const len = graph->nodes[i].edges[j].variant.obs_end - graph->nodes[i].edges[j].variant.obs_start;
-            printf("s%zu->s%u[label=\"%u:%u/%.*s\"]\n", i, graph->nodes[i].edges[j].node, graph->nodes[i].edges[j].variant.start, graph->nodes[i].edges[j].variant.end, (int) len, observed + graph->nodes[i].edges[j].variant.obs_start);
-        } // for
+        size_t const len = graph->edges[i].variant.obs_end - graph->edges[i].variant.obs_start;
+        printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", graph->edges[i].source, graph->edges[i].sink, graph->edges[i].variant.start, graph->edges[i].variant.end, (int) len, observed + graph->edges[i].variant.obs_start);
     } // for
     printf("}\n");
 } // to_dot
@@ -84,15 +76,8 @@ to_dot(Graph const* const graph, size_t const len_obs, char const observed[stati
 static void
 destroy(VA_Allocator const allocator, Graph* const graph)
 {
-    if (graph->nodes == NULL)
-    {
-        return;
-    } // if
-    for (size_t i = 0; i < va_array_length(graph->nodes); ++i)
-    {
-        graph->nodes[i].edges = va_array_destroy(allocator, graph->nodes[i].edges);
-    } // for
     graph->nodes = va_array_destroy(allocator, graph->nodes);
+    graph->edges = va_array_destroy(allocator, graph->edges);
 } // destroy
 
 
@@ -113,14 +98,14 @@ doit(VA_Allocator const allocator, Graph* const graph, VA_LCS_Node const sink, V
                 size_t const split_idx = sources[i].idx - 1;
                 sources[i].idx = add_node(allocator, graph, sources[i].row, sources[i].col, graph->nodes[split_idx].length);
 
-                /*
-                graph->nodes[sources[i].idx - 1].edges = va_array_init(allocator, va_array_length(graph->nodes[split_idx].edges) + 1, sizeof(*graph->nodes[sources[i].idx].edges));
-                for (size_t j = 0; j < va_array_length(graph->nodes[split_idx].edges); ++j)
+                for (size_t j = 0; j < va_array_length(graph->edges); ++j)
                 {
-                    va_array_append(allocator, graph->nodes[sources[i].idx - 1].edges, graph->nodes[split_idx].edges[j]);
+                    if (graph->edges[j].source == split_idx)
+                    {
+                        add_edge(allocator, graph, sources[i].idx - 1, graph->edges[j].sink, graph->edges[j].variant);
+                    } // if
                 } // for
                 add_edge(allocator, graph, sources[i].idx - 1, sink.idx - 1, variant);
-                */
 
                 graph->nodes[split_idx].row += sources[i].length;
                 graph->nodes[split_idx].col += sources[i].length;
@@ -132,7 +117,7 @@ doit(VA_Allocator const allocator, Graph* const graph, VA_LCS_Node const sink, V
                 {
                     sources[i].idx = add_node(allocator, graph, sources[i].row, sources[i].col, sources[i].length);
                 } // if
-                //add_edge(allocator, graph, sources[i].idx - 1, sink.idx - 1, variant);
+                add_edge(allocator, graph, sources[i].idx - 1, sink.idx - 1, variant);
             } // else
             idx = i + 1;
         } // if
@@ -231,7 +216,7 @@ build_graph(VA_Allocator const allocator,
         {
             VA_Variant const variant = {source.row, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1, source.col - shift, lcs_nodes[0][i].col + lcs_nodes[0][i].length - 1 - shift};
             //printf("(%u, %u, %u) -> (%u, %u, %u)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
-            //add_edge(allocator, &graph, source.idx - 1, lcs_nodes[0][i].idx - 1, variant);
+            add_edge(allocator, &graph, source.idx - 1, lcs_nodes[0][i].idx - 1, variant);
         } // if
     } // for
     lcs_nodes[0] = va_array_destroy(allocator, lcs_nodes[0]);
@@ -246,12 +231,13 @@ int
 main(int argc, char* argv[static argc + 1])
 {
 
+
     (void) argv;
     char const* const restrict reference = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTTGGGCTCAGATCTGTGATAGAACAGTTTCCTGGGAAGCTTGACTTTGTCCTTGTGGATGGGGGCTGTGTCCTAAGCCATGGCCACAAGCAGTTGATGTGCTTGGCTAGATCTGTTCTCAGTAAGGCGAAGATCTTGCTGCTTGATGAACCCAGTGCTCATTTGGATCCAGTGTGAGTTTCAGATGTTCTGTTACTTAATAGCACAGTGGGAACAGAATCATTATGCCTGCTTCATGGTGACACATATTTCTATTAGGCTGTCATGTCTGCGTGTGGGGGTCTCCCCCAAGATATGAAATAATTGCCCAGTGGAAATGAGCATAAATGCATATTTCCTTGCTAAGAGTCTTGTGTTTTCTTCCGAAGATAGTTTTTAGTTTCATACAAACTCTTCCCCCTTGTCAACACATGATGAAGCTTTTAAATACATGGGCCTAATCTGATCCTTATGATTTGCCTTTGTATCCCATTTATACCATAAGCATGTTTATAGCCCCAAATAAAGAAGTACTGGTGATTCTACATAATGAAAAATGTACTCATTTATTAAAGTTTCTTTGAAATATTTGTCCTGTTTATTTATGGATACTTAGAGTCTACCCCATGGTTGAAAAGCTGATTGTGGCTAACGCTATATCAACATTATGTGAAAAGAACTTAAAGAAATAAGTAATTTAAAGAGATAATAGAACAATAGACATATTATCAAGGTAAATACAGATCATTACTGTTCTGTGATATTATGTGTGGTATTTTCTTTCTTTTCTAGAACATACCAAATAATTAGAAGAACTCTAAAACAAGCATTTGCTGATTGCACAGTAATTCTCTGTGAACACAGGATAGAAGCAATGCTGGAATGCCAACAATTTTTGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
     char const* const restrict observed = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
+
+
 /*
-
-
     if (argc < 3)
     {
         fprintf(stderr, "usage: %s reference observed\n", argv[0]);
