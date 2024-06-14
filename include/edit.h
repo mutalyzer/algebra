@@ -7,17 +7,18 @@ extern "C"
 #endif
 
 #include <stddef.h>     // size_t
+#include <stdint.h>     // uint32_t
 
 #include "alloc.h"      // VA_Allocator
 
 
 typedef struct
 {
-    size_t row;
-    size_t col;
-    size_t length;
-    size_t incoming;
-    size_t idx;
+    uint32_t row;
+    uint32_t col;
+    uint32_t length;
+    uint32_t incoming;
+    uint32_t idx;
 } VA_LCS_Node;
 
 
