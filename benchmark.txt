@@ -1,0 +1,42 @@
+Empty main
+
+Python
+9,768 kB
+
+C
+1,260 kB
+
+
+LCS alignment
+len lcs 876  (136 empty)
+102641  {row, col, length}   @ 12 b = 1,231,692 b
+
+Python
+0:00.33
+32,688 kB
+
+
+C (no pre alloc)
+0:00.03
+20,528 kB
+
+C (256 pre alloc)
+0:00.02
+3,276 kB      (256 * (876 - 136)) @ 12 b = 2,273,280 b
+
+
+LCS graph
+71,858 nodes  8,096,506 edges  (19,823 splits)
+
+Python
+0:37.77
+1,792,004 kB
+
+C (only nodes)
+0:00.03
+4,940 kB
+
+C (flat lamdba edges: 5,894,814)  (pre alloc makes no difference)
+0:00.13
+142,468 kB
+

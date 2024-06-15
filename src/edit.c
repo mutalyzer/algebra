@@ -168,7 +168,7 @@ expand(Context const context,
             size_t const length = row - match_row;
             if (context.lcs_nodes[lcs_pos] == NULL)
             {
-                context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 1, sizeof(*context.lcs_nodes[lcs_pos]));
+                context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 256, sizeof(*context.lcs_nodes[lcs_pos]));
             } // if
             va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((VA_LCS_Node) {.row = match_row, .col = match_col, .length = length}));
             matching = false;
@@ -201,7 +201,7 @@ expand(Context const context,
         size_t const length = row - match_row;
         if (context.lcs_nodes[lcs_pos] == NULL)
         {
-            context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 1, sizeof(*context.lcs_nodes[lcs_pos]));
+            context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 256, sizeof(*context.lcs_nodes[lcs_pos]));
         } // if
         va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((VA_LCS_Node) {.row = match_row, .col = match_col, .length = length}));
     } // if
@@ -238,6 +238,16 @@ va_edit(VA_Allocator const allocator,
         allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
         return -1;
     } // if
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        context.diagonals[i] = 0;
+    } // for
+
+    for (size_t i = 0; i < umin(len_ref, len_obs); ++i)
+    {
+        context.lcs_nodes[i] = NULL;
+    } // for
 
     size_t const lower = delta > 0 ? 0 : delta;
     size_t const upper = delta > 0 ? delta : 0;

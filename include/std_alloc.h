@@ -23,6 +23,7 @@ va_std_alloc(void* const restrict context, void* const restrict ptr, size_t cons
     } // if
 
     (void) context;
+    (void) old_size;
 
     char* const restrict new_ptr = realloc(ptr, size);
     if (new_ptr == NULL)
@@ -30,10 +31,12 @@ va_std_alloc(void* const restrict context, void* const restrict ptr, size_t cons
         return NULL;  // OOM
     } // if
 
+    /*
     if (size > old_size)
     {
         (void) memset(new_ptr + old_size, 0, size - old_size);
     } // if
+    */
     return new_ptr;
 } // va_std_alloc
 
