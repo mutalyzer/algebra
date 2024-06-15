@@ -9,12 +9,11 @@ C
 
 LCS alignment
 len lcs 876  (136 empty)
-102641  {row, col, length}   @ 12 b = 1,231,692 b
+102641  {row, col, length}                          @ 12 b = 1,231,692 b
 
 Python
 0:00.33
 32,688 kB
-
 
 C (no pre alloc)
 0:00.03
@@ -22,7 +21,7 @@ C (no pre alloc)
 
 C (256 pre alloc)
 0:00.02
-3,276 kB      (256 * (876 - 136)) @ 12 b = 2,273,280 b
+3,276 kB                        (256 * (876 - 136)) @ 12 b = 2,273,280 b
 
 
 LCS graph
@@ -36,7 +35,6 @@ C (only nodes)
 0:00.03
 4,940 kB
 
-C (flat lamdba edges: 5,894,814)  (pre alloc makes no difference)
+C (flat lambda edges: 5,894,814)         (pre alloc makes no difference)
 0:00.13
 142,468 kB
-
