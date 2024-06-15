@@ -149,8 +149,8 @@ build_graph(VA_Allocator const allocator,
     (void) observed;
 
     Graph graph = {
-        va_array_init(allocator, 102641, sizeof(*graph.nodes)),
-        va_array_init(allocator, 5894814, sizeof(*graph.edges)),
+        va_array_init(allocator, 256 * len_lcs, sizeof(*graph.nodes)),
+        NULL,
     };
 
     if (len_lcs == 0 || lcs_nodes == NULL)
