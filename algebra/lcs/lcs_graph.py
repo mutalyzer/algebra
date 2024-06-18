@@ -395,6 +395,7 @@ def _build_graph(reference, observed, lcs_nodes, shift=0):
             if node._length > 1:
                 node._length -= 1
                 if idx_parent:
+                    # TODO: understand why and add test?
                     node._incoming = len_lcs_nodes
                 lcs_nodes[-2].insert(idx_parent, node)
 
