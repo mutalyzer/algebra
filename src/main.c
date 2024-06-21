@@ -33,6 +33,7 @@ typedef struct
 {
     Node* nodes;
     Edge* edges;
+    uint32_t source;
 } Graph;
 
 
@@ -55,16 +56,29 @@ add_edge(VA_Allocator const allocator, Graph* const graph, size_t const sink, si
 static void
 to_dot(Graph const graph, size_t const len_obs, char const observed[static len_obs])
 {
-    printf("%zu\n", va_array_length(graph.nodes));
+    printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\n");
+    printf("si->s%u\n", graph.source);
     for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
     {
-        printf("  %zu:  (%u, %u, %u), %u, %u\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges,graph.nodes[i].lambda);
+        if (graph.nodes[i].edges == (uint32_t) -1)
+        {
+            // FIXME: always node 0
+            printf("s%zu[label=\"(%u, %u, %u)\",peripheries=2]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        } // if
+        else
+        {
+            printf("s%zu[label=\"(%u, %u, %u)\"]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        } // else
+
+        for (size_t j = i; j != (uint32_t) -1; j = graph.nodes[j].lambda)
+        {
+            for (size_t k = graph.nodes[j].edges; k != (uint32_t) -1; k = graph.edges[k].next)
+            {
+                printf("s%zu->s%u[label=\"%u:%u/%.*s\"]\n", i, graph.edges[k].sink, graph.edges[k].variant.start, graph.edges[k].variant.end, (int) graph.edges[k].variant.obs_end - graph.edges[k].variant.obs_start, observed + graph.edges[k].variant.obs_start);
+            } // for
+        } // for
     } // for
-    printf("%zu\n", va_array_length(graph.edges));
-    for (size_t i = 0; i < va_array_length(graph.edges); ++i)
-    {
-        printf("  %zu:  %u, (%u:%u/%.*s), %u\n", i, graph.edges[i].sink, graph.edges[i].variant.start, graph.edges[i].variant.end, (int) graph.edges[i].variant.obs_end - graph.edges[i].variant.obs_start, observed + graph.edges[i].variant.obs_start, graph.edges[i].next);
-    } // for
+    printf("}\n");
 } // to_dot
 
 
@@ -131,6 +145,7 @@ build_graph(VA_Allocator const allocator,
     Graph graph = {
         va_array_init(allocator, 256 * len_lcs, sizeof(*graph.nodes)),
         NULL,
+        0,
     };
 
     if (len_lcs == 0 || lcs_nodes == NULL)
@@ -217,6 +232,8 @@ build_graph(VA_Allocator const allocator,
     lcs_nodes[0] = va_array_destroy(allocator, lcs_nodes[0]);
 
     lcs_nodes = allocator.alloc(allocator.context, lcs_nodes, len_lcs * sizeof(*lcs_nodes), 0);
+
+    graph.source = source.idx;
 
     return graph;
 } // build_graph
