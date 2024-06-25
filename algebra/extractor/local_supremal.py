@@ -46,7 +46,7 @@ def local_supremal(reference, graph):
 
             visited[node]["end"] = min(visited[node]["end"], variant.start)
 
-        visited[node]["post"] = post.union(visited[node]["post"])
+        visited[node]["post"] = visited[node]["post"].union(post)
         return visited
 
     observed = graph.supremal.sequence
