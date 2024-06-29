@@ -35,6 +35,33 @@ C (only nodes)
 0:00.03
 4,940 kB
 
-C (flat lambda edges: 5,894,814)         (pre alloc makes no difference)
+C (flat lambda edges: 5,874,991)         (pre alloc makes no difference)
 0:00.13
 142,468 kB
+
+
+LCS edge count
+
+flat edge stack order
+0:00.33
+142,476 kB
+
+flat edge stack order + reorder
+0:00.31
+279,328 kB
+
+flat edge list order
+0:00.33
+143,072 kB
+
+nested edge arrays (256 pre alloc)
+0:00.23
+355,548 kB
+
+nested edge arrays (150 pre alloc)
+0:00.21
+279,752 kB
+
+nested edge arrays (no pre alloc)
+0:01.00
+1,739,728 kB
