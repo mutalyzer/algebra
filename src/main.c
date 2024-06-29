@@ -15,15 +15,20 @@ typedef struct
 {
     VA_Variant variant;
     uint32_t sink;
+    uint32_t next;
 } Edge;
 
 
 typedef struct
 {
-    Edge* edges;
     uint32_t row;
     uint32_t col;
     uint32_t length;
+    struct
+    {
+        uint32_t head;
+        uint32_t tail;
+    } edges;
     uint32_t lambda;
 } Node;
 
@@ -31,6 +36,7 @@ typedef struct
 typedef struct
 {
     Node* nodes;
+    Edge* edges;
     uint32_t source;
 } Graph;
 
@@ -38,7 +44,7 @@ typedef struct
 static inline size_t
 add_node(VA_Allocator const allocator, Graph* const graph, size_t const row, size_t const col, size_t const length)
 {
-    va_array_append(allocator, graph->nodes, ((Node) {va_array_init(allocator, 256, sizeof(Edge)), row, col, length, -1}));
+    va_array_append(allocator, graph->nodes, ((Node) {row, col, length, {-1, -1}, -1}));
     return va_array_length(graph->nodes) - 1;
 } // add_node
 
@@ -46,7 +52,17 @@ add_node(VA_Allocator const allocator, Graph* const graph, size_t const row, siz
 static inline void
 add_edge(VA_Allocator const allocator, Graph* const graph, size_t const source, size_t const sink, VA_Variant const variant)
 {
-    va_array_append(allocator, graph->nodes[source].edges, ((Edge) {variant, sink}));
+    va_array_append(allocator, graph->edges, ((Edge) {variant, sink, -1}));
+    size_t const idx = va_array_length(graph->edges) - 1;
+
+    if (graph->nodes[source].edges.head == (uint32_t) -1)
+    {
+        graph->nodes[source].edges.tail = graph->nodes[source].edges.head = idx;
+    } // if
+    else
+    {
+        graph->nodes[source].edges.tail = graph->edges[graph->nodes[source].edges.tail].next = idx;
+    } // else
 } // add_edge
 
 
@@ -72,9 +88,9 @@ to_dot(Graph const graph, size_t const len_obs, char const observed[static len_o
     */
         for (size_t j = i; j != (uint32_t) -1; j = graph.nodes[j].lambda)
         {
-            for (size_t k = 0; k < va_array_length(graph.nodes[j].edges); ++k)
+            for (size_t k = graph.nodes[j].edges.head; k != (uint32_t) -1; k = graph.edges[k].next)
             {
-                //printf("%zu\n", k);
+                printf("%zu\n", k);
                 //printf("s%zu->s%u[label=\"%u:%u/%.*s\"]\n", i, graph.edges[k].sink, graph.edges[k].variant.start, graph.edges[k].variant.end, (int) graph.edges[k].variant.obs_end - graph.edges[k].variant.obs_start, observed + graph.edges[k].variant.obs_start);
                 count += 1;
             } // for
@@ -88,11 +104,8 @@ to_dot(Graph const graph, size_t const len_obs, char const observed[static len_o
 static void
 destroy(VA_Allocator const allocator, Graph* const graph)
 {
-    for (size_t i = 0; i < va_array_length(graph->nodes); ++i)
-    {
-        graph->nodes[i].edges = va_array_destroy(allocator, graph->nodes[i].edges);
-    } // for
     graph->nodes = va_array_destroy(allocator, graph->nodes);
+    graph->edges = va_array_destroy(allocator, graph->edges);
 } // destroy
 
 
@@ -150,6 +163,7 @@ build_graph(VA_Allocator const allocator,
 
     Graph graph = {
         va_array_init(allocator, 256 * len_lcs, sizeof(*graph.nodes)),
+        NULL,
         0,
     };
 
@@ -269,7 +283,7 @@ main(int argc, char* argv[static argc + 1])
     Graph graph = build_graph(va_std_allocator, len_ref, reference, len_obs, observed, len_lcs, lcs_nodes, 0);
 
     printf("%zu\n", va_array_length(graph.nodes));
-    //printf("%zu\n", va_array_length(graph.edges));
+    printf("%zu\n", va_array_length(graph.edges));
     printf("%zu\n", to_dot(graph, len_obs, observed));
 
     destroy(va_std_allocator, &graph);
