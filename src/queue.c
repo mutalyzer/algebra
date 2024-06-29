@@ -1,3 +1,4 @@
+#include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint32_t
 
@@ -17,45 +18,52 @@ struct VA_Queue
 inline VA_Queue*
 va_queue_init(VA_Allocator const allocator, size_t const capacity)
 {
-    VA_Queue* const queue = allocator.alloc(allocator.context, NULL, 0, sizeof(*queue) + capacity * sizeof(*queue->data));  // OVERFLOW
-    if (queue == NULL)
+    VA_Queue* const self = allocator.alloc(allocator.context, NULL, 0, sizeof(*self) + capacity * sizeof(*self->data));  // OVERFLOW
+    if (self == NULL)
     {
         return NULL;  // OOM
     } // if
-    queue->head = 0;
-    queue->tail = 0;
-    queue->capacity = capacity;
-    return queue;
+    self->head = 0;
+    self->tail = 0;
+    self->capacity = capacity;
+    return self;
 } // va_queue_init
 
 
 inline VA_Queue*
-va_queue_destroy(VA_Allocator const allocator, VA_Queue* const queue)
+va_queue_destroy(VA_Allocator const allocator, VA_Queue* const self)
 {
-    return allocator.alloc(allocator.context, queue, sizeof(*queue) + queue->capacity * sizeof(*queue->data), 0);
+    return allocator.alloc(allocator.context, self, sizeof(*self) + self->capacity * sizeof(self->data[0]), 0);
 } // va_queue_destroy
 
 
 inline uint32_t
-va_queue_dequeue(VA_Queue* const queue)
+va_queue_dequeue(VA_Queue* const self)
 {
-    if (queue->head == queue->tail)
+    if (self->head == self->tail)
     {
         return -1;  // UNDERFLOW
     } // if
-    uint32_t const value = queue->data[queue->head];
-    queue->head = (queue->head + 1) % queue->capacity;
+    uint32_t const value = self->data[self->head];
+    self->head = (self->head + 1) % self->capacity;
     return value;
 } // va_queue_dequeue
 
 
 inline void
-va_queue_enqueue(VA_Queue* const queue, uint32_t const value)
+va_queue_enqueue(VA_Queue* const self, uint32_t const value)
 {
-    if ((queue->tail + 1) % queue->capacity == queue->head)
+    if ((self->tail + 1) % self->capacity == self->head)
     {
         return;  // OVERFLOW
     } // if
-    queue->data[queue->tail] = value;
-    queue->tail = (queue->tail + 1) % queue->capacity;
+    self->data[self->tail] = value;
+    self->tail = (self->tail + 1) % self->capacity;
 } // va_queue_enqueue
+
+
+inline bool
+va_queue_is_empty(VA_Queue const* const self)
+{
+    return self->head == self->tail;
+} // va_queue_is_empty

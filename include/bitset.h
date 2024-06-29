@@ -20,15 +20,15 @@ va_bitset_init(VA_Allocator const allocator, size_t const capacity);
 
 
 VA_Bitset*
-va_bitset_destroy(VA_Allocator const allocator, VA_Bitset* const bitset);
+va_bitset_destroy(VA_Allocator const allocator, VA_Bitset* const self);
 
 
-VA_Bitset*
-va_bitset_set(VA_Bitset* const bitset, size_t const index);
+void
+va_bitset_set(VA_Bitset* const self, size_t const index);
 
 
 bool
-va_bitset_test(VA_Bitset const* const bitset, size_t const index);
+va_bitset_test(VA_Bitset const* const self, size_t const index);
 
 
 #ifdef __cplusplus

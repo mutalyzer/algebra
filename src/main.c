@@ -6,7 +6,9 @@
 
 #include "../include/alloc.h"           // VA_Allocator
 #include "../include/array.h"           // va_array_*
+#include "../include/bitset.h"          // VA_Bitset, va_bitset_*
 #include "../include/edit.h"            // va_edit
+#include "../include/queue.h"           // VA_Queue, va_queue_*
 #include "../include/std_alloc.h"       // va_std_allocator
 #include "../include/variant.h"         // VA_Variant
 
@@ -72,9 +74,9 @@ to_dot(Graph const graph, size_t const len_obs, char const observed[static len_o
             //printf("s%zu[label=\"(%u, %u, %u)\"]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
         } // else
 
-        for (size_t j = i; j != (uint32_t) -1; j = graph.nodes[j].lambda)
+        for (uint32_t j = i; j != (uint32_t) -1; j = graph.nodes[j].lambda)
         {
-            for (size_t k = graph.nodes[j].edges; k != (uint32_t) -1; k = graph.edges[k].next)
+            for (uint32_t k = graph.nodes[j].edges; k != (uint32_t) -1; k = graph.edges[k].next)
             {
                 //printf("s%zu->s%u[label=\"%u:%u/%.*s\"]\n", i, graph.edges[k].sink, graph.edges[k].variant.start, graph.edges[k].variant.end, (int) graph.edges[k].variant.obs_end - graph.edges[k].variant.obs_start, observed + graph.edges[k].variant.obs_start);
                 count += 1;
@@ -259,13 +261,47 @@ reorder(VA_Allocator const allocator, Graph const graph)
 
         new_graph.nodes[i].lambda = graph.nodes[i].lambda;
         new_graph.nodes[i].edges = -1;
-        for (size_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
+        for (uint32_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
         {
             new_graph.nodes[i].edges = add_edge(allocator, &new_graph, graph.edges[j].sink, new_graph.nodes[i].edges, graph.edges[j].variant);
         } // for
     } // for
     return new_graph;
 } // reorder
+
+
+static size_t
+bfs_traversal(Graph const graph)
+{
+    size_t count = 0;
+    VA_Bitset* visited = va_bitset_init(va_std_allocator, va_array_length(graph.nodes));
+    VA_Queue* queue = va_queue_init(va_std_allocator, va_array_length(graph.nodes));
+
+    va_queue_enqueue(queue, graph.source);
+    while (!va_queue_is_empty(queue))
+    {
+        uint32_t const source = va_queue_dequeue(queue);
+        if (va_bitset_test(visited, source))
+        {
+            continue;
+        } // if
+
+        count += 1;
+        for (uint32_t i = source; i != (uint32_t) -1; i = graph.nodes[i].lambda)
+        {
+            for (uint32_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
+            {
+                va_queue_enqueue(queue, graph.edges[j].sink);
+            } // for
+        } // for
+
+        va_bitset_set(visited, source);
+    } // while
+
+    queue = va_queue_destroy(va_std_allocator, queue);
+    visited = va_bitset_destroy(va_std_allocator, visited);
+    return count;
+} // bfs_traversal
 
 
 int
@@ -292,17 +328,10 @@ main(int argc, char* argv[static argc + 1])
     size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
     Graph graph = build_graph(va_std_allocator, len_ref, reference, len_obs, observed, len_lcs, lcs_nodes, 0);
 
-    //printf("%zu\n", va_array_length(graph.nodes));
-    //printf("%zu\n", va_array_length(graph.edges));
-    //printf("%zu\n", to_dot(graph, len_obs, observed));
+    printf("%zu\n", bfs_traversal(graph));
 
-    Graph new_graph = reorder(va_std_allocator, graph);
-    printf("%zu\n", va_array_length(new_graph.nodes));
-    printf("%zu\n", va_array_length(new_graph.edges));
-    printf("%zu\n", to_dot(new_graph, len_obs, observed));
 
     destroy(va_std_allocator, &graph);
-    destroy(va_std_allocator, &new_graph);
 
     return EXIT_SUCCESS;
 } // main

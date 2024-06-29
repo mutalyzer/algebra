@@ -18,53 +18,52 @@ va_bitset_init(VA_Allocator const allocator, size_t const capacity)
 {
     size_t const size = sizeof((VA_Bitset) {0}.data[0]) * CHAR_BIT;
     size_t const slots = (capacity + size - 1) / size;
-    VA_Bitset* const bitset = allocator.alloc(allocator.context, NULL, 0, sizeof(*bitset) + slots * size);  // OVERFLOW
-    if (bitset == NULL)
+    VA_Bitset* const self = allocator.alloc(allocator.context, NULL, 0, sizeof(*self) + slots * size);  // OVERFLOW
+    if (self == NULL)
     {
         return NULL;  // OOM
     } // if
-    bitset->capacity = capacity;
+    self->capacity = capacity;
     for (size_t i = 0; i < slots; ++i)
     {
-        bitset->data[i] = 0;
+        self->data[i] = 0;
     } // for
-    return bitset;
+    return self;
 } // va_bitset_init
 
 
 inline VA_Bitset*
-va_bitset_destroy(VA_Allocator const allocator, VA_Bitset* const bitset)
+va_bitset_destroy(VA_Allocator const allocator, VA_Bitset* const self)
 {
-    if (bitset == NULL)
+    if (self == NULL)
     {
         return NULL;
     } // if
-    size_t const size = sizeof(bitset->data[0]) * CHAR_BIT;
-    size_t const slots = (bitset->capacity + size - 1) / size;
-    return allocator.alloc(allocator.context, bitset, sizeof(*bitset) + slots * size, 0);
+    size_t const size = sizeof(self->data[0]) * CHAR_BIT;
+    size_t const slots = (self->capacity + size - 1) / size;
+    return allocator.alloc(allocator.context, self, sizeof(*self) + slots * size, 0);
 } // va_bitset_destroy
 
 
-inline VA_Bitset*
-va_bitset_set(VA_Bitset* const bitset, size_t const index)
+inline void
+va_bitset_set(VA_Bitset* const self, size_t const index)
 {
-    if (bitset == NULL || bitset->capacity <= index)
+    if (self == NULL || self->capacity <= index)
     {
-        return bitset;
+        return;
     } // if
-    size_t const size = sizeof(bitset->data[0]) * CHAR_BIT;
-    bitset->data[index / size] |= ((size_t) 1) << (index % size);
-    return bitset;
+    size_t const size = sizeof(self->data[0]) * CHAR_BIT;
+    self->data[index / size] |= ((size_t) 1) << (index % size);
 } // va_bitset_set
 
 
 inline bool
-va_bitset_test(VA_Bitset const* const bitset, size_t const index)
+va_bitset_test(VA_Bitset const* const self, size_t const index)
 {
-    if (bitset == NULL || bitset->capacity <= index)
+    if (self == NULL || self->capacity <= index)
     {
         return false;
     } // if
-    size_t const size = sizeof(bitset->data[0]) * CHAR_BIT;
-    return bitset->data[index / size] & (((size_t) 1) << (index % size));
+    size_t const size = sizeof(self->data[0]) * CHAR_BIT;
+    return self->data[index / size] & (((size_t) 1) << (index % size));
 } // va_bitset_test
