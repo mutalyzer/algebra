@@ -28,7 +28,7 @@ uint32_t
 va_queue_dequeue(VA_Queue* const self);
 
 
-void
+bool
 va_queue_enqueue(VA_Queue* const self, uint32_t const value);
 
 

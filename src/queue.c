@@ -50,15 +50,16 @@ va_queue_dequeue(VA_Queue* const self)
 } // va_queue_dequeue
 
 
-inline void
+inline bool
 va_queue_enqueue(VA_Queue* const self, uint32_t const value)
 {
     if ((self->tail + 1) % self->capacity == self->head)
     {
-        return;  // OVERFLOW
+        return false;  // OVERFLOW
     } // if
     self->data[self->tail] = value;
     self->tail = (self->tail + 1) % self->capacity;
+    return true;
 } // va_queue_enqueue
 
 
