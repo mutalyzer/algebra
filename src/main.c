@@ -275,12 +275,13 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
 {
     (void) observed;
     size_t count = 0;
-    VA_Bitset* visited = va_bitset_init(va_std_allocator, va_array_length(graph.nodes));
-    VA_Queue* queue = va_queue_init(va_std_allocator, 2 * va_array_length(graph.nodes));
+    VA_Bitset* scheduled = va_bitset_init(va_std_allocator, va_array_length(graph.nodes));
+    VA_Queue* queue = va_queue_init(va_std_allocator, va_array_length(graph.nodes));
 
     //printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\n");
     //printf("si->s%u\n", graph.source);
 
+    va_bitset_set(scheduled, graph.source);
     va_queue_enqueue(queue, graph.source);
     while (!va_queue_is_empty(queue))
     {
@@ -289,11 +290,6 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
         {
             printf("UNDERFLOW\n");
         } // if
-        if (va_bitset_test(visited, source))
-        {
-            continue;
-        } // if
-        va_bitset_set(visited, source);
 
         /*
         if (graph.nodes[source].edges == (uint32_t) -1)
@@ -308,8 +304,9 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
 
         for (uint32_t i = source; i != (uint32_t) -1; i = graph.nodes[i].lambda)
         {
-            if (!va_bitset_test(visited, i))
+            if (!va_bitset_test(scheduled, i))
             {
+                va_bitset_set(scheduled, i);
                 if (!va_queue_enqueue(queue, i))
                 {
                     printf("OVERFLOW (lambda)\n");
@@ -319,8 +316,9 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
             {
                 count += 1;
                 //printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", source, graph.edges[j].sink, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
-                if (!va_bitset_test(visited, graph.edges[j].sink))
+                if (!va_bitset_test(scheduled, graph.edges[j].sink))
                 {
+                    va_bitset_set(scheduled, graph.edges[j].sink);
                     if (!va_queue_enqueue(queue, graph.edges[j].sink))
                     {
                         printf("OVERFLOW\n");
@@ -334,7 +332,7 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
     //printf("}\n");
 
     queue = va_queue_destroy(va_std_allocator, queue);
-    visited = va_bitset_destroy(va_std_allocator, visited);
+    scheduled = va_bitset_destroy(va_std_allocator, scheduled);
     return count;
 } // bfs_traversal
 
