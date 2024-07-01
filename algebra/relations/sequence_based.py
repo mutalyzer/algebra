@@ -115,8 +115,7 @@ def compare(reference, lhs, rhs):
     lhs_graph = LCSgraph.from_sequence(reference, lhs)
     rhs_graph = LCSgraph.from_sequence(reference, rhs)
 
-    for lhs_variant, rhs_variant in product(lhs_graph.edges(), rhs_graph.edges()):
-        if not lhs_variant.is_disjoint(rhs_variant):
-            return Relation.OVERLAP
+    if lhs_graph.is_disjoint(rhs_graph):
+        return Relation.DISJOINT
 
-    return Relation.DISJOINT
+    return Relation.OVERLAP

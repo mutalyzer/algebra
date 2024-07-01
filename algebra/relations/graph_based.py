@@ -74,8 +74,7 @@ def compare(reference, lhs, rhs):
     if rhs.distance - lhs.distance == distance:
         return Relation.IS_CONTAINED
 
-    for lhs_variant, rhs_variant in product(lhs.edges(), rhs.edges()):
-        if not lhs_variant.is_disjoint(rhs_variant):
-            return Relation.OVERLAP
+    if lhs.is_disjoint(rhs):
+        return Relation.DISJOINT
 
-    return Relation.DISJOINT
+    return Relation.OVERLAP
