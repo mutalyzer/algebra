@@ -1,7 +1,6 @@
 """Functions to compare variants as sequences."""
 
 
-from itertools import product
 from .relation import Relation
 from ..lcs import LCSgraph, edit_distance
 
@@ -49,11 +48,7 @@ def are_disjoint(reference, lhs, rhs):
     lhs_graph = LCSgraph.from_sequence(reference, lhs)
     rhs_graph = LCSgraph.from_sequence(reference, rhs)
 
-    for lhs_variant, rhs_variant in product(lhs_graph.edges(), rhs_graph.edges()):
-        if not lhs_variant.is_disjoint(rhs_variant):
-            return False
-
-    return True
+    return lhs_graph.is_disjoint(rhs_graph)
 
 
 def have_overlap(reference, lhs, rhs):
@@ -71,11 +66,7 @@ def have_overlap(reference, lhs, rhs):
     lhs_graph = LCSgraph.from_sequence(reference, lhs)
     rhs_graph = LCSgraph.from_sequence(reference, rhs)
 
-    for lhs_variant, rhs_variant in product(lhs_graph.edges(), rhs_graph.edges()):
-        if not lhs_variant.is_disjoint(rhs_variant):
-            return True
-
-    return False
+    return not lhs_graph.is_disjoint(rhs_graph)
 
 
 def compare(reference, lhs, rhs):

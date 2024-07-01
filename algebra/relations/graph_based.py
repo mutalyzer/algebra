@@ -1,7 +1,6 @@
 """Functions to compare LCS graphs."""
 
 
-from itertools import product
 from ..lcs import edit_distance
 from .relation import Relation
 
