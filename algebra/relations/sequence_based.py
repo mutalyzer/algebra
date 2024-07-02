@@ -45,10 +45,7 @@ def are_disjoint(reference, lhs, rhs):
     if distance == abs(lhs_distance - rhs_distance):
         return False
 
-    lhs_graph = LCSgraph.from_sequence(reference, lhs)
-    rhs_graph = LCSgraph.from_sequence(reference, rhs)
-
-    return lhs_graph.is_disjoint(rhs_graph)
+    return LCSgraph.from_sequence(reference, lhs).is_disjoint(LCSgraph.from_sequence(reference, rhs))
 
 
 def have_overlap(reference, lhs, rhs):
@@ -63,10 +60,7 @@ def have_overlap(reference, lhs, rhs):
     if distance in (lhs_distance + rhs_distance, abs(lhs_distance - rhs_distance)):
         return False
 
-    lhs_graph = LCSgraph.from_sequence(reference, lhs)
-    rhs_graph = LCSgraph.from_sequence(reference, rhs)
-
-    return not lhs_graph.is_disjoint(rhs_graph)
+    return not LCSgraph.from_sequence(reference, lhs).is_disjoint(LCSgraph.from_sequence(reference, rhs))
 
 
 def compare(reference, lhs, rhs):
@@ -103,10 +97,7 @@ def compare(reference, lhs, rhs):
     if rhs_distance - lhs_distance == distance:
         return Relation.IS_CONTAINED
 
-    lhs_graph = LCSgraph.from_sequence(reference, lhs)
-    rhs_graph = LCSgraph.from_sequence(reference, rhs)
-
-    if lhs_graph.is_disjoint(rhs_graph):
+    if LCSgraph.from_sequence(reference, lhs).is_disjoint(LCSgraph.from_sequence(reference, rhs)):
         return Relation.DISJOINT
 
     return Relation.OVERLAP

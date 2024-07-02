@@ -2,7 +2,7 @@ import cProfile
 import pstats
 import sys
 from itertools import combinations
-from algebra.lcs import LCSgraph
+from algebra import LCSgraph, Relation
 from algebra.utils import fasta_sequence
 from algebra.variants import parse_hgvs, to_hgvs
 from algebra.relations.graph_based import compare
@@ -36,10 +36,20 @@ def graphs(reference, variants):
 
 @benchmark
 def pairwise(reference, variants):
-    return [{"lhs": lhs["label"],
-             "rhs": rhs["label"],
-             "relation": compare(reference, lhs["graph"], rhs["graph"])
-             } for lhs, rhs in combinations(variants, 2)]
+    results = []
+    for lhs, rhs in combinations(variants, 2):
+        relation = compare(reference, lhs["graph"], rhs["graph"])
+        overlap = None
+        if relation == Relation.OVERLAP:
+            common, universe = lhs["graph"].overlap(rhs["graph"])
+            overlap = len(common), len(universe)
+        results.append({
+            "lhs": lhs["label"],
+            "rhs": rhs["label"],
+            "relation": relation,
+            "overlap": overlap,
+        })
+    return results
 
 
 @benchmark
@@ -73,17 +83,11 @@ def main():
     relations = pairwise(reference, variants)
     with open("data/benchmark_fast_relations.txt", "w", encoding="utf-8") as file:
         for entry in relations:
-            print(entry["lhs"], entry["rhs"], entry["relation"].value, file=file)
+            if entry["overlap"]:
+                print(entry["lhs"], entry["rhs"], entry["relation"].value, *entry["overlap"], file=file)
+            else:
+                print(entry["lhs"], entry["rhs"], entry["relation"].value, file=file)
 
 
 if __name__ == "__main__":
-    #main()
-    graph = large_del()
-    count_nodes = 0
-    count_edges = 0
-    for node in graph.nodes():
-        count_nodes += 1
-        count_edges += len(node.edges)
-        #print(node)
-    print(count_nodes, count_edges)
-    print(graph.count_split)
+    main()

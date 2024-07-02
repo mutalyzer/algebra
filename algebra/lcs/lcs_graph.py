@@ -209,7 +209,7 @@ class LCSgraph:
         atomics = set()
         for *_, variant in self.bfs_traversal():
             for idx in range(variant[0].start, variant[0].end):
-                atomics |= {(idx, "del")}
+                atomics |= {(idx, "")}
                 for ch in set(variant[0].sequence):
                     atomics |= {(idx, ch)}
             for ch in set(variant[0].sequence):
@@ -225,8 +225,7 @@ class LCSgraph:
 
     def is_disjoint(self, other):
         """Are two LCS graphs disjoint."""
-        common, _ = self.overlap(other)
-        return len(common) == 0
+        return self.uniq_atomics().isdisjoint(other.uniq_atomics())
 
 
 def trim(lhs, rhs):
