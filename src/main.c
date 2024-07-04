@@ -278,20 +278,15 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
     VA_Bitset* scheduled = va_bitset_init(va_std_allocator, va_array_length(graph.nodes));
     VA_Queue* queue = va_queue_init(va_std_allocator, va_array_length(graph.nodes));
 
-    //printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\n");
-    //printf("si->s%u\n", graph.source);
+    printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\n");
+    printf("si->s%u\n", graph.source);
 
     va_bitset_set(scheduled, graph.source);
     va_queue_enqueue(queue, graph.source);
     while (!va_queue_is_empty(queue))
     {
         uint32_t const source = va_queue_dequeue(queue);
-        if (source == (uint32_t) -1)
-        {
-            printf("UNDERFLOW\n");
-        } // if
 
-        /*
         if (graph.nodes[source].edges == (uint32_t) -1)
         {
             printf("s%u[label=\"(%u, %u, %u)\",peripheries=2]\n", source, graph.nodes[source].row, graph.nodes[source].col, graph.nodes[source].length);
@@ -300,36 +295,28 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
         {
             printf("s%u[label=\"(%u, %u, %u)\"]\n", source, graph.nodes[source].row, graph.nodes[source].col, graph.nodes[source].length);
         } // else
-        */
 
         for (uint32_t i = source; i != (uint32_t) -1; i = graph.nodes[i].lambda)
         {
             if (!va_bitset_test(scheduled, i))
             {
                 va_bitset_set(scheduled, i);
-                if (!va_queue_enqueue(queue, i))
-                {
-                    printf("OVERFLOW (lambda)\n");
-                } // if
+                va_queue_enqueue(queue, i);  // OVERFLOW
             } // if
             for (uint32_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
             {
                 count += 1;
-                //printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", source, graph.edges[j].sink, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
+                printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", source, graph.edges[j].sink, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
                 if (!va_bitset_test(scheduled, graph.edges[j].sink))
                 {
                     va_bitset_set(scheduled, graph.edges[j].sink);
-                    if (!va_queue_enqueue(queue, graph.edges[j].sink))
-                    {
-                        printf("OVERFLOW\n");
-                    } // if
+                    va_queue_enqueue(queue, graph.edges[j].sink);  // OVERFLOW
                 } // if
             } // for
         } // for
-
     } // while
 
-    //printf("}\n");
+    printf("}\n");
 
     queue = va_queue_destroy(va_std_allocator, queue);
     scheduled = va_bitset_destroy(va_std_allocator, scheduled);
@@ -340,12 +327,12 @@ bfs_traversal(Graph const graph, size_t const len_obs, char const observed[stati
 int
 main(int argc, char* argv[static argc + 1])
 {
-
+/*
     (void) argv;
     char const* const restrict reference = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTTGGGCTCAGATCTGTGATAGAACAGTTTCCTGGGAAGCTTGACTTTGTCCTTGTGGATGGGGGCTGTGTCCTAAGCCATGGCCACAAGCAGTTGATGTGCTTGGCTAGATCTGTTCTCAGTAAGGCGAAGATCTTGCTGCTTGATGAACCCAGTGCTCATTTGGATCCAGTGTGAGTTTCAGATGTTCTGTTACTTAATAGCACAGTGGGAACAGAATCATTATGCCTGCTTCATGGTGACACATATTTCTATTAGGCTGTCATGTCTGCGTGTGGGGGTCTCCCCCAAGATATGAAATAATTGCCCAGTGGAAATGAGCATAAATGCATATTTCCTTGCTAAGAGTCTTGTGTTTTCTTCCGAAGATAGTTTTTAGTTTCATACAAACTCTTCCCCCTTGTCAACACATGATGAAGCTTTTAAATACATGGGCCTAATCTGATCCTTATGATTTGCCTTTGTATCCCATTTATACCATAAGCATGTTTATAGCCCCAAATAAAGAAGTACTGGTGATTCTACATAATGAAAAATGTACTCATTTATTAAAGTTTCTTTGAAATATTTGTCCTGTTTATTTATGGATACTTAGAGTCTACCCCATGGTTGAAAAGCTGATTGTGGCTAACGCTATATCAACATTATGTGAAAAGAACTTAAAGAAATAAGTAATTTAAAGAGATAATAGAACAATAGACATATTATCAAGGTAAATACAGATCATTACTGTTCTGTGATATTATGTGTGGTATTTTCTTTCTTTTCTAGAACATACCAAATAATTAGAAGAACTCTAAAACAAGCATTTGCTGATTGCACAGTAATTCTCTGTGAACACAGGATAGAAGCAATGCTGGAATGCCAACAATTTTTGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
     char const* const restrict observed = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
+*/
 
-/*
     if (argc < 3)
     {
         fprintf(stderr, "usage: %s reference observed\n", argv[0]);
@@ -353,16 +340,29 @@ main(int argc, char* argv[static argc + 1])
     } // if
     char const* const restrict reference = argv[1];
     char const* const restrict observed = argv[2];
-*/
+
     size_t const len_ref = strlen(reference);
     size_t const len_obs = strlen(observed);
 
     VA_LCS_Node** lcs_nodes = NULL;
     size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
+    /*
+    printf("%zu\n", len_lcs);
+    for (size_t i = 0; i < len_lcs; ++i)
+    {
+        printf("%zu:  ", i);
+        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
+        {
+            printf("(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+        } // for
+        printf("\n");
+    } // for
+    */
+
     Graph graph = build_graph(va_std_allocator, len_ref, reference, len_obs, observed, len_lcs, lcs_nodes, 0);
 
     printf("%zu\n", bfs_traversal(graph, len_obs, observed));
-    printf("%zu\n", to_dot(graph, len_obs, observed));
+    //printf("%zu\n", to_dot(graph, len_obs, observed));
 
     destroy(va_std_allocator, &graph);
 

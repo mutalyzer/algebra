@@ -1,4 +1,4 @@
-#include <stdbool.h>    // bool
+#include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint32_t
 

@@ -161,7 +161,7 @@ expand(Context const context,
             ptrdiff_t const d_row = context.len_ref - row;
             ptrdiff_t const d_col = context.len_obs - col;
             size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
-            if (lcs_pos > *len_lcs)
+            if (lcs_pos + 1 > *len_lcs)
             {
                 *len_lcs = lcs_pos + 1;
             } // if
@@ -194,7 +194,7 @@ expand(Context const context,
         ptrdiff_t const d_row = context.len_ref - row;
         ptrdiff_t const d_col = context.len_obs - col;
         size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
-        if (lcs_pos > *len_lcs)
+        if (lcs_pos + 1 > *len_lcs)
         {
             *len_lcs = lcs_pos + 1;
         } // if
