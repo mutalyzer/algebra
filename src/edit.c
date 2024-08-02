@@ -276,4 +276,3 @@ va_edit(VA_Allocator const allocator,
     *lcs_nodes = allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), max_lcs_pos * sizeof(*context.lcs_nodes));
     return max_lcs_pos;
 } // va_edit
-
