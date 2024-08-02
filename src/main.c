@@ -262,6 +262,7 @@ bfs_traversal(VA_Allocator const allocator, Graph const graph, size_t const len_
         //printf("pop %u\n", head);
         for (uint32_t i = head; i != (uint32_t) -1; i = graph.nodes[i].lambda)
         {
+            printf("s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
             if (i != head)
             {
                 //printf("lambda %u\n", i);
