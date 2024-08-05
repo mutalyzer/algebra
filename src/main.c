@@ -236,6 +236,128 @@ reorder(VA_Allocator const allocator, Graph const graph)
 } // reorder
 
 
+static void
+to_dot(Graph const graph, size_t const len_obs, char const observed[static len_obs])
+{
+    printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\nsi->s%u\n", graph.source);
+    for (uint32_t i = 0; i < va_array_length(graph.nodes); ++i)
+    {
+        printf("s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
+        if (graph.nodes[i].lambda != (uint32_t) -1)
+        {
+            printf("s%u->s%u[label=\"&#955;\",style=\"dashed\"]\n", i, graph.nodes[i].lambda);
+        } // if
+        for (uint32_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
+        {
+            printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", i, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
+        } // for
+    } // for
+    printf("}\n");
+} // to_dot
+
+
+typedef struct
+{
+    uint32_t head;
+    uint32_t tail;
+    uint32_t length;
+    struct
+    {
+        uint32_t depth;
+        uint32_t next;
+    } table[];
+} Traversal_Generator;
+
+
+static Traversal_Generator*
+traversal_init(VA_Allocator const allocator, Graph const graph)
+{
+    uint32_t const length = va_array_length(graph.nodes);
+    Traversal_Generator* const generator = allocator.alloc(allocator.context, NULL, 0, sizeof(*generator) + sizeof(generator->table[0]) * length);
+    if (generator == NULL)
+    {
+        return NULL;
+    } // if
+
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        generator->table[i].depth = 0;
+        generator->table[i].next = -1;
+    } // for
+    generator->head = graph.source;
+    generator->tail = graph.source;
+    generator->length = length;
+    return generator;
+} // traversal_init
+
+
+static Traversal_Generator*
+traversal_destroy(VA_Allocator const allocator, Traversal_Generator* self)
+{
+    if (self == NULL)
+    {
+        return NULL;
+    } // if
+    self = allocator.alloc(allocator.context, self, sizeof(*self) + sizeof(self->table[0]) * self->length, 0);
+    return self;
+} // traversal_destroy
+
+
+static uint32_t
+traversal_next(Traversal_Generator* const self, Graph const graph)
+{
+    if (self == NULL)
+    {
+        return -1;
+    } // if
+
+    uint32_t const head = self->head;
+    if (head == (uint32_t) -1)
+    {
+        return head;
+    } // if
+
+    self->head = self->table[self->head].next;
+
+    for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
+    {
+        uint32_t const tail = graph.edges[i].tail;
+
+        uint32_t iets = head;
+        for (uint32_t j = graph.nodes[tail].lambda; j != (uint32_t) -1; j = graph.nodes[j].lambda)
+        {
+            if (self->table[j].depth == 0)
+            {
+                //printf("push (lambda) %u\n", j);
+                self->table[j].depth = self->table[head].depth + 1;
+                self->table[j].next = self->table[iets].next;
+                self->table[iets].next = j;
+                iets = j;
+            } // if
+        } // for
+
+        if (self->table[tail].depth == 0)
+        {
+            //printf("push %u\n", tail);
+            self->table[tail].depth = self->table[head].depth + 1;
+            self->table[tail].next = self->table[head].next;
+            self->table[head].next = tail;
+            self->head = tail;
+        } // if
+    } // for
+
+    /*
+    printf(" #\tdepth\tnext\n");
+    for (uint32_t i = 0; i < self->length; ++i)
+    {
+        printf("%2u:\t%5u\t%4d\n", i, self->table[i].depth, self->table[i].next);
+    } // for
+    printf("head: %d\ntail: %d\n", self->head, self->tail);
+    */
+    return head;
+} // traversal_next
+
+
 static size_t
 bfs_traversal(VA_Allocator const allocator, Graph const graph, size_t const len_obs, char const observed[static len_obs])
 {
@@ -343,6 +465,7 @@ main(int argc, char* argv[static argc + 1])
 
     /*
     printf("%zu\n", to_dot(graph, len_obs, observed));
+    */
 
     printf("nodes (%zu)\n  #\t(row, col, len)\tedges\tlambda\n", va_array_length(graph.nodes));
     for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
@@ -354,9 +477,19 @@ main(int argc, char* argv[static argc + 1])
     {
         printf("%3zu:\t%4u\t  \"%u:%u/%.*s\"\t%4d\n", i, graph.edges[i].tail, graph.edges[i].variant.start, graph.edges[i].variant.end, (int) graph.edges[i].variant.obs_end - graph.edges[i].variant.obs_start, observed + graph.edges[i].variant.obs_start, (signed) graph.edges[i].next);
     } // for
-    */
 
-    printf("%zu\n", bfs_traversal(va_std_allocator, graph, len_obs, observed));
+    //printf("%zu\n", bfs_traversal(va_std_allocator, graph, len_obs, observed));
+
+    to_dot(graph, len_obs, observed);
+
+    Traversal_Generator* gen = traversal_init(va_std_allocator, graph);
+    uint32_t node = traversal_next(gen, graph);
+    while (node != (uint32_t) -1)
+    {
+        printf("yield: %u\n", node);
+        node = traversal_next(gen, graph);
+    } // if
+    gen = traversal_destroy(va_std_allocator, gen);
 
     destroy(va_std_allocator, &graph);
 
