@@ -258,6 +258,115 @@ to_dot(Graph const graph, size_t const len_obs, char const observed[static len_o
 
 typedef struct
 {
+    uint32_t post;
+    uint32_t rank;
+    uint32_t start;
+    uint32_t end;
+} Post_Dom_Table;
+
+
+static uint32_t
+intersection(uint32_t lhs, uint32_t rhs, uint32_t const length, Post_Dom_Table const visited[static length])
+{
+    while (lhs != rhs)
+    {
+        while (visited[lhs].rank > visited[rhs].rank)
+        {
+            lhs = visited[lhs].post;
+        } // while
+        while (visited[rhs].rank > visited[lhs].rank)
+        {
+            rhs = visited[rhs].post;
+        } // while
+    } // while
+    return lhs;
+} // intersection
+
+
+#define MAX(lhs, rhs) (lhs) > (rhs) ? (lhs) : (rhs)
+#define MIN(lhs, rhs) (lhs) < (rhs) ? (lhs) : (rhs)
+
+
+static void
+post_dominators(Graph const graph, uint32_t const head, uint32_t* const rank, uint32_t const start, uint32_t const length, Post_Dom_Table visited[static length])
+{
+    visited[head].post = -1;
+    visited[head].start = start;
+    visited[head].end = -1;
+    if (graph.nodes[head].lambda != (uint32_t) -1 && visited[graph.nodes[head].lambda].rank == (uint32_t) -1)
+    {
+        post_dominators(graph, graph.nodes[head].lambda, rank, start, length, visited);
+        visited[head].post = graph.nodes[head].lambda;
+    } // if
+
+    for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
+    {
+        if (visited[graph.edges[i].tail].rank == (uint32_t) -1)
+        {
+            post_dominators(graph, graph.edges[i].tail, rank, graph.edges[i].variant.end, length, visited);
+        } // if
+        else
+        {
+            visited[graph.edges[i].tail].start = MAX(visited[graph.edges[i].tail].start, graph.edges[i].variant.end);
+        } // else
+
+        if (visited[head].post == (uint32_t) -1)
+        {
+            visited[head].post = graph.edges[i].tail;
+            visited[head].end = graph.edges[i].variant.start;
+        } // if
+        else
+        {
+            visited[head].post = intersection(visited[head].post, graph.edges[i].tail, length, visited);
+            visited[head].end = MIN(visited[head].end, graph.edges[i].variant.start);
+        } // else
+    } // for
+
+    visited[head].rank = *rank;
+    *rank += 1;
+    printf("visit %u (%u): %d\n", head, visited[head].rank, visited[head].post);
+} // post_dominators
+
+
+static void
+local_supremal(VA_Allocator const allocator, Graph const graph, size_t const len_obs, char const observed[static len_obs])
+{
+    uint32_t const length = va_array_length(graph.nodes);
+    Post_Dom_Table* visited = allocator.alloc(allocator.context, NULL, 0, sizeof(*visited) * length);
+    if (visited == NULL)
+    {
+        return;
+    } // if
+
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        visited[i].rank = -1;
+    } // for
+
+    post_dominators(graph, graph.source, &(uint32_t) {0}, 0, length, visited);
+
+    printf(" # \tpost\trank\tstart\tend\n");
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        printf("%2u:\t%4d\t%4u\t%5u\t%3d\n", i, visited[i].post, visited[i].rank, visited[i].start, visited[i].end);
+    } // for
+
+    uint32_t head = graph.source;
+    uint32_t shift = 0;
+    for (uint32_t tail = visited[head].post; tail != (uint32_t) -1; head = tail, tail = visited[head].post)
+    {
+        uint32_t const start = visited[head].end;
+        uint32_t const end = visited[tail].start;
+        VA_Variant const variant = {start, end, graph.nodes[head].col + start - graph.nodes[head].row - shift, graph.nodes[tail].col + end - graph.nodes[tail].row - shift};
+        printf("%u:%u/%.*s\n", variant.start, variant.end, (int) variant.obs_end - variant.obs_start, observed + variant.obs_start);
+    } // for
+
+    visited = allocator.alloc(allocator.context, visited, sizeof(*visited) * length, 0);
+} // local_supremal
+
+
+typedef struct
+{
     uint32_t head;
     uint32_t tail;
     uint32_t length;
@@ -316,8 +425,6 @@ traversal_next(Traversal_Generator* const self, Graph const graph)
     {
         return head;
     } // if
-
-    self->head = self->table[self->head].next;
 
     for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
     {
@@ -482,6 +589,7 @@ main(int argc, char* argv[static argc + 1])
 
     to_dot(graph, len_obs, observed);
 
+/*
     Traversal_Generator* gen = traversal_init(va_std_allocator, graph);
     uint32_t node = traversal_next(gen, graph);
     while (node != (uint32_t) -1)
@@ -490,6 +598,9 @@ main(int argc, char* argv[static argc + 1])
         node = traversal_next(gen, graph);
     } // if
     gen = traversal_destroy(va_std_allocator, gen);
+*/
+
+    local_supremal(va_std_allocator, graph, len_obs, observed);
 
     destroy(va_std_allocator, &graph);
 
