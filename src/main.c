@@ -272,6 +272,10 @@ typedef struct
 static uint32_t
 intersection(uint32_t lhs, uint32_t rhs, uint32_t const length, Post_Dom_Table const visited[static length])
 {
+    if (lhs == (uint32_t) -1)
+    {
+        return rhs;
+    } // if
     while (lhs != rhs)
     {
         while (visited[lhs].rank > visited[rhs].rank)
@@ -381,10 +385,12 @@ local_supremal_it(VA_Allocator const allocator, Graph const graph)
 
     for (uint32_t i = 0; i < length; ++i)
     {
+        visited[i].post = -1;
         visited[i].edge = -1;
         visited[i].next = -1;
     } // for
 
+    uint32_t rank = 0;
     uint32_t head = graph.source;
     visited[head].edge = graph.nodes[head].edges;
 
@@ -394,39 +400,129 @@ local_supremal_it(VA_Allocator const allocator, Graph const graph)
         if (edge == (uint32_t) -1)
         {
             printf("visit %u\n", head);
+            visited[head].rank = rank;
+            rank += 1;
             head = visited[head].next;
+            continue;
         } // if
-        else
+
+        uint32_t const lambda = graph.nodes[head].lambda;
+        if (visited[head].edge == graph.nodes[head].edges &&
+            lambda != (uint32_t) -1 && visited[lambda].next == (uint32_t) -1)
         {
-            uint32_t const lambda = graph.nodes[head].lambda;
-            if (visited[head].edge == graph.nodes[head].edges &&
-                lambda != (uint32_t) -1 && visited[lambda].next == (uint32_t) -1)
+            visited[head].post = lambda;
+
+            visited[lambda].next = head;
+            visited[lambda].edge = graph.nodes[lambda].edges;
+            head = lambda;
+            continue;
+        } // if
+
+        visited[head].edge = graph.edges[edge].next;
+        while (edge != (uint32_t) -1)
+        {
+            uint32_t const tail = graph.edges[edge].tail;
+            if (visited[tail].next == (uint32_t) -1)
             {
-                visited[lambda].next = head;
-                visited[lambda].edge = graph.nodes[lambda].edges;
-                head = lambda;
-                continue;
+                visited[tail].next = head;
+                visited[tail].edge = graph.nodes[tail].edges;
+                head = tail;
+                break;
             } // if
-
-            visited[head].edge = graph.edges[edge].next;
-            while (edge != (uint32_t) -1)
-            {
-                uint32_t const tail = graph.edges[edge].tail;
-
-                if (visited[tail].next == (uint32_t) -1)
-                {
-                    visited[tail].next = head;
-                    visited[tail].edge = graph.nodes[tail].edges;
-                    head = tail;
-                    break;
-                } // if
-                edge = graph.edges[edge].next;
-            } // while
-        } // else
+            edge = graph.edges[edge].next;
+        } // while
     } // while
+
+    printf(" # \tpost\trank\n");
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        printf("%2u:\t%4d\t%4u\n", i, visited[i].post, visited[i].rank);
+    } // for
 
     visited = allocator.alloc(allocator.context, visited, sizeof(*visited) * length, 0);
 } // local_supremal_it
+
+
+static void
+local_supremal_it2(VA_Allocator const allocator, Graph const graph)
+{
+    uint32_t const length = va_array_length(graph.nodes);
+    Post_Dom_Table* visited = allocator.alloc(allocator.context, NULL, 0, sizeof(*visited) * length);
+    if (visited == NULL)
+    {
+        return;
+    } // if
+
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        visited[i].post = -1;
+        visited[i].rank = -1;
+        visited[i].edge = -1;
+        visited[i].next = -1;
+    } // for
+
+    uint32_t rank = 0;
+    uint32_t head = graph.source;
+
+    while (head != (uint32_t) -1)
+    {
+next:
+        printf(" # \tpost\trank\tedge\tnext\n");
+        for (uint32_t i = 0; i < length; ++i)
+        {
+            printf("%2u:\t%4d\t%4d\t%4d\t%4d\n", i, visited[i].post, visited[i].rank, visited[i].edge, visited[i].next);
+        } // for
+        printf("head: %d\n", head);
+
+        if (visited[head].post == (uint32_t) -1)
+        {
+            printf("first time\n");
+            visited[head].edge = graph.nodes[head].edges;
+            visited[head].post = -1;
+        } // if
+        else
+        {
+            uint32_t const post = intersection(visited[head].post, graph.edges[visited[head].edge].tail, length, visited);
+            printf("intersection %u & %u = %u\n", visited[head].post, graph.edges[visited[head].edge].tail, post);
+            visited[head].post = post;
+            visited[head].edge = graph.edges[visited[head].edge].next;
+        } // else
+
+        uint32_t edge = visited[head].edge;
+        while (edge != (uint32_t) -1)
+        {
+            uint32_t const tail = graph.edges[edge].tail;
+            printf("look at %d\n", tail);
+            if (visited[tail].next == (uint32_t) -1)
+            {
+                printf("push %u\n", tail);
+                visited[tail].next = head;
+                head = tail;
+                goto next;
+            } // if
+            uint32_t const post = intersection(visited[head].post, graph.edges[edge].tail, length, visited);
+            printf("intersection %u & %u = %u\n", visited[head].post, graph.edges[edge].tail, post);
+            visited[head].post = post;
+            edge = graph.edges[edge].next;
+        } // while
+
+        printf("visit %u\n", head);
+        visited[head].rank = rank;
+        rank += 1;
+        head = visited[head].next;
+    } // while
+
+    printf(" # \tpost\trank\tedge\tnext\n");
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        printf("%2u:\t%4d\t%4d\t%4d\t%4d\n", i, visited[i].post, visited[i].rank, visited[i].edge, visited[i].next);
+    } // for
+    printf("head: %d\n", head);
+
+
+    visited = allocator.alloc(allocator.context, visited, sizeof(*visited) * length, 0);
+} // local_supremal_it2
+
 
 // AAAATA GAAAAGAAA
 // AAT ACT
@@ -669,7 +765,7 @@ main(int argc, char* argv[static argc + 1])
 */
 
     local_supremal(va_std_allocator, graph, len_obs, observed);
-    local_supremal_it(va_std_allocator, graph);
+    local_supremal_it2(va_std_allocator, graph);
 
     destroy(va_std_allocator, &graph);
 
