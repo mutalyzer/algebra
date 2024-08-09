@@ -372,7 +372,7 @@ local_supremal(VA_Allocator const allocator, Graph const graph, size_t const len
 
 
 static void
-local_supremal_it(VA_Allocator const allocator, Graph const graph)
+local_supremal_it(VA_Allocator const allocator, Graph const graph, size_t const len_obs, char const observed[static len_obs])
 {
     uint32_t const length = va_array_length(graph.nodes);
     Post_Dom_Table* visited = allocator.alloc(allocator.context, NULL, 0, sizeof(*visited) * length);
@@ -444,6 +444,16 @@ local_supremal_it(VA_Allocator const allocator, Graph const graph)
     for (uint32_t i = 0; i < length; ++i)
     {
         printf("%2u:\t%4d\t%4u\t%5u\t%3d\n", i, visited[i].post, visited[i].rank, visited[i].start, visited[i].end);
+    } // for
+
+    head = graph.source;
+    uint32_t shift = 0;
+    for (uint32_t tail = visited[head].post; tail != (uint32_t) -1; head = tail, tail = visited[head].post)
+    {
+        uint32_t const start = visited[head].end;
+        uint32_t const end = visited[tail].start;
+        VA_Variant const variant = {start, end, graph.nodes[head].col + start - graph.nodes[head].row - shift, graph.nodes[tail].col + end - graph.nodes[tail].row - shift};
+        printf("%u:%u/%.*s\n", variant.start, variant.end, (int) variant.obs_end - variant.obs_start, observed + variant.obs_start);
     } // for
 
     visited = allocator.alloc(allocator.context, visited, sizeof(*visited) * length, 0);
@@ -691,9 +701,7 @@ main(int argc, char* argv[static argc + 1])
 */
 
     local_supremal(va_std_allocator, graph, len_obs, observed);
-
-    printf("\n\n**** ITERATIVE ****\n");
-    local_supremal_it(va_std_allocator, graph);
+    local_supremal_it(va_std_allocator, graph, len_obs, observed);
 
     destroy(va_std_allocator, &graph);
 
