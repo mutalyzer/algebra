@@ -396,22 +396,20 @@ lca(uint32_t* const start, uint32_t lhs, uint32_t rhs, size_t const length, LCA_
     uint32_t rhs_start = visited[rhs].variant.start;
     while (lhs != rhs)
     {
+        lhs_start = visited[lhs].variant.start;
+        rhs_start = visited[rhs].variant.start;
         if (visited[lhs].depth > visited[rhs].depth)
         {
             lhs = visited[lhs].lca;
-            lhs_start = visited[lhs].variant.start;
         } // if
         else if (visited[rhs].depth > visited[lhs].depth)
         {
             rhs = visited[rhs].lca;
-            rhs_start = visited[rhs].variant.start;
         } // if
         else
         {
             lhs = visited[lhs].lca;
-            lhs_start = visited[lhs].variant.start;
             rhs = visited[rhs].lca;
-            rhs_start = visited[rhs].variant.start;
         } // else
     } // while
     *start = MIN(lhs_start, rhs_start);
@@ -437,6 +435,7 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
     uint32_t const shift = graph.nodes[graph.source].row;
 
     visited[graph.source] = (LCA_Table) {-1, (VA_Variant) {0, 0, 0, 0}, 0, -1};
+    uint32_t sink = -1;
     for (uint32_t head = graph.source, tail = graph.source; head != (uint32_t) -1; head = visited[head].next)
     {
         fprintf(stderr, "enter %u\n", head);
@@ -447,6 +446,11 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             visited[lambda] = (LCA_Table) {visited[head].lca, visited[head].variant, visited[head].depth, -1};
             visited[tail].next = lambda;
             tail = lambda;
+        } // if
+
+        if (graph.nodes[head].edges == (uint32_t) -1)
+        {
+            sink = head;
         } // if
 
         for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
@@ -465,6 +469,7 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
                 uint32_t const end = MAX(graph.edges[i].variant.end, visited[edge_tail].variant.end);
                 uint32_t start = 0;
                 uint32_t const common = lca(&start, head, visited[edge_tail].lca, length, visited);
+                fprintf(stderr, "%u: %u--%u\n", common, start, end);
                 VA_Variant const variant = {start, end, graph.nodes[common].col + start - graph.nodes[common].row - shift, graph.nodes[head].col + end - graph.nodes[head].row - shift};
                 visited[edge_tail].lca = common;
                 visited[edge_tail].variant = (VA_Variant) {start, end, graph.nodes[common].col + start - graph.nodes[common].row, graph.nodes[head].col + end - graph.nodes[head].row};
@@ -483,6 +488,23 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
     {
         fprintf(stderr, "%2u:\t%3d\t" VAR_FMT "\t%5d\t%4d\n", i, visited[i].lca, print_variant(visited[i].variant, observed),  visited[i].depth, visited[i].next);
     } // for
+
+    size_t const n = visited[sink].depth - 1;
+    VA_Variant* variants = allocator.alloc(allocator.context, NULL, 0, sizeof(*variants) * n);
+    if (variants != NULL)
+    {
+        for (size_t i = 0; i < n; ++i)
+        {
+            variants[n - i - 1] = visited[sink].variant;
+            sink = visited[sink].lca;
+        } // for
+
+        for (size_t i = 0; i < n; ++i)
+        {
+            printf("        \"" VAR_FMT "\"%s\n", print_variant(variants[i], observed), i < n - 1 ? "," : "");
+        } // for
+        variants = allocator.alloc(allocator.context, variants, sizeof(*variants) * n, 0);
+    } // if
 
     visited = allocator.alloc(allocator.context, visited, sizeof(*visited) * length, 0);
 } // canonical
@@ -575,7 +597,10 @@ to_json(Graph const graph, size_t const len_obs, char const observed[static len_
     printf("    \"supremal\": \"%u:%u/%.*s\",\n", graph.supremal.start, graph.supremal.end, (int) graph.supremal.obs_end - graph.supremal.obs_start, observed + graph.supremal.obs_start);
     printf("    \"local_supremal\": [\n");
     local_supremal(va_std_allocator, graph, len_obs, observed);
-    printf("\n    ]\n");
+    printf("\n    ],\n");
+    printf("    \"canonical\": [\n");
+    canonical(va_std_allocator, graph, len_obs, observed);
+    printf("    ]\n");
     printf("}");
 } // to_json
 
@@ -630,13 +655,13 @@ main(int argc, char* argv[static argc + 1])
     } // for
 */
 
-    //local_supremal(va_std_allocator, graph, len_obs, observed);
-
-    canonical(va_std_allocator, graph, len_obs, observed);
-
     //to_dot(graph, len_obs, observed);
 
-    //to_json(graph, len_obs, observed);
+    //local_supremal(va_std_allocator, graph, len_obs, observed);
+
+    //canonical(va_std_allocator, graph, len_obs, observed);
+
+    to_json(graph, len_obs, observed);
 
     destroy(va_std_allocator, &graph);
 

@@ -5,6 +5,7 @@ import sys
 
 from algebra import LCSgraph
 from algebra.extractor import local_supremal
+from algebra.extractor.extractor import canonical
 from algebra.utils import random_sequence, to_dot
 
 
@@ -18,20 +19,21 @@ def main():
         observed = sys.argv[2]
         debug = True
     else:
-        if random.random() > 0.5:
-            prefix = random_sequence(1000)
-            suffix = random_sequence(1000)
-        reference = prefix + random_sequence(100) + suffix
-        observed = prefix + random_sequence(100) + suffix
+        #if random.random() > 0.5:
+        #    prefix = random_sequence(1000)
+        #    suffix = random_sequence(1000)
+        reference = prefix + random_sequence(20) + suffix
+        observed = prefix + random_sequence(20) + suffix
 
     print(reference, observed)
 
     graph = LCSgraph.from_sequence(reference, observed);
+    valgrind = []
     if debug:
         print("\n".join(to_dot(reference, graph, labels=False, hgvs=False)))
+        valgrind = ["valgrind", "--leak-check=full", "--error-exitcode=1"]
 
-    valgrind = ["valgrind", "-q", "--leak-check=full", "--error-exitcode=1"]
-    stdout = subprocess.run(["./a.out", reference, observed], check=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
+    stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
 
     try:
         cgraph = json.loads(stdout)
@@ -66,6 +68,8 @@ def main():
     for lhs, rhs in zip(cgraph["local_supremal"], local_supremal(reference, graph)):
         assert lhs == str(rhs), f'local supremal element differ: {lhs} vs {rhs}'
 
+    print(cgraph["canonical"])
+    print(canonical(graph))
     print("ok")
 
 
