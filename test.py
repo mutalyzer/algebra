@@ -24,6 +24,8 @@ def main():
         reference = prefix + random_sequence(100) + suffix
         observed = prefix + random_sequence(100) + suffix
 
+    print(reference, observed)
+
     graph = LCSgraph.from_sequence(reference, observed);
     if debug:
         print("\n".join(to_dot(reference, graph, labels=False, hgvs=False)))
