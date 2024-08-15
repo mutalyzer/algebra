@@ -22,8 +22,8 @@ def main():
         #if random.random() > 0.5:
         #    prefix = random_sequence(1000)
         #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(20) + suffix
-        observed = prefix + random_sequence(20) + suffix
+        reference = prefix + random_sequence(10) + suffix
+        observed = prefix + random_sequence(10) + suffix
 
     print(reference, observed)
 
@@ -31,6 +31,7 @@ def main():
     valgrind = []
     if debug:
         print("\n".join(to_dot(reference, graph, labels=False, hgvs=False)))
+        print(canonical(graph))
         valgrind = ["valgrind", "--leak-check=full", "--error-exitcode=1"]
 
     stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
@@ -63,13 +64,19 @@ def main():
         except StopIteration:
             raise ValueError(f'{cedge} not in edges of {head}') from None
 
-    assert len(cgraph["local_supremal"]) == len(local_supremal(reference, graph)), f''
+    assert len(cgraph["local_supremal"]) == len(local_supremal(reference, graph)), f'local supremal length'
 
     for lhs, rhs in zip(cgraph["local_supremal"], local_supremal(reference, graph)):
-        assert lhs == str(rhs), f'local supremal element differ: {lhs} vs {rhs}'
+        assert lhs == str(rhs), f'local supremal elements differ: {lhs} vs {rhs}'
 
-    print(cgraph["canonical"])
-    print(canonical(graph))
+    if debug:
+        print(cgraph["canonical"], canonical(graph))
+
+    assert len(cgraph["canonical"]) == len(canonical(graph)), f'canonical length'
+
+    for lhs, rhs in zip(cgraph["canonical"], canonical(graph)):
+        assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
+
     print("ok")
 
 

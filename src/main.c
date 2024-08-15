@@ -383,8 +383,9 @@ local_supremal(VA_Allocator const allocator, Graph const graph, size_t const len
 typedef struct
 {
     uint32_t lca;
-    VA_Variant variant;
     uint32_t depth;
+    uint32_t start;
+    uint32_t end;
     uint32_t next;
 } LCA_Table;
 
@@ -392,22 +393,41 @@ typedef struct
 static inline uint32_t
 lca(uint32_t* const start, uint32_t lhs, uint32_t rhs, size_t const length, LCA_Table const visited[static length])
 {
-    uint32_t lhs_start = visited[lhs].variant.start;
-    uint32_t rhs_start = visited[rhs].variant.start;
+    uint32_t lhs_start = *start;
+    uint32_t rhs_start = *start;
     while (lhs != rhs)
     {
-        lhs_start = visited[lhs].variant.start;
-        rhs_start = visited[rhs].variant.start;
+        fprintf(stderr, "        lca %u (%d), %u (%d)\n", lhs, lhs_start, rhs, rhs_start);
+
         if (visited[lhs].depth > visited[rhs].depth)
         {
+            fprintf(stderr, "        left\n");
+            lhs_start = visited[lhs].start;
             lhs = visited[lhs].lca;
         } // if
         else if (visited[rhs].depth > visited[lhs].depth)
         {
+            fprintf(stderr, "        right\n");
+            rhs_start = visited[rhs].start;
             rhs = visited[rhs].lca;
         } // if
         else
         {
+            /*
+            if (visited[lhs].lca == rhs)
+            {
+                lhs_start = visited[lhs].start;
+                lhs = rhs;
+                break;
+            } // if
+            else if (visited[rhs].lca == lhs)
+            {
+                break;
+            } // if
+            */
+            fprintf(stderr, "        both\n");
+            lhs_start = visited[lhs].start;
+            rhs_start = visited[rhs].start;
             lhs = visited[lhs].lca;
             rhs = visited[rhs].lca;
         } // else
@@ -430,81 +450,88 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
     for (uint32_t i = 0; i < length; ++i)
     {
         visited[i].depth = -1;
+        visited[i].next = -1;
     } // for
 
-    uint32_t const shift = graph.nodes[graph.source].row;
-
-    visited[graph.source] = (LCA_Table) {-1, (VA_Variant) {0, 0, 0, 0}, 0, -1};
     uint32_t sink = -1;
+    visited[graph.source] = (LCA_Table) {-1, 0, -1, -1, -1};
     for (uint32_t head = graph.source, tail = graph.source; head != (uint32_t) -1; head = visited[head].next)
     {
         fprintf(stderr, "enter %u\n", head);
-        uint32_t const lambda = graph.nodes[head].lambda;
-        if (lambda != (uint32_t) -1)
+        for (uint32_t i = head; i != (uint32_t) -1; i = graph.nodes[i].lambda)
         {
-            fprintf(stderr, "push lambda %u\n", lambda);
-            visited[lambda] = (LCA_Table) {visited[head].lca, visited[head].variant, visited[head].depth, -1};
-            visited[tail].next = lambda;
-            tail = lambda;
-        } // if
-
-        if (graph.nodes[head].edges == (uint32_t) -1)
-        {
-            sink = head;
-        } // if
-
-        for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
-        {
-            uint32_t const edge_tail = graph.edges[i].tail;
-            if (visited[edge_tail].depth == (uint32_t) -1)
+            if (i != head)
             {
-                fprintf(stderr, "push %u\n", edge_tail);
-                visited[edge_tail] = (LCA_Table) {head, graph.edges[i].variant, visited[head].depth + 1, -1};
-                visited[tail].next = edge_tail;
-                tail = edge_tail;
+                fprintf(stderr, "    enter lambda %u\n", i);
+                if (visited[i].depth != visited[head].depth)
+                {
+                    fprintf(stderr, "        push lambda %u\n", i);
+                    visited[i] = (LCA_Table) {head, visited[head].depth, visited[head].start, visited[head].end, visited[i].next};
+                } // if
+                else
+                {
+                    fprintf(stderr, "        update lambda %u\n", i);
+                    visited[i].lca = lca(&visited[i].start, head, visited[i].lca, length, visited);
+                    visited[i].end = MAX(visited[i].end, visited[head].end);
+                    fprintf(stderr, "        lca = %u (%u, %u)\n", visited[i].lca, visited[i].start, visited[i].end);
+                } // else
             } // if
-            else if (visited[head].depth == visited[edge_tail].depth - 1)
+
+            if (graph.nodes[i].edges == (uint32_t) -1)
             {
-                fprintf(stderr, "update %u: lca(%u, %u)\n", edge_tail, head, visited[edge_tail].lca);
-                uint32_t const end = MAX(graph.edges[i].variant.end, visited[edge_tail].variant.end);
-                uint32_t start = 0;
-                uint32_t const common = lca(&start, head, visited[edge_tail].lca, length, visited);
-                fprintf(stderr, "%u: %u--%u\n", common, start, end);
-                VA_Variant const variant = {start, end, graph.nodes[common].col + start - graph.nodes[common].row - shift, graph.nodes[head].col + end - graph.nodes[head].row - shift};
-                visited[edge_tail].lca = common;
-                visited[edge_tail].variant = (VA_Variant) {start, end, graph.nodes[common].col + start - graph.nodes[common].row, graph.nodes[head].col + end - graph.nodes[head].row};
-                fprintf(stderr, "variant " VAR_FMT "\n", print_variant(variant, observed));
+                fprintf(stderr, "    sink\n");
+                sink = i;
             } // if
-            else
+
+            for (uint32_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
             {
-                fprintf(stderr, "skip %u\n", edge_tail);
-            } // else
+                uint32_t const edge_tail = graph.edges[j].tail;
+                if (visited[edge_tail].depth == (uint32_t) -1)
+                {
+                    fprintf(stderr, "    push %u\n", edge_tail);
+                    visited[edge_tail] = (LCA_Table) {i, visited[i].depth + 1, graph.edges[j].variant.start, graph.edges[j].variant.end, -1};
+                    visited[tail].next = edge_tail;
+                    tail = edge_tail;
+                } // if
+                else if (visited[edge_tail].depth - 1 == visited[i].depth)
+                {
+                    fprintf(stderr, "    update %u\n", edge_tail);
+                    visited[edge_tail].lca = lca(&visited[edge_tail].start, i, visited[edge_tail].lca, length, visited);
+                    visited[edge_tail].end = MAX(visited[edge_tail].end, graph.edges[j].variant.end);
+                    fprintf(stderr, "    lca = %u (%u, %u)\n", visited[edge_tail].lca, visited[edge_tail].start, visited[edge_tail].end);
+                } // if
+                else
+                {
+                    fprintf(stderr, "    skip %u\n", edge_tail);
+                } // else
+            } // for
         } // for
-        fprintf(stderr, "done with %u\n", head);
-    } // for
+    } // while
 
-    fprintf(stderr, " # \tlca\tvariant\tdepth\tnext\n");
+    fprintf(stderr, " # \tlca\tdepth\tstart\tend\tnext\n");
     for (uint32_t i = 0; i < length; ++i)
     {
-        fprintf(stderr, "%2u:\t%3d\t" VAR_FMT "\t%5d\t%4d\n", i, visited[i].lca, print_variant(visited[i].variant, observed),  visited[i].depth, visited[i].next);
+        fprintf(stderr, "%2u:\t%3d\t%5d\t%5d\t%3d\t%4d\n", i, visited[i].lca, visited[i].depth, visited[i].start, visited[i].end, visited[i].next);
     } // for
 
-    size_t const n = visited[sink].depth - 1;
-    VA_Variant* variants = allocator.alloc(allocator.context, NULL, 0, sizeof(*variants) * n);
+    VA_Variant* variants = NULL;
+    for (uint32_t tail = sink; tail != (uint32_t) -1 && visited[tail].lca != (uint32_t) -1; tail = visited[tail].lca)
+    {
+        uint32_t const head = visited[tail].lca;
+        uint32_t const start_offset = visited[tail].start - graph.nodes[head].row;
+        uint32_t const end_offset = visited[tail].end - graph.nodes[tail].row;
+        va_array_insert(va_std_allocator, variants, ((VA_Variant) {visited[tail].start, visited[tail].end, graph.nodes[head].col + start_offset, graph.nodes[tail].col + end_offset}), 0);
+    } // for
+
     if (variants != NULL)
     {
-        for (size_t i = 0; i < n; ++i)
+        for (size_t i = 0; i < va_array_length(variants); ++i)
         {
-            variants[n - i - 1] = visited[sink].variant;
-            sink = visited[sink].lca;
+            printf("        \"" VAR_FMT "\"%s\n", print_variant(variants[i], observed), i < va_array_length(variants) - 1 ? "," : "");
         } // for
-
-        for (size_t i = 0; i < n; ++i)
-        {
-            printf("        \"" VAR_FMT "\"%s\n", print_variant(variants[i], observed), i < n - 1 ? "," : "");
-        } // for
-        variants = allocator.alloc(allocator.context, variants, sizeof(*variants) * n, 0);
     } // if
+
+    variants = va_array_destroy(va_std_allocator, variants);
 
     visited = allocator.alloc(allocator.context, visited, sizeof(*visited) * length, 0);
 } // canonical
@@ -655,7 +682,7 @@ main(int argc, char* argv[static argc + 1])
     } // for
 */
 
-    //to_dot(graph, len_obs, observed);
+    to_dot(graph, len_obs, observed);
 
     //local_supremal(va_std_allocator, graph, len_obs, observed);
 
