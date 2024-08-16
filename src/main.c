@@ -436,9 +436,10 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
     uint32_t sink = -1;
     visited[graph.source] = (LCA_Table) {-1, 0, 0, -1, -1, -1};
     uint32_t rank = 1;
+    // main loop over a queue
     for (uint32_t head = graph.source, tail = graph.source; head != (uint32_t) -1; head = visited[head].next)
     {
-        fprintf(stderr, "enter %u @ %u\n", head, visited[head].depth);
+        fprintf(stderr, "pop %u @ %u\n", head, visited[head].depth);
 
         if (graph.nodes[head].edges == (uint32_t) -1)
         {
@@ -452,6 +453,7 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
         {
             if (visited[lambda].depth == (uint32_t) -1)
             {
+                // add lambda in stack order
                 fprintf(stderr, "    push lambda %u @ %u\n", lambda, visited[head].depth);
                 visited[lambda] = (LCA_Table) {head, rank, visited[head].depth, -1, -1, visited[head].next};
                 rank += 1;
@@ -461,15 +463,26 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             {
                 fprintf(stderr, "    update lambda %u @ %u\n", lambda, visited[head].depth);
                 fprintf(stderr, "        lca(%u, %u)\n", visited[lambda].lca, head);
-                uint32_t start = visited[lambda].start;
-                uint32_t const c = lca(&start, visited[lambda].lca, head, length, visited);
-                fprintf(stderr, "        = %u (%u:%u)\n", c, start, visited[lambda].end);
-                visited[lambda].lca = c;
-                visited[lambda].start = start;
+                visited[lambda].lca = lca(&visited[lambda].start, visited[lambda].lca, head, length, visited);
+
+                // FIXME: what is correct here?
+                // AGGCCG CGCAGCCTC        ignores the common end position
+                // TAATTGGTAG CTATTCAG     needs the common end position
+
+                //visited[lambda].end = graph.nodes[head].row;  // this simulates the empty variant on a lambda edge
+
+                fprintf(stderr, "        = %u (%u:%u)\n", visited[lambda].lca, visited[lambda].start, visited[lambda].end);
             } // if
             else
             {
                 fprintf(stderr, "    improve lambda %u @ %u\n", lambda, visited[head].depth);
+
+                // FIXME: what about the original link to lambda?
+                //        lambda is already in the queue and should be *moved* instead of added again (in stack order)
+                //        if moving is difficult we can possibly skip nodes that are already processed (in the main loop)
+                // possibly related:
+                // INFINITE LOOP: CAGCGAGT CGTGTAAGGTGTACTGAAA
+
                 visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, visited[head].next};
                 visited[head].next = lambda;
             } // else
@@ -480,6 +493,7 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             uint32_t const edge_tail = graph.edges[i].tail;
             if (visited[edge_tail].depth == (uint32_t) -1)
             {
+                // add regular successors in queue order
                 fprintf(stderr, "    push %u @ %u\n", edge_tail, visited[head].depth + 1);
                 visited[edge_tail] = (LCA_Table) {head, rank, visited[head].depth + 1, graph.edges[i].variant.start, graph.edges[i].variant.end, -1};
                 rank += 1;
@@ -490,12 +504,10 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             {
                 fprintf(stderr, "    update %u @ %u\n", edge_tail, visited[edge_tail].depth);
                 fprintf(stderr, "        lca(%u, %u)\n", visited[edge_tail].lca, head);
-                uint32_t start = MIN(visited[edge_tail].start, graph.edges[i].variant.start);
-                uint32_t const c = lca(&start, visited[edge_tail].lca, head, length, visited);
-                visited[edge_tail].lca = c;
-                visited[edge_tail].start = start;
+                visited[edge_tail].start = MIN(visited[edge_tail].start, graph.edges[i].variant.start);
+                visited[edge_tail].lca = lca(&visited[edge_tail].start, visited[edge_tail].lca, head, length, visited);
                 visited[edge_tail].end = MAX(visited[edge_tail].end, graph.edges[i].variant.end);
-                fprintf(stderr, "        = %u (%u:%u)\n", c, start, visited[edge_tail].end);
+                fprintf(stderr, "        = %u (%u:%u)\n", visited[edge_tail].lca, visited[edge_tail].start, visited[edge_tail].end);
             } // if
             else
             {
@@ -510,11 +522,13 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
         fprintf(stderr, "%2u:\t%3d\t%4u\t%5u\t%5d\t%3d\t%4d\n", i, visited[i].lca, visited[i].rank, visited[i].depth, visited[i].start, visited[i].end, visited[i].next);
     } // for
 
+    // the canonical variant is given in the reverse order (for now): the Python checker needs to reverse this list
     for (uint32_t tail = sink; tail != (uint32_t) -1; tail = visited[tail].lca)
     {
         uint32_t const head = visited[tail].lca;
         if (head != (uint32_t) - 1 && visited[tail].start != (uint32_t) -1)
         {
+            // we need to skip lambda edges: start && end == -1
             uint32_t const start_offset = visited[tail].start - graph.nodes[head].row;
             uint32_t const end_offset = visited[tail].end - graph.nodes[tail].row;
             VA_Variant const variant =  {visited[tail].start, visited[tail].end, graph.nodes[head].col + start_offset, graph.nodes[tail].col + end_offset};
