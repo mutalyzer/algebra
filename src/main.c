@@ -482,7 +482,15 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
                 //        if moving is difficult we can possibly skip nodes that are already processed (in the main loop)
                 // possibly related:
                 // INFINITE LOOP: CAGCGAGT CGTGTAAGGTGTACTGAAA
+                // FIXED by probing the visited table
+                // FIXME: how often does this occur?
 
+                uint32_t probe = head;
+                while (visited[probe].next != lambda)
+                {
+                    probe = visited[probe].next;
+                } // while
+                visited[probe].next = visited[lambda].next;
                 visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, visited[head].next};
                 visited[head].next = lambda;
             } // else
