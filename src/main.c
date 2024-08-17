@@ -387,6 +387,7 @@ typedef struct
     uint32_t depth;
     uint32_t start;
     uint32_t end;
+    uint32_t prev;
     uint32_t next;
 } LCA_Table;
 
@@ -434,7 +435,7 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
     } // for
 
     uint32_t sink = -1;
-    visited[graph.source] = (LCA_Table) {-1, 0, 0, -1, -1, -1};
+    visited[graph.source] = (LCA_Table) {-1, 0, 0, -1, -1, -1, -1};
     uint32_t rank = 1;
     // main loop over a queue
     for (uint32_t head = graph.source, tail = graph.source; head != (uint32_t) -1; head = visited[head].next)
@@ -455,7 +456,7 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             {
                 // add lambda in stack order
                 fprintf(stderr, "    push lambda %u @ %u\n", lambda, visited[head].depth);
-                visited[lambda] = (LCA_Table) {head, rank, visited[head].depth, -1, -1, visited[head].next};
+                visited[lambda] = (LCA_Table) {head, rank, visited[head].depth, -1, -1, head, visited[head].next};
                 rank += 1;
                 visited[head].next = lambda;
             } // if
@@ -482,16 +483,10 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
                 //        if moving is difficult we can possibly skip nodes that are already processed (in the main loop)
                 // possibly related:
                 // INFINITE LOOP: CAGCGAGT CGTGTAAGGTGTACTGAAA
-                // FIXED by probing the visited table
-                // FIXME: how often does this occur?
+                // FIXED by double linked list
 
-                uint32_t probe = head;
-                while (visited[probe].next != lambda)
-                {
-                    probe = visited[probe].next;
-                } // while
-                visited[probe].next = visited[lambda].next;
-                visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, visited[head].next};
+                visited[visited[lambda].prev].next = visited[lambda].next;
+                visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, head, visited[head].next};
                 visited[head].next = lambda;
             } // else
         } // if
@@ -503,7 +498,7 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             {
                 // add regular successors in queue order
                 fprintf(stderr, "    push %u @ %u\n", edge_tail, visited[head].depth + 1);
-                visited[edge_tail] = (LCA_Table) {head, rank, visited[head].depth + 1, graph.edges[i].variant.start, graph.edges[i].variant.end, -1};
+                visited[edge_tail] = (LCA_Table) {head, rank, visited[head].depth + 1, graph.edges[i].variant.start, graph.edges[i].variant.end, tail, -1};
                 rank += 1;
                 visited[tail].next = edge_tail;
                 tail = edge_tail;
@@ -524,10 +519,10 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
         } // for
     } // for
 
-    fprintf(stderr, " # \tlca\trank\tdepth\tstart\tend\tnext\n");
+    fprintf(stderr, " # \tlca\trank\tdepth\tstart\tend\tprev\tnext\n");
     for (uint32_t i = 0; i < length; ++i)
     {
-        fprintf(stderr, "%2u:\t%3d\t%4u\t%5u\t%5d\t%3d\t%4d\n", i, visited[i].lca, visited[i].rank, visited[i].depth, visited[i].start, visited[i].end, visited[i].next);
+        fprintf(stderr, "%2u:\t%3d\t%4u\t%5u\t%5d\t%3d\t%4d\t%4d\n", i, visited[i].lca, visited[i].rank, visited[i].depth, visited[i].start, visited[i].end, visited[i].prev, visited[i].next);
     } // for
 
     // the canonical variant is given in the reverse order (for now): the Python checker needs to reverse this list
