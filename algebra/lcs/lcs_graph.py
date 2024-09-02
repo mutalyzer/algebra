@@ -204,6 +204,29 @@ class LCSgraph:
 
         return traversal(self._source, [])
 
+    def uniq_atomics(self):
+        """The set of unique atomics for the whole LCS graph."""
+        atomics = set()
+        for *_, variant in self.bfs_traversal():
+            for idx in range(variant[0].start, variant[0].end):
+                atomics |= {(idx, "")}
+                for ch in set(variant[0].sequence):
+                    atomics |= {(idx, ch)}
+            for ch in set(variant[0].sequence):
+                atomics |= {(variant[0].end, ch)}
+        return atomics
+
+    def overlap(self, other):
+        """The set of common unique atomics and the set of all unique
+        atomics for two LCS graphs."""
+        lhs = self.uniq_atomics()
+        rhs = other.uniq_atomics()
+        return lhs.intersection(rhs), lhs.union(rhs)
+
+    def is_disjoint(self, other):
+        """Are two LCS graphs disjoint."""
+        return self.uniq_atomics().isdisjoint(other.uniq_atomics())
+
 
 def trim(lhs, rhs):
     """Find the lengths of the common prefix and common suffix between
