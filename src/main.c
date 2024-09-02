@@ -483,8 +483,12 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
                 //        if moving is difficult we can possibly skip nodes that are already processed (in the main loop)
                 // possibly related:
                 // INFINITE LOOP: CAGCGAGT CGTGTAAGGTGTACTGAAA
-                // FIXED by double linked list
+                // FIXED by doubly linked list
 
+                if (lambda == tail)
+                {
+                    tail = visited[lambda].prev;
+                } // if
                 visited[visited[lambda].prev].next = visited[lambda].next;
                 visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, head, visited[head].next};
                 visited[head].next = lambda;
