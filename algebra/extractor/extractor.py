@@ -63,7 +63,7 @@ def canonical(graph):
             if (existing_parent != parent and
                     existing_parent.row + existing_parent.length == parent.row + parent.length and
                     existing_parent.col + existing_parent.length == parent.col + parent.length):
-                end = max(lhs_edge.end, rhs_edge.end)
+                end = max(visited[parent][1].end, visited[existing_parent][1].end)
                 delins = Variant(start, end,
                                  observed[lca.col + start - lca.row - shift:parent.col + end - parent.row - shift])
                 visited[existing_parent] = lca, delins, distance - 1

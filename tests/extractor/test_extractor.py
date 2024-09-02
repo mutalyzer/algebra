@@ -101,6 +101,7 @@ def test_diagonal(reference, observed, variants):
     ("GAGTTA", "AGGTATG", [Variant(0, 1, ""), Variant(3, 4, "G"), Variant(6, 6, "TG")], "[1del;4T>G;6_7insTG]"),
     ("AGCCCCA", "AGAGGCGCC", [Variant(1, 7, "GAGGCGCC")], "3_7delinsAGGCGCC"),
     ("TCTGGAAACACTGGT", "GCGAACTAGGT", [Variant(0, 4, "GC"), Variant(6, 10, "A"), Variant(12, 12, "A")], "[1_4delinsGC;8_10del;12_13insA]"),
+    ("ACAGGA", "CAAGGCG", [Variant(0, 3, "CAA"), Variant(5, 6, "CG")], "[1_2delinsCA;6delinsCG]"),
 ])
 def test_extract_sequence(reference, observed, variants, hgvs):
     canonical, _ = extract_sequence(reference, observed)
