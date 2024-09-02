@@ -638,7 +638,7 @@ to_json(Graph const graph, size_t const len_obs, char const observed[static len_
     printf("\n    ],\n");
     printf("    \"canonical\": [\n");
     canonical(va_std_allocator, graph, len_obs, observed);
-    printf("    ]\n");
+    printf("\n    ]\n");
     printf("}");
 } // to_json
 
