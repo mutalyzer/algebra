@@ -9,7 +9,7 @@ extern "C"
 #include <stddef.h>     // NULL, size_t
 
 
-#define KiB(size) ((size_t) size * 1024ULL)
+#define KiB(size) (((size_t) (size)) * 1024ULL)
 #define MiB(size) (KiB(size) * 1024ULL)
 #define GiB(size) (MiB(size) * 1024ULL)
 
