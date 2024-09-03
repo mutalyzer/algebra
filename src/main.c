@@ -468,7 +468,9 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
 
                 // FIXME: what is correct here?
                 // AGGCCG CGCAGCCTC        ignores the common end position
+                // ACAGGA CAAGGCG
                 // TAATTGGTAG CTATTCAG     needs the common end position
+                // TTAAG TAACA
 
                 //visited[lambda].end = graph.nodes[head].row;  // this simulates the empty variant on a lambda edge
 
