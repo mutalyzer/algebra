@@ -420,6 +420,18 @@ lca(uint32_t* const start, uint32_t lhs, uint32_t rhs, size_t const length, LCA_
 
 
 static void
+print_lca_table(size_t const length, LCA_Table const visited[static length], uint32_t const head, uint32_t const tail)
+{
+    fprintf(stderr, " # \tlca\trank\tdepth\tstart\tend\tprev\tnext\n");
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        fprintf(stderr, "%2u:\t%3d\t%4d\t%5d\t%5d\t%3d\t%4d\t%4d\n", i, visited[i].lca, visited[i].rank, visited[i].depth, visited[i].start, visited[i].end, visited[i].prev, visited[i].next);
+    } // for
+    fprintf(stderr, "head: %d\ntail: %d\n", head, tail);
+} // print_lca_table
+
+
+static void
 canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs, char const observed[static len_obs])
 {
     uint32_t const length = va_array_length(graph.nodes);
@@ -432,6 +444,14 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
     for (uint32_t i = 0; i < length; ++i)
     {
         visited[i].depth = -1;
+
+        visited[i].lca = -1;
+        visited[i].rank = -1;
+        visited[i].start = -1;
+        visited[i].end = -1;
+        visited[i].prev = -1;
+        visited[i].next = -1;
+
     } // for
 
     uint32_t sink = -1;
@@ -456,6 +476,8 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             {
                 // add lambda in stack order
                 fprintf(stderr, "    push lambda %u @ %u\n", lambda, visited[head].depth);
+
+                visited[visited[head].next].prev = lambda;
                 visited[lambda] = (LCA_Table) {head, rank, visited[head].depth, -1, -1, head, visited[head].next};
                 rank += 1;
                 visited[head].next = lambda;
@@ -487,14 +509,29 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
                 // INFINITE LOOP: CAGCGAGT CGTGTAAGGTGTACTGAAA
                 // FIXED by doubly linked list
 
-                if (lambda == tail)
+                if (visited[head].next == lambda)
                 {
-                    tail = visited[lambda].prev;
+                    visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, visited[lambda].prev, visited[lambda].next};
                 } // if
-                visited[visited[lambda].prev].next = visited[lambda].next;
-                visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, head, visited[head].next};
-                visited[head].next = lambda;
+                else
+                {
+                    if (lambda == tail)
+                    {
+                        tail = visited[lambda].prev;
+                    } // if
+                    else
+                    {
+                        visited[visited[lambda].next].prev = visited[lambda].prev;
+                    } // else
+                    visited[visited[head].next].prev = lambda;
+                    visited[visited[lambda].prev].next = visited[lambda].next;
+                    visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, head, visited[head].next};
+                    visited[head].next = lambda;
+                } // else
             } // else
+
+            //print_lca_table(length, visited, head, tail);
+
         } // if
 
         for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
@@ -522,14 +559,12 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
             {
                 fprintf(stderr, "    skip %u @ %u\n", edge_tail, visited[edge_tail].depth);
             } // else
+
+            //print_lca_table(length, visited, head, tail);
         } // for
     } // for
 
-    fprintf(stderr, " # \tlca\trank\tdepth\tstart\tend\tprev\tnext\n");
-    for (uint32_t i = 0; i < length; ++i)
-    {
-        fprintf(stderr, "%2u:\t%3d\t%4u\t%5u\t%5d\t%3d\t%4d\t%4d\n", i, visited[i].lca, visited[i].rank, visited[i].depth, visited[i].start, visited[i].end, visited[i].prev, visited[i].next);
-    } // for
+    print_lca_table(length, visited, -1, -1);
 
     // the canonical variant is given in the reverse order (for now): the Python checker needs to reverse this list
     for (uint32_t tail = sink; tail != (uint32_t) -1; tail = visited[tail].lca)

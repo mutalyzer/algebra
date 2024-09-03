@@ -1,5 +1,6 @@
 import json
 import random
+import signal
 import subprocess
 import sys
 
@@ -9,32 +10,19 @@ from algebra.extractor.extractor import canonical
 from algebra.utils import random_sequence, to_dot
 
 
-def main():
-    prefix = ""
-    suffix = ""
-    debug = False
+def handler(signum, frame):
+    raise KeyboardInterrupt
 
-    if len(sys.argv) > 1:
-        reference = sys.argv[1]
-        observed = sys.argv[2]
-        debug = True
-    else:
-        #if random.random() > 0.5:
-        #    prefix = random_sequence(1000)
-        #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(12) + suffix
-        observed = prefix + random_sequence(12) + suffix
 
-    print(reference, observed)
-
-    graph = LCSgraph.from_sequence(reference, observed);
+def check(reference, observed, debug=False, timeout=1):
+    graph = LCSgraph.from_sequence(reference, observed)
     valgrind = []
     if debug:
         print("\n".join(to_dot(reference, graph, labels=False, hgvs=False)))
         print(canonical(graph))
         valgrind = ["valgrind", "--leak-check=full", "--error-exitcode=1"]
 
-    stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
+    stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stdout=subprocess.PIPE, timeout=timeout).stdout.decode("utf-8")
 
     try:
         cgraph = json.loads(stdout)
@@ -45,10 +33,10 @@ def main():
     assert str(graph.supremal) == cgraph["supremal"], f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
 
     nodes = list(graph.nodes())
-    edges = list(graph.bfs_traversal());
+    edges = list(graph.bfs_traversal())
 
     assert len(cgraph["nodes"]) == len(nodes), f'# cgraph nodes {len(cgraph["nodes"])} vs # graph nodes {len(nodes)}'
-    assert len(cgraph["edges"]) == len(edges), f'# cgraph edges {len(cgraph["edges"])} vs # graph edges {len(edgse)}'
+    assert len(cgraph["edges"]) == len(edges), f'# cgraph edges {len(cgraph["edges"])} vs # graph edges {len(edges)}'
 
     for cnode in cgraph["nodes"].values():
         try:
@@ -77,7 +65,38 @@ def main():
     for lhs, rhs in zip(reversed(cgraph["canonical"]), canonical(graph)):
         assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
 
-    print("ok")
+
+def main():
+    if len(sys.argv) == 3:
+        return check(sys.argv[1], sys.argv[2], debug=True)
+
+    signal.signal(signal.SIGINT, handler)
+
+    failed = []
+    n = 0
+    while True:
+        prefix = ""
+        suffix = ""
+        #if random.random() > 0.5:
+        #    prefix = random_sequence(1000)
+        #    suffix = random_sequence(1000)
+        reference = prefix + random_sequence(30) + suffix
+        observed = prefix + random_sequence(30) + suffix
+
+        if n % 1_000 == 0:
+            print(n)
+
+        try:
+            check(reference, observed)
+            n += 1
+        except KeyboardInterrupt:
+            break
+        except Exception as exc:
+            failed.append({"reference": reference, "observed": observed, "exception": exc})
+            break
+
+    print()
+    print(n, failed)
 
 
 if __name__ == "__main__":
