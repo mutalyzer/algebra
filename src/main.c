@@ -629,6 +629,41 @@ bfs_traversal(VA_Allocator const allocator, Graph const graph, size_t const len_
 
 
 static void
+to_dot_raw(Graph const graph, size_t const len_obs, char const observed[static len_obs])
+{
+    printf("    \"edges\": [\n");
+    size_t count = 0;
+    for (uint32_t i = 0; i < va_array_length(graph.nodes); ++i)
+    {
+//        fprintf(stderr, "s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
+        if (graph.nodes[i].lambda != (uint32_t) -1)
+        {
+//            fprintf(stderr, "s%u->s%u[label=\"&#955;\",style=\"dashed\"]\n", i, graph.nodes[i].lambda);
+            if (count > 0)
+            {
+                printf(",\n");
+            } // if
+            count += 1;
+            printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"lambda\"}", i, graph.nodes[i].lambda);
+        } // if
+        for (uint32_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
+        {
+            if (count > 0)
+            {
+                printf(",\n");
+            } // if
+            count += 1;
+            printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"%u:%u/%.*s\"}", i, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
+//            fprintf(stderr, "s%u->s%u[label=\"%u:%u/%.*s\"]\n", i, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
+        } // for
+    } // for
+    printf("\n    ],\n");
+} // to_dot
+
+
+
+
+static void
 to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs])
 {
     printf("{\n    \"source\": \"s%u\",\n    \"nodes\": {\n", graph.source);
