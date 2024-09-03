@@ -664,16 +664,14 @@ bfs_traversal(VA_Allocator const allocator, Graph const graph, size_t const len_
 
 
 static void
-to_dot_raw(Graph const graph, size_t const len_obs, char const observed[static len_obs])
+lambda_edges(Graph const graph, size_t const len_obs, char const observed[static len_obs])
 {
     printf("    \"edges\": [\n");
     size_t count = 0;
     for (uint32_t i = 0; i < va_array_length(graph.nodes); ++i)
     {
-//        fprintf(stderr, "s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
         if (graph.nodes[i].lambda != (uint32_t) -1)
         {
-//            fprintf(stderr, "s%u->s%u[label=\"&#955;\",style=\"dashed\"]\n", i, graph.nodes[i].lambda);
             if (count > 0)
             {
                 printf(",\n");
@@ -689,17 +687,14 @@ to_dot_raw(Graph const graph, size_t const len_obs, char const observed[static l
             } // if
             count += 1;
             printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"%u:%u/%.*s\"}", i, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
-//            fprintf(stderr, "s%u->s%u[label=\"%u:%u/%.*s\"]\n", i, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
         } // for
     } // for
     printf("\n    ],\n");
-} // to_dot
-
-
+} // lambda_edges
 
 
 static void
-to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs])
+to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs], bool lambda)
 {
     printf("{\n    \"source\": \"s%u\",\n    \"nodes\": {\n", graph.source);
     for (uint32_t i = 0; i < va_array_length(graph.nodes); ++i)
@@ -707,7 +702,11 @@ to_json(Graph const graph, size_t const len_obs, char const observed[static len_
         printf("        \"s%u\": {\"row\": %u, \"col\": %u, \"length\": %u}%s\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, i < va_array_length(graph.nodes) - 1 ? "," : "");
     } // for
     printf("    },\n");
-    bfs_traversal(va_std_allocator, graph, len_obs, observed);
+    if (lambda) {
+        lambda_edges(graph, len_obs, observed);
+    } else {
+        bfs_traversal(va_std_allocator, graph, len_obs, observed);
+    }
     printf("    \"supremal\": \"%u:%u/%.*s\",\n", graph.supremal.start, graph.supremal.end, (int) graph.supremal.obs_end - graph.supremal.obs_start, observed + graph.supremal.obs_start);
     printf("    \"local_supremal\": [\n");
     local_supremal(va_std_allocator, graph, len_obs, observed);
@@ -775,7 +774,7 @@ main(int argc, char* argv[static argc + 1])
 
     //canonical(va_std_allocator, graph, len_obs, observed);
 
-    to_json(graph, len_obs, observed);
+    to_json(graph, len_obs, observed, false);
 
     destroy(va_std_allocator, &graph);
 
