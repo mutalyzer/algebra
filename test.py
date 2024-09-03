@@ -83,12 +83,14 @@ def main():
         reference = prefix + random_sequence(30) + suffix
         observed = prefix + random_sequence(30) + suffix
 
+        if n % 1_000 == 0:
+            print(n)
+
         try:
-            print(reference, observed)
             check(reference, observed)
             n += 1
         except KeyboardInterrupt:
-            break;
+            break
         except Exception as exc:
             failed.append({"reference": reference, "observed": observed, "exception": exc})
             break
