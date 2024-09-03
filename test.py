@@ -9,24 +9,7 @@ from algebra.extractor.extractor import canonical
 from algebra.utils import random_sequence, to_dot
 
 
-def main():
-    prefix = ""
-    suffix = ""
-    debug = False
-
-    if len(sys.argv) > 1:
-        reference = sys.argv[1]
-        observed = sys.argv[2]
-        debug = True
-    else:
-        #if random.random() > 0.5:
-        #    prefix = random_sequence(1000)
-        #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(12) + suffix
-        observed = prefix + random_sequence(12) + suffix
-
-    print(reference, observed)
-
+def check(reference, observed, debug=False, timeout=1):
     graph = LCSgraph.from_sequence(reference, observed);
     valgrind = []
     if debug:
@@ -34,7 +17,7 @@ def main():
         print(canonical(graph))
         valgrind = ["valgrind", "--leak-check=full", "--error-exitcode=1"]
 
-    stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
+    stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stdout=subprocess.PIPE, timeout=timeout).stdout.decode("utf-8")
 
     try:
         cgraph = json.loads(stdout)
@@ -77,7 +60,32 @@ def main():
     for lhs, rhs in zip(reversed(cgraph["canonical"]), canonical(graph)):
         assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
 
-    print("ok")
+
+def main():
+    if len(sys.argv) == 3:
+        return check(sys.argv[1], sys.argv[2], debug=True)
+
+    failed = []
+    n = 0
+    while True:
+        prefix = ""
+        suffix = ""
+        #if random.random() > 0.5:
+        #    prefix = random_sequence(1000)
+        #    suffix = random_sequence(1000)
+        reference = prefix + random_sequence(12) + suffix
+        observed = prefix + random_sequence(12) + suffix
+
+        try:
+            print(reference, observed)
+            check(reference, observed)
+            n += 1
+        except Exception as exc:
+            failed.append({"reference": reference, "observed": observed, "exception": exc})
+            break;
+
+    print()
+    print(n, failed)
 
 
 if __name__ == "__main__":
