@@ -1,5 +1,6 @@
 import json
 import random
+import signal
 import subprocess
 import sys
 
@@ -9,8 +10,12 @@ from algebra.extractor.extractor import canonical
 from algebra.utils import random_sequence, to_dot
 
 
+def handler(signum, frame):
+    raise KeyboardInterrupt
+
+
 def check(reference, observed, debug=False, timeout=1):
-    graph = LCSgraph.from_sequence(reference, observed);
+    graph = LCSgraph.from_sequence(reference, observed)
     valgrind = []
     if debug:
         print("\n".join(to_dot(reference, graph, labels=False, hgvs=False)))
@@ -28,10 +33,10 @@ def check(reference, observed, debug=False, timeout=1):
     assert str(graph.supremal) == cgraph["supremal"], f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
 
     nodes = list(graph.nodes())
-    edges = list(graph.bfs_traversal());
+    edges = list(graph.bfs_traversal())
 
     assert len(cgraph["nodes"]) == len(nodes), f'# cgraph nodes {len(cgraph["nodes"])} vs # graph nodes {len(nodes)}'
-    assert len(cgraph["edges"]) == len(edges), f'# cgraph edges {len(cgraph["edges"])} vs # graph edges {len(edgse)}'
+    assert len(cgraph["edges"]) == len(edges), f'# cgraph edges {len(cgraph["edges"])} vs # graph edges {len(edges)}'
 
     for cnode in cgraph["nodes"].values():
         try:
@@ -65,6 +70,8 @@ def main():
     if len(sys.argv) == 3:
         return check(sys.argv[1], sys.argv[2], debug=True)
 
+    signal.signal(signal.SIGINT, handler)
+
     failed = []
     n = 0
     while True:
@@ -73,16 +80,18 @@ def main():
         #if random.random() > 0.5:
         #    prefix = random_sequence(1000)
         #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(12) + suffix
-        observed = prefix + random_sequence(12) + suffix
+        reference = prefix + random_sequence(30) + suffix
+        observed = prefix + random_sequence(30) + suffix
 
         try:
             print(reference, observed)
             check(reference, observed)
             n += 1
+        except KeyboardInterrupt:
+            break;
         except Exception as exc:
             failed.append({"reference": reference, "observed": observed, "exception": exc})
-            break;
+            break
 
     print()
     print(n, failed)
