@@ -22,7 +22,7 @@ def main():
     print(reference, observed)
 
     # Create graph in C
-    stdout = subprocess.run(["./a.out", reference, observed], check=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
+    stdout = subprocess.run(["./a.out", reference, observed, "true"], check=True, stdout=subprocess.PIPE).stdout.decode("utf-8")
     try:
         cgraph = json.loads(stdout)
     except json.decoder.JSONDecodeError as exc:

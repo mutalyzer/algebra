@@ -734,6 +734,11 @@ main(int argc, char* argv[static argc + 1])
     } // if
     char const* const restrict reference = argv[1];
     char const* const restrict observed = argv[2];
+    bool lambda = false;
+    if (argc == 4)
+    {
+        lambda = (bool)argv[3];
+    }
 
     size_t const len_ref = strlen(reference);
     size_t const len_obs = strlen(observed);
@@ -774,7 +779,7 @@ main(int argc, char* argv[static argc + 1])
 
     //canonical(va_std_allocator, graph, len_obs, observed);
 
-    to_json(graph, len_obs, observed, false);
+    to_json(graph, len_obs, observed, lambda);
 
     destroy(va_std_allocator, &graph);
 
