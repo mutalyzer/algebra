@@ -38,11 +38,13 @@ def main():
             break
 
     # Convert C graph to NetworkX
-    DG = nx.MultiDiGraph()
-    DG.add_nodes_from([(k, cgraph["nodes"][k]) for k in cgraph["nodes"]])
-    DG.add_edges_from([(e['head'], e['tail'], {'variant': e['variant'], 'weight': 0 if e['variant'] == 'lambda' else 1}) for e in cgraph["edges"]])
-    all_paths = nx.all_shortest_paths(DG, cgraph["source"], "s0", weight="weight")
-    DG = DG.subgraph(set(chain(*all_paths)))
+    mdg = nx.MultiDiGraph()
+    mdg.add_nodes_from([(k, cgraph["nodes"][k]) for k in cgraph["nodes"]])
+    mdg.add_edges_from([(e['head'], e['tail'], {'variant': e['variant'], 'weight': 0 if e['variant'] == 'lambda' else 1}) for e in cgraph["edges"]])
+
+    # Find all shortest paths and create a new subgraph with only those nodes
+    all_paths = nx.all_shortest_paths(mdg, source, sink, weight="weight")
+    mdg = mdg.subgraph(set(chain(*all_paths)))
 
     # Calculate the dominators on the reversed graph
     postdoms = nx.immediate_dominators(mdg.reverse(), sink)
@@ -52,12 +54,12 @@ def main():
     lhs = source
     while lhs != postdoms[lhs]:
         rhs = postdoms[lhs]
-        if not (DG.nodes[lhs]["row"] + DG.nodes[lhs]["length"] == DG.nodes[rhs]["row"] + DG.nodes[rhs]["length"] and
-                DG.nodes[lhs]["col"] + DG.nodes[lhs]["length"] == DG.nodes[rhs]["col"] + DG.nodes[rhs]["length"]):
-            del_start = min([int(e[2].split(":")[0]) for e in filter(lambda e: e[2] != "lambda", DG.edges(lhs, data="variant"))])
-            del_end = max([int(e[2].split(":")[1].split("/")[0]) for e in filter(lambda e: e[2] != "lambda", DG.in_edges(rhs, data="variant"))])
-            ins_start = DG.nodes[lhs]["col"] + del_start - DG.nodes[lhs]["row"]
-            ins_end = DG.nodes[rhs]["col"] + del_end - DG.nodes[rhs]["row"]
+        if not (mdg.nodes[lhs]["row"] + mdg.nodes[lhs]["length"] == mdg.nodes[rhs]["row"] + mdg.nodes[rhs]["length"] and
+                mdg.nodes[lhs]["col"] + mdg.nodes[lhs]["length"] == mdg.nodes[rhs]["col"] + mdg.nodes[rhs]["length"]):
+            del_start = min([int(e[2].split(":")[0]) for e in filter(lambda e: e[2] != "lambda", mdg.edges(lhs, data="variant"))])
+            del_end = max([int(e[2].split(":")[1].split("/")[0]) for e in filter(lambda e: e[2] != "lambda", mdg.in_edges(rhs, data="variant"))])
+            ins_start = mdg.nodes[lhs]["col"] + del_start - mdg.nodes[lhs]["row"]
+            ins_end = mdg.nodes[rhs]["col"] + del_end - mdg.nodes[rhs]["row"]
             v = Variant(del_start, del_end, observed[ins_start: ins_end])
             local_supremal.append(v)
         lhs = rhs
