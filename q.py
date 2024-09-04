@@ -68,7 +68,7 @@ def main():
         rhs = postdoms[lhs]
         if not (mdg.nodes[lhs]["row"] + mdg.nodes[lhs]["length"] == mdg.nodes[rhs]["row"] + mdg.nodes[rhs]["length"] and
                 mdg.nodes[lhs]["col"] + mdg.nodes[lhs]["length"] == mdg.nodes[rhs]["col"] + mdg.nodes[rhs]["length"]):
-            del_start = min([e[2].start for e in filter(lambda e: e[2], mdg.edges(lhs, data="variant"))])
+            del_start = min([e[2].start for e in filter(lambda e: e[2], mdg.out_edges(lhs, data="variant"))])
             del_end = max([e[2].end for e in filter(lambda e: e[2], mdg.in_edges(rhs, data="variant"))])
             ins_start = mdg.nodes[lhs]["col"] + del_start - mdg.nodes[lhs]["row"]
             ins_end = mdg.nodes[rhs]["col"] + del_end - mdg.nodes[rhs]["row"]
