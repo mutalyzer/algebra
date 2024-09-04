@@ -33,7 +33,10 @@ def main():
     source = cgraph["source"]
     i = iter(cgraph["nodes"])
     while True:
-        sink = next(i)
+        try:
+            sink = next(i)
+        except StopIteration:
+            break
         if sink != source:
             break
 
