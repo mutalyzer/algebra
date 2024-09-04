@@ -37,10 +37,19 @@ def main():
         if sink != source:
             break
 
+    # Convert C string variant into Variant object
+    def str2var(desc):
+        if desc == "lambda":
+            return None
+
+        start, remainder = desc.split(":")
+        end, inserted = remainder.split("/")
+        return Variant(int(start), int(end), inserted)
+
     # Convert C graph to NetworkX
     mdg = nx.MultiDiGraph()
     mdg.add_nodes_from([(k, cgraph["nodes"][k]) for k in cgraph["nodes"]])
-    mdg.add_edges_from([(e['head'], e['tail'], {'variant': e['variant'], 'weight': 0 if e['variant'] == 'lambda' else 1}) for e in cgraph["edges"]])
+    mdg.add_edges_from([(e['head'], e['tail'], {'variant': str2var(e['variant']), 'weight': 0 if str(e['variant']) == 'lambda' else 1}) for e in cgraph["edges"]])
 
     # Find all shortest paths and create a new subgraph with only those nodes
     all_paths = nx.all_shortest_paths(mdg, source, sink, weight="weight")
@@ -56,8 +65,8 @@ def main():
         rhs = postdoms[lhs]
         if not (mdg.nodes[lhs]["row"] + mdg.nodes[lhs]["length"] == mdg.nodes[rhs]["row"] + mdg.nodes[rhs]["length"] and
                 mdg.nodes[lhs]["col"] + mdg.nodes[lhs]["length"] == mdg.nodes[rhs]["col"] + mdg.nodes[rhs]["length"]):
-            del_start = min([int(e[2].split(":")[0]) for e in filter(lambda e: e[2] != "lambda", mdg.edges(lhs, data="variant"))])
-            del_end = max([int(e[2].split(":")[1].split("/")[0]) for e in filter(lambda e: e[2] != "lambda", mdg.in_edges(rhs, data="variant"))])
+            del_start = min([e[2].start for e in filter(lambda e: e[2], mdg.edges(lhs, data="variant"))])
+            del_end = max([e[2].end for e in filter(lambda e: e[2], mdg.in_edges(rhs, data="variant"))])
             ins_start = mdg.nodes[lhs]["col"] + del_start - mdg.nodes[lhs]["row"]
             ins_end = mdg.nodes[rhs]["col"] + del_end - mdg.nodes[rhs]["row"]
             v = Variant(del_start, del_end, observed[ins_start: ins_end])
