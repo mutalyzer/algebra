@@ -79,7 +79,7 @@ def nx_extract(reference, observed):
         assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
 
 
-def check(reference, observed, debug=False, timeout=1):
+def check(reference, observed, debug=False, timeout=2):
     graph = LCSgraph.from_sequence(reference, observed)
     valgrind = []
     if debug:

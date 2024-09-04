@@ -1,8 +1,9 @@
+#include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint32_t
 #include <stdio.h>      // stderr, fprintf, printf
 #include <stdlib.h>     // EXIT_*
-#include <string.h>     // strlen
+#include <string.h>     // strlen, strncmp
 
 #include "../include/alloc.h"           // VA_Allocator
 #include "../include/array.h"           // va_array_*
@@ -498,36 +499,27 @@ canonical(VA_Allocator const allocator, Graph const graph, size_t const len_obs,
 
                 fprintf(stderr, "        = %u (%u:%u)\n", visited[lambda].lca, visited[lambda].start, visited[lambda].end);
             } // if
+            else if (visited[head].next == lambda)
+            {
+                fprintf(stderr, "    improve lambda in place %u @ %u\n", lambda, visited[head].depth);
+                visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, visited[lambda].prev, visited[lambda].next};
+            } // if
             else
             {
                 fprintf(stderr, "    improve lambda %u @ %u\n", lambda, visited[head].depth);
 
-                // FIXME: what about the original link to lambda?
-                //        lambda is already in the queue and should be *moved* instead of added again (in stack order)
-                //        if moving is difficult we can possibly skip nodes that are already processed (in the main loop)
-                // possibly related:
-                // INFINITE LOOP: CAGCGAGT CGTGTAAGGTGTACTGAAA
-                // FIXED by doubly linked list
-
-                if (visited[head].next == lambda)
+                if (lambda == tail)
                 {
-                    visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, visited[lambda].prev, visited[lambda].next};
+                    tail = visited[lambda].prev;
                 } // if
                 else
                 {
-                    if (lambda == tail)
-                    {
-                        tail = visited[lambda].prev;
-                    } // if
-                    else
-                    {
-                        visited[visited[lambda].next].prev = visited[lambda].prev;
-                    } // else
-                    visited[visited[head].next].prev = lambda;
-                    visited[visited[lambda].prev].next = visited[lambda].next;
-                    visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, head, visited[head].next};
-                    visited[head].next = lambda;
+                    visited[visited[lambda].next].prev = visited[lambda].prev;
                 } // else
+                visited[visited[head].next].prev = lambda;
+                visited[visited[lambda].prev].next = visited[lambda].next;
+                visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, -1, -1, head, visited[head].next};
+                visited[head].next = lambda;
             } // else
 
             //print_lca_table(length, visited, head, tail);
@@ -694,7 +686,7 @@ lambda_edges(Graph const graph, size_t const len_obs, char const observed[static
 
 
 static void
-to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs], bool lambda)
+to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs], bool const lambda)
 {
     printf("{\n    \"source\": \"s%u\",\n    \"nodes\": {\n", graph.source);
     for (uint32_t i = 0; i < va_array_length(graph.nodes); ++i)
@@ -735,10 +727,10 @@ main(int argc, char* argv[static argc + 1])
     char const* const restrict reference = argv[1];
     char const* const restrict observed = argv[2];
     bool lambda = false;
-    if (argc == 4)
+    if (argc == 4 && strncmp(argv[3], "true", 4) == 0)
     {
-        lambda = (bool)argv[3];
-    }
+        lambda = true;
+    } // if
 
     size_t const len_ref = strlen(reference);
     size_t const len_obs = strlen(observed);
