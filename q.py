@@ -17,8 +17,8 @@ def main():
         reference = sys.argv[1]
         observed = sys.argv[2]
     else:
-        reference = random_sequence(32, 8)
-        observed = random_sequence(32, 8)
+        reference = random_sequence(32, 0)
+        observed = random_sequence(32, 0)
     print(reference, observed)
 
     # Create graph in C
@@ -29,6 +29,14 @@ def main():
         print(f'\"{stdout}\"')
         raise exc
 
+    # Set source and guess sink
+    source = cgraph["source"]
+    i = iter(cgraph["nodes"])
+    while True:
+        sink = next(i)
+        if sink != source:
+            break
+
     # Convert C graph to NetworkX
     DG = nx.MultiDiGraph()
     DG.add_nodes_from([(k, cgraph["nodes"][k]) for k in cgraph["nodes"]])
@@ -37,11 +45,11 @@ def main():
     DG = DG.subgraph(set(chain(*all_paths)))
 
     # Calculate the dominators on the reversed graph
-    postdoms = nx.immediate_dominators(DG.reverse(), "s0")
+    postdoms = nx.immediate_dominators(mdg.reverse(), sink)
 
     # Extract local supremals from reduced graph
     local_supremal = []
-    lhs = cgraph["source"]
+    lhs = source
     while lhs != postdoms[lhs]:
         rhs = postdoms[lhs]
         if not (DG.nodes[lhs]["row"] + DG.nodes[lhs]["length"] == DG.nodes[rhs]["row"] + DG.nodes[rhs]["length"] and
@@ -53,7 +61,6 @@ def main():
             v = Variant(del_start, del_end, observed[ins_start: ins_end])
             local_supremal.append(v)
         lhs = rhs
-
     print(local_supremal)
 
     # Validate against original Python implementation
