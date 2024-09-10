@@ -12,13 +12,13 @@ def test_diagonal(reference, observed, variants):
 
 
 @pytest.mark.parametrize("reference, observed, variants, hgvs", [
-    ("AAATAATATAATAATTTAT", "AAATAATAATTTAT", [Variant(2, 13, "ATAATA")], "3_12ATAAT[1]"),
+    ("AAATAATATAATAATTTAT", "AAATAATAATTTAT", [Variant(2, 13, "ATAATA")], "4_13TAATA[1]"),
     ("ACATATATATTATATATAAAA", "ACATATATATAAAA", [Variant(3, 17, "TATATAT")], "4_17TATATAT[1]"),
     ("TTTCTCTCTCTCTCTC", "TTTCTCTCTCTCCTCTCTCTC", [Variant(7, 12, "CTCTCCTCTC")], "8_12dup"),
     ("AAATCTGTATGGAG", "AAATCTGTTGTTGTATGGAG", [Variant(5, 8, "TGTTGTTGT")], "6_8TGT[3]"),
     ("AAAGCATTTTAAA", "AAAGCATGTGTTTTAAA", [Variant(6, 7, "TGTGT")], "7_8insGT[2]"),
     ("CAATAAATACAG", "CAATACAG", [Variant(1, 9, "AATA")], "2_9AATA[1]"),
-    ("AGTGCTTTGTTTTGTTATAATTAAC", "AGTGCTTTGTTATAATTAAC", [Variant(5, 16, "TTTGTT")], "6_15TTTGT[1]"),
+    ("AGTGCTTTGTTTTGTTATAATTAAC", "AGTGCTTTGTTATAATTAAC", [Variant(5, 16, "TTTGTT")], "7_16TTGTT[1]"),
     ("ATTGCATTTCTTCAATACTAATTTCTAAAGCCTTT", "ATTGCATTTCTTCAATACTAATTTCTAAAGCCTTTTTCTTCAATACTAATTTCTAAAGCCTTT", [Variant(6, 35, "TTTCTTCAATACTAATTTCTAAAGCCTTTTTCTTCAATACTAATTTCTAAAGCCTTT")], "8_35dup"),
     ("TTCTTCAATACTAATTTCTAAAGCCTTTCCG", "TTCTTCAATACTAATTTCTAAAGCCTTTTTCTTCAATACTAATTTCTAAAGCCTTTCCG", [Variant(0, 28, "TTCTTCAATACTAATTTCTAAAGCCTTTTTCTTCAATACTAATTTCTAAAGCCTTT")], "1_28dup"),
     ("AAGTCTCATGGCTATTTGCA", "AAGTCTCATGGCTATATGGCTATTTGCA", [Variant(7, 15, "ATGGCTATATGGCTAT")], "8_15dup"),
@@ -55,7 +55,7 @@ def test_diagonal(reference, observed, variants):
     ("CATCAT", "CAT", [Variant(0, 6, "CAT")], "1_6CAT[1]"),
     ("CATCAT", "", [Variant(0, 6, "")], "1_6del"),
     ("", "CATCAT", [Variant(0, 0, "CATCAT")], "0_1insCAT[2]"),
-    ("CATCATC", "CATCATCATC", [Variant(0, 7, "CATCATCATC")], "1_6CAT[3]"),
+    ("CATCATC", "CATCATCATC", [Variant(0, 7, "CATCATCATC")], "2_7ATC[3]"),
     ("CATCA", "CATCATCAT", [Variant(5, 5, "TCAT")], "5_6insTCAT"),
     ("ATCAT", "CATCATCAT", [Variant(0, 0, "CATC")], "0_1insCATC"),
     ("TT", "TATT", [Variant(0, 1, "TAT")], "1_2insAT"),
@@ -75,7 +75,7 @@ def test_diagonal(reference, observed, variants):
     ("CATATC", "CC", [Variant(1, 5, "")], "2_5del"),
     ("CC", "CATATC", [Variant(1, 1, "ATAT")], "1_2insAT[2]"),
     ("TCAT", "TCATCAT", [Variant(0, 4, "TCATCAT")], "2_4dup"),
-    ("TCATCAT", "TCAT", [Variant(0, 7, "TCAT")], "1_6TCA[1]"),
+    ("TCATCAT", "TCAT", [Variant(0, 7, "TCAT")], "2_7CAT[1]"),
     ("CGACTGACGTTACCGAAGTTTTTTGTACAGTCGACTGACGTTCGTCCATGATACAGAGTATGCGCAATTCC",
      "CGACTGACATTACCGAAGTTTTTTTGTACAGGGTTCTGACGATCGTCCATGGCACGGGTATGCGCGCAATTGC",
      [Variant(8, 9, "A"), Variant(18, 24, "TTTTTTT"), Variant(29, 35, "GGGTTC"), Variant(40, 41, "A"), Variant(50, 57, "GCACGG"), Variant(61, 65, "GCGCGC"), Variant(69, 70, "G")],
