@@ -148,7 +148,7 @@ build_graph(VA_Allocator const allocator,
                     if (heads[k].incoming == i)
                     {
                         size_t const split_idx = heads[k].idx;
-                        heads[k].idx = add_node(allocator, &graph, heads[k].row, heads[k].col, graph.nodes[split_idx].length);
+                        heads[k].idx = add_node(allocator, &graph, heads[k].row, heads[k].col, graph.nodes[split_idx].length - 1);
                         heads[k].incoming = 0;
 
                         // lambda-edge
