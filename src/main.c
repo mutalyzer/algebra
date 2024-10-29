@@ -1,5 +1,5 @@
 #include <stdbool.h>    // bool, false, true
-#include <stddef.h>     // NULL, size_t
+#include <stddef.h>     // NULL, ptrdiff_t, size_t
 #include <stdint.h>     // uint32_t
 #include <stdio.h>      // stderr, fprintf, printf
 #include <stdlib.h>     // EXIT_*
@@ -237,13 +237,13 @@ build_graph(VA_Allocator const allocator,
 static void
 to_dot(Graph const graph, size_t const len_obs, char const observed[static len_obs])
 {
-    fprintf(stderr, "digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\nsi->s%u\n", graph.source);
+    fprintf(stderr, "digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[label=\"\",shape=none,width=0]\nsi->s%u\n", graph.source);
     for (uint32_t i = 0; i < va_array_length(graph.nodes); ++i)
     {
         fprintf(stderr, "s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
         if (graph.nodes[i].lambda != (uint32_t) -1)
         {
-            fprintf(stderr, "s%u->s%u[label=\"&#955;\",style=\"dashed\"]\n", i, graph.nodes[i].lambda);
+            fprintf(stderr, "s%u->s%u[label=\"&lambda;\",style=\"dashed\"]\n", i, graph.nodes[i].lambda);
         } // if
         for (uint32_t j = graph.nodes[i].edges; j != (uint32_t) -1; j = graph.edges[j].next)
         {
@@ -771,7 +771,41 @@ main(int argc, char* argv[static argc + 1])
 
     //canonical(va_std_allocator, graph, len_obs, observed);
 
-    to_json(graph, len_obs, observed, lambda);
+    //to_json(graph, len_obs, observed, lambda);
+
+    for (uint32_t head = 0; head < va_array_length(graph.nodes); ++head)
+    {
+        for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
+        {
+            uint32_t const tail = graph.edges[i].tail;
+            printf(
+                "(%u, %u, %u) -> (%u, %u, %u)\n",
+                graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length,
+                graph.nodes[tail].row, graph.nodes[tail].col, graph.nodes[tail].length
+            );
+
+            ptrdiff_t const offset = MIN(
+                (ptrdiff_t) graph.nodes[tail].row - (ptrdiff_t) graph.nodes[head].row + (graph.nodes[head].length == 0),
+                (ptrdiff_t) graph.nodes[tail].col - (ptrdiff_t) graph.nodes[head].col + (graph.nodes[head].length == 0)
+            ) - 1;
+
+            uint32_t const head_start = offset > 0 ? MIN(offset, graph.nodes[head].length - 1) : 0;
+            uint32_t const tail_start = offset < 0 ? MIN(-offset, graph.nodes[tail].length - 1) : 0;
+            uint32_t const length = MIN(graph.nodes[head].length - head_start + (graph.nodes[head].length == 0), graph.nodes[tail].length - tail_start + (graph.nodes[tail].length == 0));
+
+            //printf("    %zd: (%u, %u): %u\n", offset, head_start, tail_start, length);
+
+            for (uint32_t j = 0; j < length; ++j)
+            {
+                VA_Variant const variant = {graph.nodes[head].row + head_start + j + (graph.nodes[head].length > 0), graph.nodes[tail].row + tail_start + j, graph.nodes[head].col + head_start + j + (graph.nodes[head].length > 0), graph.nodes[tail].col + tail_start + j};
+                printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n",
+                    graph.nodes[head].row + head_start + j, graph.nodes[head].col + head_start + j,
+                    graph.nodes[tail].row + tail_start + j, graph.nodes[tail].col + tail_start + j,
+                    print_variant(variant, observed)
+                );
+            } // for
+        } // for
+    } // for
 
     destroy(va_std_allocator, &graph);
 
