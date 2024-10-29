@@ -70,9 +70,12 @@ destroy(VA_Allocator const allocator, Graph* const graph)
 } // destroy
 
 
-static bool
+static inline bool
 is_tail(Graph const graph, uint32_t const head, uint32_t const tail)
 {
+    return head != (uint32_t) -1 && graph.edges[graph.nodes[head].edges].tail == tail;
+/*
+    // FIXME: how efficient is this?
     if (head == (uint32_t) -1)
     {
         return false;
@@ -86,6 +89,7 @@ is_tail(Graph const graph, uint32_t const head, uint32_t const tail)
         } // if
     } // for
     return false;
+*/
 } // is_tail
 
 
@@ -163,7 +167,6 @@ build_graph(VA_Allocator const allocator,
                 {
                     max_sink = MAX(max_sink, tail.row + tail.length - 1);
 
-                    // FIXME: how efficient is this?
                     if (is_tail(graph, heads[k].idx, tail.idx))
                     {
                         continue;
@@ -235,7 +238,6 @@ build_graph(VA_Allocator const allocator,
         {
             max_sink = MAX(max_sink, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1);
 
-            // FIXME: how efficient is this?
             if (is_tail(graph, source.idx, lcs_nodes[0][i].idx))
             {
                 continue;
