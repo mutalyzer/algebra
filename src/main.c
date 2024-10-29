@@ -70,6 +70,25 @@ destroy(VA_Allocator const allocator, Graph* const graph)
 } // destroy
 
 
+static bool
+is_tail(Graph const graph, uint32_t const head, uint32_t const tail)
+{
+    if (head == (uint32_t) -1)
+    {
+        return false;
+    } // if
+
+    for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
+    {
+        if (graph.edges[i].tail == tail)
+        {
+            return true;
+        } // if
+    } // for
+    return false;
+} // is_tail
+
+
 static Graph
 build_graph(VA_Allocator const allocator,
             size_t const len_ref, size_t const len_obs,
@@ -142,8 +161,15 @@ build_graph(VA_Allocator const allocator,
             {
                 if (heads[k].row + heads[k].length < tail.row + tail.length && heads[k].col + heads[k].length < tail.col + tail.length)
                 {
-                    VA_Variant const variant = {heads[k].row + heads[k].length, tail.row + tail.length - 1, heads[k].col + heads[k].length - shift, tail.col + tail.length - 1 - shift};
                     max_sink = MAX(max_sink, tail.row + tail.length - 1);
+
+                    // FIXME: how efficient is this?
+                    if (is_tail(graph, heads[k].idx, tail.idx))
+                    {
+                        continue;
+                    } // if
+
+                    VA_Variant const variant = {heads[k].row + heads[k].length, tail.row + tail.length - 1, heads[k].col + heads[k].length - shift, tail.col + tail.length - 1 - shift};
 
                     if (heads[k].incoming == i)
                     {
@@ -207,8 +233,15 @@ build_graph(VA_Allocator const allocator,
 
         if (source.row < lcs_nodes[0][i].row + lcs_nodes[0][i].length && source.col < lcs_nodes[0][i].col + lcs_nodes[0][i].length)
         {
-            VA_Variant const variant = {source.row, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1, source.col - shift, lcs_nodes[0][i].col + lcs_nodes[0][i].length - 1 - shift};
             max_sink = MAX(max_sink, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1);
+
+            // FIXME: how efficient is this?
+            if (is_tail(graph, source.idx, lcs_nodes[0][i].idx))
+            {
+                continue;
+            } // if
+
+            VA_Variant const variant = {source.row, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1, source.col - shift, lcs_nodes[0][i].col + lcs_nodes[0][i].length - 1 - shift};
             graph.nodes[source.idx].edges = add_edge(allocator, &graph, lcs_nodes[0][i].idx, graph.nodes[source.idx].edges, variant);
         } // if
     } // for
