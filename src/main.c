@@ -73,7 +73,9 @@ destroy(VA_Allocator const allocator, Graph* const graph)
 static inline bool
 is_tail(Graph const graph, uint32_t const head, uint32_t const tail)
 {
-    return head != (uint32_t) -1 && graph.edges[graph.nodes[head].edges].tail == tail;
+    return head != (uint32_t) -1 &&
+           graph.nodes[head].edges != (uint32_t) -1 &&
+           graph.edges[graph.nodes[head].edges].tail == tail;
 /*
     // FIXME: how efficient is this?
     if (head == (uint32_t) -1)
