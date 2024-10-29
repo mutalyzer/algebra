@@ -788,21 +788,29 @@ main(int argc, char* argv[static argc + 1])
 
             ptrdiff_t const row = (ptrdiff_t) graph.nodes[head].row - is_source;
             ptrdiff_t const col = (ptrdiff_t) graph.nodes[head].col - is_source;
-            uint32_t const len = graph.nodes[head].length + is_source;
+            uint32_t const length = graph.nodes[head].length + is_source;
 
-            //printf("%zd, %zd, %u\n", row, col, len);
+            //printf("%zd, %zd, %u\n", row, col, length);
 
-            ptrdiff_t const offset = MIN((ptrdiff_t) graph.nodes[tail].row - row, (ptrdiff_t) graph.nodes[tail].col - col) - 1;
-
-            uint32_t const head_start = offset > 0 ? MIN(offset, len - 1) : 0;
+            ptrdiff_t const offset = MIN(
+                (ptrdiff_t) graph.nodes[tail].row - row,
+                (ptrdiff_t) graph.nodes[tail].col - col
+            ) - 1;
+            uint32_t const head_start = offset > 0 ? MIN(offset, length - 1) : 0;
             uint32_t const tail_start = offset < 0 ? MIN(-offset, graph.nodes[tail].length - 1) : 0;
-            uint32_t const length = MIN(len - head_start, graph.nodes[tail].length - tail_start + is_sink);
 
-            //printf("    %zd: (%u, %u): %u\n", offset, head_start, tail_start, length);
+            //printf("    %zd: (%u, %u): %u\n", offset, head_start, tail_start);
 
-            for (uint32_t j = 0; j < length; ++j)
+            for (uint32_t j = 0; j < MIN(length - head_start, graph.nodes[tail].length - tail_start + is_sink); ++j)
             {
-                VA_Variant const variant = {graph.nodes[head].row + head_start + j + !is_source, graph.nodes[tail].row + tail_start + j, graph.nodes[head].col + head_start + j + !is_source, graph.nodes[tail].col + tail_start + j};
+                VA_Variant const variant =
+                {
+                    row + head_start + j + 1,
+                    graph.nodes[tail].row + tail_start + j,
+                    col + head_start + j + 1,
+                    graph.nodes[tail].col + tail_start + j
+                };
+
                 printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n",
                     graph.nodes[head].row + head_start + j, graph.nodes[head].col + head_start + j,
                     graph.nodes[tail].row + tail_start + j, graph.nodes[tail].col + tail_start + j,
