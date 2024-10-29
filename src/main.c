@@ -783,21 +783,26 @@ main(int argc, char* argv[static argc + 1])
                 graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length,
                 graph.nodes[tail].row, graph.nodes[tail].col, graph.nodes[tail].length
             );
+            bool const is_source = graph.source == head;
+            bool const is_sink = graph.nodes[tail].edges == (uint32_t) -1;
 
-            ptrdiff_t const offset = MIN(
-                (ptrdiff_t) graph.nodes[tail].row - (ptrdiff_t) graph.nodes[head].row + (graph.nodes[head].length == 0),
-                (ptrdiff_t) graph.nodes[tail].col - (ptrdiff_t) graph.nodes[head].col + (graph.nodes[head].length == 0)
-            ) - 1;
+            ptrdiff_t const row = (ptrdiff_t) graph.nodes[head].row - is_source;
+            ptrdiff_t const col = (ptrdiff_t) graph.nodes[head].col - is_source;
+            uint32_t const len = graph.nodes[head].length + is_source;
 
-            uint32_t const head_start = offset > 0 ? MIN(offset, graph.nodes[head].length - 1) : 0;
+            //printf("%zd, %zd, %u\n", row, col, len);
+
+            ptrdiff_t const offset = MIN((ptrdiff_t) graph.nodes[tail].row - row, (ptrdiff_t) graph.nodes[tail].col - col) - 1;
+
+            uint32_t const head_start = offset > 0 ? MIN(offset, len - 1) : 0;
             uint32_t const tail_start = offset < 0 ? MIN(-offset, graph.nodes[tail].length - 1) : 0;
-            uint32_t const length = MIN(graph.nodes[head].length - head_start + (graph.nodes[head].length == 0), graph.nodes[tail].length - tail_start + (graph.nodes[tail].length == 0));
+            uint32_t const length = MIN(len - head_start, graph.nodes[tail].length - tail_start + is_sink);
 
             //printf("    %zd: (%u, %u): %u\n", offset, head_start, tail_start, length);
 
             for (uint32_t j = 0; j < length; ++j)
             {
-                VA_Variant const variant = {graph.nodes[head].row + head_start + j + (graph.nodes[head].length > 0), graph.nodes[tail].row + tail_start + j, graph.nodes[head].col + head_start + j + (graph.nodes[head].length > 0), graph.nodes[tail].col + tail_start + j};
+                VA_Variant const variant = {graph.nodes[head].row + head_start + j + !is_source, graph.nodes[tail].row + tail_start + j, graph.nodes[head].col + head_start + j + !is_source, graph.nodes[tail].col + tail_start + j};
                 printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n",
                     graph.nodes[head].row + head_start + j, graph.nodes[head].col + head_start + j,
                     graph.nodes[tail].row + tail_start + j, graph.nodes[tail].col + tail_start + j,
