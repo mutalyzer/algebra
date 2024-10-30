@@ -73,6 +73,7 @@ destroy(VA_Allocator const allocator, Graph* const graph)
 static inline bool
 is_tail(Graph const graph, uint32_t const head, uint32_t const tail)
 {
+    return false;
     return head != (uint32_t) -1 &&
            graph.nodes[head].edges != (uint32_t) -1 &&
            graph.edges[graph.nodes[head].edges].tail == tail;
@@ -136,6 +137,8 @@ build_graph(VA_Allocator const allocator,
     {
         if (heads[i].row + heads[i].length < sink.row + sink.length && heads[i].col + heads[i].length < sink.col + sink.length)
         {
+            printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", heads[i].row, heads[i].col, heads[i].length, sink.row, sink.col, sink.length);
+
             VA_Variant const variant = {heads[i].row + heads[i].length, sink.row + sink.length - 1, heads[i].col + heads[i].length - shift, sink.col + sink.length - 1 - shift};
             max_sink = MAX(max_sink, sink.row + sink.length - 1);
             heads[i].idx = add_node(allocator, &graph, heads[i].row, heads[i].col, heads[i].length);
@@ -149,10 +152,22 @@ build_graph(VA_Allocator const allocator,
         sink.length -= 1;
         sink.incoming = len_lcs - 1;
         va_array_insert(allocator, lcs_nodes[len_lcs - 1], sink, here);
+
+        printf("INSERT (%u %u %u) here: %zu\n", sink.row, sink.col, sink.length, here);
     } // if
 
     for (size_t i = len_lcs - 1; i >= 1; --i)
     {
+        for (size_t j = 0; j < len_lcs; ++j)
+        {
+            printf("%zu: ", j);
+            for (size_t k = 0; k < va_array_length(lcs_nodes[j]); ++k)
+            {
+                printf("(%u %u %u) ", lcs_nodes[j][k].row, lcs_nodes[j][k].col, lcs_nodes[j][k].length);
+            } // for
+            printf("\n");
+        } // for
+
         for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
         {
             if (lcs_nodes[i][j].idx == (uint32_t) -1)
@@ -169,6 +184,8 @@ build_graph(VA_Allocator const allocator,
                 {
                     max_sink = MAX(max_sink, tail.row + tail.length - 1);
 
+                    printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length);
+
                     if (is_tail(graph, heads[k].idx, tail.idx))
                     {
                         continue;
@@ -179,7 +196,7 @@ build_graph(VA_Allocator const allocator,
                     if (heads[k].incoming == i)
                     {
                         size_t const split_idx = heads[k].idx;
-                        heads[k].idx = add_node(allocator, &graph, heads[k].row, heads[k].col, graph.nodes[split_idx].length - 1);
+                        heads[k].idx = add_node(allocator, &graph, heads[k].row, heads[k].col, heads[k].length);
                         heads[k].incoming = 0;
 
                         // lambda-edge
@@ -211,10 +228,24 @@ build_graph(VA_Allocator const allocator,
                     lcs_nodes[i][j].incoming = i;
                 } // if
                 va_array_insert(allocator, lcs_nodes[i - 1], lcs_nodes[i][j], here);
+
+                printf("INSERT (%u %u %u) here: %zu\n", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length, here);
+
             } // if
         } // for
         lcs_nodes[i] = va_array_destroy(allocator, lcs_nodes[i]);
     } // for
+
+    for (size_t j = 0; j < len_lcs; ++j)
+    {
+        printf("%zu: ", j);
+        for (size_t k = 0; k < va_array_length(lcs_nodes[j]); ++k)
+        {
+            printf("(%u %u %u) ", lcs_nodes[j][k].row, lcs_nodes[j][k].col, lcs_nodes[j][k].length);
+        } // for
+        printf("\n");
+    } // for
+
 
     VA_LCS_Node source = lcs_nodes[0][0];
 
@@ -239,6 +270,8 @@ build_graph(VA_Allocator const allocator,
         if (source.row < lcs_nodes[0][i].row + lcs_nodes[0][i].length && source.col < lcs_nodes[0][i].col + lcs_nodes[0][i].length)
         {
             max_sink = MAX(max_sink, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1);
+
+            printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
 
             if (is_tail(graph, source.idx, lcs_nodes[0][i].idx))
             {
