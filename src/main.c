@@ -70,32 +70,6 @@ destroy(VA_Allocator const allocator, Graph* const graph)
 } // destroy
 
 
-static inline bool
-is_tail(Graph const graph, uint32_t const head, uint32_t const tail)
-{
-    return false;
-    return head != (uint32_t) -1 &&
-           graph.nodes[head].edges != (uint32_t) -1 &&
-           graph.edges[graph.nodes[head].edges].tail == tail;
-/*
-    // FIXME: how efficient is this?
-    if (head == (uint32_t) -1)
-    {
-        return false;
-    } // if
-
-    for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
-    {
-        if (graph.edges[i].tail == tail)
-        {
-            return true;
-        } // if
-    } // for
-    return false;
-*/
-} // is_tail
-
-
 static Graph
 build_graph(VA_Allocator const allocator,
             size_t const len_ref, size_t const len_obs,
@@ -137,7 +111,7 @@ build_graph(VA_Allocator const allocator,
     {
         if (heads[i].row + heads[i].length < sink.row + sink.length && heads[i].col + heads[i].length < sink.col + sink.length)
         {
-            printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", heads[i].row, heads[i].col, heads[i].length, sink.row, sink.col, sink.length);
+            //printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", heads[i].row, heads[i].col, heads[i].length, sink.row, sink.col, sink.length);
 
             VA_Variant const variant = {heads[i].row + heads[i].length, sink.row + sink.length - 1, heads[i].col + heads[i].length - shift, sink.col + sink.length - 1 - shift};
             max_sink = MAX(max_sink, sink.row + sink.length - 1);
@@ -153,21 +127,11 @@ build_graph(VA_Allocator const allocator,
         sink.incoming = len_lcs - 1;
         va_array_insert(allocator, lcs_nodes[len_lcs - 1], sink, here);
 
-        printf("INSERT (%u %u %u) here: %zu\n", sink.row, sink.col, sink.length, here);
+        //printf("INSERT (%u %u %u) here: %zu\n", sink.row, sink.col, sink.length, here);
     } // if
 
     for (size_t i = len_lcs - 1; i >= 1; --i)
     {
-        for (size_t j = 0; j < len_lcs; ++j)
-        {
-            printf("%zu: ", j);
-            for (size_t k = 0; k < va_array_length(lcs_nodes[j]); ++k)
-            {
-                printf("(%u %u %u) ", lcs_nodes[j][k].row, lcs_nodes[j][k].col, lcs_nodes[j][k].length);
-            } // for
-            printf("\n");
-        } // for
-
         for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
         {
             if (lcs_nodes[i][j].idx == (uint32_t) -1)
@@ -184,12 +148,7 @@ build_graph(VA_Allocator const allocator,
                 {
                     max_sink = MAX(max_sink, tail.row + tail.length - 1);
 
-                    printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length);
-
-                    if (is_tail(graph, heads[k].idx, tail.idx))
-                    {
-                        continue;
-                    } // if
+                    //printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length);
 
                     VA_Variant const variant = {heads[k].row + heads[k].length, tail.row + tail.length - 1, heads[k].col + heads[k].length - shift, tail.col + tail.length - 1 - shift};
 
@@ -229,23 +188,12 @@ build_graph(VA_Allocator const allocator,
                 } // if
                 va_array_insert(allocator, lcs_nodes[i - 1], lcs_nodes[i][j], here);
 
-                printf("INSERT (%u %u %u) here: %zu\n", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length, here);
+                //printf("INSERT (%u %u %u) here: %zu\n", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length, here);
 
             } // if
         } // for
         lcs_nodes[i] = va_array_destroy(allocator, lcs_nodes[i]);
     } // for
-
-    for (size_t j = 0; j < len_lcs; ++j)
-    {
-        printf("%zu: ", j);
-        for (size_t k = 0; k < va_array_length(lcs_nodes[j]); ++k)
-        {
-            printf("(%u %u %u) ", lcs_nodes[j][k].row, lcs_nodes[j][k].col, lcs_nodes[j][k].length);
-        } // for
-        printf("\n");
-    } // for
-
 
     VA_LCS_Node source = lcs_nodes[0][0];
 
@@ -271,12 +219,7 @@ build_graph(VA_Allocator const allocator,
         {
             max_sink = MAX(max_sink, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1);
 
-            printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
-
-            if (is_tail(graph, source.idx, lcs_nodes[0][i].idx))
-            {
-                continue;
-            } // if
+            //printf("MAKE EDGE (%u %u %u) -> (%u %u %u)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
 
             VA_Variant const variant = {source.row, lcs_nodes[0][i].row + lcs_nodes[0][i].length - 1, source.col - shift, lcs_nodes[0][i].col + lcs_nodes[0][i].length - 1 - shift};
             graph.nodes[source.idx].edges = add_edge(allocator, &graph, lcs_nodes[0][i].idx, graph.nodes[source.idx].edges, variant);
@@ -780,6 +723,49 @@ to_json(Graph const graph, size_t const len_obs, char const observed[static len_
 } // to_json
 
 
+static void
+edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_length,
+      uint32_t const tail_row, uint32_t const tail_col, uint32_t const tail_length,
+      bool const is_source, bool const is_sink,
+      size_t const len_obs, char const observed[static len_obs])
+{
+    printf(
+        "(%u, %u, %u) -> (%u, %u, %u)\n",
+        head_row, head_col, head_length,
+        tail_row, tail_col, tail_length
+    );
+
+    ptrdiff_t const row = (ptrdiff_t) head_row - is_source;
+    ptrdiff_t const col = (ptrdiff_t) head_col - is_source;
+    uint32_t const length = head_length + is_source;
+
+    //printf("%zd, %zd, %u\n", row, col, length);
+
+    ptrdiff_t const offset = MIN((ptrdiff_t) tail_row - row, (ptrdiff_t) tail_col - col) - 1;
+    uint32_t const head_start = offset > 0 ? MIN(offset, length - 1) : 0;
+    uint32_t const tail_start = offset < 0 ? MIN(-offset, tail_length - 1) : 0;
+
+    //printf("    %zd: (%u, %u)\n", offset, head_start, tail_start);
+
+    for (uint32_t j = 0; j < MIN(length - head_start, tail_length - tail_start + is_sink); ++j)
+    {
+        VA_Variant const variant =
+        {
+            row + head_start + j + 1,
+            tail_row + tail_start + j,
+            col + head_start + j + 1,
+            tail_col + tail_start + j
+        };
+
+        printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n",
+            head_row + head_start + j, head_col + head_start + j,
+            tail_row + tail_start + j, tail_col + tail_start + j,
+            print_variant(variant, observed)
+        );
+    } // for
+} // edges
+
+
 int
 main(int argc, char* argv[static argc + 1])
 {
@@ -845,50 +831,51 @@ main(int argc, char* argv[static argc + 1])
 
     for (uint32_t head = 0; head < va_array_length(graph.nodes); ++head)
     {
+        uint32_t* tails = va_array_init(va_std_allocator, 10, sizeof(*tails));
         for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
         {
             uint32_t const tail = graph.edges[i].tail;
-            printf(
-                "(%u, %u, %u) -> (%u, %u, %u)\n",
-                graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length,
-                graph.nodes[tail].row, graph.nodes[tail].col, graph.nodes[tail].length
-            );
-            bool const is_source = graph.source == head;
-            bool const is_sink = graph.nodes[tail].edges == (uint32_t) -1;
 
-            ptrdiff_t const row = (ptrdiff_t) graph.nodes[head].row - is_source;
-            ptrdiff_t const col = (ptrdiff_t) graph.nodes[head].col - is_source;
-            uint32_t const length = graph.nodes[head].length + is_source;
-
-            //printf("%zd, %zd, %u\n", row, col, length);
-
-            ptrdiff_t const offset = MIN(
-                (ptrdiff_t) graph.nodes[tail].row - row,
-                (ptrdiff_t) graph.nodes[tail].col - col
-            ) - 1;
-            uint32_t const head_start = offset > 0 ? MIN(offset, length - 1) : 0;
-            uint32_t const tail_start = offset < 0 ? MIN(-offset, graph.nodes[tail].length - 1) : 0;
-
-            //printf("    %zd: (%u, %u): %u\n", offset, head_start, tail_start);
-
-            for (uint32_t j = 0; j < MIN(length - head_start, graph.nodes[tail].length - tail_start + is_sink); ++j)
+            bool found = false;
+            for (uint32_t j = 0; j < va_array_length(tails); ++j)
             {
-                VA_Variant const variant =
+                if (tail == tails[j])
                 {
-                    row + head_start + j + 1,
-                    graph.nodes[tail].row + tail_start + j,
-                    col + head_start + j + 1,
-                    graph.nodes[tail].col + tail_start + j
-                };
-
-                printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n",
-                    graph.nodes[head].row + head_start + j, graph.nodes[head].col + head_start + j,
-                    graph.nodes[tail].row + tail_start + j, graph.nodes[tail].col + tail_start + j,
-                    print_variant(variant, observed)
-                );
+                    found = true;
+                    break;
+                } // if
             } // for
+            if (found)
+            {
+                continue;
+            } // if
+
+            va_array_append(va_std_allocator, tails, tail);
+
+            edges(
+                graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length,
+                graph.nodes[tail].row, graph.nodes[tail].col, graph.nodes[tail].length,
+                graph.source == head, graph.nodes[tail].edges == (uint32_t) -1,
+                len_obs, observed
+           );
         } // for
+        tails = va_array_destroy(va_std_allocator, tails);
     } // for
+
+    /*
+    edges(1, 5, 5, 6, 6, 5, false, true, len_obs, observed);
+    edges(7, 8, 1, 6, 6, 4, false, false, len_obs, observed);
+    edges(4, 7, 1, 6, 6, 3, false, false, len_obs, observed);
+    edges(5, 0, 1, 6, 6, 1, false, false, len_obs, observed);
+    edges(1, 4, 1, 6, 6, 1, false, false, len_obs, observed);
+    edges(1, 3, 1, 6, 6, 1, false, false, len_obs, observed);
+    edges(1, 2, 1, 6, 6, 1, false, false, len_obs, observed);
+    edges(1, 1, 1, 6, 6, 1, false, false, len_obs, observed);
+    edges(7, 8, 1, 1, 5, 5, false, false, len_obs, observed);
+    edges(4, 7, 1, 1, 5, 4, false, false, len_obs, observed);
+    edges(5, 0, 1, 1, 5, 2, false, false, len_obs, observed);
+    edges(1, 4, 1, 1, 5, 2, false, false, len_obs, observed);
+    */
 
     destroy(va_std_allocator, &graph);
 
