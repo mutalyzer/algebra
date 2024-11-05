@@ -2,7 +2,7 @@
 #include <stddef.h>     // NULL, ptrdiff_t, size_t
 #include <stdint.h>     // uint32_t
 #include <stdio.h>      // stderr, fprintf, printf
-#include <stdlib.h>     // EXIT_*
+#include <stdlib.h>     // EXIT_*, atoi, rand, srand
 #include <string.h>     // strlen, strncmp
 
 #include "../include/alloc.h"           // VA_Allocator
@@ -723,31 +723,40 @@ to_json(Graph const graph, size_t const len_obs, char const observed[static len_
 } // to_json
 
 
-static void
+static size_t
 edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_length,
       uint32_t const tail_row, uint32_t const tail_col, uint32_t const tail_length,
-      bool const is_source, bool const is_sink,
-      size_t const len_obs, char const observed[static len_obs])
+      bool const is_source,
+      size_t const len_obs, char const observed[static len_obs],
+      VA_Variant const edge)
 {
+/*
     printf(
-        "(%u, %u, %u) -> (%u, %u, %u)\n",
+        "(%u, %u, %u) -> (%u, %u, %u) source: %d\n",
         head_row, head_col, head_length,
-        tail_row, tail_col, tail_length
+        tail_row, tail_col, tail_length,
+        is_source
     );
+    printf(VAR_FMT "\n", print_variant(edge, observed));
+    printf("%u %u %u %u\n", edge.start, edge.end, edge.obs_start, edge.obs_end);
+*/
 
     ptrdiff_t const row = (ptrdiff_t) head_row - is_source;
     ptrdiff_t const col = (ptrdiff_t) head_col - is_source;
     uint32_t const length = head_length + is_source;
 
-    //printf("%zd, %zd, %u\n", row, col, length);
+//    printf("%zd, %zd, %u\n", row, col, length);
 
     ptrdiff_t const offset = MIN((ptrdiff_t) tail_row - row, (ptrdiff_t) tail_col - col) - 1;
     uint32_t const head_start = offset > 0 ? MIN(offset, length - 1) : 0;
     uint32_t const tail_start = offset < 0 ? MIN(-offset, tail_length - 1) : 0;
 
-    //printf("    %zd: (%u, %u)\n", offset, head_start, tail_start);
+    uint32_t const count = MIN(length - head_start, tail_length - tail_start);
 
-    for (uint32_t j = 0; j < MIN(length - head_start, tail_length - tail_start + is_sink); ++j)
+//    printf("    %zd: (%u, %u) :: %u\n", offset, head_start, tail_start, count);
+
+    bool found = false;
+    for (uint32_t j = 0; j < count; ++j)
     {
         VA_Variant const variant =
         {
@@ -757,78 +766,73 @@ edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_leng
             tail_col + tail_start + j
         };
 
-        printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n",
+        if (edge.start == variant.start && edge.end == variant.end &&
+            edge.obs_start == variant.obs_start && edge.obs_end == variant.obs_end)
+        {
+            found = true;
+        } // if
+/*
+        printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n%u %u %u %u\n",
             head_row + head_start + j, head_col + head_start + j,
             tail_row + tail_start + j, tail_col + tail_start + j,
-            print_variant(variant, observed)
+            print_variant(variant, observed),
+            variant.start, variant.end, variant.obs_start, variant.obs_end
         );
+*/
     } // for
+
+    if (!found)
+    {
+        return -1;
+    } // if
+    return count;
 } // edges
 
 
-int
-main(int argc, char* argv[static argc + 1])
+static size_t
+random_sequence(size_t const min, size_t const max, char sequence[static max])
 {
-/*
-    (void) argv;
-    char const* const restrict reference = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTTGGGCTCAGATCTGTGATAGAACAGTTTCCTGGGAAGCTTGACTTTGTCCTTGTGGATGGGGGCTGTGTCCTAAGCCATGGCCACAAGCAGTTGATGTGCTTGGCTAGATCTGTTCTCAGTAAGGCGAAGATCTTGCTGCTTGATGAACCCAGTGCTCATTTGGATCCAGTGTGAGTTTCAGATGTTCTGTTACTTAATAGCACAGTGGGAACAGAATCATTATGCCTGCTTCATGGTGACACATATTTCTATTAGGCTGTCATGTCTGCGTGTGGGGGTCTCCCCCAAGATATGAAATAATTGCCCAGTGGAAATGAGCATAAATGCATATTTCCTTGCTAAGAGTCTTGTGTTTTCTTCCGAAGATAGTTTTTAGTTTCATACAAACTCTTCCCCCTTGTCAACACATGATGAAGCTTTTAAATACATGGGCCTAATCTGATCCTTATGATTTGCCTTTGTATCCCATTTATACCATAAGCATGTTTATAGCCCCAAATAAAGAAGTACTGGTGATTCTACATAATGAAAAATGTACTCATTTATTAAAGTTTCTTTGAAATATTTGTCCTGTTTATTTATGGATACTTAGAGTCTACCCCATGGTTGAAAAGCTGATTGTGGCTAACGCTATATCAACATTATGTGAAAAGAACTTAAAGAAATAAGTAATTTAAAGAGATAATAGAACAATAGACATATTATCAAGGTAAATACAGATCATTACTGTTCTGTGATATTATGTGTGGTATTTTCTTTCTTTTCTAGAACATACCAAATAATTAGAAGAACTCTAAAACAAGCATTTGCTGATTGCACAGTAATTCTCTGTGAACACAGGATAGAAGCAATGCTGGAATGCCAACAATTTTTGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
-    char const* const restrict observed = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
-*/
+    size_t const len = rand() % (max - min) + min;
 
-    if (argc < 3)
+    for (size_t i = 0; i < len; ++i)
     {
-        fprintf(stderr, "usage: %s reference observed\n", argv[0]);
-        return EXIT_FAILURE;
-    } // if
-    char const* const restrict reference = argv[1];
-    char const* const restrict observed = argv[2];
-    bool lambda = false;
-    if (argc == 4 && strncmp(argv[3], "true", 4) == 0)
-    {
-        lambda = true;
-    } // if
+        sequence[i] = "ACGT"[rand() % 4];
+    } // for
 
-    size_t const len_ref = strlen(reference);
-    size_t const len_obs = strlen(observed);
+    return len;
+} // random_sequence
 
+
+static int
+check(size_t const len_ref, char const reference[static len_ref],
+      size_t const len_obs, char const observed[static len_obs],
+      bool const debug)
+{
     VA_LCS_Node** lcs_nodes = NULL;
     size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
-    /*
-    fprintf(stderr, "%zu\n", len_lcs);
-    for (size_t i = 0; i < len_lcs; ++i)
+
+    if (debug)
     {
-        fprintf(stderr, "%zu:  ", i);
-        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
+        fprintf(stderr, "%zu\n", len_lcs);
+        for (size_t i = 0; i < len_lcs; ++i)
         {
-            fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+            fprintf(stderr, "%zu:  ", i);
+            for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
+            {
+                fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+            } // for
+            fprintf(stderr, "\n");
         } // for
-        fprintf(stderr, "\n");
-    } // for
-    */
+    } // if
 
     Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0);
 
-/*
-    printf("nodes (%zu)\n  #\t(row, col, len)\tedges\tlambda\n", va_array_length(graph.nodes));
-    for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
+    if (debug)
     {
-        printf("%c%2zu:\t(%u, %u, %u)\t%5d\t%6d\n", i == graph.source ? '*' : ' ', i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, (signed) graph.nodes[i].edges, (signed) graph.nodes[i].lambda);
-    } // for
-    printf("edges (%zu)\n  #\ttail\t\"start:end/seq\"\tnext\n", va_array_length(graph.edges));
-    for (size_t i = 0; i < va_array_length(graph.edges); ++i)
-    {
-        printf("%3zu:\t%4u\t  \"%u:%u/%.*s\"\t%4d\n", i, graph.edges[i].tail, graph.edges[i].variant.start, graph.edges[i].variant.end, (int) graph.edges[i].variant.obs_end - graph.edges[i].variant.obs_start, observed + graph.edges[i].variant.obs_start, (signed) graph.edges[i].next);
-    } // for
-*/
+        to_dot(graph, len_obs, observed);
+    } // if
 
-    to_dot(graph, len_obs, observed);
-
-    //local_supremal(va_std_allocator, graph, len_obs, observed);
-
-    //canonical(va_std_allocator, graph, len_obs, observed);
-
-    //to_json(graph, len_obs, observed, lambda);
-
+    size_t count = 0;
     for (uint32_t head = 0; head < va_array_length(graph.nodes); ++head)
     {
         uint32_t* tails = va_array_init(va_std_allocator, 10, sizeof(*tails));
@@ -845,39 +849,100 @@ main(int argc, char* argv[static argc + 1])
                     break;
                 } // if
             } // for
-            if (found)
-            {
-                continue;
-            } // if
 
             va_array_append(va_std_allocator, tails, tail);
 
-            edges(
+            size_t const n = edges(
                 graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length,
-                graph.nodes[tail].row, graph.nodes[tail].col, graph.nodes[tail].length,
-                graph.source == head, graph.nodes[tail].edges == (uint32_t) -1,
-                len_obs, observed
-           );
+                graph.nodes[tail].row, graph.nodes[tail].col, graph.nodes[tail].length + (graph.nodes[tail].edges == (uint32_t) -1),
+                graph.source == head,
+                len_obs, observed,
+                graph.edges[i].variant
+            );
+            if (n == (size_t) -1)
+            {
+                printf("EDGE NOT FOUND: " VAR_FMT "\n", print_variant(graph.edges[i].variant, observed));
+                return EXIT_FAILURE;
+            } // if
+            if (!found)
+            {
+                count += n;
+            } // if
         } // for
         tails = va_array_destroy(va_std_allocator, tails);
     } // for
 
-    /*
-    edges(1, 5, 5, 6, 6, 5, false, true, len_obs, observed);
-    edges(7, 8, 1, 6, 6, 4, false, false, len_obs, observed);
-    edges(4, 7, 1, 6, 6, 3, false, false, len_obs, observed);
-    edges(5, 0, 1, 6, 6, 1, false, false, len_obs, observed);
-    edges(1, 4, 1, 6, 6, 1, false, false, len_obs, observed);
-    edges(1, 3, 1, 6, 6, 1, false, false, len_obs, observed);
-    edges(1, 2, 1, 6, 6, 1, false, false, len_obs, observed);
-    edges(1, 1, 1, 6, 6, 1, false, false, len_obs, observed);
-    edges(7, 8, 1, 1, 5, 5, false, false, len_obs, observed);
-    edges(4, 7, 1, 1, 5, 4, false, false, len_obs, observed);
-    edges(5, 0, 1, 1, 5, 2, false, false, len_obs, observed);
-    edges(1, 4, 1, 1, 5, 2, false, false, len_obs, observed);
-    */
+    if (count != va_array_length(graph.edges))
+    {
+        printf("COUNTS: %zu vs %zu\n", count, va_array_length(graph.edges));
+        return EXIT_FAILURE;
+    } // if
 
     destroy(va_std_allocator, &graph);
+    return EXIT_SUCCESS;
+} // check
+
+
+int
+main(int argc, char* argv[static argc + 1])
+{
+/*
+    (void) argv;
+    char const* const restrict reference = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTTGGGCTCAGATCTGTGATAGAACAGTTTCCTGGGAAGCTTGACTTTGTCCTTGTGGATGGGGGCTGTGTCCTAAGCCATGGCCACAAGCAGTTGATGTGCTTGGCTAGATCTGTTCTCAGTAAGGCGAAGATCTTGCTGCTTGATGAACCCAGTGCTCATTTGGATCCAGTGTGAGTTTCAGATGTTCTGTTACTTAATAGCACAGTGGGAACAGAATCATTATGCCTGCTTCATGGTGACACATATTTCTATTAGGCTGTCATGTCTGCGTGTGGGGGTCTCCCCCAAGATATGAAATAATTGCCCAGTGGAAATGAGCATAAATGCATATTTCCTTGCTAAGAGTCTTGTGTTTTCTTCCGAAGATAGTTTTTAGTTTCATACAAACTCTTCCCCCTTGTCAACACATGATGAAGCTTTTAAATACATGGGCCTAATCTGATCCTTATGATTTGCCTTTGTATCCCATTTATACCATAAGCATGTTTATAGCCCCAAATAAAGAAGTACTGGTGATTCTACATAATGAAAAATGTACTCATTTATTAAAGTTTCTTTGAAATATTTGTCCTGTTTATTTATGGATACTTAGAGTCTACCCCATGGTTGAAAAGCTGATTGTGGCTAACGCTATATCAACATTATGTGAAAAGAACTTAAAGAAATAAGTAATTTAAAGAGATAATAGAACAATAGACATATTATCAAGGTAAATACAGATCATTACTGTTCTGTGATATTATGTGTGGTATTTTCTTTCTTTTCTAGAACATACCAAATAATTAGAAGAACTCTAAAACAAGCATTTGCTGATTGCACAGTAATTCTCTGTGAACACAGGATAGAAGCAATGCTGGAATGCCAACAATTTTTGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
+    char const* const restrict observed = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
+*/
+
+    if (argc == 2)
+    {
+        srand(atoi(argv[1]));
+        size_t count = 0;
+        while (true)
+        {
+            char reference[4096];
+            char observed[4096];
+            size_t const len_ref = random_sequence(0, 40, reference);
+            size_t const len_obs = random_sequence(0, 40, observed);
+
+            printf("%zu: %.*s %.*s\n", count, (int) len_ref, reference, (int) len_obs, observed);
+            if (check(len_ref, reference, len_obs, observed, false) == EXIT_FAILURE)
+            {
+                return EXIT_FAILURE;
+            } // if
+            count += 1;
+        } // while
+    } // if
+    else if (argc == 3)
+    {
+        char const* const restrict reference = argv[1];
+        char const* const restrict observed = argv[2];
+        size_t const len_ref = strlen(reference);
+        size_t const len_obs = strlen(observed);
+        check(len_ref, reference, len_obs, observed, true);
+    } // if
+    else
+    {
+        fprintf(stderr, "usage: %s\n", argv[0]);
+        return EXIT_FAILURE;
+    } // else
+
+/*
+    printf("nodes (%zu)\n  #\t(row, col, len)\tedges\tlambda\n", va_array_length(graph.nodes));
+    for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
+    {
+        printf("%c%2zu:\t(%u, %u, %u)\t%5d\t%6d\n", i == graph.source ? '*' : ' ', i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, (signed) graph.nodes[i].edges, (signed) graph.nodes[i].lambda);
+    } // for
+    printf("edges (%zu)\n  #\ttail\t\"start:end/seq\"\tnext\n", va_array_length(graph.edges));
+    for (size_t i = 0; i < va_array_length(graph.edges); ++i)
+    {
+        printf("%3zu:\t%4u\t  \"%u:%u/%.*s\"\t%4d\n", i, graph.edges[i].tail, graph.edges[i].variant.start, graph.edges[i].variant.end, (int) graph.edges[i].variant.obs_end - graph.edges[i].variant.obs_start, observed + graph.edges[i].variant.obs_start, (signed) graph.edges[i].next);
+    } // for
+*/
+
+    //local_supremal(va_std_allocator, graph, len_obs, observed);
+
+    //canonical(va_std_allocator, graph, len_obs, observed);
+
+    //to_json(graph, len_obs, observed, lambda);
 
     return EXIT_SUCCESS;
 } // main
