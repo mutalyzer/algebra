@@ -1,6 +1,6 @@
 #include <stdbool.h>    // bool, false, true
-#include <stddef.h>     // NULL, ptrdiff_t, size_t
-#include <stdint.h>     // uint32_t
+#include <stddef.h>     // NULL, size_t
+#include <stdint.h>     // intmax_t, uint32_t
 #include <stdio.h>      // stderr, fprintf, printf
 #include <stdlib.h>     // EXIT_*, atoi, rand, srand
 #include <string.h>     // strlen, strncmp
@@ -17,6 +17,20 @@
 
 #define print_variant(variant, observed) variant.start, variant.end, (int) variant.obs_end - variant.obs_start, observed + variant.obs_start
 #define VAR_FMT "%u:%u/%.*s"
+
+
+static size_t
+random_sequence(size_t const min, size_t const max, char sequence[static max])
+{
+    size_t const len = rand() % (max - min) + min;
+
+    for (size_t i = 0; i < len; ++i)
+    {
+        sequence[i] = "ACGT"[rand() % 4];
+    } // for
+
+    return len;
+} // random_sequence
 
 
 typedef struct
@@ -697,7 +711,7 @@ lambda_edges(Graph const graph, size_t const len_obs, char const observed[static
     printf("\n    ],\n");
 } // lambda_edges
 
-
+/*
 static void
 to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs], bool const lambda)
 {
@@ -721,6 +735,7 @@ to_json(Graph const graph, size_t const len_obs, char const observed[static len_
     printf("\n    ]\n");
     printf("}");
 } // to_json
+*/
 
 
 static size_t
@@ -730,22 +745,20 @@ edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_leng
       size_t const len_obs, char const observed[static len_obs],
       VA_Variant const edge)
 {
-/*
     printf(
         "(%u, %u, %u) -> (%u, %u, %u) source: %d\n",
         head_row, head_col, head_length,
         tail_row, tail_col, tail_length,
         is_source
     );
-    printf(VAR_FMT "\n", print_variant(edge, observed));
+    //printf(VAR_FMT "\n", print_variant(edge, observed));
     printf("%u %u %u %u\n", edge.start, edge.end, edge.obs_start, edge.obs_end);
-*/
 
     ptrdiff_t const row = (ptrdiff_t) head_row - is_source;
     ptrdiff_t const col = (ptrdiff_t) head_col - is_source;
     uint32_t const length = head_length + is_source;
 
-//    printf("%zd, %zd, %u\n", row, col, length);
+    printf("%zd, %zd, %u\n", row, col, length);
 
     ptrdiff_t const offset = MIN((ptrdiff_t) tail_row - row, (ptrdiff_t) tail_col - col) - 1;
     uint32_t const head_start = offset > 0 ? MIN(offset, length - 1) : 0;
@@ -753,7 +766,13 @@ edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_leng
 
     uint32_t const count = MIN(length - head_start, tail_length - tail_start);
 
-//    printf("    %zd: (%u, %u) :: %u\n", offset, head_start, tail_start, count);
+    printf("    %zd: (%u, %u) :: %u\n", offset, head_start, tail_start, count);
+
+    if (offset < 0 && tail_length <= -offset)
+    {
+        printf("    X\n");
+        return 0;
+    } // if
 
     bool found = false;
     for (uint32_t j = 0; j < count; ++j)
@@ -771,14 +790,13 @@ edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_leng
         {
             found = true;
         } // if
-/*
-        printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n%u %u %u %u\n",
+
+        printf("    (%u, %u) -> (%u, %u) :: " VAR_FMT "\n", //"%u %u %u %u\n",
             head_row + head_start + j, head_col + head_start + j,
             tail_row + tail_start + j, tail_col + tail_start + j,
-            print_variant(variant, observed),
-            variant.start, variant.end, variant.obs_start, variant.obs_end
+            print_variant(variant, observed) //,
+            //variant.start, variant.end, variant.obs_start, variant.obs_end
         );
-*/
     } // for
 
     if (!found)
@@ -787,20 +805,6 @@ edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_leng
     } // if
     return count;
 } // edges
-
-
-static size_t
-random_sequence(size_t const min, size_t const max, char sequence[static max])
-{
-    size_t const len = rand() % (max - min) + min;
-
-    for (size_t i = 0; i < len; ++i)
-    {
-        sequence[i] = "ACGT"[rand() % 4];
-    } // for
-
-    return len;
-} // random_sequence
 
 
 static int
@@ -874,7 +878,7 @@ check(size_t const len_ref, char const reference[static len_ref],
 
     if (count != va_array_length(graph.edges))
     {
-        printf("COUNTS: %zu vs %zu\n", count, va_array_length(graph.edges));
+        printf("COUNTS: %zu vs %zu1:5/, o\n", count, va_array_length(graph.edges));
         return EXIT_FAILURE;
     } // if
 
@@ -882,6 +886,104 @@ check(size_t const len_ref, char const reference[static len_ref],
     return EXIT_SUCCESS;
 } // check
 
+
+static void
+edges2(VA_LCS_Node const head, VA_LCS_Node const tail, bool const is_source,
+       size_t const len_obs, char const observed[static len_obs])
+{
+    printf("%u %u %u -> %u %u %u %s\n", head.row, head.col, head.length, tail.row, tail.col, tail.length, is_source ? "SOURCE" : "");
+
+    intmax_t const row = (intmax_t) head.row - is_source;
+    intmax_t const col = (intmax_t) head.col - is_source;
+    uint32_t const length = head.length + is_source;
+
+    intmax_t const offset = MIN((intmax_t) tail.row - row, (intmax_t) tail.col - col) - 1;
+
+    uint32_t const head_offset = offset > 0 ? MIN(length, offset + 1) : 1;
+    uint32_t const tail_offset = offset < 0 ? MIN(tail.length, -offset) : 0;
+
+    //printf("    %ld: (%u, %u)\n", offset, head_offset, tail_offset);
+
+    if (head_offset > length || (tail.length > 0 && tail_offset >= tail.length))
+    {
+        printf("    NO EDGE\n");
+        return;
+    } // if
+
+    uint32_t const count = MIN(length - head_offset, tail.length - tail_offset - 1) + 1;
+
+    VA_Variant const variant = {row + head_offset, tail.row + tail_offset, col + head_offset, tail.col + tail_offset};
+
+    printf("    " VAR_FMT " x %u\n", print_variant(variant, observed), count);
+} // edges2
+
+
+static void
+build(size_t const len_ref, char const reference[static len_ref],
+      size_t const len_obs, char const observed[static len_obs],
+      size_t const shift)
+{
+    VA_LCS_Node** lcs_nodes = NULL;
+    size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
+
+    if (len_lcs == 0 || lcs_nodes == NULL)
+    {
+        fprintf(stderr, "Trivial graph\n");
+        return;
+    } // if
+
+    VA_LCS_Node const last = lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
+    if (last.row + last.length != len_ref + shift || last.col + last.length != len_obs + shift)
+    {
+        va_array_append(va_std_allocator, lcs_nodes[len_lcs - 1], ((VA_LCS_Node) {.row = len_ref + shift, .col = len_obs + shift, .length = 0}));
+    } // if
+
+    fprintf(stderr, "%zu\n", len_lcs);
+    for (size_t i = 0; i < len_lcs; ++i)
+    {
+        fprintf(stderr, "%zu:  ", i);
+        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
+        {
+            fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+        } // for
+        fprintf(stderr, "\n");
+    } // for
+
+    bool is_sink = true;
+    for (size_t t_i = 0; t_i < len_lcs; ++t_i)
+    {
+        size_t const t_len = va_array_length(lcs_nodes[len_lcs - t_i - 1]);
+        for (size_t t_j = 0; t_j < t_len; ++t_j)
+        {
+            VA_LCS_Node const tail = lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
+            bool const is_source = tail.row == shift && tail.col == shift;
+            printf("%s", is_sink ? "SINK\n" : "");
+            //printf("%u %u %u\n", tail.row, tail.col, tail.length);
+
+            for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail.length + 1); ++h_i)
+            {
+                size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
+                //printf("    level: %zu with %zu nodes\n", len_lcs - t_i - h_i - 1, h_len);
+                for (size_t h_j = 0; h_j < h_len; ++h_j)
+                {
+                    VA_LCS_Node const head = lcs_nodes[len_lcs - t_i - h_i - 1][h_j];
+                    //printf("        %u %u %u\n", head.row, head.col, head.length);
+                    if (is_source)
+                    {
+                        edges2(tail, head, true, len_obs, observed);
+                    } // if
+                    else
+                    {
+                        edges2(head, tail, head.row == shift && head.col == shift, len_obs, observed);
+                    } // else
+                } // for
+                is_sink = false;
+            } // for
+
+        } // for
+    } // for
+
+} // build
 
 int
 main(int argc, char* argv[static argc + 1])
@@ -917,7 +1019,22 @@ main(int argc, char* argv[static argc + 1])
         char const* const restrict observed = argv[2];
         size_t const len_ref = strlen(reference);
         size_t const len_obs = strlen(observed);
-        check(len_ref, reference, len_obs, observed, true);
+        //check(len_ref, reference, len_obs, observed, true);
+
+        build(len_ref, reference, len_obs, observed, 0);
+
+/*
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 5, .col = 2, .length = 1}, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 4, .col = 0, .length = 5}, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 4, .col = 0, .length = 5}, (VA_LCS_Node) {.row = 10, .col = 10, .length = 0}, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 5, .col = 2, .length = 1}, (VA_LCS_Node) {.row = 4, .col = 0, .length = 5}, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 4, .col = 9, .length = 1}, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 8, .col = 8, .length = 1}, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 8, .col = 5, .length = 1}, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 8, .col = 5, .length = 1}, (VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 5, .col = 2, .length = 1}, false, len_obs, observed);
+*/
     } // if
     else
     {
@@ -928,6 +1045,7 @@ main(int argc, char* argv[static argc + 1])
 /*
     printf("nodes (%zu)\n  #\t(row, col, len)\tedges\tlambda\n", va_array_length(graph.nodes));
     for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
+
     {
         printf("%c%2zu:\t(%u, %u, %u)\t%5d\t%6d\n", i == graph.source ? '*' : ' ', i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, (signed) graph.nodes[i].edges, (signed) graph.nodes[i].lambda);
     } // for
