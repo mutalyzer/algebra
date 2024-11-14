@@ -888,33 +888,35 @@ check(size_t const len_ref, char const reference[static len_ref],
 
 
 static void
-edges2(VA_LCS_Node const head, VA_LCS_Node const tail, bool const is_source,
+edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
+       bool const is_source, bool const is_sink,
        size_t const len_obs, char const observed[static len_obs])
 {
-    printf("%u %u %u -> %u %u %u %s\n", head.row, head.col, head.length, tail.row, tail.col, tail.length, is_source ? "SOURCE" : "");
+    //printf("%u %u %u -> %u %u %u %s %s\n", head.row, head.col, head.length, tail.row, tail.col, tail.length, is_source ? "SOURCE" : "", is_sink ? "SINK" : "");
 
     intmax_t const row = (intmax_t) head.row - is_source;
     intmax_t const col = (intmax_t) head.col - is_source;
-    uint32_t const length = head.length + is_source;
+    uint32_t const head_length = head.length + is_source;
+    uint32_t const tail_length = tail.length + is_sink;
 
     intmax_t const offset = MIN((intmax_t) tail.row - row, (intmax_t) tail.col - col) - 1;
 
-    uint32_t const head_offset = offset > 0 ? MIN(length, offset + 1) : 1;
-    uint32_t const tail_offset = offset < 0 ? MIN(tail.length, -offset) : 0;
+    uint32_t const head_offset = offset > 0 ? MIN(head_length, offset + 1) : 1;
+    uint32_t const tail_offset = offset < 0 ? MIN(tail_length, -offset) : 0;
 
     //printf("    %ld: (%u, %u)\n", offset, head_offset, tail_offset);
 
-    if (head_offset > length || (tail.length > 0 && tail_offset >= tail.length))
+    if (head_offset > head_length || (tail_length > 0 && tail_offset >= tail_length))
     {
-        printf("    NO EDGE\n");
+        printf("NO EDGE\n");
         return;
     } // if
 
-    uint32_t const count = MIN(length - head_offset, tail.length - tail_offset - 1) + 1;
+    uint32_t const count = MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
 
     VA_Variant const variant = {row + head_offset, tail.row + tail_offset, col + head_offset, tail.col + tail_offset};
 
-    printf("    " VAR_FMT " x %u\n", print_variant(variant, observed), count);
+    printf(VAR_FMT " x %u\n", print_variant(variant, observed), count);
 } // edges2
 
 
@@ -949,6 +951,9 @@ build(size_t const len_ref, char const reference[static len_ref],
         fprintf(stderr, "\n");
     } // for
 
+
+    VA_LCS_Node source = {.row = shift, .col = shift, .length = 0};
+    bool found_source = false;
     bool is_sink = true;
     for (size_t t_i = 0; t_i < len_lcs; ++t_i)
     {
@@ -957,8 +962,12 @@ build(size_t const len_ref, char const reference[static len_ref],
         {
             VA_LCS_Node const tail = lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
             bool const is_source = tail.row == shift && tail.col == shift;
-            printf("%s", is_sink ? "SINK\n" : "");
-            //printf("%u %u %u\n", tail.row, tail.col, tail.length);
+            if (is_source)
+            {
+                source = tail;
+                found_source = true;
+            } // if
+            printf("%u %u %u\n", tail.row, tail.col, tail.length);
 
             for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail.length + 1); ++h_i)
             {
@@ -967,23 +976,40 @@ build(size_t const len_ref, char const reference[static len_ref],
                 for (size_t h_j = 0; h_j < h_len; ++h_j)
                 {
                     VA_LCS_Node const head = lcs_nodes[len_lcs - t_i - h_i - 1][h_j];
-                    //printf("        %u %u %u\n", head.row, head.col, head.length);
-                    if (is_source)
+
+                    printf("    %u %u %u: ", head.row, head.col, head.length);
+
+                    if (head.row + head.length > tail.row + tail.length - h_i ||
+                        head.col + head.length > tail.col + tail.length - h_i)
                     {
-                        edges2(tail, head, true, len_obs, observed);
+                        if (tail.row + tail.length - h_i > head.row + head.length ||
+                            tail.col + tail.length - h_i > head.col + head.length)
+                        {
+                            printf("--\n");
+                        } // if
+                        else
+                        {
+                            //printf("    CONVERSE\n");
+                            edges2(tail, head, is_source, false, len_obs, observed);
+                        } // else
                     } // if
                     else
                     {
-                        edges2(head, tail, head.row == shift && head.col == shift, len_obs, observed);
+                        edges2(head, tail, head.row == shift && head.col == shift, is_sink, len_obs, observed);
                     } // else
+
                 } // for
                 is_sink = false;
             } // for
-
+            if (!found_source && tail.length >= len_lcs - t_i)
+            {
+                printf("    %u %u %u: ", source.row, source.col, source.length);
+                edges2(source, tail, true, is_sink, len_obs, observed);
+            } // if
         } // for
     } // for
-
 } // build
+
 
 int
 main(int argc, char* argv[static argc + 1])
@@ -1024,17 +1050,38 @@ main(int argc, char* argv[static argc + 1])
         build(len_ref, reference, len_obs, observed, 0);
 
 /*
-        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 5, .col = 2, .length = 1}, true, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, true, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 4, .col = 0, .length = 5}, true, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 4, .col = 0, .length = 5}, (VA_LCS_Node) {.row = 10, .col = 10, .length = 0}, false, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 5, .col = 2, .length = 1}, (VA_LCS_Node) {.row = 4, .col = 0, .length = 5}, false, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 4, .col = 9, .length = 1}, true, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 4}, (VA_LCS_Node) {.row = 8, .col = 8, .length = 1}, true, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 8, .col = 5, .length = 1}, false, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 8, .col = 5, .length = 1}, (VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, false, len_obs, observed);
-        edges2((VA_LCS_Node) {.row = 2, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 5, .col = 2, .length = 1}, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 7, .col = 8, .length = 1}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 4, .col = 7, .length = 1}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 2, .length = 1}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 3, .length = 1}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 4, .length = 1}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 5, .col = 0, .length = 1}, (VA_LCS_Node) {.row = 6, .col = 6, .length = 4}, false, true, len_obs, observed);
+
+        edges2((VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, (VA_LCS_Node) {.row = 7, .col = 8, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, (VA_LCS_Node) {.row = 4, .col = 7, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 2, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 3, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 4, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 5, .col = 0, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 0}, (VA_LCS_Node) {.row = 1, .col = 5, .length = 5}, true, false, len_obs, observed);
+
+        edges2((VA_LCS_Node) {.row = 4, .col = 7, .length = 1}, (VA_LCS_Node) {.row = 7, .col = 8, .length = 1}, false, false, len_obs, observed);
+
+        edges2((VA_LCS_Node) {.row = 1, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 5, .col = 0, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 2, .length = 1}, (VA_LCS_Node) {.row = 5, .col = 0, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 3, .length = 1}, (VA_LCS_Node) {.row = 5, .col = 0, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 4, .length = 1}, (VA_LCS_Node) {.row = 5, .col = 0, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 0}, (VA_LCS_Node) {.row = 5, .col = 0, .length = 1}, true, false, len_obs, observed);
+
+        edges2((VA_LCS_Node) {.row = 1, .col = 1, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 4, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 2, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 4, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 1, .col = 3, .length = 1}, (VA_LCS_Node) {.row = 1, .col = 4, .length = 1}, false, false, len_obs, observed);
+        edges2((VA_LCS_Node) {.row = 0, .col = 0, .length = 0}, (VA_LCS_Node) {.row = 1, .col = 4, .length = 1}, true, false, len_obs, observed);
 */
+
     } // if
     else
     {
