@@ -887,7 +887,7 @@ check(size_t const len_ref, char const reference[static len_ref],
 } // check
 
 
-static void
+static bool
 edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
        bool const is_source, bool const is_sink,
        size_t const len_obs, char const observed[static len_obs])
@@ -909,7 +909,7 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
     if (head_offset > head_length || (tail_length > 0 && tail_offset >= tail_length))
     {
         printf("NO EDGE\n");
-        return;
+        return false;
     } // if
 
     uint32_t const count = MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
@@ -917,7 +917,24 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
     VA_Variant const variant = {row + head_offset, tail.row + tail_offset, col + head_offset, tail.col + tail_offset};
 
     printf(VAR_FMT " x %u\n", print_variant(variant, observed), count);
+    return true;
 } // edges2
+
+
+typedef struct
+{
+    uint32_t row;
+    uint32_t col;
+    uint32_t length;
+    uint32_t edges;
+} Node2;
+
+
+typedef struct
+{
+    uint32_t tail;
+    uint32_t next;
+} Edge2;
 
 
 static void
@@ -951,6 +968,8 @@ build(size_t const len_ref, char const reference[static len_ref],
         fprintf(stderr, "\n");
     } // for
 
+    Node2* nodes = NULL;
+    Edge2* edges = NULL;
 
     VA_LCS_Node source = {.row = shift, .col = shift, .length = 0};
     bool found_source = false;
@@ -989,7 +1008,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                         } // if
                         else
                         {
-                            //printf("    CONVERSE\n");
+                            printf("CONVERSE  ");
                             edges2(tail, head, is_source, false, len_obs, observed);
                         } // else
                     } // if
@@ -1007,7 +1026,10 @@ build(size_t const len_ref, char const reference[static len_ref],
                 edges2(source, tail, true, is_sink, len_obs, observed);
             } // if
         } // for
+        lcs_nodes[len_lcs - t_i - 1] = va_array_destroy(va_std_allocator, lcs_nodes[len_lcs - t_i - 1]);
     } // for
+
+    lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs, 0);
 } // build
 
 
@@ -1045,7 +1067,7 @@ main(int argc, char* argv[static argc + 1])
         char const* const restrict observed = argv[2];
         size_t const len_ref = strlen(reference);
         size_t const len_obs = strlen(observed);
-        //check(len_ref, reference, len_obs, observed, true);
+        check(len_ref, reference, len_obs, observed, true);
 
         build(len_ref, reference, len_obs, observed, 0);
 
