@@ -170,10 +170,6 @@ def to_hgvs(variants, reference):
         deleted = reference[variant.start:variant.end]
         deleted_unit, deleted_number, deleted_remainder = repeats(deleted)
 
-        #print(deleted, variant.sequence)
-        #print(deleted_unit, deleted_number, deleted_remainder,
-        #      inserted_unit, inserted_number, inserted_remainder)
-
         # Select a non-minimal repeat unit if reference and observed are
         # in agreement.
         diff = len(inserted_unit) - len(deleted_unit)
@@ -181,12 +177,10 @@ def to_hgvs(variants, reference):
             inserted_unit = deleted_unit
             inserted_number = 1
             inserted_remainder = deleted_remainder
-            #print("<")
         elif diff > 0 and inserted_unit == deleted[:len(deleted_unit) + diff]:
             deleted_unit = inserted_unit
             deleted_number = 1
             deleted_remainder = inserted_remainder
-            #print("<")
 
         # Repeat structure
         if deleted_unit == inserted_unit:
@@ -196,9 +190,6 @@ def to_hgvs(variants, reference):
             # Duplication
             if deleted_number == 1 and inserted_number == 2:
                 return f"{to_hgvs_position(variant.start + inserted_remainder, variant.start + inserted_remainder + len(inserted_unit))}dup"
-
-            #print(deleted_unit, deleted_number, deleted_remainder,
-            #      inserted_unit, inserted_number, inserted_remainder)
 
             # shift 3'
             assert deleted_remainder == inserted_remainder
