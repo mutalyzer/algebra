@@ -95,7 +95,8 @@ def cli_extract(reference, args):
     if args.dot:
         print("\n".join(to_dot(reference, graph, atomics=args.atomics, labels=not args.internal_labels, hgvs=not args.internal_labels)))
     if args.local_supremal:
-        print(to_hgvs(local_supremal(reference, graph), reference))
+        local = local_supremal(reference, graph)
+        print(to_hgvs(local, reference), local)
     if args.supremal:
         print(graph.supremal.to_hgvs(reference), graph.supremal.to_spdi(), graph.supremal)
 
