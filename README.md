@@ -112,7 +112,7 @@ graph = LCSgraph.from_sequence(reference, observed)
 # vizualized using Graphviz
 "\n".join(to_dot(reference, graph))
 ```
-![example](https://github.com/user-attachments/assets/1d78d87b-d3fd-48c6-8c45-ccfeb7e095e9)
+![Example LCS-graph](https://github.com/mutalyzer/algebra/blob/master/docs/example.svg?raw=true)
 
 See Also
 --------

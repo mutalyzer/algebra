@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 696 188">
+<defs>
+<marker id="a" markerHeight="8" markerWidth="10" orient="auto" refX="2" refY="4">
+<path fill="context-stroke" d="m0 0 2 4-2 4 10-4Z"/>
+</marker>
+</defs>
+<g fill="none" stroke="#000">
+<circle cx="71" cy="117" r="29"/>
+<circle cx="223" cy="79" r="29"/>
+<circle cx="223" cy="155" r="29"/>
+<circle cx="375" cy="33" r="29"/>
+<circle cx="375" cy="109" r="29"/>
+<circle cx="503" cy="109" r="29"/>
+<circle cx="659" cy="109" r="29"/>
+<circle cx="659" cy="109" r="33"/>
+<g marker-end="url(#a)">
+<path d="M5 117h27"/>
+<path d="m99 110 86-21"/>
+<path d="m99 124 86 21"/>
+<path d="m251 71 86-27"/>
+<path d="m252 85 84 16"/>
+<path d="m251 147 86-27"/>
+<path d="M251 161c36 6 100 14 153 1 24-6 48-19 67-30"/>
+<path d="m400 48 69 41"/>
+<path d="M404 109h59"/>
+<path d="m529 122 21 6c25 5 33 5 58 0l11-3"/>
+<path d="m529 96 21 -5c25 -5 33 -5 58 0l11 3"/>
+</g>
+</g>
+<g font-family="monospace" text-anchor="middle">
+<text x="142" y="90">1_2insT</text>
+<text x="140" y="152">2C&gt;T</text>
+<text x="288" y="50">3del</text>
+<text x="299" y="88">3C&gt;T</text>
+<text x="288" y="124">3_4insT</text>
+<text x="370" y="184">5G&gt;T</text>
+<text x="439" y="58">5G&gt;T</text>
+<text x="434" y="105">5del</text>
+<text x="578" y="148">8_9insT</text>
+<text x="578" y="82">7_8insT</text>
+</g>
+</svg>
