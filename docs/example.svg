@@ -4,7 +4,7 @@
 <path fill="context-stroke" d="m0 0 2 4-2 4 10-4Z"/>
 </marker>
 </defs>
-<g fill="none" stroke="#000">
+<g fill="none" stroke="currentColor">
 <circle cx="71" cy="117" r="29"/>
 <circle cx="223" cy="79" r="29"/>
 <circle cx="223" cy="155" r="29"/>
