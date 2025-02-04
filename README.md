@@ -98,6 +98,22 @@ canonical, _ = extract(reference, variant)
 to_hgvs(canonical, reference)
 ```
 
+Graph-based variant representation.
+
+```python
+from algebra import LCSgraph
+from algebra.utils import to_dot
+
+
+reference = "ACCTGACT"
+observed = "ATCTTACTT"
+
+graph = LCSgraph.from_sequence(reference, observed)
+# vizualized using Graphviz
+"\n".join(to_dot(reference, graph))
+```
+![example](https://github.com/user-attachments/assets/1d78d87b-d3fd-48c6-8c45-ccfeb7e095e9)
+
 See Also
 --------
 
