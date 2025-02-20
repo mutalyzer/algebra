@@ -30,7 +30,7 @@ def to_dot(reference, graph, labels=True, hgvs=True, atomics=False):
     yield "rankdir=LR"
     yield "edge[fontname=monospace]"
     yield f'node[fixedsize=true,fontname=serif,shape=circle,width={".8" if labels else "1"}]'
-    yield "si[shape=none,width=0]"
+    yield "si[label="",shape=none,width=0]"
     yield "si->s0"
 
     count = 0
