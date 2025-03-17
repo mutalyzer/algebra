@@ -923,15 +923,6 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
 
 typedef struct
 {
-    uint32_t row;
-    uint32_t col;
-    uint32_t length;
-    uint32_t edges;
-} Node2;
-
-
-typedef struct
-{
     uint32_t tail;
     uint32_t next;
 } Edge2;
@@ -951,11 +942,18 @@ build(size_t const len_ref, char const reference[static len_ref],
         return;
     } // if
 
-    VA_LCS_Node const last = lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
-    if (last.row + last.length != len_ref + shift || last.col + last.length != len_obs + shift)
+    VA_LCS_Node* last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
+    if (last->row + last->length != len_ref + shift || last->col + last->length != len_obs + shift)
     {
         va_array_append(va_std_allocator, lcs_nodes[len_lcs - 1], ((VA_LCS_Node) {.row = len_ref + shift, .col = len_obs + shift, .length = 0}));
     } // if
+
+    Node* nodes = NULL;
+    Edge2* edges = NULL;
+
+    last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
+    va_array_append(va_std_allocator, nodes, ((Node) {last->row, last->col, last->length, -1, -1}));
+    last->idx = va_array_length(nodes) - 1;
 
     fprintf(stderr, "%zu\n", len_lcs);
     for (size_t i = 0; i < len_lcs; ++i)
@@ -963,67 +961,85 @@ build(size_t const len_ref, char const reference[static len_ref],
         fprintf(stderr, "%zu:  ", i);
         for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
         {
-            fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+            fprintf(stderr, "(%u, %u, %u, %d) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length, lcs_nodes[i][j].idx);
         } // for
         fprintf(stderr, "\n");
     } // for
 
-    Node2* nodes = NULL;
-    Edge2* edges = NULL;
-
-    VA_LCS_Node source = {.row = shift, .col = shift, .length = 0};
-    bool found_source = false;
+    uint32_t source_idx = -1;
     bool is_sink = true;
     for (size_t t_i = 0; t_i < len_lcs; ++t_i)
     {
         size_t const t_len = va_array_length(lcs_nodes[len_lcs - t_i - 1]);
         for (size_t t_j = 0; t_j < t_len; ++t_j)
         {
-            VA_LCS_Node const tail = lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
-            bool const is_source = tail.row == shift && tail.col == shift;
-            if (is_source)
+            VA_LCS_Node const* const tail = &lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
+            if (tail->idx == (uint32_t) -1)
             {
-                source = tail;
-                found_source = true;
+                continue;
             } // if
-            printf("%u %u %u\n", tail.row, tail.col, tail.length);
+            bool const is_source = tail->row == shift && tail->col == shift;
+            printf("%u %u %u\n", tail->row, tail->col, tail->length);
 
-            for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail.length + 1); ++h_i)
+            for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail->length + 1); ++h_i)
             {
                 size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
                 //printf("    level: %zu with %zu nodes\n", len_lcs - t_i - h_i - 1, h_len);
                 for (size_t h_j = 0; h_j < h_len; ++h_j)
                 {
-                    VA_LCS_Node const head = lcs_nodes[len_lcs - t_i - h_i - 1][h_j];
+                    VA_LCS_Node* head = &lcs_nodes[len_lcs - t_i - h_i - 1][h_j];
 
-                    printf("    %u %u %u: ", head.row, head.col, head.length);
+                    printf("    %u %u %u: ", head->row, head->col, head->length);
 
-                    if (head.row + head.length > tail.row + tail.length - h_i ||
-                        head.col + head.length > tail.col + tail.length - h_i)
+                    if (head->row + head->length > tail->row + tail->length - h_i ||
+                        head->col + head->length > tail->col + tail->length - h_i)
                     {
-                        if (tail.row + tail.length - h_i > head.row + head.length ||
-                            tail.col + tail.length - h_i > head.col + head.length)
+                        if (tail->row + tail->length - h_i > head->row + head->length ||
+                            tail->col + tail->length - h_i > head->col + head->length)
                         {
                             printf("--\n");
                         } // if
                         else
                         {
                             printf("CONVERSE  ");
-                            edges2(tail, head, is_source, false, len_obs, observed);
+                            if (edges2(*tail, *head, is_source, false, len_obs, observed))
+                            {
+                                if (head->idx == (uint32_t) -1)
+                                {
+                                    va_array_append(va_std_allocator, nodes, ((Node) {head->row, head->col, head->length, -1, -1}));
+                                    head->idx = va_array_length(nodes) - 1;
+                                } // if
+                                va_array_append(va_std_allocator, edges, ((Edge2) {head->idx, nodes[tail->idx].edges}));
+                                nodes[tail->idx].edges = va_array_length(edges) - 1;
+                            }
                         } // else
                     } // if
                     else
                     {
-                        edges2(head, tail, head.row == shift && head.col == shift, is_sink, len_obs, observed);
+                        if (edges2(*head, *tail, head->row == shift && head->col == shift, is_sink, len_obs, observed))
+                        {
+                            if (head->idx == (uint32_t) -1)
+                            {
+                                va_array_append(va_std_allocator, nodes, ((Node) {head->row, head->col, head->length, -1, -1}));
+                                head->idx = va_array_length(nodes) - 1;
+                                if (head->row == shift && head->col == shift)
+                                {
+                                    source_idx = head->idx;
+                                }
+                            } // if
+                            va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[head->idx].edges}));
+                            nodes[head->idx].edges = va_array_length(edges) - 1;
+                        } // if
                     } // else
 
                 } // for
                 is_sink = false;
             } // for
-            if (!found_source && tail.length >= len_lcs - t_i)
+            if (source_idx == (uint32_t) -1 && tail->length >= len_lcs - t_i)
             {
-                printf("    %u %u %u: ", source.row, source.col, source.length);
-                edges2(source, tail, true, is_sink, len_obs, observed);
+                VA_LCS_Node const source = {.row = 0, .col = 0, .length = 0};
+                printf("XXX    %u %u %u: ", source.row, source.col, source.length);
+                edges2(source, *tail, true, is_sink, len_obs, observed);
             } // if
         } // for
         lcs_nodes[len_lcs - t_i - 1] = va_array_destroy(va_std_allocator, lcs_nodes[len_lcs - t_i - 1]);
