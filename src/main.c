@@ -895,7 +895,7 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
        bool const is_source, bool const is_sink,
        size_t const len_obs, char const observed[static len_obs])
 {
-    //printf("%u %u %u -> %u %u %u %s %s\n", head.row, head.col, head.length, tail.row, tail.col, tail.length, is_source ? "SOURCE" : "", is_sink ? "SINK" : "");
+//    printf("%u %u %u -> %u %u %u %s %s\n", head.row, head.col, head.length, tail.row, tail.col, tail.length, is_source ? "SOURCE" : "", is_sink ? "SINK" : "");
 
     intmax_t const row = (intmax_t) head.row - is_source;
     intmax_t const col = (intmax_t) head.col - is_source;
@@ -945,17 +945,17 @@ build(size_t const len_ref, char const reference[static len_ref],
         return;
     } // if
 
-    VA_LCS_Node* last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
-    if (last->row + last->length != len_ref + shift || last->col + last->length != len_obs + shift)
-    {
-        va_array_append(va_std_allocator, lcs_nodes[len_lcs - 1], ((VA_LCS_Node) {.row = len_ref + shift, .col = len_obs + shift, .length = 0}));
-    } // if
-
     Node* nodes = NULL;
     Edge2* edges = NULL;
 
-    last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
-    va_array_append(va_std_allocator, nodes, ((Node) {last->row, last->col, last->length, -1, -1}));
+    VA_LCS_Node* last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
+    if (last->row + last->length != len_ref + shift || last->col + last->length != len_obs + shift)
+    {
+        va_array_append(va_std_allocator, lcs_nodes[len_lcs - 1],
+                        ((VA_LCS_Node) {.row = len_ref + shift, .col = len_obs + shift, .length = 0}));
+        last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
+    } // if
+    va_array_append(va_std_allocator, nodes, ((Node) {last->row, last->col, last->length, GVA_NULL, GVA_NULL}));
     last->idx = va_array_length(nodes) - 1;
 
     fprintf(stderr, "%zu\n", len_lcs);
@@ -969,8 +969,7 @@ build(size_t const len_ref, char const reference[static len_ref],
         fprintf(stderr, "\n");
     } // for
 
-
-    VA_LCS_Node source = {0, 0, 0, -1, -1};
+    VA_LCS_Node source = {shift, shift, 0, -1, GVA_NULL};
     bool found_source = false;
     bool is_sink = true;
     for (size_t t_i = 0; t_i < len_lcs; ++t_i)
@@ -979,15 +978,9 @@ build(size_t const len_ref, char const reference[static len_ref],
         for (size_t t_j = 0; t_j < t_len; ++t_j)
         {
             VA_LCS_Node const* const tail = &lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
-            if (tail->idx == (uint32_t) -1)
+            if (tail->idx == GVA_NULL)
             {
                 continue;
-            } // if
-            bool const is_source = tail->row == shift && tail->col == shift;
-            if (is_source)
-            {
-                source = *tail;
-                found_source = true;
             } // if
             printf("%u %u %u\n", tail->row, tail->col, tail->length);
 
@@ -1001,18 +994,19 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                     printf("    %u %u %u: ", head->row, head->col, head->length);
 
-                    if (head->row + head->length > tail->row + tail->length - h_i ||
-                        head->col + head->length > tail->col + tail->length - h_i)
+                    if (head->row + head->length + h_i > tail->row + tail->length ||
+                        head->col + head->length + h_i > tail->col + tail->length)
                     {
-                        if (tail->row + tail->length - h_i > head->row + head->length ||
-                            tail->col + tail->length - h_i > head->col + head->length)
+                        if (tail->row + tail->length > head->row + head->length + h_i ||
+                            tail->col + tail->length > head->col + head->length + h_i)
                         {
                             printf("--\n");  // FIXME: skip this remainder of this (head) level
                         } // if
                         else
                         {
                             printf("CONVERSE  ");
-                            if (head->idx != GVA_NULL && edges2(*tail, *head, is_source, false, len_obs, observed))
+                            if (head->idx != GVA_NULL && edges2(*tail, *head, tail->row == shift && tail->col == shift,
+                                                                false, len_obs, observed))
                             {
                                 va_array_append(va_std_allocator, edges, ((Edge2) {head->idx, nodes[tail->idx].edges}));
                                 nodes[tail->idx].edges = va_array_length(edges) - 1;
@@ -1021,12 +1015,11 @@ build(size_t const len_ref, char const reference[static len_ref],
                     } // if
                     else
                     {
-                        // is this always true?
                         if (edges2(*head, *tail, head->row == shift && head->col == shift, is_sink, len_obs, observed))
                         {
                             if (head->idx == GVA_NULL)
                             {
-                                va_array_append(va_std_allocator, nodes, ((Node) {head->row, head->col, head->length, -1, -1}));
+                                va_array_append(va_std_allocator, nodes, ((Node) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
                                 head->idx = va_array_length(nodes) - 1;
                                 if (head->row == shift && head->col == shift)
                                 {
@@ -1037,16 +1030,20 @@ build(size_t const len_ref, char const reference[static len_ref],
                             va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[head->idx].edges}));
                             nodes[head->idx].edges = va_array_length(edges) - 1;
                         } // if
+                        else
+                        {
+                           // FIXME: skip this remainder of this (head) level
+                        } // else
                     } // else
 
-                } // for
+                } // for h_j
                 is_sink = false;
-            } // for
+            } // for h_i
             if (!found_source && tail->length >= len_lcs - t_i)
             {
                 if (source.idx == GVA_NULL)
                 {
-                    va_array_append(va_std_allocator, nodes, ((Node) {0, 0, 0, -1, -1}));
+                    va_array_append(va_std_allocator, nodes, ((Node) {source.row, source.col, source.length, GVA_NULL, GVA_NULL}));
                     source.idx = va_array_length(nodes) - 1;
                 } // if
                 printf("SOURCE    %u %u %u: ", source.row, source.col, source.length);
@@ -1056,10 +1053,12 @@ build(size_t const len_ref, char const reference[static len_ref],
                     nodes[source.idx].edges = va_array_length(edges) - 1;
                 } // if
             } // if
-        } // for
+        } // for t_j
+        // dealloc lcs pos level
         lcs_nodes[len_lcs - t_i - 1] = va_array_destroy(va_std_allocator, lcs_nodes[len_lcs - t_i - 1]);
-    } // for
+    } // for t_i
 
+    // deallocation
     lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs, 0);
 
 
