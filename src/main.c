@@ -967,7 +967,7 @@ build(size_t const len_ref, char const reference[static len_ref],
         fprintf(stderr, "%zu:  ", i);
         for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
         {
-            fprintf(stderr, "(%u, %u, %u, %d) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length, lcs_nodes[i][j].idx);
+            fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
         } // for
         fprintf(stderr, "\n");
     } // for
@@ -1039,7 +1039,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                             head->incoming = MIN(head->incoming, start);
                             if (end + count > tail->incoming)
                             {
-                                printf("SPLIT?! ");
+                                printf("SPLIT ");
                                 uint32_t const el = tail->incoming - tail->row;
                                 va_array_append(va_std_allocator, nodes,
                                                 ((Node) {tail->row, tail->col, el, GVA_NULL, tail->idx}));
@@ -1065,15 +1065,17 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                 } // for h_j
                 is_sink = false;
+                if (split_idx != GVA_NULL)
+                {
+                    tail->row = nodes[split_idx].row;
+                    tail->col = nodes[split_idx].col;
+                    tail->length = tail->length + nodes[split_idx].length;
+                    tail->idx = split_idx;
+                    tail->incoming = -1;
+                    printf("tail renamed to: %u %u %u %u\n", tail->row, tail->col, tail->length, tail->incoming);
+                    split_idx = GVA_NULL;
+                } // if
             } // for h_i
-            if (split_idx != GVA_NULL)
-            {
-                tail->row = nodes[split_idx].row;
-                tail->col = nodes[split_idx].col;
-                tail->length = nodes[split_idx].length;
-                tail->idx = split_idx;
-                tail->incoming = -1;
-            }
             if (!found_source && tail->length >= len_lcs - t_i)
             {
                 if (source.idx == GVA_NULL)
@@ -1107,8 +1109,8 @@ build(size_t const len_ref, char const reference[static len_ref],
         {
             printf("    (%u, %u, %u): ", nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length);
             uint32_t unused;
-            edges2(((VA_LCS_Node) {nodes[i].row, nodes[i].col, nodes[i].length}),
-                   ((VA_LCS_Node) {nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length}),
+            edges2(((VA_LCS_Node) {nodes[i].row, nodes[i].col, nodes[i].length, 0, 0}),
+                   ((VA_LCS_Node) {nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length, 0, 0}),
                    nodes[i].row == shift && nodes[i].col == shift, nodes[edges[j].tail].edges == GVA_NULL, len_obs, observed, &unused, &unused);
         } // for
     } // for
