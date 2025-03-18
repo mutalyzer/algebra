@@ -890,10 +890,10 @@ check(size_t const len_ref, char const reference[static len_ref],
 } // check
 
 
-static bool
+static uint32_t
 edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
        bool const is_source, bool const is_sink,
-       size_t const len_obs, char const observed[static len_obs])
+       size_t const len_obs, char const observed[static len_obs], uint32_t* const start, uint32_t* const end)
 {
 //    printf("%u %u %u -> %u %u %u %s %s\n", head.row, head.col, head.length, tail.row, tail.col, tail.length, is_source ? "SOURCE" : "", is_sink ? "SINK" : "");
 
@@ -912,15 +912,17 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
     if (head_offset > head_length || (tail_length > 0 && tail_offset >= tail_length))
     {
         printf("NO EDGE\n");
-        return false;
+        return 0;
     } // if
 
     uint32_t const count = MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
 
-    VA_Variant const variant = {row + head_offset, tail.row + tail_offset, col + head_offset, tail.col + tail_offset};
+    *start = row + head_offset;
+    *end = tail.row + tail_offset;
+    VA_Variant const variant = {*start, *end, col + head_offset, tail.col + tail_offset};
 
     printf(VAR_FMT " x %u\n", print_variant(variant, observed), count);
-    return true;
+    return count;
 } // edges2
 
 
@@ -957,6 +959,7 @@ build(size_t const len_ref, char const reference[static len_ref],
     } // if
     va_array_append(va_std_allocator, nodes, ((Node) {last->row, last->col, last->length, GVA_NULL, GVA_NULL}));
     last->idx = va_array_length(nodes) - 1;
+    last->incoming = -1;
 
     fprintf(stderr, "%zu\n", len_lcs);
     for (size_t i = 0; i < len_lcs; ++i)
@@ -977,13 +980,14 @@ build(size_t const len_ref, char const reference[static len_ref],
         size_t const t_len = va_array_length(lcs_nodes[len_lcs - t_i - 1]);
         for (size_t t_j = 0; t_j < t_len; ++t_j)
         {
-            VA_LCS_Node const* const tail = &lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
+            VA_LCS_Node* const tail = &lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
             if (tail->idx == GVA_NULL)
             {
                 continue;
             } // if
-            printf("%u %u %u\n", tail->row, tail->col, tail->length);
+            printf("%u %u %u %u\n", tail->row, tail->col, tail->length, tail->incoming);
 
+            uint32_t split_idx = GVA_NULL;
             for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail->length + 1); ++h_i)
             {
                 size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
@@ -1005,8 +1009,9 @@ build(size_t const len_ref, char const reference[static len_ref],
                         else
                         {
                             printf("CONVERSE  ");
+                            uint32_t unused;
                             if (head->idx != GVA_NULL && edges2(*tail, *head, tail->row == shift && tail->col == shift,
-                                                                false, len_obs, observed))
+                                                                false, len_obs, observed, &unused, &unused))
                             {
                                 va_array_append(va_std_allocator, edges, ((Edge2) {head->idx, nodes[tail->idx].edges}));
                                 nodes[tail->idx].edges = va_array_length(edges) - 1;
@@ -1015,18 +1020,40 @@ build(size_t const len_ref, char const reference[static len_ref],
                     } // if
                     else
                     {
-                        if (edges2(*head, *tail, head->row == shift && head->col == shift, is_sink, len_obs, observed))
+                        uint32_t start = -1;
+                        uint32_t end = -1;
+                        uint32_t const count = edges2(*head, *tail, head->row == shift && head->col == shift, is_sink, len_obs, observed, &start, &end);
+                        if (count > 0)
                         {
                             if (head->idx == GVA_NULL)
                             {
                                 va_array_append(va_std_allocator, nodes, ((Node) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
                                 head->idx = va_array_length(nodes) - 1;
+                                head->incoming = start;
                                 if (head->row == shift && head->col == shift)
                                 {
                                     source = *head;
                                     found_source = true;
                                 } // if
                             } // if
+                            head->incoming = MIN(head->incoming, start);
+                            if (end + count > tail->incoming)
+                            {
+                                printf("SPLIT?! ");
+                                uint32_t const el = tail->incoming - tail->row;
+                                va_array_append(va_std_allocator, nodes,
+                                                ((Node) {tail->row, tail->col, el, GVA_NULL, tail->idx}));
+                                split_idx = va_array_length(nodes) - 1;
+                                tail->row += el;
+                                tail->col += el;
+                                tail->length -= el;
+                                tail->incoming += el;
+                                nodes[tail->idx].row = tail->row;
+                                nodes[tail->idx].col = tail->col;
+                                nodes[tail->idx].length = tail->length;
+
+                                printf("    %u %u %u %u: \n", el, tail->row, tail->col, tail->length);
+                            }
                             va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[head->idx].edges}));
                             nodes[head->idx].edges = va_array_length(edges) - 1;
                         } // if
@@ -1039,6 +1066,14 @@ build(size_t const len_ref, char const reference[static len_ref],
                 } // for h_j
                 is_sink = false;
             } // for h_i
+            if (split_idx != GVA_NULL)
+            {
+                tail->row = nodes[split_idx].row;
+                tail->col = nodes[split_idx].col;
+                tail->length = nodes[split_idx].length;
+                tail->idx = split_idx;
+                tail->incoming = -1;
+            }
             if (!found_source && tail->length >= len_lcs - t_i)
             {
                 if (source.idx == GVA_NULL)
@@ -1047,7 +1082,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                     source.idx = va_array_length(nodes) - 1;
                 } // if
                 printf("SOURCE    %u %u %u: ", source.row, source.col, source.length);
-                if (edges2(source, *tail, true, is_sink, len_obs, observed))
+                uint32_t unused;
+                if (edges2(source, *tail, true, is_sink, len_obs, observed, &unused, &unused))
                 {
                     va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[source.idx].edges}));
                     nodes[source.idx].edges = va_array_length(edges) - 1;
@@ -1070,9 +1106,10 @@ build(size_t const len_ref, char const reference[static len_ref],
         for (size_t j = nodes[i].edges; j != GVA_NULL; j = edges[j].next)
         {
             printf("    (%u, %u, %u): ", nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length);
+            uint32_t unused;
             edges2(((VA_LCS_Node) {nodes[i].row, nodes[i].col, nodes[i].length}),
                    ((VA_LCS_Node) {nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length}),
-                   nodes[i].row == shift && nodes[i].col == shift, nodes[edges[j].tail].edges == GVA_NULL, len_obs, observed);
+                   nodes[i].row == shift && nodes[i].col == shift, nodes[edges[j].tail].edges == GVA_NULL, len_obs, observed, &unused, &unused);
         } // for
     } // for
 } // build
