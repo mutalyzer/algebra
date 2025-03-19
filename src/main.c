@@ -987,7 +987,7 @@ build(size_t const len_ref, char const reference[static len_ref],
             } // if
             printf("%u %u %u %u\n", tail->row, tail->col, tail->length, tail->incoming);
 
-            uint32_t split_idx = GVA_NULL;
+            uint32_t split_idx = tail->idx;
             for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail->length + 1); ++h_i)
             {
                 size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
@@ -1009,9 +1009,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                         else
                         {
                             printf("CONVERSE  ");
-                            uint32_t unused;
                             if (head->idx != GVA_NULL && edges2(*tail, *head, tail->row == shift && tail->col == shift,
-                                                                false, len_obs, observed, &unused, &unused))
+                                                                false, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0}))
                             {
                                 va_array_append(va_std_allocator, edges, ((Edge2) {head->idx, nodes[tail->idx].edges}));
                                 nodes[tail->idx].edges = va_array_length(edges) - 1;
@@ -1029,7 +1028,6 @@ build(size_t const len_ref, char const reference[static len_ref],
                             {
                                 va_array_append(va_std_allocator, nodes, ((Node) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
                                 head->idx = va_array_length(nodes) - 1;
-                                head->incoming = start;
                                 if (head->row == shift && head->col == shift)
                                 {
                                     source = *head;
@@ -1039,21 +1037,15 @@ build(size_t const len_ref, char const reference[static len_ref],
                             head->incoming = MIN(head->incoming, start);
                             if (end + count > tail->incoming)
                             {
-                                printf("SPLIT ");
-                                uint32_t const el = tail->incoming - tail->row;
                                 va_array_append(va_std_allocator, nodes,
-                                                ((Node) {tail->row, tail->col, el, GVA_NULL, tail->idx}));
+                                                ((Node) {tail->row, tail->col, tail->incoming - tail->row, GVA_NULL, tail->idx}));
                                 split_idx = va_array_length(nodes) - 1;
-                                tail->row += el;
-                                tail->col += el;
-                                tail->length -= el;
-                                tail->incoming += el;
                                 nodes[tail->idx].row = tail->row;
                                 nodes[tail->idx].col = tail->col;
                                 nodes[tail->idx].length = tail->length;
-
-                                printf("    %u %u %u %u: \n", el, tail->row, tail->col, tail->length);
-                            }
+                                tail->incoming = end + count;
+                                printf("SPLIT %u %u %u\n", tail->row, tail->col, tail->length);
+                            } // if
                             va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[head->idx].edges}));
                             nodes[head->idx].edges = va_array_length(edges) - 1;
                         } // if
@@ -1062,19 +1054,9 @@ build(size_t const len_ref, char const reference[static len_ref],
                            // FIXME: skip this remainder of this (head) level
                         } // else
                     } // else
-
                 } // for h_j
                 is_sink = false;
-                if (split_idx != GVA_NULL)
-                {
-                    tail->row = nodes[split_idx].row;
-                    tail->col = nodes[split_idx].col;
-                    tail->length = tail->length + nodes[split_idx].length;
-                    tail->idx = split_idx;
-                    tail->incoming = -1;
-                    printf("tail renamed to: %u %u %u %u\n", tail->row, tail->col, tail->length, tail->incoming);
-                    split_idx = GVA_NULL;
-                } // if
+                tail->idx = split_idx;
             } // for h_i
             if (!found_source && tail->length >= len_lcs - t_i)
             {
@@ -1084,8 +1066,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                     source.idx = va_array_length(nodes) - 1;
                 } // if
                 printf("SOURCE    %u %u %u: ", source.row, source.col, source.length);
-                uint32_t unused;
-                if (edges2(source, *tail, true, is_sink, len_obs, observed, &unused, &unused))
+                // is this edges2 check always true?
+                if (edges2(source, *tail, true, is_sink, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0}))
                 {
                     va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[source.idx].edges}));
                     nodes[source.idx].edges = va_array_length(edges) - 1;
@@ -1108,10 +1090,9 @@ build(size_t const len_ref, char const reference[static len_ref],
         for (size_t j = nodes[i].edges; j != GVA_NULL; j = edges[j].next)
         {
             printf("    (%u, %u, %u): ", nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length);
-            uint32_t unused;
             edges2(((VA_LCS_Node) {nodes[i].row, nodes[i].col, nodes[i].length, 0, 0}),
                    ((VA_LCS_Node) {nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length, 0, 0}),
-                   nodes[i].row == shift && nodes[i].col == shift, nodes[edges[j].tail].edges == GVA_NULL, len_obs, observed, &unused, &unused);
+                   nodes[i].row == shift && nodes[i].col == shift, nodes[edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
         } // for
     } // for
 } // build
