@@ -908,7 +908,7 @@ check(size_t const len_ref, char const reference[static len_ref],
 static uint32_t
 edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
        bool const is_source, bool const is_sink,
-       size_t const len_obs, char const observed[static len_obs], uint32_t* const start, uint32_t* const end)
+       size_t const len_obs, char const observed[static len_obs], VA_Variant* const variant)
 {
 //    printf("%u %u %u -> %u %u %u %s %s\n", head.row, head.col, head.length, tail.row, tail.col, tail.length, is_source ? "SOURCE" : "", is_sink ? "SINK" : "");
 
@@ -932,11 +932,9 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
 
     uint32_t const count = MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
 
-    *start = row + head_offset;
-    *end = tail.row + tail_offset;
-    VA_Variant const variant = {*start, *end, col + head_offset, tail.col + tail_offset};
+    *variant = (VA_Variant) {row + head_offset, tail.row + tail_offset, col + head_offset, tail.col + tail_offset};
 
-    printf(VAR_FMT " x %u\n", print_variant(variant, observed), count);
+    printf(VAR_FMT " x %u\n", print_variant((*variant), observed), count);
     return count;
 } // edges2
 
@@ -980,9 +978,10 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
                     printf(",\n");
                 } // if
                 count += 1;
+                VA_Variant variant;
                 uint32_t const count2 = edges2(((VA_LCS_Node) {graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length, 0, 0}),
                                                ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, 0, 0}),
-                                               graph.nodes[head].row == graph.nodes[graph.source].row && graph.nodes[head].col == graph.nodes[graph.source].col, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
+                                               graph.nodes[head].row == graph.nodes[graph.source].row && graph.nodes[head].col == graph.nodes[graph.source].col, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &variant);
 
                 for (uint32_t k = 0; k < count2; ++k)
                 {
@@ -1098,7 +1097,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                         {
                             printf("CONVERSE  ");
                             if (head->idx != GVA_NULL && edges2(*tail, *head, tail->row == shift && tail->col == shift,
-                                                                false, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0}))
+                                                                false, len_obs, observed, &(VA_Variant) {0, 0, 0, 0}))
                             {
                                 va_array_append(va_std_allocator, graph.edges, ((Edge2) {head->idx, graph.nodes[tail->idx].edges}));
                                 graph.nodes[tail->idx].edges = va_array_length(graph.edges) - 1;
@@ -1107,9 +1106,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                     } // if
                     else
                     {
-                        uint32_t start = -1;
-                        uint32_t end = -1;
-                        uint32_t const count = edges2(*head, *tail, head->row == shift && head->col == shift, is_sink, len_obs, observed, &start, &end);
+                        VA_Variant variant;
+                        uint32_t const count = edges2(*head, *tail, head->row == shift && head->col == shift, is_sink, len_obs, observed, &variant);
                         if (count > 0)
                         {
                             if (head->idx == GVA_NULL)
@@ -1123,8 +1121,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                                     found_source = true;
                                 } // if
                             } // if
-                            head->incoming = MIN(head->incoming, start);
-                            if (end + count > tail->incoming)
+                            head->incoming = MIN(head->incoming, variant.start);
+                            if (variant.end + count > tail->incoming)
                             {
                                 uint32_t const split_len = tail->incoming - tail->row;
                                 va_array_append(va_std_allocator, graph.nodes,
@@ -1133,7 +1131,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 graph.nodes[tail->idx].row += split_len;
                                 graph.nodes[tail->idx].col += split_len;
                                 graph.nodes[tail->idx].length -= split_len;
-                                tail->incoming = end + count;
+                                tail->incoming = variant.end + count;
                                 printf("SPLIT %u %u %u\n", tail->row, tail->col, tail->length);
                             } // if
                             va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
@@ -1158,7 +1156,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                 } // if
                 printf("SOURCE    %u %u %u: ", source.row, source.col, source.length);
                 // is this edges2 check always true?
-                if (edges2(source, *tail, true, is_sink, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0}))
+                if (edges2(source, *tail, true, is_sink, len_obs, observed, &(VA_Variant) {0, 0, 0, 0}))
                 {
                     va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[source.idx].edges}));
                     graph.nodes[source.idx].edges = va_array_length(graph.edges) - 1;
@@ -1186,7 +1184,7 @@ build(size_t const len_ref, char const reference[static len_ref],
             printf("    (%u, %u, %u): ", graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
             edges2(((VA_LCS_Node) {graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, 0, 0}),
                    ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, 0, 0}),
-                   graph.nodes[i].row == shift && graph.nodes[i].col == shift, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
+                   graph.nodes[i].row == shift && graph.nodes[i].col == shift, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(VA_Variant) {0, 0, 0, 0});
         } // for
     } // for
 
