@@ -982,12 +982,12 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
                 count += 1;
                 uint32_t const count2 = edges2(((VA_LCS_Node) {graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length, 0, 0}),
                                                ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, 0, 0}),
-                                               false, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
+                                               graph.nodes[head].row == graph.nodes[graph.source].row && graph.nodes[head].col == graph.nodes[graph.source].col, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
 
-                if (count2 > 0)
+                for (uint32_t k = 0; k < count2; ++k)
                 {
-                    printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"%u\"}", head, graph.edges[j].tail, count2);
-                } // if
+                    printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"%u\"}\n", head, graph.edges[j].tail, count2);
+                } // for
                 //printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", head, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
 
                 if (table[graph.edges[j].tail].depth > 0)
