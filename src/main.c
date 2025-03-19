@@ -46,6 +46,13 @@ typedef struct
 
 typedef struct
 {
+    uint32_t tail;
+    uint32_t next;
+} Edge2;
+
+
+typedef struct
+{
     uint32_t row;
     uint32_t col;
     uint32_t length;
@@ -61,6 +68,14 @@ typedef struct
     VA_Variant supremal;
     uint32_t source;
 } Graph;
+
+
+typedef struct
+{
+    Node* nodes;
+    Edge2* edges;
+    uint32_t source;
+} Graph2;
 
 
 static inline size_t
@@ -926,14 +941,7 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
 } // edges2
 
 
-typedef struct
-{
-    uint32_t tail;
-    uint32_t next;
-} Edge2;
-
-
-static void
+static Graph2
 build(size_t const len_ref, char const reference[static len_ref],
       size_t const len_obs, char const observed[static len_obs],
       size_t const shift)
@@ -941,14 +949,13 @@ build(size_t const len_ref, char const reference[static len_ref],
     VA_LCS_Node** lcs_nodes = NULL;
     size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
 
+    Graph2 graph = {NULL, NULL, GVA_NULL};
+
     if (len_lcs == 0 || lcs_nodes == NULL)
     {
         fprintf(stderr, "Trivial graph\n");
-        return;
+        return graph;
     } // if
-
-    Node* nodes = NULL;
-    Edge2* edges = NULL;
 
     VA_LCS_Node* last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
     if (last->row + last->length != len_ref + shift || last->col + last->length != len_obs + shift)
@@ -957,8 +964,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                         ((VA_LCS_Node) {.row = len_ref + shift, .col = len_obs + shift, .length = 0}));
         last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
     } // if
-    va_array_append(va_std_allocator, nodes, ((Node) {last->row, last->col, last->length, GVA_NULL, GVA_NULL}));
-    last->idx = va_array_length(nodes) - 1;
+    va_array_append(va_std_allocator, graph.nodes, ((Node) {last->row, last->col, last->length, GVA_NULL, GVA_NULL}));
+    last->idx = va_array_length(graph.nodes) - 1;
     last->incoming = -1;
 
     fprintf(stderr, "%zu\n", len_lcs);
@@ -1012,8 +1019,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                             if (head->idx != GVA_NULL && edges2(*tail, *head, tail->row == shift && tail->col == shift,
                                                                 false, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0}))
                             {
-                                va_array_append(va_std_allocator, edges, ((Edge2) {head->idx, nodes[tail->idx].edges}));
-                                nodes[tail->idx].edges = va_array_length(edges) - 1;
+                                va_array_append(va_std_allocator, graph.edges, ((Edge2) {head->idx, graph.nodes[tail->idx].edges}));
+                                graph.nodes[tail->idx].edges = va_array_length(graph.edges) - 1;
                             }
                         } // else
                     } // if
@@ -1026,8 +1033,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                         {
                             if (head->idx == GVA_NULL)
                             {
-                                va_array_append(va_std_allocator, nodes, ((Node) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
-                                head->idx = va_array_length(nodes) - 1;
+                                va_array_append(va_std_allocator, graph.nodes, ((Node) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
+                                head->idx = va_array_length(graph.nodes) - 1;
                                 if (head->row == shift && head->col == shift)
                                 {
                                     source = *head;
@@ -1038,17 +1045,17 @@ build(size_t const len_ref, char const reference[static len_ref],
                             if (end + count > tail->incoming)
                             {
                                 uint32_t const split_len = tail->incoming - tail->row;
-                                va_array_append(va_std_allocator, nodes,
+                                va_array_append(va_std_allocator, graph.nodes,
                                                 ((Node) {tail->row, tail->col, split_len, GVA_NULL, tail->idx}));
-                                split_idx = va_array_length(nodes) - 1;
-                                nodes[tail->idx].row += split_len;
-                                nodes[tail->idx].col += split_len;
-                                nodes[tail->idx].length -= split_len;
+                                split_idx = va_array_length(graph.nodes) - 1;
+                                graph.nodes[tail->idx].row += split_len;
+                                graph.nodes[tail->idx].col += split_len;
+                                graph.nodes[tail->idx].length -= split_len;
                                 tail->incoming = end + count;
                                 printf("SPLIT %u %u %u\n", tail->row, tail->col, tail->length);
                             } // if
-                            va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[head->idx].edges}));
-                            nodes[head->idx].edges = va_array_length(edges) - 1;
+                            va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
+                            graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
                         } // if
                         else
                         {
@@ -1063,15 +1070,15 @@ build(size_t const len_ref, char const reference[static len_ref],
             {
                 if (source.idx == GVA_NULL)
                 {
-                    va_array_append(va_std_allocator, nodes, ((Node) {source.row, source.col, source.length, GVA_NULL, GVA_NULL}));
-                    source.idx = va_array_length(nodes) - 1;
+                    va_array_append(va_std_allocator, graph.nodes, ((Node) {source.row, source.col, source.length, GVA_NULL, GVA_NULL}));
+                    source.idx = va_array_length(graph.nodes) - 1;
                 } // if
                 printf("SOURCE    %u %u %u: ", source.row, source.col, source.length);
                 // is this edges2 check always true?
                 if (edges2(source, *tail, true, is_sink, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0}))
                 {
-                    va_array_append(va_std_allocator, edges, ((Edge2) {tail->idx, nodes[source.idx].edges}));
-                    nodes[source.idx].edges = va_array_length(edges) - 1;
+                    va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[source.idx].edges}));
+                    graph.nodes[source.idx].edges = va_array_length(graph.edges) - 1;
                 } // if
             } // if
         } // for t_j
@@ -1083,23 +1090,24 @@ build(size_t const len_ref, char const reference[static len_ref],
     lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs, 0);
 
 
-    printf("#nodes: %zu\n#edges: %zu\n", va_array_length(nodes), va_array_length(edges));
+    printf("#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
     printf("source: %u\n", source.idx);
-    for (size_t i = 0; i < va_array_length(nodes); ++i)
+    for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
     {
-        printf("%zu: (%u, %u, %u):\n", i, nodes[i].row, nodes[i].col, nodes[i].length);
-        if (nodes[i].lambda != GVA_NULL)
+        printf("%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        if (graph.nodes[i].lambda != GVA_NULL)
         {
-            printf("    (%u, %u, %u): lambda\n", nodes[nodes[i].lambda].row, nodes[nodes[i].lambda].col, nodes[nodes[i].lambda].length);
+            printf("    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
         }
-        for (size_t j = nodes[i].edges; j != GVA_NULL; j = edges[j].next)
+        for (size_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
         {
-            printf("    (%u, %u, %u): ", nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length);
-            edges2(((VA_LCS_Node) {nodes[i].row, nodes[i].col, nodes[i].length, 0, 0}),
-                   ((VA_LCS_Node) {nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length, 0, 0}),
-                   nodes[i].row == shift && nodes[i].col == shift, nodes[edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
+            printf("    (%u, %u, %u): ", graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
+            edges2(((VA_LCS_Node) {graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, 0, 0}),
+                   ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, 0, 0}),
+                   graph.nodes[i].row == shift && graph.nodes[i].col == shift, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
         } // for
     } // for
+    return graph;
 } // build
 
 
