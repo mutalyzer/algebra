@@ -941,6 +941,87 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
 } // edges2
 
 
+static size_t
+bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[static len_obs])
+{
+    struct
+    {
+        uint32_t depth;
+        uint32_t next;
+    }* table = va_std_allocator.alloc(va_std_allocator.context, NULL, 0, sizeof(*table) * va_array_length(graph.nodes));
+
+    for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
+    {
+        table[i].depth = 0;
+        table[i].next = GVA_NULL;
+    } // for
+    uint32_t head = graph.source;
+    uint32_t tail = graph.source;
+
+    size_t count = 0;
+    //printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\n");
+    //printf("si->s%u\n", graph.source);
+
+    printf("    \"edges\": [\n");
+    while (head != GVA_NULL)
+    {
+        //printf("pop %u\n", head);
+        for (uint32_t i = head; i != GVA_NULL; i = graph.nodes[i].lambda)
+        {
+            //printf("s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
+            if (i != head)
+            {
+                //printf("lambda %u\n", i);
+            } // if
+            for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+            {
+                if (count > 0)
+                {
+                    printf(",\n");
+                } // if
+                count += 1;
+                uint32_t const count2 = edges2(((VA_LCS_Node) {graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length, 0, 0}),
+                                               ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, 0, 0}),
+                                               false, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
+
+                if (count2 > 0)
+                {
+                    printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"%u\"}", head, graph.edges[j].tail, count2);
+                } // if
+                //printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", head, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
+
+                if (table[graph.edges[j].tail].depth > 0)
+                {
+                    //printf("skip %u\n", graph.edges[j].tail);
+                    continue;
+                } // if
+
+                //printf("push %u\n", graph.edges[j].tail);
+                table[graph.edges[j].tail].depth = table[i].depth + 1;
+                table[tail].next = graph.edges[j].tail;
+                tail = graph.edges[j].tail;
+            } // for
+        } // for
+        head = table[head].next;
+
+        /*
+        printf("  # \tdepth\tnext\n");
+        for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
+        {
+            printf("%3zu:\t%5u\t%4d\n", i, table[i].depth, table[i].next);
+        } // for
+        printf("head: %d\ntail: %d\n", head, tail);
+        */
+    } // while
+
+    printf("\n    ],\n");
+
+    table = va_std_allocator.alloc(va_std_allocator.context, table, sizeof(*table) * va_array_length(graph.nodes), 0);
+
+    return count;
+} // bfs_traversal2
+
+
 static Graph2
 build(size_t const len_ref, char const reference[static len_ref],
       size_t const len_obs, char const observed[static len_obs],
@@ -1038,6 +1119,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 if (head->row == shift && head->col == shift)
                                 {
                                     source = *head;
+                                    graph.source = source.idx;
                                     found_source = true;
                                 } // if
                             } // if
@@ -1072,6 +1154,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                 {
                     va_array_append(va_std_allocator, graph.nodes, ((Node) {source.row, source.col, source.length, GVA_NULL, GVA_NULL}));
                     source.idx = va_array_length(graph.nodes) - 1;
+                    graph.source = source.idx;
                 } // if
                 printf("SOURCE    %u %u %u: ", source.row, source.col, source.length);
                 // is this edges2 check always true?
@@ -1089,9 +1172,8 @@ build(size_t const len_ref, char const reference[static len_ref],
     // deallocation
     lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs, 0);
 
-
     printf("#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
-    printf("source: %u\n", source.idx);
+    printf("source: %u\n", graph.source);
     for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
     {
         printf("%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
@@ -1107,6 +1189,10 @@ build(size_t const len_ref, char const reference[static len_ref],
                    graph.nodes[i].row == shift && graph.nodes[i].col == shift, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &(uint32_t) {0}, &(uint32_t) {0});
         } // for
     } // for
+
+
+    bfs_traversal2(graph, len_obs, observed);
+
     return graph;
 } // build
 
