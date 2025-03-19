@@ -881,7 +881,7 @@ check(size_t const len_ref, char const reference[static len_ref],
 
     if (count != va_array_length(graph.edges))
     {
-        printf("COUNTS: %zu vs %zu1:5/, o\n", count, va_array_length(graph.edges));
+        printf("COUNTS: %zu vs %zu\n", count, va_array_length(graph.edges));
         return EXIT_FAILURE;
     } // if
 
