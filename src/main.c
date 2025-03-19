@@ -1037,12 +1037,13 @@ build(size_t const len_ref, char const reference[static len_ref],
                             head->incoming = MIN(head->incoming, start);
                             if (end + count > tail->incoming)
                             {
+                                uint32_t const split_len = tail->incoming - tail->row;
                                 va_array_append(va_std_allocator, nodes,
-                                                ((Node) {tail->row, tail->col, tail->incoming - tail->row, GVA_NULL, tail->idx}));
+                                                ((Node) {tail->row, tail->col, split_len, GVA_NULL, tail->idx}));
                                 split_idx = va_array_length(nodes) - 1;
-                                nodes[tail->idx].row = tail->row;
-                                nodes[tail->idx].col = tail->col;
-                                nodes[tail->idx].length = tail->length;
+                                nodes[tail->idx].row += split_len;
+                                nodes[tail->idx].col += split_len;
+                                nodes[tail->idx].length -= split_len;
                                 tail->incoming = end + count;
                                 printf("SPLIT %u %u %u\n", tail->row, tail->col, tail->length);
                             } // if
@@ -1087,6 +1088,10 @@ build(size_t const len_ref, char const reference[static len_ref],
     for (size_t i = 0; i < va_array_length(nodes); ++i)
     {
         printf("%zu: (%u, %u, %u):\n", i, nodes[i].row, nodes[i].col, nodes[i].length);
+        if (nodes[i].lambda != GVA_NULL)
+        {
+            printf("    (%u, %u, %u): lambda\n", nodes[nodes[i].lambda].row, nodes[nodes[i].lambda].col, nodes[nodes[i].lambda].length);
+        }
         for (size_t j = nodes[i].edges; j != GVA_NULL; j = edges[j].next)
         {
             printf("    (%u, %u, %u): ", nodes[edges[j].tail].row, nodes[edges[j].tail].col, nodes[edges[j].tail].length);
