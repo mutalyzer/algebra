@@ -934,7 +934,7 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
 
     *variant = (VA_Variant) {row + head_offset, tail.row + tail_offset, col + head_offset, tail.col + tail_offset};
 
-    printf(VAR_FMT " x %u\n", print_variant((*variant), observed), count);
+    //printf(VAR_FMT " x %u\n", print_variant((*variant), observed), count);
     return count;
 } // edges2
 
@@ -957,17 +957,17 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
     uint32_t tail = graph.source;
 
     size_t count = 0;
-    //printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[shape=point,width=.1]\n");
-    //printf("si->s%u\n", graph.source);
+    printf("digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\nsi[label=\"\",shape=none,width=0]\n");
+    printf("si->s%u\n", graph.source);
 
-    printf("    \"edges\": [\n");
+    //printf("    \"edges\": [\n");
     while (head != GVA_NULL)
     {
         uint32_t len = graph.nodes[head].length;
         //printf("pop %u\n", head);
         for (uint32_t i = head; i != GVA_NULL; i = graph.nodes[i].lambda)
         {
-            //printf("s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
+            printf("s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == GVA_NULL && graph.nodes[i].lambda == GVA_NULL ? ",peripheries=2" : "");
             if (i != head)
             {
                 len += graph.nodes[i].length;
@@ -977,7 +977,7 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
             {
                 if (count > 0)
                 {
-                    printf(",\n");
+                    //printf(",\n");
                 } // if
                 count += 1;
                 VA_Variant variant;
@@ -987,7 +987,8 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
 
                 for (uint32_t k = 0; k < count2; ++k)
                 {
-                    printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" VAR_FMT "\"}%s", head, graph.edges[j].tail, print_variant(variant, observed), k < count2 - 1 ? ",\n" : "");
+                    printf("s%u->s%u[label=\"" VAR_FMT "\"]\n", head, graph.edges[j].tail, print_variant(variant, observed));
+                    //printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" VAR_FMT "\"}%s", head, graph.edges[j].tail, print_variant(variant, observed), k < count2 - 1 ? ",\n" : "");
                     variant.start += 1;
                     variant.end += 1;
                     variant.obs_start += 1;
@@ -1019,7 +1020,8 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
         */
     } // while
 
-    printf("\n    ],\n");
+    printf("}\n");
+    //printf("\n    ],\n");
 
     table = va_std_allocator.alloc(va_std_allocator.context, table, sizeof(*table) * va_array_length(graph.nodes), 0);
 
