@@ -963,12 +963,14 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
     printf("    \"edges\": [\n");
     while (head != GVA_NULL)
     {
+        uint32_t len = graph.nodes[head].length;
         //printf("pop %u\n", head);
         for (uint32_t i = head; i != GVA_NULL; i = graph.nodes[i].lambda)
         {
             //printf("s%u[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == (uint32_t) -1 ? ",peripheries=2" : "");
             if (i != head)
             {
+                len += graph.nodes[i].length;
                 //printf("lambda %u\n", i);
             } // if
             for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
@@ -979,13 +981,17 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
                 } // if
                 count += 1;
                 VA_Variant variant;
-                uint32_t const count2 = edges2(((VA_LCS_Node) {graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length, 0, 0}),
+                uint32_t const count2 = edges2(((VA_LCS_Node) {graph.nodes[head].row, graph.nodes[head].col, len, 0, 0}),
                                                ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, 0, 0}),
                                                graph.nodes[head].row == graph.nodes[graph.source].row && graph.nodes[head].col == graph.nodes[graph.source].col, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, len_obs, observed, &variant);
 
                 for (uint32_t k = 0; k < count2; ++k)
                 {
-                    printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"%u\"}\n", head, graph.edges[j].tail, count2);
+                    printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" VAR_FMT "\"}%s", head, graph.edges[j].tail, print_variant(variant, observed), k < count2 - 1 ? ",\n" : "");
+                    variant.start += 1;
+                    variant.end += 1;
+                    variant.obs_start += 1;
+                    variant.obs_end += 1;
                 } // for
                 //printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", head, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
 
