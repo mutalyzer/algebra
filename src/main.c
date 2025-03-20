@@ -854,6 +854,21 @@ check(size_t const len_ref, char const reference[static len_ref],
         to_dot(graph, len_obs, observed);
     } // if
 
+    printf("#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
+    printf("source: %u\n", graph.source);
+    for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
+    {
+        printf("%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        if (graph.nodes[i].lambda != GVA_NULL)
+        {
+            printf("    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
+        }
+        for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            printf("    (%u, %u, %u): " VAR_FMT "\n", graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, print_variant(graph.edges[j].variant, observed));
+        } // for
+    } // for
+
     size_t count = 0;
     for (uint32_t head = 0; head < va_array_length(graph.nodes); ++head)
     {
@@ -934,7 +949,7 @@ edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
 
     *variant = (VA_Variant) {row + head_offset, tail.row + tail_offset, col + head_offset, tail.col + tail_offset};
 
-    //printf(VAR_FMT " x %u\n", print_variant((*variant), observed), count);
+    printf(VAR_FMT " x %u\n", print_variant((*variant), observed), count);
     return count;
 } // edges2
 
@@ -994,7 +1009,6 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
                     variant.obs_start += 1;
                     variant.obs_end += 1;
                 } // for
-                //printf("s%u->s%u[label=\"%u:%u/%.*s\"]\n", head, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
 
                 if (table[graph.edges[j].tail].depth > 0)
                 {
@@ -1187,7 +1201,7 @@ build(size_t const len_ref, char const reference[static len_ref],
         {
             printf("    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
         }
-        for (size_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
         {
             printf("    (%u, %u, %u): ", graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
             edges2(((VA_LCS_Node) {graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, 0, 0}),
