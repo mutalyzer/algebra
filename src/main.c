@@ -1051,6 +1051,7 @@ build(size_t const len_ref, char const reference[static len_ref],
       size_t const len_obs, char const observed[static len_obs],
       size_t const shift)
 {
+    printf("build!\n");
     VA_LCS_Node** lcs_nodes = NULL;
     size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
 
@@ -1098,9 +1099,10 @@ build(size_t const len_ref, char const reference[static len_ref],
             VA_LCS_Node* const tail = &lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
             if (tail->idx == GVA_NULL)
             {
+                // sink unreachable from tail, do not add to graph
                 continue;
             } // if
-            printf("%u %u %u %u\n", tail->row, tail->col, tail->length, tail->incoming);
+            printf("%u %u %u %d\n", tail->row, tail->col, tail->length, tail->incoming);
 
             uint32_t split_idx = tail->idx;
             for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail->length + 1); ++h_i)
@@ -1119,11 +1121,11 @@ build(size_t const len_ref, char const reference[static len_ref],
                         if (tail->row + tail->length > head->row + head->length + h_i ||
                             tail->col + tail->length > head->col + head->length + h_i)
                         {
-                            printf("--\n");  // FIXME: skip this remainder of this (head) level
+                            printf("--\n");  // FIXME: skip the remainder of this (head) level
                         } // if
                         else
                         {
-                            printf("CONVERSE  ");
+                            printf("CONVERSE\n");
                             if (head->idx != GVA_NULL && edges2(*tail, *head, tail->row == shift && tail->col == shift,
                                                                 false, len_obs, observed, &(VA_Variant) {0, 0, 0, 0}))
                             {
@@ -1146,6 +1148,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 printf("MAKE NODE %u: (%u, %u, %u)\n", head->idx, head->row, head->col, head->length);
                                 if (head->row == shift && head->col == shift)
                                 {
+                                    // head is the source
                                     source = *head;
                                     graph.source = source.idx;
                                     found_source = true;
@@ -1154,6 +1157,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                             head->incoming = MIN(head->incoming, variant.start);
                             if (variant.end + count > tail->incoming)
                             {
+                                printf("SPLIT %u %u %u  @ %u\n", tail->row, tail->col, tail->length, variant.end + count - 1);
                                 uint32_t const split_len = tail->incoming - tail->row;
                                 va_array_append(va_std_allocator, graph.nodes,
                                                 ((Node) {tail->row, tail->col, split_len, GVA_NULL, tail->idx}));
@@ -1162,9 +1166,17 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 graph.nodes[tail->idx].col += split_len;
                                 graph.nodes[tail->idx].length -= split_len;
                                 tail->incoming = variant.end + count;
-                                printf("SPLIT %u %u %u  @ %u\n", tail->row, tail->col, tail->length, variant.end + count - 1);
+                                printf(VAR_FMT "\n", print_variant(variant, observed));
+                                if (variant.start < variant.end + count - 1)
+                                {
+                                    // incoming edge
+                                    printf("INCOMING -> BOTH\n");
+                                    va_array_append(va_std_allocator, graph.edges, ((Edge2) {split_idx, graph.nodes[head->idx].edges}));
+                                    graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
+                                } // if
                                 for (uint32_t i = graph.nodes[tail->idx].edges; i != GVA_NULL; i = graph.edges[i].next)
                                 {
+                                    // outgoing edges
                                     VA_Variant var;
                                     uint32_t const count2 = edges2(*tail, (VA_LCS_Node) {graph.nodes[graph.edges[i].tail].row, graph.nodes[graph.edges[i].tail].col, graph.nodes[graph.edges[i].tail].length, 0, 0}, tail->row == shift && tail->col == shift, graph.nodes[graph.edges[i].tail].edges == GVA_NULL && graph.nodes[graph.edges[i].tail].lambda == GVA_NULL, len_obs, observed, &var);
                                     printf("    -> %u: " VAR_FMT " x %u ::\n", graph.edges[i].tail, print_variant(var, observed), count2);
@@ -1188,7 +1200,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                         } // if
                         else
                         {
-                           // FIXME: skip this remainder of this (head) level
+                           // FIXME: skip the remainder of this (head) level
                         } // else
                     } // else
                 } // for h_j
@@ -1229,7 +1241,7 @@ build(size_t const len_ref, char const reference[static len_ref],
         if (graph.nodes[i].lambda != GVA_NULL)
         {
             printf("    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
-        }
+        } // if
         for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
         {
             printf("    (%u, %u, %u): ", graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
