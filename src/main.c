@@ -1174,6 +1174,10 @@ build(size_t const len_ref, char const reference[static len_ref],
                                     va_array_append(va_std_allocator, graph.edges, ((Edge2) {split_idx, graph.nodes[head->idx].edges}));
                                     graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
                                 } // if
+                                uint32_t head_head = GVA_NULL;
+                                uint32_t head_tail = GVA_NULL;
+                                uint32_t tail_head = GVA_NULL;
+                                uint32_t tail_tail = GVA_NULL;
                                 for (uint32_t i = graph.nodes[tail->idx].edges; i != GVA_NULL; i = graph.edges[i].next)
                                 {
                                     // outgoing edges
@@ -1183,16 +1187,46 @@ build(size_t const len_ref, char const reference[static len_ref],
                                     if (var.start > variant.end + count - 1)
                                     {
                                         printf("    -> TAIL\n");
+                                        if (tail_tail != GVA_NULL)
+                                        {
+                                            graph.edges[tail_tail].next = i;
+                                        } // if
+                                        if (tail_head == GVA_NULL)
+                                        {
+                                            tail_head = i;
+                                        } // if
+                                        tail_tail = i;
                                     } // if
                                     else if (var.end + count2 - 1 < variant.end + count)
                                     {
                                         printf("    -> HEAD\n");
+                                        if (head_tail != GVA_NULL)
+                                        {
+                                            graph.edges[head_tail].next = i;
+                                        } // if
+                                        if (head_head == GVA_NULL)
+                                        {
+                                            head_head = i;
+                                        } // if
+                                        head_tail = i;
                                     } // if
                                     else
                                     {
                                         printf("    -> BOTH\n");
+                                        va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, head_head}));
+                                        head_head = va_array_length(graph.edges) - 1;
                                     } // else
                                 } // for
+                                if (head_tail != GVA_NULL)
+                                {
+                                    graph.edges[head_tail].next = GVA_NULL;
+                                } // if
+                                if (tail_tail != GVA_NULL)
+                                {
+                                    graph.edges[tail_tail].next = GVA_NULL;
+                                } // if
+                                graph.nodes[split_idx].edges = head_head;
+                                graph.nodes[tail->idx].edges = tail_head;
                             } // if
                             va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
                             graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
