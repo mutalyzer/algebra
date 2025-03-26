@@ -1213,7 +1213,16 @@ build(size_t const len_ref, char const reference[static len_ref],
                                     else
                                     {
                                         printf("    -> BOTH\n");
-                                        va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, head_head}));
+                                        if (tail_tail != GVA_NULL)
+                                        {
+                                            graph.edges[tail_tail].next = i;
+                                        } // if
+                                        if (tail_head == GVA_NULL)
+                                        {
+                                            tail_head = i;
+                                        } // if
+                                        tail_tail = i;
+                                        va_array_append(va_std_allocator, graph.edges, ((Edge2) {graph.edges[i].tail, head_head}));
                                         head_head = va_array_length(graph.edges) - 1;
                                     } // else
                                 } // for
