@@ -7,6 +7,7 @@
 #include "../include/array.h"           // va_array_*
 #include "../include/edit.h"            // va_edit
 #include "../include/graph.h"           // Graph, to_dot
+#include "../include/graph2.h"          // build
 #include "../include/std_alloc.h"       // va_std_allocator
 
 

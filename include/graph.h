@@ -12,20 +12,12 @@ typedef struct
 
 typedef struct
 {
-    uint32_t tail;
-    uint32_t next;
-} Edge2;
-
-
-typedef struct
-{
     uint32_t row;
     uint32_t col;
     uint32_t length;
     uint32_t edges;
     uint32_t lambda;
 } Node;
-
 
 typedef struct
 {
@@ -36,27 +28,16 @@ typedef struct
 } Graph;
 
 
-typedef struct
-{
-    Node* nodes;
-    Edge2* edges;
-    uint32_t source;
-} Graph2;
-
-
 Graph
 build_graph(VA_Allocator const allocator,
             size_t const len_ref, size_t const len_obs,
             size_t const len_lcs, VA_LCS_Node* lcs_nodes[static len_lcs],
             size_t const shift);
 
-Graph2
-build(size_t const len_ref, char const reference[static len_ref],
-      size_t const len_obs, char const observed[static len_obs],
-      size_t const shift);
 
 void
 to_dot(Graph const graph, size_t const len_obs, char const observed[static len_obs]);
+
 
 size_t
 edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_length,
@@ -64,6 +45,7 @@ edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_leng
       bool const is_source,
       size_t const len_obs, char const observed[static len_obs],
       VA_Variant const edge);
+
 
 void
 destroy(VA_Allocator const allocator, Graph* const graph);
