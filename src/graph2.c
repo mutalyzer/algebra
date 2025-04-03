@@ -67,11 +67,8 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
 
     for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
     {
-        // if (NULL != table) // silence static analyzer
-        {
-            table[i].depth = 0;
-            table[i].next = GVA_NULL;
-        }
+        table[i].depth = 0;
+        table[i].next = GVA_NULL;
     } // for
     uint32_t head = graph.source;
     uint32_t tail = graph.source;
