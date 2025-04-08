@@ -225,13 +225,15 @@ build(size_t const len_ref, char const reference[static len_ref],
                         else
                         {
                             printf("CONVERSE\n");
+                            VA_Variant variant;
                             if (head->idx != GVA_NULL && edges2(*tail, *head, tail->row == shift && tail->col == shift,
-                                                                false, len_obs, observed, &(VA_Variant) {0, 0, 0, 0}))
+                                                                false, len_obs, observed, &variant))
                             {
                                 va_array_append(va_std_allocator, graph.edges, ((Edge2) {head->idx, graph.nodes[tail->idx].edges}));
                                 graph.nodes[tail->idx].edges = va_array_length(graph.edges) - 1;
                                 printf("MAKE EDGE\n");
-                            }
+                            } // if
+                            tail->incoming = MIN(tail->incoming, variant.start);
                         } // else
                     } // if
                     else

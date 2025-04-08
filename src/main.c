@@ -160,8 +160,8 @@ main(int argc, char* argv[static argc + 1])
         char const* const restrict observed = argv[2];
         size_t const len_ref = strlen(reference);
         size_t const len_obs = strlen(observed);
-        // check(len_ref, reference, len_obs, observed, true);
-        // build(len_ref, reference, len_obs, observed, 0);
+        check(len_ref, reference, len_obs, observed, true);
+        build(len_ref, reference, len_obs, observed, 0);
 
         VA_LCS_Node** lcs_nodes = NULL;
         size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
@@ -169,7 +169,7 @@ main(int argc, char* argv[static argc + 1])
         Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
 
         // to_dot(graph, len_obs, observed);
-        to_json(graph, len_obs, observed, false);
+        // to_json(graph, len_obs, observed, false);
 
         destroy(va_std_allocator, &graph);
 
