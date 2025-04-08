@@ -157,6 +157,32 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
 } // bfs_traversal2
 
 
+static inline VA_Variant
+shift_variant(VA_Variant const variant, uint32_t const shift)
+{
+    return (VA_Variant) {variant.start + shift, variant.end + shift, variant.obs_start + shift, variant.obs_end + shift};
+} // shift_variant
+
+
+static void
+split(Graph2 graph, VA_LCS_Node const* const head, uint32_t const count, VA_Variant const incoming, size_t const len_obs, char const observed[static len_obs])
+{
+    fprintf(stderr, "SPLIT %u %u %u  @ %u\n", head->row, head->col, head->length, head->incoming);
+    fprintf(stderr, "incoming: " VAR_FMT " x %u\n", print_variant(incoming, observed), count);
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        uint32_t const offset = count - 1 - i;
+        fprintf(stderr, "    " VAR_FMT "\n", print_variant(shift_variant(incoming, offset), observed));
+        for (uint32_t j = graph.nodes[head->idx].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            Node2 const tail = graph.nodes[graph.edges[j].tail];
+            VA_Variant outgoing;
+            uint32_t const count2 = edges2(*head, (VA_LCS_Node) {tail.row, tail.col, tail.length, 0, 0}, head->row == 0 && head->col == 0, tail.edges == GVA_NULL, len_obs, observed, &outgoing);
+        } // for
+    } // for
+} // split
+
+
 Graph2
 build(size_t const len_ref, char const reference[static len_ref],
       size_t const len_obs, char const observed[static len_obs],
@@ -283,85 +309,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                             head->incoming = MIN(head->incoming, variant.start);
                             if (variant.end + count > tail->incoming)
                             {
-                                fprintf(stderr, "SPLIT %u %u %u  @ %u\n", tail->row, tail->col, tail->length, tail->incoming);
-                                uint32_t const split_len = tail->incoming - tail->row;
-                                va_array_append(va_std_allocator, graph.nodes,
-                                                ((Node2) {tail->row, tail->col, split_len, GVA_NULL, tail->idx}));
-                                split_idx = va_array_length(graph.nodes) - 1;
-                                graph.nodes[tail->idx].row += split_len;
-                                graph.nodes[tail->idx].col += split_len;
-                                graph.nodes[tail->idx].length -= split_len;
-                                tail->incoming = variant.end + count;
-                                fprintf(stderr, VAR_FMT "\n", print_variant(variant, observed));
-                                if (count > 1)
-                                {
-                                    // incoming edge
-                                    fprintf(stderr, "INCOMING -> BOTH\n");
-                                    va_array_append(va_std_allocator, graph.edges, ((Edge2) {split_idx, graph.nodes[head->idx].edges}));
-                                    graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
-                                } // if
-                                uint32_t head_head = GVA_NULL;
-                                uint32_t head_tail = GVA_NULL;
-                                uint32_t tail_head = GVA_NULL;
-                                uint32_t tail_tail = GVA_NULL;
-                                for (uint32_t i = graph.nodes[tail->idx].edges; i != GVA_NULL; i = graph.edges[i].next)
-                                {
-                                    // outgoing edges
-                                    VA_Variant var;
-                                    uint32_t const count2 = edges2(*tail, (VA_LCS_Node) {graph.nodes[graph.edges[i].tail].row, graph.nodes[graph.edges[i].tail].col, graph.nodes[graph.edges[i].tail].length, 0, 0}, tail->row == shift && tail->col == shift, graph.nodes[graph.edges[i].tail].edges == GVA_NULL && graph.nodes[graph.edges[i].tail].lambda == GVA_NULL, len_obs, observed, &var);
-                                    fprintf(stderr, "    -> %u: " VAR_FMT " x %u ::\n", graph.edges[i].tail, print_variant(var, observed), count2);
-                                    if (var.start > variant.end + count - 1)
-                                    {
-                                        fprintf(stderr, "    -> TAIL\n");
-                                        if (tail_tail != GVA_NULL)
-                                        {
-                                            graph.edges[tail_tail].next = i;
-                                        } // if
-                                        if (tail_head == GVA_NULL)
-                                        {
-                                            tail_head = i;
-                                        } // if
-                                        tail_tail = i;
-                                    } // if
-                                    else if (var.end + count2 - 1 < variant.end + count)
-                                    {
-                                        fprintf(stderr, "    -> HEAD\n");
-                                        if (head_tail != GVA_NULL)
-                                        {
-                                            graph.edges[head_tail].next = i;
-                                        } // if
-                                        if (head_head == GVA_NULL)
-                                        {
-                                            head_head = i;
-                                        } // if
-                                        head_tail = i;
-                                    } // if
-                                    else
-                                    {
-                                        fprintf(stderr, "    -> BOTH\n");
-                                        if (tail_tail != GVA_NULL)
-                                        {
-                                            graph.edges[tail_tail].next = i;
-                                        } // if
-                                        if (tail_head == GVA_NULL)
-                                        {
-                                            tail_head = i;
-                                        } // if
-                                        tail_tail = i;
-                                        va_array_append(va_std_allocator, graph.edges, ((Edge2) {graph.edges[i].tail, head_head}));
-                                        head_head = va_array_length(graph.edges) - 1;
-                                    } // else
-                                } // for
-                                if (head_tail != GVA_NULL)
-                                {
-                                    graph.edges[head_tail].next = GVA_NULL;
-                                } // if
-                                if (tail_tail != GVA_NULL)
-                                {
-                                    graph.edges[tail_tail].next = GVA_NULL;
-                                } // if
-                                graph.nodes[split_idx].edges = head_head;
-                                graph.nodes[tail->idx].edges = tail_head;
+                                split(graph, tail, count, variant, len_obs, observed);
                             } // if
                             va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
                             graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
