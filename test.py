@@ -105,7 +105,7 @@ def check(reference, observed, debug=False, timeout=2):
 
     for cnode in cgraph["nodes"].values():
         try:
-            cnode["node"] = next(node for node in nodes if node == LCSgraph.Node(cnode["row"], cnode["col"], cnode["length"]))
+            cnode["node"] = next(node for node in nodes if node.row == cnode["row"] and node.col == cnode["col"])
         except StopIteration:
             raise ValueError(f'{cnode} not in graph nodes') from None
 
@@ -125,6 +125,10 @@ def check(reference, observed, debug=False, timeout=2):
     if debug:
         print(list(reversed(cgraph["canonical"])), canonical(graph))
 
+
+    print()
+    print(cgraph["canonical"])
+    print(canonical(graph))
     assert len(cgraph["canonical"]) == len(canonical(graph)), f'canonical length'
 
     for lhs, rhs in zip(reversed(cgraph["canonical"]), canonical(graph)):
@@ -133,7 +137,7 @@ def check(reference, observed, debug=False, timeout=2):
 
 def main():
     if len(sys.argv) == 3:
-        return check(sys.argv[1], sys.argv[2], debug=True)
+        return check(sys.argv[1], sys.argv[2], debug=False)
 
     signal.signal(signal.SIGINT, handler)
 
@@ -145,15 +149,15 @@ def main():
         #if random.random() > 0.5:
         #    prefix = random_sequence(1000)
         #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(30) + suffix
-        observed = prefix + random_sequence(30) + suffix
+        reference = prefix + random_sequence(130) + suffix
+        observed = prefix + random_sequence(100) + suffix
 
         if n % 1_000 == 0:
             print(n)
 
         try:
             check(reference, observed)
-            nx_extract(reference, observed)
+            # nx_extract(reference, observed)
             n += 1
         except KeyboardInterrupt:
             break

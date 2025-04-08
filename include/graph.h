@@ -32,11 +32,15 @@ Graph
 build_graph(VA_Allocator const allocator,
             size_t const len_ref, size_t const len_obs,
             size_t const len_lcs, VA_LCS_Node* lcs_nodes[static len_lcs],
-            size_t const shift);
+            size_t const shift, bool const debug);
 
 
 void
 to_dot(Graph const graph, size_t const len_obs, char const observed[static len_obs]);
+
+
+void
+to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs], bool const lambda);
 
 
 size_t
