@@ -368,6 +368,7 @@ lambda_edges(Graph const graph, size_t const len_obs, char const observed[static
     printf("\n    ],\n");
 } // lambda_edges
 
+
 void
 to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs], bool const lambda)
 {

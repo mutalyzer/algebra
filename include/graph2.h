@@ -32,3 +32,7 @@ Graph2
 build(size_t const len_ref, char const reference[static len_ref],
       size_t const len_obs, char const observed[static len_obs],
       size_t const shift);
+
+
+void
+to_json2(Graph2 const graph, size_t const len_obs, char const observed[static len_obs]);
