@@ -201,6 +201,7 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
     fprintf(stderr, "\n\nSPLIT %u %u %u  @ %u\n", node->row, node->col, node->length, node->incoming);
     fprintf(stderr, "incoming: " VAR_FMT " x %u\n", print_variant(incoming, observed), in_count);
     print_graph(*graph, len_obs, observed, 0);
+    uint32_t const length = node->length;
     for (uint32_t i = 0; i < in_count; ++i)
     {
         fprintf(stderr, "X %u %u %u %u\n", node->row, node->col, node->length, node->idx);
@@ -210,6 +211,7 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
         uint32_t head_tail = GVA_NULL;
         uint32_t tail_head = GVA_NULL;
         uint32_t tail_tail = GVA_NULL;
+        bool split = false;
         for (uint32_t j = graph->nodes[node->idx].edges; j != GVA_NULL; j = graph->edges[j].next)
         {
             Node2 const tail = graph->nodes[graph->edges[j].tail];
@@ -230,12 +232,32 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
                 } // if
                 tail_tail = j;
             } // if
+            else if (split)
+            {
+                fprintf(stderr, "    head\n");
+                if (head_tail != GVA_NULL)
+                {
+                    graph->edges[head_tail].next = j;
+                } // if
+                if (head_head == GVA_NULL)
+                {
+                    head_head = j;
+                } // if
+                head_tail = j;
+            } // if
             else
             {
+                split = true;
                 fprintf(stderr, "    split @ %u\n", incoming.end + offset);
-                graph->nodes[node->idx].row += offset + 1;
-                graph->nodes[node->idx].col += offset + 1;
-                graph->nodes[node->idx].length -= offset + 1;
+
+                uint32_t const tail_len = (node->row + node->length - 1) - (incoming.end + offset) + 1;
+
+                fprintf(stderr, "    %u\n", tail_len);
+
+                graph->nodes[node->idx].row += graph->nodes[node->idx].length - tail_len;
+                graph->nodes[node->idx].col += graph->nodes[node->idx].length - tail_len;
+                graph->nodes[node->idx].length = tail_len;
+
                 fprintf(stderr, "    tail (%u, %u, %u)\n", graph->nodes[node->idx].row, graph->nodes[node->idx].col, graph->nodes[node->idx].length);
 
                 va_array_append(va_std_allocator, graph->edges, ((Edge2) {node->idx, graph->nodes[head_idx].edges}));
@@ -269,6 +291,13 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
                 } // else
             } // else
         } // for
+        if (!split)
+        {
+            fprintf(stderr, "STOPPEN\n");
+            va_array_append(va_std_allocator, graph->edges, ((Edge2) {node->idx, graph->nodes[head_idx].edges}));
+            graph->nodes[head_idx].edges = va_array_length(graph->edges) - 1;
+            break;
+        } // if
         if (head_tail != GVA_NULL)
         {
             graph->edges[head_tail].next = GVA_NULL;
@@ -285,7 +314,7 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
         print_graph(*graph, len_obs, observed, 0);
     } // for
     fprintf(stderr, "\n\n");
-    node->length = 3;
+    node->length = length;
 } // split
 
 
@@ -358,7 +387,6 @@ build(size_t const len_ref, char const reference[static len_ref],
             } // if
             fprintf(stderr, "%u %u %u %d\n", tail->row, tail->col, tail->length, tail->incoming);
 
-            uint32_t split_idx = tail->idx;
             for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail->length + 1); ++h_i)
             {
                 size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
@@ -419,14 +447,24 @@ build(size_t const len_ref, char const reference[static len_ref],
                             head->incoming = MIN(head->incoming, variant.start);
                             if (variant.end + count > tail->incoming)
                             {
-                                split(&graph, tail, head->idx, count, variant, len_obs, observed);
-                                fprintf(stderr, "%u %u %u %u\n", tail->row, tail->col, tail->length, tail->idx);
+                                // volg eerst de lambda takken
+                                if (graph.nodes[tail->idx].lambda != GVA_NULL)
+                                {
+                                    va_array_append(va_std_allocator, graph.edges, ((Edge2) {graph.nodes[tail->idx].lambda, graph.nodes[head->idx].edges}));
+                                    graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
+                                    fprintf(stderr, "MAKE EDGE: %u\n", graph.nodes[tail->idx].lambda);
+                                } // if
+                                else
+                                {
+                                    split(&graph, tail, head->idx, count, variant, len_obs, observed);
+                                    fprintf(stderr, "%u %u %u %u\n", tail->row, tail->col, tail->length, tail->idx);
+                                } // else
                             } // if
                             else
                             {
                                 va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
                                 graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
-                                fprintf(stderr, "MAKE EDGE\n");
+                                fprintf(stderr, "MAKE EDGE: %u\n", tail->idx);
                             }
                         } // if
                         else
@@ -436,7 +474,6 @@ build(size_t const len_ref, char const reference[static len_ref],
                     } // else
                 } // for h_j
                 is_sink = false;
-                tail->idx = split_idx;
             } // for h_i
             if (!found_source && tail->length >= len_lcs - t_i)
             {

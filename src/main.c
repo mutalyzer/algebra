@@ -173,6 +173,10 @@ main(int argc, char* argv[static argc + 1])
         // to_dot(graph, len_obs, observed);
         // to_json(graph, len_obs, observed, false);
 
+        // destroy graph2
+        va_array_destroy(va_std_allocator, graph2.nodes);
+        va_array_destroy(va_std_allocator, graph2.edges);
+
         destroy(va_std_allocator, &graph);
 
     } // if
