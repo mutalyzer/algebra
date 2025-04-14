@@ -192,6 +192,9 @@ shift_variant(VA_Variant const variant, uint32_t const shift)
 ./a.out TATCCGTCCG GAAAAATCCG
 ./a.out GCCTGCCTAT GCCTAAAAAG
 ./a.out TGCCTTA TAGCAGCCC
+
+lengte aanpassen en zomaar eerste lambda volgen
+./a.out CCC CACCCACA
 */
 
 
@@ -206,6 +209,7 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
     {
         fprintf(stderr, "X %u %u %u %u\n", node->row, node->col, node->length, node->idx);
         uint32_t const offset = in_count - 1 - i;
+        fprintf(stderr, "OFFSET: %u\n", offset);
         fprintf(stderr, "    " VAR_FMT "\n", print_variant(shift_variant(incoming, offset), observed));
         uint32_t head_head = GVA_NULL;
         uint32_t head_tail = GVA_NULL;
@@ -232,6 +236,7 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
                 } // if
                 tail_tail = j;
             } // if
+            // dit is toeval
             else if (split)
             {
                 fprintf(stderr, "    head\n");
@@ -262,7 +267,8 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
 
                 va_array_append(va_std_allocator, graph->edges, ((Edge2) {node->idx, graph->nodes[head_idx].edges}));
                 graph->nodes[head_idx].edges = va_array_length(graph->edges) - 1;
-                if (outgoing.end + out_count - 1 > incoming.end + offset)
+                // dit is toeval
+                if (out_count > 1)
                 {
                     fprintf(stderr, "    keep both outgoing\n");
                     if (tail_tail != GVA_NULL)
@@ -279,6 +285,7 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
                 } // if
                 else
                 {
+                    fprintf(stderr, "    head\n");
                     if (head_tail != GVA_NULL)
                     {
                         graph->edges[head_tail].next = j;
@@ -314,6 +321,7 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
         print_graph(*graph, len_obs, observed, 0);
     } // for
     fprintf(stderr, "\n\n");
+    // dit is toeval
     node->length = length;
 } // split
 
@@ -417,6 +425,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 graph.nodes[tail->idx].edges = va_array_length(graph.edges) - 1;
                                 fprintf(stderr, "MAKE EDGE\n");
                                 tail->incoming = MIN(tail->incoming, variant.start);
+                                fprintf(stderr, "new incoming (%u, %u, %u): %u\n", tail->row, tail->col, tail->length, tail->incoming);
                             } // if
                             else
                             {
@@ -447,7 +456,9 @@ build(size_t const len_ref, char const reference[static len_ref],
                             head->incoming = MIN(head->incoming, variant.start);
                             if (variant.end + count > tail->incoming)
                             {
+                                // dit is toeval
                                 // volg eerst de lambda takken
+                                /*
                                 if (graph.nodes[tail->idx].lambda != GVA_NULL)
                                 {
                                     va_array_append(va_std_allocator, graph.edges, ((Edge2) {graph.nodes[tail->idx].lambda, graph.nodes[head->idx].edges}));
@@ -455,6 +466,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                                     fprintf(stderr, "MAKE EDGE: %u\n", graph.nodes[tail->idx].lambda);
                                 } // if
                                 else
+                                */
                                 {
                                     split(&graph, tail, head->idx, count, variant, len_obs, observed);
                                     fprintf(stderr, "%u %u %u %u\n", tail->row, tail->col, tail->length, tail->idx);
