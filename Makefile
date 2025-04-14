@@ -22,7 +22,7 @@ MEMCHECK   = valgrind -q --leak-check=full --error-exitcode=1
 .PHONY: check clean debug release
 
 
-debug:   CFLAGS+=-O0 -g -DDEBUG
+debug:   CFLAGS+=-O0 -g -DDEBUG -mno-avx512f
 release: CFLAGS+=-O3
 
 
@@ -30,7 +30,7 @@ debug release: $(TARGET)
 
 
 check: CFLAGS+=-O0 -g -DDEBUG -ftest-coverage -fprofile-arcs -dumpbase '' \
-		-fkeep-inline-functions -fkeep-static-functions
+		-fkeep-inline-functions -fkeep-static-functions -mno-avx512f
 check: $(TEST_BINS) $(TESTS_GCNOS) $(TEST_GCDAS) $(TEST_COVS)
 
 
