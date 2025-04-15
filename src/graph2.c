@@ -198,7 +198,7 @@ lengte aanpassen en zomaar eerste lambda volgen
 */
 
 
-static void
+static uint32_t
 split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t const in_count, VA_Variant const incoming, size_t const len_obs, char const observed[static len_obs])
 {
     fprintf(stderr, "\n\nSPLIT %u %u %u  @ %u\n", node->row, node->col, node->length, node->incoming);
@@ -321,8 +321,8 @@ split(Graph2* const graph, VA_LCS_Node* node, uint32_t const head_idx, uint32_t 
         print_graph(*graph, len_obs, observed, 0);
     } // for
     fprintf(stderr, "\n\n");
-    // dit is toeval
-    node->length = length;
+    fprintf(stderr, "split return %u\n", length - node->length);
+    return length - node->length;
 } // split
 
 
@@ -395,7 +395,9 @@ build(size_t const len_ref, char const reference[static len_ref],
             } // if
             fprintf(stderr, "%u %u %u %d\n", tail->row, tail->col, tail->length, tail->incoming);
 
-            for (size_t h_i = 0; h_i < MIN(len_lcs - t_i, tail->length + 1); ++h_i)
+            size_t const tmp_len = MIN(len_lcs - t_i, tail->length + 1);
+            uint32_t split_len = 0;
+            for (size_t h_i = 0; h_i < tmp_len; ++h_i)
             {
                 size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
                 //printf("    level: %zu with %zu nodes\n", len_lcs - t_i - h_i - 1, h_len);
@@ -405,13 +407,13 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                     fprintf(stderr, "    %u %u %u: ", head->row, head->col, head->length);
 
-                    if (head->row + head->length + h_i > tail->row + tail->length ||
-                        head->col + head->length + h_i > tail->col + tail->length)
+                    if (head->row + head->length + h_i > tail->row + tail->length + split_len ||
+                        head->col + head->length + h_i > tail->col + tail->length + split_len)
                     {
-                        if (tail->row + tail->length > head->row + head->length + h_i ||
-                            tail->col + tail->length > head->col + head->length + h_i)
+                        if (tail->row + tail->length + split_len > head->row + head->length + h_i ||
+                            tail->col + tail->length + split_len > head->col + head->length + h_i)
                         {
-                            fprintf(stderr, "no edge\n");
+                            fprintf(stderr, "no edge X\n");
                         } // if
                         else
                         {
@@ -454,6 +456,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 } // if
                             } // if
                             head->incoming = MIN(head->incoming, variant.start);
+                            fprintf(stderr, "YO! %u %u (%u,%u,%u) %u\n", variant.end, count, tail->row, tail->col, tail->length, tail->incoming);
                             if (variant.end + count > tail->incoming)
                             {
                                 // dit is toeval
@@ -468,7 +471,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 else
                                 */
                                 {
-                                    split(&graph, tail, head->idx, count, variant, len_obs, observed);
+                                    split_len = split(&graph, tail, head->idx, count, variant, len_obs, observed);
                                     fprintf(stderr, "%u %u %u %u\n", tail->row, tail->col, tail->length, tail->idx);
                                 } // else
                             } // if
@@ -487,7 +490,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                 } // for h_j
                 is_sink = false;
             } // for h_i
-            if (!found_source && tail->length >= len_lcs - t_i)
+            if (!found_source && tail->length + split_len >= len_lcs - t_i)
             {
                 if (source.idx == GVA_NULL)
                 {
