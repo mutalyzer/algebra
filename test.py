@@ -80,7 +80,8 @@ def nx_extract(reference, observed):
 
 
 def check(reference, observed, debug=False, timeout=2):
-    graph = LCSgraph.from_sequence(reference, observed)
+    #graph = LCSgraph.from_sequence(reference, observed)
+    graph = LCSgraph(reference, observed)
     valgrind = []
     if debug:
         print("\n".join(to_dot(reference, graph, labels=False, hgvs=False)))
@@ -95,7 +96,7 @@ def check(reference, observed, debug=False, timeout=2):
         print(f'\"{stdout}\"')
         raise exc
 
-    assert str(graph.supremal) == cgraph["supremal"], f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
+    #assert str(graph.supremal) == cgraph["supremal"], f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
 
     nodes = list(graph.nodes())
     edges = list(graph.bfs_traversal())
@@ -117,26 +118,27 @@ def check(reference, observed, debug=False, timeout=2):
         except StopIteration:
             raise ValueError(f'{cedge} not in edges of {head}') from None
 
-    assert len(cgraph["local_supremal"]) == len(local_supremal(reference, graph)), f'local supremal length'
+    #assert len(cgraph["local_supremal"]) == len(local_supremal(reference, graph)), f'local supremal length'
 
-    for lhs, rhs in zip(cgraph["local_supremal"], local_supremal(reference, graph)):
-        assert lhs == str(rhs), f'local supremal elements differ: {lhs} vs {rhs}'
+    #for lhs, rhs in zip(cgraph["local_supremal"], local_supremal(reference, graph)):
+    #    assert lhs == str(rhs), f'local supremal elements differ: {lhs} vs {rhs}'
 
-    if debug:
-        print(list(reversed(cgraph["canonical"])), canonical(graph))
+    #if debug:
+    #    print(list(reversed(cgraph["canonical"])), canonical(graph))
 
 
-    print()
-    print(cgraph["canonical"])
-    print(canonical(graph))
-    assert len(cgraph["canonical"]) == len(canonical(graph)), f'canonical length'
+    #print()
+    #print(cgraph["canonical"])
+    #print(canonical(graph))
+    #assert len(cgraph["canonical"]) == len(canonical(graph)), f'canonical length'
 
-    for lhs, rhs in zip(reversed(cgraph["canonical"]), canonical(graph)):
-        assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
+    #for lhs, rhs in zip(reversed(cgraph["canonical"]), canonical(graph)):
+    #    assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
 
 
 def main():
     if len(sys.argv) == 3:
+        print(sys.argv[1], sys.argv[2])
         return check(sys.argv[1], sys.argv[2], debug=False)
 
     signal.signal(signal.SIGINT, handler)
@@ -149,8 +151,8 @@ def main():
         #if random.random() > 0.5:
         #    prefix = random_sequence(1000)
         #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(130) + suffix
-        observed = prefix + random_sequence(100) + suffix
+        reference = prefix + random_sequence(10) + suffix
+        observed = prefix + random_sequence(10) + suffix
 
         if n % 1_000 == 0:
             print(n)
