@@ -19,8 +19,6 @@ typedef struct
     uint32_t length;
     uint32_t incoming;
     uint32_t idx;
-    uint32_t split_len;
-    uint32_t orig_len;
 } VA_LCS_Node;
 
 

@@ -14,6 +14,7 @@
 #define print_variant(variant, observed) variant.start, variant.end, (int) variant.obs_end - variant.obs_start, observed + variant.obs_start
 #define VAR_FMT "%u:%u/%.*s"
 
+
 static uint32_t const GVA_NULL = UINT32_MAX;
 
 
