@@ -157,7 +157,7 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
 
 
 static void
-print_graph(Graph2 const graph, size_t const len_obs, char const observed[static len_obs], uint32_t const shift) {
+print_graph(Graph2 const graph, size_t const len_obs, char const observed[static len_obs]) {
     fprintf(stderr, "#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
     fprintf(stderr, "source: %u\n", graph.source);
     if (graph.nodes == NULL)
@@ -178,8 +178,9 @@ print_graph(Graph2 const graph, size_t const len_obs, char const observed[static
                     ((VA_LCS_Node) {graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, 0, 0}),
                     ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col,
                                     graph.nodes[graph.edges[j].tail].length, 0, 0}),
-                    graph.nodes[i].row == shift && graph.nodes[i].col == shift,
-                    graph.nodes[graph.edges[j].tail].edges == GVA_NULL, &variant);
+                    i == graph.source,
+                    graph.nodes[graph.edges[j].tail].edges == GVA_NULL && graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                    &variant);
             fprintf(stderr, VAR_FMT " x %u\n", print_variant(variant, observed), count);
         } // for
     } // for
@@ -237,6 +238,7 @@ build(size_t const len_ref, char const reference[static len_ref],
             va_array_append(va_std_allocator, graph.edges, ((Edge2) {sink_idx, GVA_NULL}));
             va_array_append(va_std_allocator, graph.nodes, ((Node2) {head->row, head->col, head->length, va_array_length(graph.edges) - 1, GVA_NULL}));
             head->idx = va_array_length(graph.nodes) - 1;
+            head->incoming = head->row + head->length;
 
             VA_Variant variant;
             uint32_t const count = edges2(*head, sink, head->row == shift && head->col == shift, true, &variant);
@@ -256,7 +258,7 @@ build(size_t const len_ref, char const reference[static len_ref],
         size_t const t_len = va_array_length(lcs_nodes[len_lcs - t_i - 1]);
         for (size_t t_j = 0; t_j < t_len; ++t_j)
         {
-            VA_LCS_Node const* const tail = &lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
+            VA_LCS_Node* const tail = &lcs_nodes[len_lcs - t_i - 1][t_len - t_j - 1];
             if (tail->idx == GVA_NULL)
             {
                 continue;
@@ -264,7 +266,8 @@ build(size_t const len_ref, char const reference[static len_ref],
 
             if (tail->row == shift && tail->col == shift)
             {
-                graph.source = tail->idx;
+                source.idx = tail->idx;
+                source.incoming = tail->incoming;
             } // if
 
             bool const is_sink = tail->row + tail->length == len_ref + shift && tail->col + tail->length == len_obs + shift;
@@ -287,6 +290,12 @@ build(size_t const len_ref, char const reference[static len_ref],
                         uint32_t const count = edges2(*head, *tail, head->row == shift && head->col == shift, is_sink, &variant);
                         if (count > 0)
                         {
+
+                            if (variant.end + count > tail->incoming)
+                            {
+                                fprintf(stderr, "SPLIT (%u, %u, %u) first outgoing edge at %u\n", tail->row, tail->col, tail->length, tail->incoming);
+                            } // if
+
                             if (head->idx == GVA_NULL)
                             {
                                 va_array_append(va_std_allocator, graph.nodes, ((Node2) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
@@ -294,6 +303,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                             } // if
                             va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
                             graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
+                            head->incoming = MIN(head->incoming, variant.start);
 
                             fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
                         } // if
@@ -304,8 +314,15 @@ build(size_t const len_ref, char const reference[static len_ref],
                         uint32_t const count = edges2(*tail, *head, false, false, &variant);
                         if (count > 0)
                         {
+
+                            if (variant.end + count > head->incoming)
+                            {
+                                fprintf(stderr, "SPLIT (%u, %u, %u) first outgoing edge at %u\n", head->row, head->col, head->length, head->incoming);
+                            } // if
+
                             va_array_append(va_std_allocator, graph.edges, ((Edge2) {head->idx, graph.nodes[tail->idx].edges}));
                             graph.nodes[tail->idx].edges = va_array_length(graph.edges) - 1;
+                            tail->incoming = MIN(tail->incoming, variant.start);
 
                             fprintf(stderr, "CONVERSE (%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", tail->row, tail->col, tail->length, head->row, head->col, head->length, print_variant(variant, observed), count);
                         } // if
@@ -313,7 +330,7 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                 } // for h_j
             } // for h_i
-            if (!found_source && tail->length + 1 > len_lcs - t_i)
+            if (!found_source && tail->length >= len_lcs - t_i)
             {
                 if (source.idx == GVA_NULL)
                 {
@@ -323,6 +340,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                 } // if
                 va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[source.idx].edges}));
                 graph.nodes[source.idx].edges = va_array_length(graph.edges) - 1;
+                source.incoming = MIN(source.incoming, source.row + source.length);
 
                 VA_Variant variant;
                 uint32_t const count = edges2(source, *tail, true, is_sink, &variant);
@@ -333,7 +351,14 @@ build(size_t const len_ref, char const reference[static len_ref],
     } // for t_i
     lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs, 0);
 
-    print_graph(graph, len_obs, observed, shift);
+    fprintf(stderr, "SOURCE first outgoing edge at %u\n", source.incoming);
+    graph.nodes[source.idx].row += source.incoming;
+    graph.nodes[source.idx].col += source.incoming;
+    graph.nodes[source.idx].length -= source.incoming;
+
+    graph.source = source.idx;
+
+    print_graph(graph, len_obs, observed);
 
     return graph;
 } // build
