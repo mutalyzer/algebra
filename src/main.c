@@ -138,12 +138,10 @@ print_graph(Graph const graph, size_t const len_obs, char const observed[static 
     for (size_t i = 0; i < va_array_length(graph.nodes); ++i) {
         fprintf(stderr, "%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
         if (graph.nodes[i].lambda != GVA_NULL) {
-            fprintf(stderr, "    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row,
-                    graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
+            fprintf(stderr, "    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
         } // if
         for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next) {
-            fprintf(stderr, "    (%u, %u, %u): ", graph.nodes[graph.edges[j].tail].row,
-                    graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
+            fprintf(stderr, "    %u: (%u, %u, %u): ", graph.edges[j].tail, graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
             fprintf(stderr, VAR_FMT "\n", print_variant(graph.edges[j].variant, observed));
         } // for
     } // for
