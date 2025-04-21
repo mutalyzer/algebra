@@ -11,4 +11,3 @@ python test.py CACGCTCGT ACACT
 python test.py GTTTA TCTTTCTGC
 python test.py TCAACAAAGG CAA
 python test.py CTTATAAT CCTACCG
-
