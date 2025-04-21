@@ -127,6 +127,29 @@ check(size_t const len_ref, char const reference[static len_ref],
 } // check
 
 
+static void
+print_graph(Graph const graph, size_t const len_obs, char const observed[static len_obs]) {
+    fprintf(stderr, "#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
+    fprintf(stderr, "source: %u\n", graph.source);
+    if (graph.nodes == NULL)
+    {
+        return;
+    } // if
+    for (size_t i = 0; i < va_array_length(graph.nodes); ++i) {
+        fprintf(stderr, "%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        if (graph.nodes[i].lambda != GVA_NULL) {
+            fprintf(stderr, "    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row,
+                    graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
+        } // if
+        for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next) {
+            fprintf(stderr, "    (%u, %u, %u): ", graph.nodes[graph.edges[j].tail].row,
+                    graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
+            fprintf(stderr, VAR_FMT "\n", print_variant(graph.edges[j].variant, observed));
+        } // for
+    } // for
+} // print_graph
+
+
 int
 main(int argc, char* argv[static argc + 1])
 {
@@ -164,13 +187,14 @@ main(int argc, char* argv[static argc + 1])
         //check(len_ref, reference, len_obs, observed, true);
         Graph2 graph2 = build(len_ref, reference, len_obs, observed, 0);
 
-        to_json2(graph2, len_obs, observed);
+        //to_json2(graph2, len_obs, observed);
 
         VA_LCS_Node** lcs_nodes = NULL;
         size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
 
         Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
 
+        print_graph(graph, len_obs, observed);
         // to_dot(graph, len_obs, observed);
         // to_json(graph, len_obs, observed, false);
 
