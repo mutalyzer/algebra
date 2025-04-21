@@ -187,6 +187,20 @@ print_graph(Graph2 const graph, size_t const len_obs, char const observed[static
 } // print_graph
 
 
+static void
+split(VA_LCS_Node* const node, uint32_t const in_count, VA_Variant const incoming, Graph2* const graph)
+{
+    fprintf(stderr, "\n\n***SPLIT (%u, %u, %u) because of first outgoing edge at %u\n", node->row, node->col, node->length, node->incoming);
+
+    for (uint32_t i = 0; i < incoming.end + in_count - node->incoming; ++i)
+    {
+        fprintf(stderr, "%u\n", incoming.end + in_count - i - 1);
+    } // for
+    node->incoming = -1;
+    fprintf(stderr, "***\n\n\n");
+} // split
+
+
 Graph2
 build(size_t const len_ref, char const reference[static len_ref],
       size_t const len_obs, char const observed[static len_obs],
@@ -293,7 +307,7 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                             if (variant.end + count > tail->incoming)
                             {
-                                fprintf(stderr, "SPLIT (%u, %u, %u) first outgoing edge at %u\n", tail->row, tail->col, tail->length, tail->incoming);
+                                split(tail, count, variant, &graph);
                             } // if
 
                             if (head->idx == GVA_NULL)
@@ -317,7 +331,7 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                             if (variant.end + count > head->incoming)
                             {
-                                fprintf(stderr, "SPLIT (%u, %u, %u) first outgoing edge at %u\n", head->row, head->col, head->length, head->incoming);
+                                split(head, count, variant, &graph);
                             } // if
 
                             va_array_append(va_std_allocator, graph.edges, ((Edge2) {head->idx, graph.nodes[tail->idx].edges}));
