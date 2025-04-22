@@ -11,3 +11,6 @@ valgrind --error-exitcode=1 ./a.out CACGCTCGT ACACT
 valgrind --error-exitcode=1 ./a.out GTTTA TCTTTCTGC
 valgrind --error-exitcode=1 ./a.out TCAACAAAGG CAA
 valgrind --error-exitcode=1 ./a.out CTTATAAT CCTACCG
+valgrind --error-exitcode=1 ./a.out GG GGTCA
+valgrind --error-exitcode=1 ./a.out "" AAT
+valgrind --error-exitcode=1 ./a.out AGTGG TGGGGTAGT

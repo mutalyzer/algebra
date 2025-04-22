@@ -185,7 +185,7 @@ main(int argc, char* argv[static argc + 1])
         //check(len_ref, reference, len_obs, observed, true);
         Graph2 graph2 = build(len_ref, reference, len_obs, observed, 0);
 
-        //to_json2(graph2, len_obs, observed);
+        to_json2(graph2, len_obs, observed);
 
         VA_LCS_Node** lcs_nodes = NULL;
         size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);

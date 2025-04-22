@@ -298,17 +298,6 @@ build(size_t const len_ref, char const reference[static len_ref],
     VA_LCS_Node** lcs_nodes = NULL;
     size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
 
-    fprintf(stderr, "%zu\n", len_lcs);
-    for (size_t i = 0; i < len_lcs; ++i)
-    {
-        fprintf(stderr, "%zu:  ", i);
-        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
-        {
-            fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
-        } // for
-        fprintf(stderr, "\n");
-    } // for
-
     Graph2 graph = {NULL, NULL, GVA_NULL};
 
     if (len_lcs == 0 || lcs_nodes == NULL)
@@ -327,6 +316,18 @@ build(size_t const len_ref, char const reference[static len_ref],
         return graph;
     } // if
 
+    fprintf(stderr, "%zu\n", len_lcs);
+    for (size_t i = 0; i < len_lcs; ++i)
+    {
+        fprintf(stderr, "%zu:  ", i);
+        for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
+        {
+            fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
+        } // for
+        fprintf(stderr, "\n");
+    } // for
+
+    bool found_source = false;
     VA_LCS_Node* const last = &lcs_nodes[len_lcs - 1][va_array_length(lcs_nodes[len_lcs - 1]) - 1];
     if (last->row + last->length != len_ref + shift || last->col + last->length != len_obs + shift)
     {
@@ -337,6 +338,10 @@ build(size_t const len_ref, char const reference[static len_ref],
         for (size_t i = 0; i < h_len; ++i)
         {
             VA_LCS_Node* const head = &lcs_nodes[len_lcs - 1][h_len - i - 1];
+            if (head->row == shift && head->col == shift)
+            {
+                found_source = true;
+            } // if
 
             va_array_append(va_std_allocator, graph.edges, ((Edge2) {sink_idx, GVA_NULL}));
             va_array_append(va_std_allocator, graph.nodes, ((Node2) {head->row, head->col, head->length, va_array_length(graph.edges) - 1, GVA_NULL}));
@@ -355,7 +360,6 @@ build(size_t const len_ref, char const reference[static len_ref],
     } // else
 
     VA_LCS_Node source = {shift, shift, 0, -1, GVA_NULL};
-    bool found_source = false;
     for (size_t t_i = 0; t_i < len_lcs; ++t_i)
     {
         size_t const t_len = va_array_length(lcs_nodes[len_lcs - t_i - 1]);

@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 from itertools import chain
-import networkx as nx
+#import networkx as nx
 
 from algebra import LCSgraph
 from algebra.extractor import local_supremal
