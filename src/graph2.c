@@ -188,7 +188,7 @@ print_graph(Graph2 const graph, size_t const len_obs, char const observed[static
 static void
 split(VA_LCS_Node* const node, VA_LCS_Node* const head, uint32_t const in_count, VA_Variant const incoming, Graph2* const graph)
 {
-    fprintf(stderr, "\n\n***SPLIT (%u, %u, %u) because of first outgoing edge at %u\n", node->row, node->col, node->length, node->incoming);
+    fprintf(stderr, "\n***SPLIT (%u, %u, %u) because of first outgoing edge at %u\n", node->row, node->col, node->length, node->incoming);
 
     uint32_t pos = 0;
     for (uint32_t i = 0; i < incoming.end + in_count - node->incoming; ++i)
@@ -206,6 +206,7 @@ split(VA_LCS_Node* const node, VA_LCS_Node* const head, uint32_t const in_count,
             uint32_t const out_count = edges2(*node, (VA_LCS_Node) {tail->row, tail->col, tail->length, -1, GVA_NULL}, false, tail->edges == GVA_NULL && tail->lambda == GVA_NULL, &outgoing);
             fprintf(stderr, "    %u: (%u, %u, %u): x %u  ", graph->edges[j].tail, tail->row, tail->col, tail->length, out_count);
 
+            // TODO: can we avoid reordering the tail list?
             if (outgoing.start > pos)
             {
                 if (tail_tail != GVA_NULL)
@@ -284,10 +285,11 @@ split(VA_LCS_Node* const node, VA_LCS_Node* const head, uint32_t const in_count,
     node->incoming = -1;  // FIXME: real value?
     head->incoming = incoming.start;
 
-    fprintf(stderr, "***\n\n\n");
+    fprintf(stderr, "***\n\n");
 } // split
 
 
+// FIXME: incoming means the first *outgoing* edge
 Graph2
 build(size_t const len_ref, char const reference[static len_ref],
       size_t const len_obs, char const observed[static len_obs],
@@ -404,13 +406,22 @@ build(size_t const len_ref, char const reference[static len_ref],
                             else
                             {
                                 uint32_t lambda = tail->idx;
-                                while (graph.nodes[lambda].lambda != GVA_NULL && variant.end >= graph.nodes[lambda].row + graph.nodes[lambda].length)
+                                for (uint32_t i = 0; i < count; ++i)
                                 {
-                                    lambda = graph.nodes[lambda].lambda;
-                                } // if
+                                    while (graph.nodes[lambda].lambda != GVA_NULL &&
+                                           variant.end + i >= graph.nodes[lambda].row + graph.nodes[lambda].length)
+                                    {
+                                        lambda = graph.nodes[lambda].lambda;
+                                    } // if
 
-                                va_array_append(va_std_allocator, graph.edges, ((Edge2) {lambda, graph.nodes[head->idx].edges}));
-                                graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
+                                    va_array_append(va_std_allocator, graph.edges, ((Edge2) {lambda, graph.nodes[head->idx].edges}));
+                                    graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
+
+                                    if (graph.nodes[lambda].lambda == GVA_NULL)
+                                    {
+                                        break;
+                                    } // if
+                                } // for
                                 head->incoming = MIN(head->incoming, variant.start);
                             } // else
 
