@@ -13,4 +13,11 @@ python test.py TCAACAAAGG CAA
 python test.py CTTATAAT CCTACCG
 python test.py GG GGTCA
 python test.py "" AAT
+python test.py CGATGT TGTGA
 python test.py AGTGG TGGGGTAGT
+python test.py CGAG CGAG
+python test.py GGCGAA GGACCA
+python test.py CTCCTCGGA ACCTCGTCTG
+python test.py TTTCCAG TTGTTCA
+python test.py TTAATTAGTT GACGTTAATT
+#python test.py CGGGGGC CCGGCCG
