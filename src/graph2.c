@@ -387,6 +387,7 @@ build(size_t const len_ref, char const reference[static len_ref],
 
             bool const is_sink = tail->row + tail->length == len_ref + shift && tail->col + tail->length == len_obs + shift;
             size_t const len = MIN(len_lcs - t_i, tail->length + 1);
+            bool replaced = false;
             for (size_t h_i = 0; h_i < len; ++h_i)
             {
                 size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
@@ -398,7 +399,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                         found_source = true;
                     } // if
 
-                    fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)\n", head->row, head->col, head->length, tail->row, tail->col, tail->length);
+                    fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", head->row, head->col, head->length, tail->row, tail->col, tail->length);
 
                     if (head->row + head->length + h_i <= tail->row + tail->length &&
                         head->col + head->length + h_i <= tail->col + tail->length)
@@ -422,7 +423,6 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 uint32_t lambda = tail->idx;
                                 for (uint32_t i = 0; i < count; ++i)
                                 {
-                                    fprintf(stderr, "LAMBDA\n");
                                     while (graph.nodes[lambda].lambda != GVA_NULL &&
                                            variant.end + i >= graph.nodes[lambda].row + graph.nodes[lambda].length)
                                     {
@@ -452,10 +452,16 @@ build(size_t const len_ref, char const reference[static len_ref],
                         {
                             if (head->idx == GVA_NULL)
                             {
-                                fprintf(stderr, "CONVERSE We don't know yet\n");
-                                fprintf(stderr, "Append (%u, %u, %zu) at level: %zu\n", tail->row, tail->col, tail->length - h_i - 1, h_i - 2);
-                                h_i = len;
-                                break;
+                                fprintf(stderr, "CONVERSE We don't know yet %zu %zu\n", len_lcs - t_i - 1, h_i);
+                                if (len_lcs - t_i - 2 > h_i)
+                                {
+                                    fprintf(stderr, "Append (%u, %u, %zu) %u %u at level: %zu\n", tail->row, tail->col, tail->length - h_i - 1, tail->incoming, tail->idx, len_lcs - t_i - h_i - 2);
+                                    va_array_append(va_std_allocator, lcs_nodes[len_lcs - t_i - h_i - 2], ((VA_LCS_Node) {tail->row, tail->col, tail->length - h_i - 1, tail->incoming, tail->idx}));
+                                    h_i = len;
+                                    replaced = true;
+                                    break;
+                                } // if
+                                continue;
                             } // if
 
                             if (variant.end + count > head->incoming)
@@ -480,7 +486,7 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                 } // for h_j
             } // for h_i
-            if (!found_source && tail->length >= len_lcs - t_i)
+            if (!replaced && !found_source && tail->length >= len_lcs - t_i)
             {
                 if (source.idx == GVA_NULL)
                 {

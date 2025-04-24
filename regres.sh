@@ -20,4 +20,4 @@ python test.py GGCGAA GGACCA
 python test.py CTCCTCGGA ACCTCGTCTG
 python test.py TTTCCAG TTGTTCA
 python test.py TTAATTAGTT GACGTTAATT
-#python test.py CGGGGGC CCGGCCG
+python test.py CGGGGGC CCGGCCG
