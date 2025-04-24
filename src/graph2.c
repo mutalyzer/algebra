@@ -398,6 +398,8 @@ build(size_t const len_ref, char const reference[static len_ref],
                         found_source = true;
                     } // if
 
+                    fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)\n", head->row, head->col, head->length, tail->row, tail->col, tail->length);
+
                     if (head->row + head->length + h_i <= tail->row + tail->length &&
                         head->col + head->length + h_i <= tail->col + tail->length)
                     {
@@ -441,14 +443,20 @@ build(size_t const len_ref, char const reference[static len_ref],
                             fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
                         } // if
                     } // if
-                    else if (/*head->idx != GVA_NULL &&*/
-                             tail->row + tail->length <= head->row + head->length + h_i &&
+                    else if (tail->row + tail->length <= head->row + head->length + h_i &&
                              tail->col + tail->length <= head->col + head->length + h_i)
                     {
                         VA_Variant variant;
                         uint32_t const count = edges2(*tail, *head, tail->row == shift && tail->col == shift, false, &variant);
                         if (count > 0)
                         {
+                            if (head->idx == GVA_NULL)
+                            {
+                                fprintf(stderr, "CONVERSE We don't know yet\n");
+                                fprintf(stderr, "Append (%u, %u, %zu) at level: %zu\n", tail->row, tail->col, tail->length - h_i - 1, h_i - 2);
+                                h_i = len;
+                                break;
+                            } // if
 
                             if (variant.end + count > head->incoming)
                             {
