@@ -423,15 +423,23 @@ build(size_t const len_ref, char const reference[static len_ref],
                                 uint32_t lambda = tail->idx;
                                 for (uint32_t i = 0; i < count; ++i)
                                 {
+                                    fprintf(stderr, "LAMBDA: %u\n", lambda);
+                                    fprintf(stderr, "    variant: %u\n", variant.end + i);
+                                    bool is_lambda = false;
                                     while (graph.nodes[lambda].lambda != GVA_NULL &&
                                            variant.end + i >= graph.nodes[lambda].row + graph.nodes[lambda].length)
                                     {
                                         lambda = graph.nodes[lambda].lambda;
+                                        is_lambda = true;
                                     } // if
 
-                                    va_array_append(va_std_allocator, graph.edges, ((Edge2) {lambda, graph.nodes[head->idx].edges}));
-                                    graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
+                                    if (i == 0 || is_lambda)
+                                    {
+                                        va_array_append(va_std_allocator, graph.edges, ((Edge2) {lambda, graph.nodes[head->idx].edges}));
+                                        graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
+                                    } // if
 
+                                    fprintf(stderr, "    next: %u\n", graph.nodes[lambda].lambda);
                                     if (graph.nodes[lambda].lambda == GVA_NULL || variant.end + count <= graph.nodes[lambda].row + graph.nodes[lambda].length)
                                     {
                                         break;
@@ -452,10 +460,11 @@ build(size_t const len_ref, char const reference[static len_ref],
                         {
                             if (head->idx == GVA_NULL)
                             {
-                                fprintf(stderr, "CONVERSE We don't know yet %zu %zu\n", len_lcs - t_i - 1, h_i);
+                                fprintf(stderr, "(%u, %u, %u) not in the graph yet\n", head->row, head->col, head->length);
+                                // FIXME: why is this special?
                                 if (len_lcs - t_i - 2 > h_i)
                                 {
-                                    fprintf(stderr, "Append (%u, %u, %zu) %u %u at level: %zu\n", tail->row, tail->col, tail->length - h_i - 1, tail->incoming, tail->idx, len_lcs - t_i - h_i - 2);
+                                    fprintf(stderr, "Append (%u, %u, %zu) at level: %zu\n", tail->row, tail->col, tail->length - h_i - 1, len_lcs - t_i - h_i - 2);
                                     va_array_append(va_std_allocator, lcs_nodes[len_lcs - t_i - h_i - 2], ((VA_LCS_Node) {tail->row, tail->col, tail->length - h_i - 1, tail->incoming, tail->idx}));
                                     h_i = len;
                                     replaced = true;
