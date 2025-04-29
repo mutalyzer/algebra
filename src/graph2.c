@@ -368,6 +368,12 @@ build(size_t const len_ref, char const reference[static len_ref],
         } // if
     } // else
 
+    size_t* x = va_array_init(va_std_allocator, len_lcs, sizeof(*x));
+    for (size_t i = 0; i < len_lcs; ++i)
+    {
+        x[i] = va_array_length(lcs_nodes[i]);
+    } // for
+
     for (size_t t_i = 0; t_i < len_lcs; ++t_i)
     {
         size_t const t_len = va_array_length(lcs_nodes[len_lcs - t_i - 1]);
@@ -387,10 +393,11 @@ build(size_t const len_ref, char const reference[static len_ref],
 
             bool const is_sink = tail->row + tail->length == len_ref + shift && tail->col + tail->length == len_obs + shift;
             size_t const len = MIN(len_lcs - t_i, tail->length + 1);
-            bool replaced = false;
-            for (size_t h_i = 0; h_i < len; ++h_i)
+            bool converse_stop = false;
+            size_t append_level = 0;
+            for (size_t h_i = 0; !converse_stop && h_i < len; ++h_i)
             {
-                size_t const h_len = h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]);
+                size_t const h_len = MIN(h_i == 0 ? t_len - t_j - 1: va_array_length(lcs_nodes[len_lcs - t_i - h_i - 1]), x[len_lcs - t_i - h_i - 1]);
                 for (size_t h_j = 0; h_j < h_len; ++h_j)
                 {
                     VA_LCS_Node* const head = &lcs_nodes[len_lcs - t_i - h_i - 1][h_len - h_j - 1];
@@ -462,18 +469,14 @@ build(size_t const len_ref, char const reference[static len_ref],
                             {
                                 fprintf(stderr, "(%u, %u, %u) not in the graph yet\n", head->row, head->col, head->length);
                                 // FIXME: why is this special?
-                                if (len_lcs - t_i - 2 > h_i)
+                                if (h_i > 0)
                                 {
-                                    fprintf(stderr, "Append (%u, %u, %zu) at level: %zu\n", tail->row, tail->col, tail->length - h_i - 1, len_lcs - t_i - h_i - 2);
-                                    va_array_append(va_std_allocator, lcs_nodes[len_lcs - t_i - h_i - 2], ((VA_LCS_Node) {tail->row, tail->col, tail->length - h_i - 1, tail->incoming, tail->idx}));
-                                    h_i = len;
-                                    replaced = true;
-                                    break;
+                                    fprintf(stderr, "Marking to stop\n");
+                                    append_level = h_i;
+                                    converse_stop = true;
                                 } // if
-                                continue;
                             } // if
-
-                            if (variant.end + count > head->incoming)
+                            else if (variant.end + count > head->incoming)
                             {
                                 split(head, tail, count, variant, &graph);
                             } // if
@@ -495,7 +498,12 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                 } // for h_j
             } // for h_i
-            if (!replaced && !found_source && tail->length >= len_lcs - t_i)
+            if (converse_stop)
+            {
+                fprintf(stderr, "Append (%u, %u, %zu) at level: %zu\n", tail->row, tail->col, tail->length - append_level, len_lcs - t_i - append_level - 1);
+                va_array_append(va_std_allocator, lcs_nodes[len_lcs - t_i - append_level - 1], ((VA_LCS_Node) {tail->row, tail->col, tail->length - append_level, tail->incoming, tail->idx}));
+            } // if
+            else if (!found_source && tail->length >= len_lcs - t_i)
             {
                 if (source.idx == GVA_NULL)
                 {
@@ -514,6 +522,8 @@ build(size_t const len_ref, char const reference[static len_ref],
         lcs_nodes[len_lcs - t_i - 1] = va_array_destroy(va_std_allocator, lcs_nodes[len_lcs - t_i - 1]);
     } // for t_i
     lcs_nodes = va_std_allocator.alloc(va_std_allocator.context, lcs_nodes, len_lcs, 0);
+
+    x = va_array_destroy(va_std_allocator, x);
 
     fprintf(stderr, "SOURCE first outgoing edge at %u\n", source.incoming);
     graph.nodes[source.idx].row += source.incoming;
