@@ -4,85 +4,7 @@
 
 #include "../include/alloc.h"   // VA_Allocator
 #include "../include/array.h"   // va_array_*
-#include "../include/edit.h"    // VA_LCS_Node, va_edit*
-
-
-#include <stdio.h>
-
-
-static inline size_t
-wu_snake(size_t const m,
-         char const a[static restrict m],
-         size_t const n,
-         char const b[static restrict n],
-         ptrdiff_t const k,
-         ptrdiff_t const lower,
-         ptrdiff_t const upper)
-{
-    size_t col = lower > upper ? lower : upper;
-    size_t row = col - k;
-    while (row < m && col < n && a[row] == b[col])
-    {
-        row += 1;
-        col += 1;
-    } // while
-    return col;
-} // wu_snake
-
-
-static size_t
-wu_compare(VA_Allocator const allocator,
-           size_t const m,
-           char const a[static restrict m],
-           size_t const n,
-           char const b[static restrict n])
-{
-    ptrdiff_t const delta = n - m;
-    size_t const offset = m + 1;
-    size_t const size = m + n + 3;
-    ptrdiff_t* const restrict fp = allocator.alloc(allocator.context, NULL, 0, size * sizeof(*fp));
-    if (fp == NULL)
-    {
-        return -1;
-    } // if
-
-    for (size_t i = 0; i < size; ++i)
-    {
-        fp[i] = -1;
-    } // for
-
-    size_t p = 0;
-    while ((size_t) fp[delta + offset] != n)
-    {
-        for (ptrdiff_t k = -p; k <= delta - 1; ++k)
-        {
-            fp[k + offset] = wu_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset]);
-        } // for
-        for (ptrdiff_t k = delta + p; k >= delta + 1; --k)
-        {
-            fp[k + offset] = wu_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset]);
-        } // for
-        fp[delta + offset] = wu_snake(m, a, n, b, delta, fp[delta - 1 + offset] + 1, fp[delta + 1 + offset]);
-        p += 1;
-    } // while
-
-    allocator.alloc(allocator.context, fp, size * sizeof(*fp), 0);
-
-    return delta + 2 * (p - 1);
-} // wu_compare
-
-
-size_t
-va_edit_distance_only(VA_Allocator const allocator,
-                      size_t const len_ref,
-                      char const reference[static restrict len_ref],
-                      size_t const len_obs,
-                      char const observed[static restrict len_obs])
-{
-    return len_ref > len_obs ?
-           wu_compare(allocator, len_obs, observed, len_ref, reference) :
-           wu_compare(allocator, len_ref, reference, len_obs, observed);
-} // va_edit_distance_only
+#include "../include/edit.h"
 
 
 static inline size_t
@@ -107,7 +29,7 @@ typedef struct
     size_t const len_obs;
     char const* const restrict observed;
     size_t* const restrict diagonals;
-    VA_LCS_Node** const restrict lcs_nodes;
+    uint32_t* const restrict lcs_index;
 } Context;
 
 
@@ -115,7 +37,8 @@ static size_t
 expand(Context const context,
        ptrdiff_t const idx,
        size_t const p,
-       size_t* const len_lcs)
+       size_t* const len_lcs,
+       VA_LCS_Node2** lcs_nodes)
 {
     ptrdiff_t const delta = context.len_obs - context.len_ref;
     size_t const offset = context.len_ref + 1;
@@ -169,12 +92,8 @@ expand(Context const context,
                 *len_lcs = lcs_pos + 1;
             } // if
             size_t const length = row - match_row;
-            if (context.lcs_nodes[lcs_pos] == NULL)
-            {
-                context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 256, sizeof(*context.lcs_nodes[lcs_pos]));
-            } // if
-            va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((VA_LCS_Node) {match_row, match_col, length, -1, -1, length}));
-            fprintf(stderr, "(%zu, %zu, %zu)\n", match_row, match_col, length);
+            va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1}));
+            context.lcs_index[lcs_pos] = va_array_length(*lcs_nodes) - 1;
             matching = false;
         } // if
         row += 1;
@@ -203,12 +122,8 @@ expand(Context const context,
             *len_lcs = lcs_pos + 1;
         } // if
         size_t const length = row - match_row;
-        if (context.lcs_nodes[lcs_pos] == NULL)
-        {
-            context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 256, sizeof(*context.lcs_nodes[lcs_pos]));
-        } // if
-        va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((VA_LCS_Node) {match_row, match_col, length, -1, -1, length}));
-        fprintf(stderr, "(%zu, %zu, %zu)\n", match_row, match_col, length);
+        va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1}));
+        context.lcs_index[lcs_pos] = va_array_length(*lcs_nodes) - 1;
     } // if
 
     return steps;
@@ -216,12 +131,13 @@ expand(Context const context,
 
 
 size_t
-va_edit(VA_Allocator const allocator,
-        size_t const len_ref,
-        char const reference[static restrict len_ref],
-        size_t const len_obs,
-        char const observed[static restrict len_obs],
-        VA_LCS_Node*** restrict lcs_nodes)
+va_edit2(VA_Allocator const allocator,
+         size_t const len_ref,
+         char const reference[static restrict len_ref],
+         size_t const len_obs,
+         char const observed[static restrict len_obs],
+         VA_LCS_Node2** restrict lcs_nodes,
+         uint32_t** restrict lcs_index)
 {
     ptrdiff_t const delta = len_obs - len_ref;
     size_t const offset = len_ref + 1;
@@ -235,12 +151,12 @@ va_edit(VA_Allocator const allocator,
         len_obs,
         observed,
         .diagonals = allocator.alloc(allocator.context, NULL, 0, size * sizeof(*context.diagonals)),
-        .lcs_nodes = allocator.alloc(allocator.context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes)),
+        .lcs_index = allocator.alloc(allocator.context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.lcs_index)),
     };
-    if (context.diagonals == NULL || context.lcs_nodes == NULL)
+    if (context.diagonals == NULL || context.lcs_index == NULL)
     {
         allocator.alloc(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
-        allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), 0);
+        allocator.alloc(allocator.context, context.lcs_index, umin(len_ref, len_obs) * sizeof(*context.lcs_index), 0);
         return -1;
     } // if
 
@@ -251,8 +167,10 @@ va_edit(VA_Allocator const allocator,
 
     for (size_t i = 0; i < umin(len_ref, len_obs); ++i)
     {
-        context.lcs_nodes[i] = NULL;
+        context.lcs_index[i] = -1;
     } // for
+
+    *lcs_nodes = NULL;
 
     size_t const lower = delta > 0 ? 0 : delta;
     size_t const upper = delta > 0 ? delta : 0;
@@ -264,13 +182,13 @@ va_edit(VA_Allocator const allocator,
     {
         for (ptrdiff_t idx = lower - p; idx < delta; ++idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, lcs_nodes);
         } // for
         for (ptrdiff_t idx = upper + p; idx > delta; --idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, lcs_nodes);
         } // for
-        context.diagonals[offset + delta] = expand(context, delta, p, &max_lcs_pos);
+        context.diagonals[offset + delta] = expand(context, delta, p, &max_lcs_pos, lcs_nodes);
 
         p += 1;
     } // while
@@ -278,6 +196,7 @@ va_edit(VA_Allocator const allocator,
     allocator.alloc(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
 
     // transfer ownership
-    *lcs_nodes = allocator.alloc(allocator.context, context.lcs_nodes, umin(len_ref, len_obs) * sizeof(*context.lcs_nodes), max_lcs_pos * sizeof(*context.lcs_nodes));
+    *lcs_index = allocator.alloc(allocator.context, context.lcs_index, umin(len_ref, len_obs) * sizeof(*context.lcs_index), max_lcs_pos * sizeof(*context.lcs_index));
+
     return max_lcs_pos;
-} // va_edit
+} // va_edit2
