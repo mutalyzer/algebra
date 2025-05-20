@@ -92,7 +92,7 @@ expand(Context const context,
                 *len_lcs = lcs_pos + 1;
             } // if
             size_t const length = row - match_row;
-            va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1}));
+            va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1, -1}));
             context.lcs_index[lcs_pos] = va_array_length(*lcs_nodes) - 1;
             matching = false;
         } // if
@@ -122,7 +122,7 @@ expand(Context const context,
             *len_lcs = lcs_pos + 1;
         } // if
         size_t const length = row - match_row;
-        va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1}));
+        va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1, -1}));
         context.lcs_index[lcs_pos] = va_array_length(*lcs_nodes) - 1;
     } // if
 

@@ -31,6 +31,7 @@ typedef struct
     uint32_t lcs_pos;
     uint32_t prev;
     uint32_t idx;
+    uint32_t outgoing;
 } VA_LCS_Node2;
 
 

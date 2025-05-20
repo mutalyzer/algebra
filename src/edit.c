@@ -7,9 +7,6 @@
 #include "../include/edit.h"    // VA_LCS_Node, va_edit*
 
 
-#include <stdio.h>
-
-
 static inline size_t
 wu_snake(size_t const m,
          char const a[static restrict m],
@@ -174,7 +171,6 @@ expand(Context const context,
                 context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 256, sizeof(*context.lcs_nodes[lcs_pos]));
             } // if
             va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((VA_LCS_Node) {match_row, match_col, length, -1, -1, length}));
-            fprintf(stderr, "(%zu, %zu, %zu)\n", match_row, match_col, length);
             matching = false;
         } // if
         row += 1;
@@ -208,7 +204,6 @@ expand(Context const context,
             context.lcs_nodes[lcs_pos] = va_array_init(context.allocator, 256, sizeof(*context.lcs_nodes[lcs_pos]));
         } // if
         va_array_append(context.allocator, context.lcs_nodes[lcs_pos], ((VA_LCS_Node) {match_row, match_col, length, -1, -1, length}));
-        fprintf(stderr, "(%zu, %zu, %zu)\n", match_row, match_col, length);
     } // if
 
     return steps;
