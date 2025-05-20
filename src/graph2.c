@@ -407,6 +407,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                     head->idx = va_array_length(graph.nodes) - 1;
                     if (is_source)
                     {
+                        found_source = true;
                         graph.source = head->idx;
                     } // if
                 } // if
@@ -436,7 +437,7 @@ build(size_t const len_ref, char const reference[static len_ref],
                             graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
                         } // if
 
-                        fprintf(stderr, "    next: %u\n", graph.nodes[lambda].lambda);
+                        fprintf(stderr, "    next: %d\n", graph.nodes[lambda].lambda);
                         if (graph.nodes[lambda].lambda == GVA_NULL || variant.end + count <= graph.nodes[lambda].row + graph.nodes[lambda].length)
                         {
                             break;
