@@ -194,11 +194,10 @@ split(VA_LCS_Node2 const* const node, VA_LCS_Node2 const* const head,
 
     fprintf(stderr, "%u\n", incoming.end + in_count - node->outgoing);
 
+    fprintf(stderr, "fsp: %u lsp: %u\n", incoming.end + in_count - 1, MAX(incoming.end, node->outgoing));
     uint32_t pos = 0;
-    for (uint32_t i = 0; i < incoming.end + in_count - node->outgoing; ++i)
+    for (pos = incoming.end + in_count - 1; pos >= MAX(incoming.end, node->outgoing); --pos)
     {
-        pos = incoming.end + in_count - i - 1;
-
         uint32_t head_head = GVA_NULL;
         uint32_t head_tail = GVA_NULL;
         uint32_t tail_head = GVA_NULL;
@@ -282,7 +281,7 @@ split(VA_LCS_Node2 const* const node, VA_LCS_Node2 const* const head,
                                                           lambda->row, lambda->col, lambda->length, pos);
     } // for
 
-    if (incoming.end < pos)
+    if (incoming.end <= pos)
     {
         va_array_append(va_std_allocator, graph->edges, ((Edge2) {node->idx, graph->nodes[head->idx].edges}));
         graph->nodes[head->idx].edges = va_array_length(graph->edges) - 1;
@@ -419,6 +418,7 @@ build(size_t const len_ref, char const reference[static len_ref],
         {
             continue;
         } // if
+        uint32_t split_point = -1;
 
         bool const is_sink = tail->row + tail->length == len_ref + shift && tail->col + tail->length == len_obs + shift;
         for (size_t j = i + 1; j < t_len; ++j)
@@ -443,17 +443,16 @@ build(size_t const len_ref, char const reference[static len_ref],
 
                 fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
 
-                if (variant.end + count <= tail->outgoing)
+                if (variant.end + count <= tail->outgoing || split_point == tail->outgoing)
                 {
                     distribute(tail, head, count, variant, &graph);
-                    head->outgoing = MIN(head->outgoing, variant.start);
                 } // if
                 else
                 {
                     split(tail, head, count, variant, &graph);
-                    tail->outgoing = -1;  // FIXME: real value?
-                    head->outgoing = variant.start;
+                    split_point = MAX(variant.end, tail->outgoing);
                 } // else
+                head->outgoing = MIN(head->outgoing, variant.start);
             } // if
         } // for
         if (!found_source && tail->length > tail->lcs_pos)
