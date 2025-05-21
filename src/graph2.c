@@ -192,6 +192,8 @@ split(VA_LCS_Node2 const* const node, VA_LCS_Node2 const* const head,
 {
     fprintf(stderr, "\n***SPLIT (%u, %u, %u) because of first outgoing edge at %u\n", node->row, node->col, node->length, node->outgoing);
 
+    fprintf(stderr, "%u\n", incoming.end + in_count - node->outgoing);
+
     uint32_t pos = 0;
     for (uint32_t i = 0; i < incoming.end + in_count - node->outgoing; ++i)
     {
@@ -393,7 +395,7 @@ build(size_t const len_ref, char const reference[static len_ref],
     } // if
     else
     {
-        VA_LCS_Node2 const sink = {len_ref, len_obs, 0, len_lcs, GVA_NULL, GVA_NULL, -1};
+        VA_LCS_Node2 const sink = {len_ref, len_obs, 0, len_lcs - 1, GVA_NULL, GVA_NULL, -1};
         va_array_append(va_std_allocator, graph.nodes, ((Node2) {sink.row, sink.col, sink.length, GVA_NULL, GVA_NULL}));
         uint32_t const sink_idx = va_array_length(graph.nodes) - 1;
         for (uint32_t idx = lcs_index[len_lcs - 1]; idx != GVA_NULL; idx = lcs_nodes[idx].prev)
@@ -402,7 +404,10 @@ build(size_t const len_ref, char const reference[static len_ref],
             va_array_append(va_std_allocator, graph.edges, ((Edge2) {sink_idx, GVA_NULL}));
             va_array_append(va_std_allocator, graph.nodes, ((Node2) {head->row, head->col, head->length, va_array_length(graph.edges) - 1, GVA_NULL}));
             head->idx = va_array_length(graph.nodes) - 1;
-            fprintf(stderr, "SINK edge from %u\n", head->idx);
+
+            VA_Variant variant;
+            uint32_t const count = edges3(head, &sink, head->row == shift && head->col == shift, true, &variant);
+            fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, sink.row, sink.col, sink.length, print_variant(variant, observed), count);
         } // for
     } // else
 
@@ -461,7 +466,10 @@ build(size_t const len_ref, char const reference[static len_ref],
             } // if
             va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[source.idx].edges}));
             graph.nodes[source.idx].edges = va_array_length(graph.edges) - 1;
-            fprintf(stderr, "SOURCE edge to %u\n", tail->idx);
+
+            VA_Variant variant;
+            uint32_t const count = edges3(&source, tail, true, is_sink, &variant);
+            fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", source.row, source.col, source.length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
         } // if
     } // for
 
