@@ -375,6 +375,12 @@ build(size_t const len_ref, char const reference[static len_ref],
         return graph;
     } // if
 
+
+    for (size_t i = 0; i < va_array_length(lcs_nodes); ++i)
+    {
+        fprintf(stderr, "(%u, %u, %u) @ %u\n", lcs_nodes[i].row, lcs_nodes[i].col, lcs_nodes[i].length, lcs_nodes[i].lcs_pos);
+    } // for
+
     VA_LCS_Node2 source = {shift, shift, 0, -1, GVA_NULL, GVA_NULL, -1};
     bool found_source = false;
     VA_LCS_Node2* const last = &lcs_nodes[lcs_index[len_lcs - 1]];
@@ -431,30 +437,32 @@ build(size_t const len_ref, char const reference[static len_ref],
 
             VA_Variant variant;
             uint32_t const count = edges3(head, tail, is_source, is_sink, &variant);
-            if (count > 0)
+            if (count == 0)
             {
-                if (head->idx == GVA_NULL)
-                {
-                    va_array_append(va_std_allocator, graph.nodes, ((Node2) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
-                    head->idx = va_array_length(graph.nodes) - 1;
-                } // if
+                continue;
+            } // if
 
-                fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
+            if (head->idx == GVA_NULL)
+            {
+                va_array_append(va_std_allocator, graph.nodes, ((Node2) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
+                head->idx = va_array_length(graph.nodes) - 1;
+            } // if
 
-                if (variant.end + count > tail->outgoing && split_point != tail->outgoing)
-                {
-                    split(tail, count, variant, split_point, &graph);
-                    split_point = MAX(variant.end, tail->outgoing);
-                } // else
-                distribute(tail, head, count, variant, &graph);
+            fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
 
-                head->outgoing = MIN(head->outgoing, variant.start);
-                if (is_source)
-                {
-                    found_source = true;
-                    source.idx = head->idx;
-                    source.outgoing = head->outgoing;
-                } // if
+            if (variant.end + count > tail->outgoing && split_point != tail->outgoing)
+            {
+                split(tail, count, variant, split_point, &graph);
+                split_point = MAX(variant.end, tail->outgoing);
+            } // if
+            distribute(tail, head, count, variant, &graph);
+
+            head->outgoing = MIN(head->outgoing, variant.start);
+            if (is_source)
+            {
+                found_source = true;
+                source.idx = head->idx;
+                source.outgoing = head->outgoing;
             } // if
         } // for
 
