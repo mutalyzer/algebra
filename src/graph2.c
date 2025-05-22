@@ -253,6 +253,10 @@ split(VA_LCS_Node2 const* const node,
                 tail_tail = j;
                 va_array_append(va_std_allocator, graph->edges, ((Edge2) {graph->edges[j].tail, head_head}));
                 head_head = va_array_length(graph->edges) - 1;
+                if (head_tail == GVA_NULL)
+                {
+                    head_tail = head_head;
+                } // if
 
                 fprintf(stderr, "both\n");
             } // else
