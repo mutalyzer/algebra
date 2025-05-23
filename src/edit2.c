@@ -29,7 +29,8 @@ typedef struct
     size_t const len_obs;
     char const* const restrict observed;
     size_t* const restrict diagonals;
-    uint32_t* const restrict lcs_index;
+    uint32_t* const restrict head;
+    uint32_t* const restrict tail;
 } Context;
 
 
@@ -92,8 +93,12 @@ expand(Context const context,
                 *len_lcs = lcs_pos + 1;
             } // if
             size_t const length = row - match_row;
-            va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1, -1}));
-            context.lcs_index[lcs_pos] = va_array_length(*lcs_nodes) - 1;
+            va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.tail[lcs_pos], -1, -1}));
+            context.tail[lcs_pos] = va_array_length(*lcs_nodes) - 1;
+            if (context.head[lcs_pos] == (uint32_t) -1)
+            {
+                context.head[lcs_pos] = context.tail[lcs_pos];
+            } // if
             matching = false;
         } // if
         row += 1;
@@ -122,22 +127,22 @@ expand(Context const context,
             *len_lcs = lcs_pos + 1;
         } // if
         size_t const length = row - match_row;
-        va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.lcs_index[lcs_pos], -1, -1}));
-        context.lcs_index[lcs_pos] = va_array_length(*lcs_nodes) - 1;
+        va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.tail[lcs_pos], -1, -1}));
+        context.tail[lcs_pos] = va_array_length(*lcs_nodes) - 1;
+        if (context.head[lcs_pos] == (uint32_t) -1)
+        {
+            context.head[lcs_pos] = context.tail[lcs_pos];
+        } // if
     } // if
 
     return steps;
 } // expand
 
 
-size_t
+VA_LCS_Node2*
 va_edit2(VA_Allocator const allocator,
-         size_t const len_ref,
-         char const reference[static restrict len_ref],
-         size_t const len_obs,
-         char const observed[static restrict len_obs],
-         VA_LCS_Node2** restrict lcs_nodes,
-         uint32_t** restrict lcs_index)
+         size_t const len_ref, char const reference[static restrict len_ref],
+         size_t const len_obs, char const observed[static restrict len_obs])
 {
     ptrdiff_t const delta = len_obs - len_ref;
     size_t const offset = len_ref + 1;
@@ -151,13 +156,15 @@ va_edit2(VA_Allocator const allocator,
         len_obs,
         observed,
         .diagonals = allocator.alloc(allocator.context, NULL, 0, size * sizeof(*context.diagonals)),
-        .lcs_index = allocator.alloc(allocator.context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.lcs_index)),
+        .head = allocator.alloc(allocator.context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.head)),
+        .tail = allocator.alloc(allocator.context, NULL, 0, umin(len_ref, len_obs) * sizeof(*context.tail)),
     };
-    if (context.diagonals == NULL || context.lcs_index == NULL)
+    if (context.diagonals == NULL || context.head == NULL || context.tail == NULL)
     {
         allocator.alloc(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
-        allocator.alloc(allocator.context, context.lcs_index, umin(len_ref, len_obs) * sizeof(*context.lcs_index), 0);
-        return -1;
+        allocator.alloc(allocator.context, context.head, umin(len_ref, len_obs) * sizeof(*context.head), 0);
+        allocator.alloc(allocator.context, context.tail, umin(len_ref, len_obs) * sizeof(*context.tail), 0);
+        return NULL;
     } // if
 
     for (size_t i = 0; i < size; ++i)
@@ -167,10 +174,11 @@ va_edit2(VA_Allocator const allocator,
 
     for (size_t i = 0; i < umin(len_ref, len_obs); ++i)
     {
-        context.lcs_index[i] = -1;
+        context.head[i] = -1;
+        context.tail[i] = -1;
     } // for
 
-    *lcs_nodes = NULL;
+    VA_LCS_Node2* lcs_nodes = NULL;
 
     size_t const lower = delta > 0 ? 0 : delta;
     size_t const upper = delta > 0 ? delta : 0;
@@ -182,21 +190,30 @@ va_edit2(VA_Allocator const allocator,
     {
         for (ptrdiff_t idx = lower - p; idx < delta; ++idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, lcs_nodes);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, &lcs_nodes);
         } // for
         for (ptrdiff_t idx = upper + p; idx > delta; --idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, lcs_nodes);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, &lcs_nodes);
         } // for
-        context.diagonals[offset + delta] = expand(context, delta, p, &max_lcs_pos, lcs_nodes);
+        context.diagonals[offset + delta] = expand(context, delta, p, &max_lcs_pos, &lcs_nodes);
 
         p += 1;
     } // while
 
+    uint32_t prev = 0;
+    for (size_t i = 1; i < max_lcs_pos; ++i)
+    {
+        if (context.head[i] != (uint32_t) -1)
+        {
+            lcs_nodes[context.head[i]].prev = context.tail[prev];
+            prev = i;
+        } // if
+    } // for
+
     allocator.alloc(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
+    allocator.alloc(allocator.context, context.head, size * sizeof(*context.head), 0);
+    allocator.alloc(allocator.context, context.tail, size * sizeof(*context.tail), 0);
 
-    // transfer ownership
-    *lcs_index = allocator.alloc(allocator.context, context.lcs_index, umin(len_ref, len_obs) * sizeof(*context.lcs_index), max_lcs_pos * sizeof(*context.lcs_index));
-
-    return max_lcs_pos;
+    return lcs_nodes;
 } // va_edit2

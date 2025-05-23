@@ -349,17 +349,15 @@ edges3(VA_LCS_Node2 const* const head, VA_LCS_Node2 const* const tail,
 
 
 Graph2
-build(size_t const len_ref, char const reference[static len_ref],
-      size_t const len_obs, char const observed[static len_obs],
+build(size_t const len_ref, char const reference[static restrict len_ref],
+      size_t const len_obs, char const observed[static restrict len_obs],
       size_t const shift)
 {
-    VA_LCS_Node2* lcs_nodes = NULL;
-    uint32_t* lcs_index = NULL;
-    size_t const len_lcs = va_edit2(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes, &lcs_index);
+    VA_LCS_Node2* lcs_nodes = va_edit2(va_std_allocator, len_ref, reference, len_obs, observed);
 
     Graph2 graph = {NULL, NULL, GVA_NULL};
 
-    if (len_lcs == 0 || lcs_nodes == NULL)
+    if (lcs_nodes == NULL)
     {
         va_array_append(va_std_allocator, graph.nodes, ((Node2) {len_ref, len_obs, 0, GVA_NULL, GVA_NULL}));
         uint32_t const sink = va_array_length(graph.nodes) - 1;
@@ -375,15 +373,16 @@ build(size_t const len_ref, char const reference[static len_ref],
         return graph;
     } // if
 
-
     for (size_t i = 0; i < va_array_length(lcs_nodes); ++i)
     {
-        fprintf(stderr, "(%u, %u, %u) @ %u\n", lcs_nodes[i].row, lcs_nodes[i].col, lcs_nodes[i].length, lcs_nodes[i].lcs_pos);
+        fprintf(stderr, "%zu: (%u, %u, %u)  %u  %2d\n", i, lcs_nodes[i].row, lcs_nodes[i].col, lcs_nodes[i].length, lcs_nodes[i].lcs_pos, lcs_nodes[i].prev);
     } // for
 
     VA_LCS_Node2 source = {shift, shift, 0, -1, GVA_NULL, GVA_NULL, -1};
     bool found_source = false;
-    VA_LCS_Node2* const last = &lcs_nodes[lcs_index[len_lcs - 1]];
+    size_t const len = va_array_length(lcs_nodes);
+    VA_LCS_Node2* const last = &lcs_nodes[len - 1];
+    size_t const len_lcs = last->lcs_pos + 1;
     if (last->row + last->length == len_ref + shift && last->col + last->length == len_obs + shift)
     {
         va_array_append(va_std_allocator, graph.nodes, ((Node2) {last->row, last->col, last->length, GVA_NULL, GVA_NULL}));
@@ -399,9 +398,10 @@ build(size_t const len_ref, char const reference[static len_ref],
         VA_LCS_Node2 const sink = {len_ref, len_obs, 0, len_lcs - 1, GVA_NULL, GVA_NULL, -1};
         va_array_append(va_std_allocator, graph.nodes, ((Node2) {sink.row, sink.col, sink.length, GVA_NULL, GVA_NULL}));
         uint32_t const sink_idx = va_array_length(graph.nodes) - 1;
-        for (uint32_t idx = lcs_index[len_lcs - 1]; idx != GVA_NULL; idx = lcs_nodes[idx].prev)
+
+        for (uint32_t j = len; j != GVA_NULL && lcs_nodes[j].lcs_pos >= len_lcs; j = lcs_nodes[j].prev)
         {
-            VA_LCS_Node2* const head = &lcs_nodes[idx];
+            VA_LCS_Node2* const head = &lcs_nodes[j];
             va_array_append(va_std_allocator, graph.edges, ((Edge2) {sink_idx, GVA_NULL}));
             va_array_append(va_std_allocator, graph.nodes, ((Node2) {head->row, head->col, head->length, va_array_length(graph.edges) - 1, GVA_NULL}));
             head->idx = va_array_length(graph.nodes) - 1;
@@ -419,21 +419,24 @@ build(size_t const len_ref, char const reference[static len_ref],
         } // for
     } // else
 
-    size_t const t_len = va_array_length(lcs_nodes);
-    for (size_t i = 0; i < t_len; ++i)
+    for (size_t i = 0; i < len; ++i)
     {
-        VA_LCS_Node2* const tail = &lcs_nodes[t_len - i - 1];
+        VA_LCS_Node2 const* const tail = &lcs_nodes[len - i - 1];
         if (tail->idx == GVA_NULL)
         {
             continue;
         } // if
+
         uint32_t split_point = -1;
 
         bool const is_sink = tail->row + tail->length == len_ref + shift && tail->col + tail->length == len_obs + shift;
-        for (size_t j = i + 1; j < t_len; ++j)
+        uint32_t const low = tail->length > tail->lcs_pos ? 0 : tail->lcs_pos - tail->length;
+        for (uint32_t j = tail->prev; j != GVA_NULL && lcs_nodes[j].lcs_pos >= low; j = lcs_nodes[j].prev)
         {
-            VA_LCS_Node2* const head = &lcs_nodes[t_len - j - 1];
+            VA_LCS_Node2* const head = &lcs_nodes[j];
             bool const is_source = head->row == shift && head->col == shift;
+
+            fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", head->row, head->col, head->length, tail->row, tail->col, tail->length);
 
             VA_Variant variant;
             uint32_t const count = edges3(head, tail, is_source, is_sink, &variant);
@@ -484,7 +487,6 @@ build(size_t const len_ref, char const reference[static len_ref],
     } // for
 
     lcs_nodes = va_array_destroy(va_std_allocator, lcs_nodes);
-    va_std_allocator.alloc(va_std_allocator.context, lcs_index, len_lcs * sizeof(*lcs_index), 0);
 
     fprintf(stderr, "SOURCE first outgoing edge at %d\n", source.outgoing);
     if (source.outgoing != (uint32_t) -1)

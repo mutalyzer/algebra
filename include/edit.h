@@ -52,14 +52,10 @@ va_edit(VA_Allocator const allocator,
         VA_LCS_Node*** restrict lcs_nodes);
 
 
-size_t
+VA_LCS_Node2*
 va_edit2(VA_Allocator const allocator,
-         size_t const len_ref,
-         char const reference[static restrict len_ref],
-         size_t const len_obs,
-         char const observed[static restrict len_obs],
-         VA_LCS_Node2** restrict lcs_nodes,
-         uint32_t** restrict lcs_index);
+         size_t const len_ref, char const reference[static restrict len_ref],
+         size_t const len_obs, char const observed[static restrict len_obs]);
 
 
 #ifdef __cplusplus

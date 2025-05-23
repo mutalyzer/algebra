@@ -29,8 +29,8 @@ typedef struct
 
 
 Graph2
-build(size_t const len_ref, char const reference[static len_ref],
-      size_t const len_obs, char const observed[static len_obs],
+build(size_t const len_ref, char const reference[static restrict len_ref],
+      size_t const len_obs, char const observed[static restrict len_obs],
       size_t const shift);
 
 
