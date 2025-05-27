@@ -151,8 +151,8 @@ def main():
         #if random.random() > 0.5:
         #    prefix = random_sequence(1000)
         #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(10) + suffix
-        observed = prefix + random_sequence(10) + suffix
+        reference = prefix + random_sequence(42) + suffix
+        observed = prefix + random_sequence(42) + suffix
 
         if n % 1_000 == 0:
             print(n)
