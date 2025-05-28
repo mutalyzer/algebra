@@ -79,7 +79,7 @@ def nx_extract(reference, observed):
         assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
 
 
-def check(reference, observed, debug=False, timeout=2):
+def check(reference, observed, debug=False, timeout=None):
     #graph = LCSgraph.from_sequence(reference, observed)
     graph = LCSgraph(reference, observed)
     valgrind = []
@@ -88,7 +88,7 @@ def check(reference, observed, debug=False, timeout=2):
         print(canonical(graph))
         valgrind = ["valgrind", "--leak-check=full", "--error-exitcode=1"]
 
-    stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stdout=subprocess.PIPE, timeout=timeout).stdout.decode("utf-8")
+    stdout = subprocess.run([*valgrind, "./a.out", reference, observed], check=True, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, timeout=timeout).stdout.decode("utf-8")
 
     try:
         cgraph = json.loads(stdout)
@@ -151,8 +151,8 @@ def main():
         #if random.random() > 0.5:
         #    prefix = random_sequence(1000)
         #    suffix = random_sequence(1000)
-        reference = prefix + random_sequence(42) + suffix
-        observed = prefix + random_sequence(42) + suffix
+        reference = prefix + random_sequence(142) + suffix
+        observed = prefix + random_sequence(142) + suffix
 
         if n % 1_000 == 0:
             print(n)

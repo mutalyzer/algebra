@@ -30,7 +30,7 @@ typedef struct
     uint32_t length;
     uint32_t lcs_pos;
     uint32_t next;
-    uint32_t head;
+    uint32_t inext;
     uint32_t idx;
     uint32_t outgoing;
 } VA_LCS_Node2;
@@ -56,7 +56,8 @@ va_edit(VA_Allocator const allocator,
 VA_LCS_Node2*
 va_edit2(VA_Allocator const allocator,
          size_t const len_ref, char const reference[static restrict len_ref],
-         size_t const len_obs, char const observed[static restrict len_obs]);
+         size_t const len_obs, char const observed[static restrict len_obs],
+         uint32_t* const restrict head);
 
 
 #ifdef __cplusplus

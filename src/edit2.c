@@ -39,7 +39,7 @@ expand(Context const context,
        ptrdiff_t const idx,
        size_t const p,
        size_t* const len_lcs,
-       uint32_t* const prev,
+       uint32_t* head,
        VA_LCS_Node2** lcs_nodes)
 {
     ptrdiff_t const delta = context.len_obs - context.len_ref;
@@ -90,12 +90,12 @@ expand(Context const context,
             ptrdiff_t const d_col = context.len_obs - col;
             size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
             size_t const length = row - match_row;
-            va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.tail[lcs_pos], *prev, -1, -1}));
+            va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.tail[lcs_pos], -1, -1, -1}));
             context.tail[lcs_pos] = va_array_length(*lcs_nodes) - 1;
             if (lcs_pos + 1 >= *len_lcs)
             {
                 *len_lcs = lcs_pos + 1;
-                *prev = context.tail[lcs_pos];
+                *head = context.tail[lcs_pos];
             } // if
             if (context.head[lcs_pos] == (uint32_t) -1)
             {
@@ -125,12 +125,12 @@ expand(Context const context,
         ptrdiff_t const d_col = context.len_obs - col;
         size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
         size_t const length = row - match_row;
-        va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.tail[lcs_pos], *prev, -1, -1}));
+        va_array_append(context.allocator, *lcs_nodes, ((VA_LCS_Node2) {match_row, match_col, length, lcs_pos, context.tail[lcs_pos], -1, -1, -1}));
         context.tail[lcs_pos] = va_array_length(*lcs_nodes) - 1;
         if (lcs_pos + 1 >= *len_lcs)
         {
             *len_lcs = lcs_pos + 1;
-            *prev = context.tail[lcs_pos];
+            *head = context.tail[lcs_pos];
         } // if
         if (context.head[lcs_pos] == (uint32_t) -1)
         {
@@ -145,7 +145,8 @@ expand(Context const context,
 VA_LCS_Node2*
 va_edit2(VA_Allocator const allocator,
          size_t const len_ref, char const reference[static restrict len_ref],
-         size_t const len_obs, char const observed[static restrict len_obs])
+         size_t const len_obs, char const observed[static restrict len_obs],
+         uint32_t* const restrict head)
 {
     ptrdiff_t const delta = len_obs - len_ref;
     size_t const offset = len_ref + 1;
@@ -181,7 +182,7 @@ va_edit2(VA_Allocator const allocator,
         context.tail[i] = -1;
     } // for
 
-    uint32_t prev = -1;
+    *head = -1;
     VA_LCS_Node2* lcs_nodes = NULL;
 
     size_t const lower = delta > 0 ? 0 : delta;
@@ -194,24 +195,32 @@ va_edit2(VA_Allocator const allocator,
     {
         for (ptrdiff_t idx = lower - p; idx < delta; ++idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, &prev, &lcs_nodes);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, head, &lcs_nodes);
         } // for
         for (ptrdiff_t idx = upper + p; idx > delta; --idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, &prev, &lcs_nodes);
+            context.diagonals[offset + idx] = expand(context, idx, p, &max_lcs_pos, head, &lcs_nodes);
         } // for
-        context.diagonals[offset + delta] = expand(context, delta, p, &max_lcs_pos, &prev, &lcs_nodes);
+        context.diagonals[offset + delta] = expand(context, delta, p, &max_lcs_pos, head, &lcs_nodes);
 
         p += 1;
     } // while
 
-    prev = 0;
+    uint32_t prev = 0;
     for (size_t i = 1; i < max_lcs_pos; ++i)
     {
         if (context.head[i] != (uint32_t) -1)
         {
             lcs_nodes[context.head[i]].next = context.tail[prev];
             prev = i;
+        } // if
+    } // for
+
+    for (uint32_t i = 0; i < va_array_length(lcs_nodes); ++i)
+    {
+        if (lcs_nodes[i].next != (uint32_t) -1)
+        {
+            lcs_nodes[lcs_nodes[i].next].inext = i;
         } // if
     } // for
 
