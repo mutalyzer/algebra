@@ -127,7 +127,10 @@ build_graph(VA_Allocator const allocator,
             VA_LCS_Node* const heads = lcs_nodes[i - 1];
             for (size_t k = 0; k < va_array_length(heads); ++k)
             {
-                if (heads[k].row + heads[k].length < tail.row + tail.length && heads[k].col + heads[k].length < tail.col + tail.length)
+                eq_count += 1;
+
+                if (heads[k].row + heads[k].length < tail.row + tail.length &&
+                    heads[k].col + heads[k].length < tail.col + tail.length)
                 {
                     max_sink = MAX(max_sink, tail.row + tail.length - 1);
 
@@ -152,19 +155,31 @@ build_graph(VA_Allocator const allocator,
                         if (debug)
                             printf("RELABEL NODE %u: (%u, %u, %u)\n", split_idx, graph.nodes[split_idx].row,graph.nodes[split_idx].col, graph.nodes[split_idx].length);
                     } // if
-                    else
+                    else if (heads[k].idx == GVA_NULL)
                     {
-                        if (heads[k].idx == GVA_NULL)
-                        {
-                            heads[k].idx = add_node(allocator, &graph, heads[k].row, heads[k].col, heads[k].length);
-                            if (debug)
-                                printf("MAKE NODE %u: (%u, %u, %u)\n", heads[k].idx, heads[k].row, heads[k].col, heads[k].length);
-                        } // if
-                    } // else
+                        heads[k].idx = add_node(allocator, &graph, heads[k].row, heads[k].col, heads[k].length);
+                        if (debug)
+                            printf("MAKE NODE %u: (%u, %u, %u)\n", heads[k].idx, heads[k].row, heads[k].col, heads[k].length);
+                    } // if
 
-                    graph.nodes[heads[k].idx].edges = add_edge(allocator, &graph, tail.idx, graph.nodes[heads[k].idx].edges, variant);
-                    if (debug)
-                        printf("MAKE EDGE (%u %u %u) -> (%u %u %u): " VAR_FMT "\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length, print_variant(variant, "0123456789"));
+                    /*
+                    bool found = false;
+                    for (size_t e = graph.nodes[heads[k].idx].edges; e != GVA_NULL; e = graph.edges[e].next)
+                    {
+                        if (graph.edges[e].tail == tail.idx)
+                        {
+                            found = true;
+                            break;
+                        } // if
+                    } // for
+                    if (!found)
+                    */
+
+                    {
+                        graph.nodes[heads[k].idx].edges = add_edge(allocator, &graph, tail.idx, graph.nodes[heads[k].idx].edges, variant);
+                        if (debug)
+                            printf("MAKE EDGE (%u %u %u) -> (%u %u %u): " VAR_FMT "\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length, print_variant(variant, "0123456789"));
+                    } // if
 
                     here = k + 1;
                 } // if

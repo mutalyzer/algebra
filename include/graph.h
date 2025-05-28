@@ -2,6 +2,9 @@
 #include "../include/edit.h"            // VA_LCS_Node
 #include "../include/variant.h"         // VA_Variant
 
+extern size_t eq_count;
+
+
 typedef struct
 {
     uint32_t tail;

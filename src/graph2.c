@@ -18,6 +18,9 @@
 #define VAR_FMT "%u:%u/%.*s"
 
 
+size_t eq_count;
+
+
 static uint32_t const GVA_NULL = UINT32_MAX;
 
 
@@ -444,6 +447,8 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
             lcs_nodes[lcs_nodes[idx].next].inext = lcs_nodes[idx].inext;
         } // if
 
+        eq_count += 1;
+
         if (tail->idx == GVA_NULL)
         {
             continue;
@@ -489,6 +494,11 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
             distribute(tail, head, count, variant, &graph);
             head->outgoing = MIN(head->outgoing, variant.start);
             source.outgoing = MIN(source.outgoing, variant.start);
+
+/*
+            va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
+            graph.nodes[head->idx].edges = va_array_length(graph.edges);
+*/
         } // for
 
         if (!found_source && tail->length > tail->lcs_pos)
