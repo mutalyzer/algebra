@@ -89,6 +89,9 @@ build_graph(VA_Allocator const allocator,
     VA_LCS_Node* const heads = lcs_nodes[len_lcs - 1];
     for (size_t i = 0; i < va_array_length(heads); ++i)
     {
+        eq_count += 1;
+        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", heads[i].row, heads[i].col, heads[i].length, sink.row, sink.col, sink.length);
+
         if (heads[i].row + heads[i].length < sink.row + sink.length && heads[i].col + heads[i].length < sink.col + sink.length)
         {
             VA_Variant const variant = {heads[i].row + heads[i].length, sink.row + sink.length - 1, heads[i].col + heads[i].length - shift, sink.col + sink.length - 1 - shift};
@@ -100,6 +103,7 @@ build_graph(VA_Allocator const allocator,
             graph.nodes[heads[i].idx].edges = add_edge(allocator, &graph, sink.idx, graph.nodes[heads[i].idx].edges, variant);
             if (debug)
                 printf("MAKE EDGE (%u %u %u) -> (%u %u %u): " VAR_FMT "\n", heads[i].row, heads[i].col, heads[i].length, sink.row, sink.col, sink.length, print_variant(variant, "0123456789"));
+
             here = i + 1;
         } // if
     } // for
@@ -128,6 +132,7 @@ build_graph(VA_Allocator const allocator,
             for (size_t k = 0; k < va_array_length(heads); ++k)
             {
                 eq_count += 1;
+                fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length);
 
                 if (heads[k].row + heads[k].length < tail.row + tail.length &&
                     heads[k].col + heads[k].length < tail.col + tail.length)
@@ -221,6 +226,9 @@ build_graph(VA_Allocator const allocator,
         {
             continue;
         } // if
+
+        eq_count += 1;
+        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
 
         if (source.row < lcs_nodes[0][i].row + lcs_nodes[0][i].length && source.col < lcs_nodes[0][i].col + lcs_nodes[0][i].length)
         {
