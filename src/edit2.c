@@ -149,6 +149,13 @@ va_edit2(VA_Allocator const allocator,
     size_t const offset = len_ref + 1;
     size_t const size = len_ref + len_obs + 3;
 
+    *lcs_index = NULL;
+    *lcs_nodes = NULL;
+    if (len_ref == 0 || len_obs == 0)
+    {
+        return 0;
+    } // if
+
     Context const context =
     {
         allocator,
