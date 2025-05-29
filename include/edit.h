@@ -35,6 +35,13 @@ typedef struct
 } VA_LCS_Node2;
 
 
+typedef struct
+{
+    uint32_t head;
+    uint32_t tail;
+} VA_LCS_List;
+
+
 size_t
 va_edit_distance_only(VA_Allocator const allocator,
                       size_t const len_ref,
@@ -52,11 +59,12 @@ va_edit(VA_Allocator const allocator,
         VA_LCS_Node*** restrict lcs_nodes);
 
 
-VA_LCS_Node2*
+size_t
 va_edit2(VA_Allocator const allocator,
          size_t const len_ref, char const reference[static restrict len_ref],
          size_t const len_obs, char const observed[static restrict len_obs],
-         uint32_t* const restrict head);
+         VA_LCS_List** restrict lcs_index,
+         VA_LCS_Node2** restrict lcs_nodes);
 
 
 #ifdef __cplusplus

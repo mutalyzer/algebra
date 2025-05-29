@@ -359,8 +359,9 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
       size_t const len_obs, char const observed[static restrict len_obs],
       size_t const shift)
 {
-    uint32_t last_idx = -1;
-    VA_LCS_Node2* lcs_nodes = va_edit2(va_std_allocator, len_ref, reference, len_obs, observed, &last_idx);
+    VA_LCS_List* lcs_index = NULL;
+    VA_LCS_Node2* lcs_nodes = NULL;
+    size_t const len_lcs = va_edit2(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_index, &lcs_nodes);
 
     Graph2 graph = {NULL, NULL, GVA_NULL};
 
@@ -384,7 +385,21 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
     {
         fprintf(stderr, "%2zu: (%u, %u, %u)  %u  %2d  %2d\n", i, lcs_nodes[i].row, lcs_nodes[i].col, lcs_nodes[i].length, lcs_nodes[i].lcs_pos, lcs_nodes[i].next, lcs_nodes[i].inext);
     } // for
-    fprintf(stderr, "last: %u\n", last_idx);
+    for (size_t i = 0; i < len_lcs; ++i)
+    {
+        fprintf(stderr, "%zu:  ", i);
+        for (uint32_t j = lcs_index[i].tail; j != GVA_NULL; j = lcs_nodes[j].next)
+        {
+            fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[j].row, lcs_nodes[j].col, lcs_nodes[j].length);
+            if (j == lcs_index[i].head)
+            {
+                break;
+            } // if
+        } // for
+        fprintf(stderr, "\n");
+    } // for
+
+    uint32_t last_idx = lcs_index[len_lcs - 1].tail;
 
     VA_LCS_Node2 source = {shift, shift, 0, -1, GVA_NULL, GVA_NULL, GVA_NULL, -1};
     bool found_source = false;
@@ -422,14 +437,11 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
             eq_count += 1;
             fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", head->row, head->col, head->length, sink.row, sink.col, sink.length);
 
-/*
-            VA_Variant variant;
-            uint32_t const count = edges3(head, &sink, head->row == shift && head->col == shift, true, &variant);
-            fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, sink.row, sink.col, sink.length, print_variant(variant, observed), count);
-*/
+            //VA_Variant variant;
+            //uint32_t const count = edges3(head, &sink, head->row == shift && head->col == shift, true, &variant);
+            //fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", head->row, head->col, head->length, sink.row, sink.col, sink.length, print_variant(variant, observed), count);
         } // for
     } // else
-//    fprintf(stderr, "\n");
 
     for (size_t i = 0; i < len; ++i)
     {
@@ -496,10 +508,10 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
             head->outgoing = MIN(head->outgoing, variant.start);
             source.outgoing = MIN(source.outgoing, variant.start);
 
-/*  NO SPLIT NODES
-            va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
-            graph.nodes[head->idx].edges = va_array_length(graph.edges);
-*/
+//  NO SPLIT NODES
+//          va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[head->idx].edges}));
+//          graph.nodes[head->idx].edges = va_array_length(graph.edges);
+
         } // for
 
         if (!found_source && tail->length > tail->lcs_pos)
@@ -516,15 +528,14 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
             va_array_append(va_std_allocator, graph.edges, ((Edge2) {tail->idx, graph.nodes[source.idx].edges}));
             graph.nodes[source.idx].edges = va_array_length(graph.edges) - 1;
 
-/*
-            VA_Variant variant;
-            uint32_t const count = edges3(&source, tail, true, is_sink, &variant);
-            fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", source.row, source.col, source.length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
-*/
+            //VA_Variant variant;
+            //uint32_t const count = edges3(&source, tail, true, is_sink, &variant);
+            //fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)  " VAR_FMT " x %u\n", source.row, source.col, source.length, tail->row, tail->col, tail->length, print_variant(variant, observed), count);
         } // if
     } // for
 
     lcs_nodes = va_array_destroy(va_std_allocator, lcs_nodes);
+    va_std_allocator.alloc(va_std_allocator.context, lcs_index, len_lcs * sizeof(*lcs_index), 0);
 
     //fprintf(stderr, "SOURCE first outgoing edge at %d\n", source.outgoing);
     if (source.outgoing != (uint32_t) -1)
