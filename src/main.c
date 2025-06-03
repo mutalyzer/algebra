@@ -158,7 +158,7 @@ main(int argc, char* argv[static argc + 1])
     size_t const len_ref = strlen(reference);
     size_t const len_obs = strlen(observed);
     eq_count = 0;
-    //Graph2 graph = build(len_ref, reference, len_obs, observed, 0);
+    Graph2 graph = build(len_ref, reference, len_obs, observed, 0);
     //VA_LCS_Node2* lcs_nodes = va_edit2(va_std_allocator, len_ref, reference, len_obs, observed, &(uint32_t) {0});
     VA_LCS_Node** lcs_nodes = NULL;
     size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
@@ -193,30 +193,38 @@ main(int argc, char* argv[static argc + 1])
         char const* const restrict observed = argv[2];
         size_t const len_ref = strlen(reference);
         size_t const len_obs = strlen(observed);
-        eq_count = 0;
-        //check(len_ref, reference, len_obs, observed, true);
-        Graph2 graph2 = build(len_ref, reference, len_obs, observed, 0);
 
-        fprintf(stderr, "count: %zu\n", eq_count);
+        Graph graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
+        print_graph(graph, len_obs, observed);
+        to_json(graph, len_obs, observed, false);
 
-        //to_json2(graph2, len_obs, observed);
+        destroy(va_std_allocator, &graph);
 
+/*
         VA_LCS_Node** lcs_nodes = NULL;
         size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
 
         for (size_t i = 0; i < len_lcs; ++i)
         {
-            fprintf(stderr, "%zu:  ", i);
+            fprintf(stderr, "%2zu:  ", i);
             for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
             {
                 fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
             } // for
             fprintf(stderr, "\n");
         } // for
+        fprintf(stderr, "\n");
+
+        eq_count = 0;
+        //check(len_ref, reference, len_obs, observed, true);
+        Graph2 graph2 = build(len_ref, reference, len_obs, observed, 0);
+        fprintf(stderr, "new count: %zu\n", eq_count);
+
+        //to_json2(graph2, len_obs, observed);
 
         eq_count = 0;
         Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
-        fprintf(stderr, "count: %zu\n", eq_count);
+        fprintf(stderr, "old count: %zu\n\n", eq_count);
 
         //print_graph(graph, len_obs, observed);
         // to_dot(graph, len_obs, observed);
@@ -227,7 +235,7 @@ main(int argc, char* argv[static argc + 1])
         va_array_destroy(va_std_allocator, graph2.edges);
 
         destroy(va_std_allocator, &graph);
-
+        */
     } // if
     else
     {

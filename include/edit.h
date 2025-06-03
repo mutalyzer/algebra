@@ -14,6 +14,13 @@ extern "C"
 
 typedef struct
 {
+    uint32_t head;
+    uint32_t tail;
+} VA_LCS_List;
+
+
+typedef struct
+{
     uint32_t row;
     uint32_t col;
     uint32_t length;
@@ -37,9 +44,31 @@ typedef struct
 
 typedef struct
 {
-    uint32_t head;
-    uint32_t tail;
-} VA_LCS_List;
+    uint32_t row;
+    uint32_t col;
+    uint32_t length;
+    uint32_t incoming;
+    uint32_t idx;
+    uint32_t next;
+} VA_LCS_Node3;
+
+
+typedef struct
+{
+    size_t length;
+    struct
+    {
+        uint32_t head;
+        uint32_t tail;
+    }* index;
+    VA_LCS_Node3* nodes;
+} VA_LCS;
+
+
+VA_LCS
+va_edit3(VA_Allocator const allocator,
+         size_t const len_ref, char const reference[static restrict len_ref],
+         size_t const len_obs, char const observed[static restrict len_obs]);
 
 
 size_t

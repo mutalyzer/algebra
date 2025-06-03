@@ -107,8 +107,8 @@ bfs_traversal2(Graph2 const graph, size_t const len_obs, char const observed[sta
                 } // if
                 count += 1;
                 VA_Variant variant;
-                uint32_t const count2 = edges2(((VA_LCS_Node) {graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, 0, 0}),
-                                               ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, 0, 0}),
+                uint32_t const count2 = edges2(((VA_LCS_Node) {.row = graph.nodes[i].row, .col =graph.nodes[i].col, .length = graph.nodes[i].length}),
+                                               ((VA_LCS_Node) {.row = graph.nodes[graph.edges[j].tail].row, .col = graph.nodes[graph.edges[j].tail].col, .length = graph.nodes[graph.edges[j].tail].length}),
                                                graph.nodes[head].row == graph.nodes[graph.source].row && graph.nodes[head].col == graph.nodes[graph.source].col, graph.nodes[graph.edges[j].tail].edges == GVA_NULL, &variant);
 
                 for (uint32_t k = 0; k < count2; ++k)
@@ -176,9 +176,8 @@ print_graph(Graph2 const graph, size_t const len_obs, char const observed[static
             fprintf(stderr, "    %u: (%u, %u, %u): ", graph.edges[j].tail, graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
             VA_Variant variant;
             uint32_t const count = edges2(
-                    ((VA_LCS_Node) {graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, 0, 0}),
-                    ((VA_LCS_Node) {graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col,
-                                    graph.nodes[graph.edges[j].tail].length, 0, 0}),
+                    ((VA_LCS_Node) {.row = graph.nodes[i].row, .col = graph.nodes[i].col, .length = graph.nodes[i].length}),
+                    ((VA_LCS_Node) {.row = graph.nodes[graph.edges[j].tail].row, .col = graph.nodes[graph.edges[j].tail].col, .length = graph.nodes[graph.edges[j].tail].length}),
                     i == graph.source,
                     graph.nodes[graph.edges[j].tail].edges == GVA_NULL && graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
                     &variant);
@@ -211,8 +210,9 @@ split(VA_LCS_Node2 const* const node,
             Node2 const* const tail = &graph->nodes[graph->edges[j].tail];
             VA_Variant outgoing;
             uint32_t const out_count = edges2(
-                (VA_LCS_Node) {node->row, node->col, node->length, -1, GVA_NULL},
-                (VA_LCS_Node) {tail->row, tail->col, tail->length, -1, GVA_NULL}, false, tail->edges == GVA_NULL && tail->lambda == GVA_NULL, &outgoing);
+                (VA_LCS_Node) {.row = node->row, .col = node->col, .length = node->length},
+                (VA_LCS_Node) {.row = tail->row, .col = tail->col, .length = tail->length},
+                false, tail->edges == GVA_NULL && tail->lambda == GVA_NULL, &outgoing);
             //fprintf(stderr, "    %u: (%u, %u, %u): x %u  ", graph->edges[j].tail, tail->row, tail->col, tail->length, out_count);
 
             // TODO: can we avoid reordering the tail list? Yes? XOR-linked?
@@ -385,6 +385,9 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
     {
         fprintf(stderr, "%2zu: (%u, %u, %u)  %u  %2d  %2d\n", i, lcs_nodes[i].row, lcs_nodes[i].col, lcs_nodes[i].length, lcs_nodes[i].lcs_pos, lcs_nodes[i].next, lcs_nodes[i].inext);
     } // for
+    fprintf(stderr, "\n");
+
+    /*
     for (size_t i = 0; i < len_lcs; ++i)
     {
         fprintf(stderr, "%zu:  ", i);
@@ -398,6 +401,7 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
         } // for
         fprintf(stderr, "\n");
     } // for
+    */
 
     uint32_t last_idx = lcs_index[len_lcs - 1].tail;
 
@@ -445,8 +449,8 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
 
     for (size_t i = 0; i < len; ++i)
     {
-        VA_LCS_Node2 const* const restrict tail = &lcs_nodes[len - i - 1];
         uint32_t const idx = len - i - 1;
+        VA_LCS_Node2 const* const restrict tail = &lcs_nodes[idx];
 
         if (lcs_nodes[idx].inext != GVA_NULL)
         {
@@ -471,7 +475,13 @@ build(size_t const len_ref, char const reference[static restrict len_ref],
 
         uint32_t const lcs_low = tail->length > tail->lcs_pos ? 0 : tail->lcs_pos - tail->length;
 
-        for (uint32_t j = last_idx; j != GVA_NULL && lcs_nodes[j].lcs_pos >= lcs_low; j = lcs_nodes[j].next)
+        uint32_t j = last_idx;
+        //fprintf(stderr, "%d\n", last_idx);
+        if (tail->length == 1 && lcs_index[tail->lcs_pos].head < last_idx)
+        {
+            //j = lcs_nodes[lcs_index[tail->lcs_pos].head].next;
+        }
+        for (; j != GVA_NULL && lcs_nodes[j].lcs_pos >= lcs_low; j = lcs_nodes[j].next)
         {
             VA_LCS_Node2* const head = &lcs_nodes[j];
             bool const is_source = head->row == shift && head->col == shift;

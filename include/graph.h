@@ -32,6 +32,13 @@ typedef struct
 
 
 Graph
+build3(VA_Allocator const allocator,
+       size_t const len_ref, char const reference[static restrict len_ref],
+       size_t const len_obs, char const observed[static restrict len_obs],
+       size_t const shift);
+
+
+Graph
 build_graph(VA_Allocator const allocator,
             size_t const len_ref, size_t const len_obs,
             size_t const len_lcs, VA_LCS_Node* lcs_nodes[static len_lcs],
