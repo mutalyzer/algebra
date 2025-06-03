@@ -265,6 +265,20 @@ build3(VA_Allocator const allocator,
 
     Graph graph = {.nodes = NULL, .edges = NULL};
 
+    if (lcs.nodes == NULL)
+    {
+        uint32_t const sink_idx = add_node(allocator, &graph, len_ref, len_obs, 0);
+        if (len_ref == 0 && len_obs == 0)
+        {
+            graph.source = sink_idx;
+            return graph;
+        } // if
+
+        graph.source = add_node(allocator, &graph, shift, shift, 0);
+        graph.nodes[graph.source].edges = add_edge(allocator, &graph, sink_idx, GVA_NULL, (VA_Variant) {shift, shift + len_ref, 0, len_obs});
+        return graph;
+    } // if
+
     if (lcs.length == 0 || lcs.nodes == NULL)
     {
         graph.source = add_node(allocator, &graph, shift, shift, 0);
@@ -280,23 +294,28 @@ build3(VA_Allocator const allocator,
     } // if
 
     uint32_t tail = lcs.index[lcs.length - 1].tail;
-    VA_LCS_Node3* sink = &lcs.nodes[tail];
-    if (sink->row + sink->length != len_ref + shift || sink->col + sink->length != len_obs + shift)
+    VA_LCS_Node3 sink = lcs.nodes[tail];
+    if (sink.row + sink.length == len_ref + shift && sink.col + sink.length == len_obs + shift)
     {
-        sink = &(VA_LCS_Node3) {.row = len_ref + shift, .col = len_obs + shift, .length = 0};
-        tail = GVA_NULL;
+        lcs.nodes[tail].idx = add_node(allocator, &graph, sink.row, sink.col, sink.length);
+        sink.idx = lcs.nodes[tail].idx;
     } // if
-    sink->idx = add_node(allocator, &graph, sink->row, sink->col, sink->length);
+    else
+    {
+        sink = (VA_LCS_Node3) {.row = len_ref + shift, .col = len_obs + shift, .length = 0};
+        sink.idx = add_node(allocator, &graph, sink.row, sink.col, sink.length);
+        tail = GVA_NULL;
+    } // else
 
     for (uint32_t i = lcs.index[lcs.length - 1].head; i != tail; i = lcs.nodes[i].next)
     {
         eq_count += 1;
-        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length, sink->row, sink->col, sink->length);
+        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length, sink.row, sink.col, sink.length);
 
-        VA_Variant const variant = {lcs.nodes[i].row + lcs.nodes[i].length, sink->row + sink->length, lcs.nodes[i].col + lcs.nodes[i].length - shift, sink->col + sink->length - shift};
+        VA_Variant const variant = {lcs.nodes[i].row + lcs.nodes[i].length, sink.row + sink.length, lcs.nodes[i].col + lcs.nodes[i].length - shift, sink.col + sink.length - shift};
 
         lcs.nodes[i].idx = add_node(allocator, &graph, lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length);
-        graph.nodes[lcs.nodes[i].idx].edges = add_edge(allocator, &graph, sink->idx, graph.nodes[lcs.nodes[i].idx].edges, variant);
+        graph.nodes[lcs.nodes[i].idx].edges = add_edge(allocator, &graph, sink.idx, graph.nodes[lcs.nodes[i].idx].edges, variant);
     } // for
 
     for (size_t i = lcs.length - 1; i >= 1; --i)
@@ -383,18 +402,17 @@ build3(VA_Allocator const allocator,
     } // for
 
     size_t head = lcs.index[0].head;
-    VA_LCS_Node3* source = &lcs.nodes[head];
-    if (source->row == shift && source->col == shift)
+    VA_LCS_Node3 source = lcs.nodes[head];
+    if (source.row == shift && source.col == shift)
     {
-        head = source->next;
+        head = source.next;
     } // if
     else
     {
-        source = &(VA_LCS_Node3) {.row = shift, .col = shift, .length = 0};
-        source->idx = add_node(allocator, &graph, source->row, source->col, source->length);
+        source = (VA_LCS_Node3) {.row = shift, .col = shift, .length = 0};
+        source.idx = add_node(allocator, &graph, source.row, source.col, source.length);
     } // else
 
-    uint32_t min_source = -1;
     for (uint32_t i = head; i != GVA_NULL; i = lcs.nodes[i].next)
     {
         if (lcs.nodes[i].idx == GVA_NULL)
@@ -403,21 +421,32 @@ build3(VA_Allocator const allocator,
         } // if
 
         eq_count += 1;
-        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", source->row, source->col, source->length, lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length);
+        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", source.row, source.col, source.length, lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length);
 
-        VA_Variant const variant = {source->row, lcs.nodes[i].row + lcs.nodes[i].length - 1, source->col - shift, lcs.nodes[i].col + lcs.nodes[i].length - 1 - shift};
+        VA_Variant const variant = {source.row, lcs.nodes[i].row + lcs.nodes[i].length - 1, source.col - shift, lcs.nodes[i].col + lcs.nodes[i].length - 1 - shift};
 
-        min_source = MIN(min_source, variant.start);
-
-        graph.nodes[source->idx].edges = add_edge(allocator, &graph, lcs.nodes[i].idx, graph.nodes[source->idx].edges, variant);
+        graph.nodes[source.idx].edges = add_edge(allocator, &graph, lcs.nodes[i].idx, graph.nodes[source.idx].edges, variant);
     } // for
-    uint32_t const min_offset = min_source - graph.nodes[source->idx].row;
 
-    graph.nodes[source->idx].row += min_offset;
-    graph.nodes[source->idx].col += min_offset;
-    graph.nodes[source->idx].length -= min_offset;
+    uint32_t min_source = GVA_NULL;
+    for (uint32_t i = graph.nodes[source.idx].edges; i != (uint32_t) -1; i = graph.edges[i].next)
+    {
+        min_source = MIN(min_source, graph.edges[i].variant.start);
+    } // for
 
-    graph.source = source->idx;
+    if (min_source != GVA_NULL)
+    {
+        uint32_t const min_offset = min_source - graph.nodes[source.idx].row;
+        graph.nodes[source.idx].row += min_offset;
+        graph.nodes[source.idx].col += min_offset;
+        graph.nodes[source.idx].length -= min_offset;
+    } // if
+    else
+    {
+        graph.nodes[source.idx].length = 0;
+    } // else
+
+    graph.source = source.idx;
 
     va_std_allocator.alloc(va_std_allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
     va_array_destroy(va_std_allocator, lcs.nodes);
@@ -516,7 +545,7 @@ bfs_traversal(VA_Allocator const allocator, Graph const graph, size_t const len_
         */
     } // while
 
-    printf("\n    ],\n");
+    printf("\n    ]\n");
 
     table = allocator.alloc(allocator.context, table, sizeof(*table) * va_array_length(graph.nodes), 0);
 
@@ -550,7 +579,7 @@ lambda_edges(Graph const graph, size_t const len_obs, char const observed[static
             printf("         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"%u:%u/%.*s\"}", i, graph.edges[j].tail, graph.edges[j].variant.start, graph.edges[j].variant.end, (int) graph.edges[j].variant.obs_end - graph.edges[j].variant.obs_start, observed + graph.edges[j].variant.obs_start);
         } // for
     } // for
-    printf("\n    ],\n");
+    printf("\n    ]\n");
 } // lambda_edges
 
 
@@ -568,13 +597,13 @@ to_json(Graph const graph, size_t const len_obs, char const observed[static len_
     } else {
         bfs_traversal(va_std_allocator, graph, len_obs, observed);
     }
-    printf("    \"supremal\": \"%u:%u/%.*s\",\n", graph.supremal.start, graph.supremal.end, (int) graph.supremal.obs_end - graph.supremal.obs_start, observed + graph.supremal.obs_start);
-    printf("    \"local_supremal\": [\n");
-    local_supremal(va_std_allocator, graph, len_obs, observed, false);
-    printf("\n    ],\n");
-    printf("    \"canonical\": [\n");
-    canonical(va_std_allocator, graph, len_obs, observed, false);
-    printf("\n    ]\n");
+    //printf("    \"supremal\": \"%u:%u/%.*s\",\n", graph.supremal.start, graph.supremal.end, (int) graph.supremal.obs_end - graph.supremal.obs_start, observed + graph.supremal.obs_start);
+    //printf("    \"local_supremal\": [\n");
+    //local_supremal(va_std_allocator, graph, len_obs, observed, false);
+    //printf("\n    ],\n");
+    //printf("    \"canonical\": [\n");
+    //canonical(va_std_allocator, graph, len_obs, observed, false);
+    //printf("\n    ]\n");
     printf("}");
 } // to_json
 

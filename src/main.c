@@ -195,7 +195,7 @@ main(int argc, char* argv[static argc + 1])
         size_t const len_obs = strlen(observed);
 
         Graph graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
-        //print_graph(graph, len_obs, observed);
+        print_graph(graph, len_obs, observed);
         to_json(graph, len_obs, observed, false);
 
         destroy(va_std_allocator, &graph);
@@ -213,7 +213,7 @@ main(int argc, char* argv[static argc + 1])
             fprintf(stderr, "\n");
         } // for
         fprintf(stderr, "\n");
-/*
+
         eq_count = 0;
         //check(len_ref, reference, len_obs, observed, true);
         Graph2 graph2 = build(len_ref, reference, len_obs, observed, 0);
