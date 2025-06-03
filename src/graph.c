@@ -279,14 +279,16 @@ build3(VA_Allocator const allocator,
         return graph;
     } // if
 
-    VA_LCS_Node3* sink = &lcs.nodes[lcs.index[lcs.length - 1].tail];
+    uint32_t tail = lcs.index[lcs.length - 1].tail;
+    VA_LCS_Node3* sink = &lcs.nodes[tail];
     if (sink->row + sink->length != len_ref + shift || sink->col + sink->length != len_obs + shift)
     {
         sink = &(VA_LCS_Node3) {.row = len_ref + shift, .col = len_obs + shift, .length = 0};
+        tail = GVA_NULL;
     } // if
     sink->idx = add_node(allocator, &graph, sink->row, sink->col, sink->length);
 
-    for (uint32_t i = lcs.index[lcs.length - 1].head; i != lcs.index[lcs.length - 1].tail; i = lcs.nodes[i].next)
+    for (uint32_t i = lcs.index[lcs.length - 1].head; i != tail; i = lcs.nodes[i].next)
     {
         eq_count += 1;
         fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length, sink->row, sink->col, sink->length);
