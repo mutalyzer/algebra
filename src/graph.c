@@ -255,7 +255,7 @@ build_graph(VA_Allocator const allocator,
 } // build_graph
 
 
-Graph
+Graph3
 build3(VA_Allocator const allocator,
        size_t const len_ref, char const reference[static restrict len_ref],
        size_t const len_obs, char const observed[static restrict len_obs],
@@ -263,19 +263,21 @@ build3(VA_Allocator const allocator,
 {
     VA_LCS const lcs = va_edit3(allocator, len_ref, reference, len_obs, observed);
 
-    Graph graph = {.nodes = NULL, .edges = NULL};
+    Graph3 graph = {.nodes = NULL, .edges = NULL};
 
     if (lcs.nodes == NULL)
     {
-        uint32_t const sink_idx = add_node(allocator, &graph, len_ref, len_obs, 0);
+        va_array_append(va_std_allocator, graph.nodes, ((Node) {len_ref, len_obs, 0, GVA_NULL, GVA_NULL}));
+        uint32_t const sink = va_array_length(graph.nodes) - 1;
         if (len_ref == 0 && len_obs == 0)
         {
-            graph.source = sink_idx;
+            graph.source = sink;
             return graph;
         } // if
 
-        graph.source = add_node(allocator, &graph, shift, shift, 0);
-        graph.nodes[graph.source].edges = add_edge(allocator, &graph, sink_idx, GVA_NULL, (VA_Variant) {shift, shift + len_ref, 0, len_obs});
+        va_array_append(va_std_allocator, graph.edges, ((Edge3) {sink, GVA_NULL}));
+        va_array_append(va_std_allocator, graph.nodes, ((Node) {shift, shift, 0, va_array_length(graph.edges) - 1, GVA_NULL}));
+        graph.source = va_array_length(graph.nodes) - 1;
         return graph;
     } // if
 
@@ -283,14 +285,16 @@ build3(VA_Allocator const allocator,
     VA_LCS_Node3 sink = lcs.nodes[tail_idx];
     if (sink.row + sink.length == len_ref + shift && sink.col + sink.length == len_obs + shift)
     {
-        lcs.nodes[tail_idx].idx = add_node(allocator, &graph, sink.row, sink.col, sink.length);
+        va_array_append(allocator, graph.nodes, ((Node) {sink.row, sink.col, sink.length, GVA_NULL, GVA_NULL}));
+        lcs.nodes[tail_idx].idx = va_array_length(graph.nodes) - 1;
         lcs.nodes[tail_idx].moved = true;
         sink = lcs.nodes[tail_idx];
     } // if
     else
     {
         sink = (VA_LCS_Node3) {.row = len_ref + shift, .col = len_obs + shift, .length = 0};
-        sink.idx = add_node(allocator, &graph, sink.row, sink.col, sink.length);
+        va_array_append(allocator, graph.nodes, ((Node) {sink.row, sink.col, sink.length, GVA_NULL, GVA_NULL}));
+        sink.idx = va_array_length(graph.nodes) - 1;
         tail_idx = GVA_NULL;
     } // else
 
@@ -298,10 +302,10 @@ build3(VA_Allocator const allocator,
     {
         eq_count += 1;
 
-        VA_Variant const variant = {lcs.nodes[i].row + lcs.nodes[i].length, sink.row + sink.length, lcs.nodes[i].col + lcs.nodes[i].length - shift, sink.col + sink.length - shift};
-
-        lcs.nodes[i].idx = add_node(allocator, &graph, lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length);
-        graph.nodes[lcs.nodes[i].idx].edges = add_edge(allocator, &graph, sink.idx, graph.nodes[lcs.nodes[i].idx].edges, variant);
+        va_array_append(allocator, graph.nodes, ((Node) {lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length, GVA_NULL, GVA_NULL}));
+        lcs.nodes[i].idx = va_array_length(graph.nodes) - 1;
+        va_array_append(allocator, graph.edges, ((Edge3) {sink.idx, graph.nodes[lcs.nodes[i].idx].edges}));
+        graph.nodes[lcs.nodes[i].idx].edges = va_array_length(graph.edges) - 1;
     } // for
 
     for (size_t i = lcs.length - 1; i >= 1; --i)
@@ -331,30 +335,31 @@ build3(VA_Allocator const allocator,
                 if (head->row + head->length < tail->row + tail->length &&
                     head->col + head->length < tail->col + tail->length)
                 {
-                    VA_Variant const variant = {head->row + head->length, tail->row + tail->length - 1, head->col + head->length - shift, tail->col + tail->length - 1 - shift};
-
                     if (head->incoming == i)
                     {
                         uint32_t const split_idx = head->idx;
-                        head->idx = add_node(allocator, &graph, head->row, head->col, head->length);
+                        va_array_append(allocator, graph.nodes, ((Node) {head->row, head->col, head->length, GVA_NULL, split_idx}));
+                        head->idx = va_array_length(graph.nodes) - 1;
                         head->incoming = 0;
-
-                        graph.nodes[head->idx].lambda = split_idx;
 
                         graph.nodes[split_idx].row += head->length;
                         graph.nodes[split_idx].col += head->length;
                         graph.nodes[split_idx].length -= head->length;
 
-                        graph.nodes[head->idx].edges = add_edge(allocator, &graph, tail->idx, graph.nodes[head->idx].edges, variant);
+                        va_array_append(allocator, graph.edges, ((Edge3) {tail->idx, graph.nodes[head->idx].edges}));
+                        graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
                     } // if
                     else if (head->idx == GVA_NULL)
                     {
-                        head->idx = add_node(allocator, &graph, head->row, head->col, head->length);
-                        graph.nodes[head->idx].edges = add_edge(allocator, &graph, tail->idx, graph.nodes[head->idx].edges, variant);
+                        va_array_append(allocator, graph.nodes, ((Node) {head->row, head->col, head->length, GVA_NULL, GVA_NULL}));
+                        head->idx = va_array_length(graph.nodes) - 1;
+                        va_array_append(allocator, graph.edges, ((Edge3) {tail->idx, graph.nodes[head->idx].edges}));
+                        graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
                     } // if
                     else if (!head->moved || !tail->moved)
                     {
-                        graph.nodes[head->idx].edges = add_edge(allocator, &graph, tail->idx, graph.nodes[head->idx].edges, variant);
+                        va_array_append(allocator, graph.edges, ((Edge3) {tail->idx, graph.nodes[head->idx].edges}));
+                        graph.nodes[head->idx].edges = va_array_length(graph.edges) - 1;
                     } // if
 
                     here = k;
@@ -389,7 +394,8 @@ build3(VA_Allocator const allocator,
     else
     {
         source = (VA_LCS_Node3) {.row = shift, .col = shift, .length = 0};
-        source.idx = add_node(allocator, &graph, source.row, source.col, source.length);
+        va_array_append(allocator, graph.nodes, ((Node) {source.row, source.col, source.length, GVA_NULL, GVA_NULL}));
+        source.idx = va_array_length(graph.nodes) - 1;
     } // else
 
     for (uint32_t i = head_idx; i != GVA_NULL; i = lcs.nodes[i].next)
@@ -401,28 +407,9 @@ build3(VA_Allocator const allocator,
 
         eq_count += 1;
 
-        VA_Variant const variant = {source.row, lcs.nodes[i].row + lcs.nodes[i].length - 1, source.col - shift, lcs.nodes[i].col + lcs.nodes[i].length - 1 - shift};
-
-        graph.nodes[source.idx].edges = add_edge(allocator, &graph, lcs.nodes[i].idx, graph.nodes[source.idx].edges, variant);
+        va_array_append(allocator, graph.edges, ((Edge3) {lcs.nodes[i].idx, graph.nodes[source.idx].edges}));
+        graph.nodes[source.idx].edges = va_array_length(graph.edges) - 1;
     } // for
-
-    uint32_t min_source = GVA_NULL;
-    for (uint32_t i = graph.nodes[source.idx].edges; i != GVA_NULL; i = graph.edges[i].next)
-    {
-        min_source = MIN(min_source, graph.edges[i].variant.start);
-    } // for
-
-    if (min_source != GVA_NULL)
-    {
-        uint32_t const min_offset = min_source - graph.nodes[source.idx].row;
-        graph.nodes[source.idx].row += min_offset;
-        graph.nodes[source.idx].col += min_offset;
-        graph.nodes[source.idx].length -= min_offset;
-    } // if
-    else
-    {
-        graph.nodes[source.idx].length = 0;
-    } // else
 
     graph.source = source.idx;
 

@@ -24,7 +24,7 @@ size_t eq_count;
 static uint32_t const GVA_NULL = UINT32_MAX;
 
 
-static uint32_t
+uint32_t
 edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
        bool const is_source, bool const is_sink,
        VA_Variant* const variant)

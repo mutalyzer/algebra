@@ -148,6 +148,35 @@ print_graph(Graph const graph, size_t const len_obs, char const observed[static 
 } // print_graph
 
 
+static void
+print_graph3(Graph3 const graph, size_t const len_obs, char const observed[static len_obs]) {
+    fprintf(stderr, "#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
+    fprintf(stderr, "source: %u\n", graph.source);
+    if (graph.nodes == NULL)
+    {
+        return;
+    } // if
+    for (size_t i = 0; i < va_array_length(graph.nodes); ++i) {
+        fprintf(stderr, "%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        if (graph.nodes[i].lambda != GVA_NULL) {
+            fprintf(stderr, "    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
+        } // if
+        for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next) {
+            fprintf(stderr, "    %u: (%u, %u, %u): ", graph.edges[j].tail, graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
+            VA_Variant variant;
+            uint32_t const count = edges2(
+                    ((VA_LCS_Node) {.row = graph.nodes[i].row, .col = graph.nodes[i].col, .length = graph.nodes[i].length}),
+                    ((VA_LCS_Node) {.row = graph.nodes[graph.edges[j].tail].row, .col = graph.nodes[graph.edges[j].tail].col, .length = graph.nodes[graph.edges[j].tail].length}),
+                    i == graph.source,
+                    graph.nodes[graph.edges[j].tail].edges == GVA_NULL && graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                    &variant);
+            fprintf(stderr, VAR_FMT " x %u\n", print_variant(variant, observed), count);
+        } // for
+    } // for
+} // print_graph3
+
+
+
 int
 main(int argc, char* argv[static argc + 1])
 {
@@ -197,11 +226,15 @@ main(int argc, char* argv[static argc + 1])
         size_t const len_ref = strlen(reference);
         size_t const len_obs = strlen(observed);
 
-        Graph graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
-        print_graph(graph, len_obs, observed);
-        to_json(graph, len_obs, observed, false);
+        Graph3 graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
+        print_graph3(graph, len_obs, observed);
 
-        destroy(va_std_allocator, &graph);
+        va_array_destroy(va_std_allocator, graph.nodes);
+        va_array_destroy(va_std_allocator, graph.edges);
+
+        //to_json(graph, len_obs, observed, false);
+
+        //destroy(va_std_allocator, &graph);
 /*
         VA_LCS_Node** lcs_nodes = NULL;
         size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);

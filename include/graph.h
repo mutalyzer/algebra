@@ -32,7 +32,28 @@ typedef struct
 } Graph;
 
 
-Graph
+typedef struct
+{
+    uint32_t tail;
+    uint32_t next;
+} Edge3;
+
+
+typedef struct
+{
+    Node* nodes;
+    Edge3* edges;
+    uint32_t source;
+} Graph3;
+
+
+uint32_t
+edges2(VA_LCS_Node const head, VA_LCS_Node const tail,
+       bool const is_source, bool const is_sink,
+       VA_Variant* const variant);
+
+
+Graph3
 build3(VA_Allocator const allocator,
        size_t const len_ref, char const reference[static restrict len_ref],
        size_t const len_obs, char const observed[static restrict len_obs],
