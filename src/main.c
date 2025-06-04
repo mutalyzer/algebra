@@ -158,13 +158,16 @@ main(int argc, char* argv[static argc + 1])
     size_t const len_ref = strlen(reference);
     size_t const len_obs = strlen(observed);
     eq_count = 0;
-    Graph2 graph = build(len_ref, reference, len_obs, observed, 0);
+    //Graph2 graph = build(len_ref, reference, len_obs, observed, 0);
     //VA_LCS_Node2* lcs_nodes = va_edit2(va_std_allocator, len_ref, reference, len_obs, observed, &(uint32_t) {0});
-    VA_LCS_Node** lcs_nodes = NULL;
-    size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
-    Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
+    //VA_LCS_Node** lcs_nodes = NULL;
+    //size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
+    //Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
+    Graph graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
+
     printf("nodes: %zu\nedges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
     printf("%zu\n", eq_count);
+    destroy(va_std_allocator, &graph);
     return 0;
 */
 

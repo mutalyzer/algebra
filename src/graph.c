@@ -90,7 +90,7 @@ build_graph(VA_Allocator const allocator,
     for (size_t i = 0; i < va_array_length(heads); ++i)
     {
         eq_count += 1;
-        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", heads[i].row, heads[i].col, heads[i].length, sink.row, sink.col, sink.length);
+        //fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", heads[i].row, heads[i].col, heads[i].length, sink.row, sink.col, sink.length);
 
         if (heads[i].row + heads[i].length < sink.row + sink.length && heads[i].col + heads[i].length < sink.col + sink.length)
         {
@@ -139,7 +139,7 @@ build_graph(VA_Allocator const allocator,
                 } // if
                 */
                 eq_count += 1;
-                fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length);
+                //fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", heads[k].row, heads[k].col, heads[k].length, tail.row, tail.col, tail.length);
 
                 if (heads[k].row + heads[k].length < tail.row + tail.length &&
                     heads[k].col + heads[k].length < tail.col + tail.length)
@@ -220,7 +220,7 @@ build_graph(VA_Allocator const allocator,
         } // if
 
         eq_count += 1;
-        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
+        //fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", source.row, source.col, source.length, lcs_nodes[0][i].row, lcs_nodes[0][i].col, lcs_nodes[0][i].length);
 
         if (source.row < lcs_nodes[0][i].row + lcs_nodes[0][i].length && source.col < lcs_nodes[0][i].col + lcs_nodes[0][i].length)
         {
@@ -237,7 +237,7 @@ build_graph(VA_Allocator const allocator,
     lcs_nodes = allocator.alloc(allocator.context, lcs_nodes, len_lcs * sizeof(*lcs_nodes), 0);
 
     uint32_t min_source = max_sink;
-    for (uint32_t i = graph.nodes[source.idx].edges; i != (uint32_t) -1; i = graph.edges[i].next)
+    for (uint32_t i = graph.nodes[source.idx].edges; i != GVA_NULL; i = graph.edges[i].next)
     {
         min_source = MIN(min_source, graph.edges[i].variant.start);
     } // for
@@ -261,7 +261,7 @@ build3(VA_Allocator const allocator,
        size_t const len_obs, char const observed[static restrict len_obs],
        size_t const shift)
 {
-    VA_LCS lcs = va_edit3(allocator, len_ref, reference, len_obs, observed);
+    VA_LCS const lcs = va_edit3(allocator, len_ref, reference, len_obs, observed);
 
     Graph graph = {.nodes = NULL, .edges = NULL};
 
@@ -279,38 +279,24 @@ build3(VA_Allocator const allocator,
         return graph;
     } // if
 
-    if (lcs.length == 0 || lcs.nodes == NULL)
-    {
-        graph.source = add_node(allocator, &graph, shift, shift, 0);
-        if (len_ref == 0 && len_obs == 0)
-        {
-            graph.supremal = (VA_Variant) {0, 0, 0, 0};
-            return graph;
-        } // if
-        uint32_t const sink = add_node(allocator, &graph, len_ref, len_obs, 0);
-        graph.supremal = (VA_Variant) {shift, shift + len_ref, 0, len_obs};
-        graph.nodes[graph.source].edges = add_edge(allocator, &graph, sink, -1, graph.supremal);
-        return graph;
-    } // if
-
-    uint32_t tail = lcs.index[lcs.length - 1].tail;
-    VA_LCS_Node3 sink = lcs.nodes[tail];
+    uint32_t tail_idx = lcs.index[lcs.length - 1].tail;
+    VA_LCS_Node3 sink = lcs.nodes[tail_idx];
     if (sink.row + sink.length == len_ref + shift && sink.col + sink.length == len_obs + shift)
     {
-        lcs.nodes[tail].idx = add_node(allocator, &graph, sink.row, sink.col, sink.length);
-        sink.idx = lcs.nodes[tail].idx;
+        lcs.nodes[tail_idx].idx = add_node(allocator, &graph, sink.row, sink.col, sink.length);
+        lcs.nodes[tail_idx].moved = true;
+        sink = lcs.nodes[tail_idx];
     } // if
     else
     {
         sink = (VA_LCS_Node3) {.row = len_ref + shift, .col = len_obs + shift, .length = 0};
         sink.idx = add_node(allocator, &graph, sink.row, sink.col, sink.length);
-        tail = GVA_NULL;
+        tail_idx = GVA_NULL;
     } // else
 
-    for (uint32_t i = lcs.index[lcs.length - 1].head; i != tail; i = lcs.nodes[i].next)
+    for (uint32_t i = lcs.index[lcs.length - 1].head; i != tail_idx; i = lcs.nodes[i].next)
     {
         eq_count += 1;
-        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length, sink.row, sink.col, sink.length);
 
         VA_Variant const variant = {lcs.nodes[i].row + lcs.nodes[i].length, sink.row + sink.length, lcs.nodes[i].col + lcs.nodes[i].length - shift, sink.col + sink.length - shift};
 
@@ -320,92 +306,85 @@ build3(VA_Allocator const allocator,
 
     for (size_t i = lcs.length - 1; i >= 1; --i)
     {
-        fprintf(stderr, "level %zu\n", i);
-        for (uint32_t j = 0; j < lcs.length; ++j)
-        {
-            fprintf(stderr, "%2u: %2d  %2d\n", j, lcs.index[j].head, lcs.index[j].tail);
-        } // for
-        for (size_t j = 0; j < va_array_length(lcs.nodes); ++j)
-        {
-            fprintf(stderr, "%2zu: (%u, %u, %u)  %2d\n", j, lcs.nodes[j].row, lcs.nodes[j].col, lcs.nodes[j].length, lcs.nodes[j].next);
-        } // for
-
-        uint32_t next = -1;
+        uint32_t next = GVA_NULL;
         for (uint32_t j = lcs.index[i].head; j != GVA_NULL; j = next)
         {
-            next = lcs.nodes[j].next;
+            VA_LCS_Node3* const tail = &lcs.nodes[j];
+            next = tail->next;
             if (lcs.nodes[j].idx == GVA_NULL)
             {
                 continue;
             } // if
 
-            uint32_t here = -1;
+            uint32_t here = GVA_NULL;
             for (uint32_t k = lcs.index[i - 1].head; k != GVA_NULL; k = lcs.nodes[k].next)
             {
+                eq_count += 1;
+
                 if (k > j)
                 {
-                    fprintf(stderr, "(%u, %u, %u) skip because topo order\n", lcs.nodes[k].row, lcs.nodes[k].col, lcs.nodes[k].length);
                     continue;
                 } // if
 
-                eq_count += 1;
-                fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", lcs.nodes[k].row, lcs.nodes[k].col, lcs.nodes[k].length, lcs.nodes[j].row, lcs.nodes[j].col, lcs.nodes[j].length);
+                VA_LCS_Node3* const head = &lcs.nodes[k];
 
-                if (lcs.nodes[k].row + lcs.nodes[k].length < lcs.nodes[j].row + lcs.nodes[j].length &&
-                    lcs.nodes[k].col + lcs.nodes[k].length < lcs.nodes[j].col + lcs.nodes[j].length)
+                if (head->row + head->length < tail->row + tail->length &&
+                    head->col + head->length < tail->col + tail->length)
                 {
-                    VA_Variant const variant = {lcs.nodes[k].row + lcs.nodes[k].length, lcs.nodes[j].row + lcs.nodes[j].length - 1, lcs.nodes[k].col + lcs.nodes[k].length - shift, lcs.nodes[j].col + lcs.nodes[j].length - 1 - shift};
+                    VA_Variant const variant = {head->row + head->length, tail->row + tail->length - 1, head->col + head->length - shift, tail->col + tail->length - 1 - shift};
 
-                    if (lcs.nodes[k].incoming == i)
+                    if (head->incoming == i)
                     {
-                        fprintf(stderr, "SPLIT at %zu\n", i);
-                        uint32_t const split_idx = lcs.nodes[k].idx;
-                        lcs.nodes[k].idx = add_node(allocator, &graph, lcs.nodes[k].row, lcs.nodes[k].col, lcs.nodes[k].length);
-                        lcs.nodes[k].incoming = 0;
+                        uint32_t const split_idx = head->idx;
+                        head->idx = add_node(allocator, &graph, head->row, head->col, head->length);
+                        head->incoming = 0;
 
-                        // lambda-edge
-                        graph.nodes[lcs.nodes[k].idx].lambda = split_idx;
+                        graph.nodes[head->idx].lambda = split_idx;
 
-                        graph.nodes[split_idx].row += lcs.nodes[k].length;
-                        graph.nodes[split_idx].col += lcs.nodes[k].length;
-                        graph.nodes[split_idx].length -= lcs.nodes[k].length;
-                        fprintf(stderr, "RELABEL NODE %u: (%u, %u, %u)\n", split_idx, graph.nodes[split_idx].row, graph.nodes[split_idx].col, graph.nodes[split_idx].length);
+                        graph.nodes[split_idx].row += head->length;
+                        graph.nodes[split_idx].col += head->length;
+                        graph.nodes[split_idx].length -= head->length;
+
+                        graph.nodes[head->idx].edges = add_edge(allocator, &graph, tail->idx, graph.nodes[head->idx].edges, variant);
                     } // if
-                    else if (lcs.nodes[k].idx == GVA_NULL)
+                    else if (head->idx == GVA_NULL)
                     {
-                        lcs.nodes[k].idx = add_node(allocator, &graph, lcs.nodes[k].row, lcs.nodes[k].col, lcs.nodes[k].length);
+                        head->idx = add_node(allocator, &graph, head->row, head->col, head->length);
+                        graph.nodes[head->idx].edges = add_edge(allocator, &graph, tail->idx, graph.nodes[head->idx].edges, variant);
                     } // if
-
-                    graph.nodes[lcs.nodes[k].idx].edges = add_edge(allocator, &graph, lcs.nodes[j].idx, graph.nodes[lcs.nodes[k].idx].edges, variant);
+                    else if (!head->moved || !tail->moved)
+                    {
+                        graph.nodes[head->idx].edges = add_edge(allocator, &graph, tail->idx, graph.nodes[head->idx].edges, variant);
+                    } // if
 
                     here = k;
                 } // if
             } // for
 
-            if (lcs.nodes[j].length > 1)
+            if (tail->length > 1)
             {
-                lcs.nodes[j].length -= 1;
+                tail->length -= 1;
+                tail->moved = true;
                 if (here != GVA_NULL)
                 {
-                    lcs.nodes[j].incoming = i;
-                    lcs.nodes[j].next = lcs.nodes[here].next;
+                    tail->incoming = i;
+                    tail->next = lcs.nodes[here].next;
                     lcs.nodes[here].next = j;
                 } // if
                 else
                 {
-                    lcs.nodes[j].next = lcs.index[i - 1].head;
+                    tail->next = lcs.index[i - 1].head;
                     lcs.index[i - 1].head = j;
                 } // else
-                fprintf(stderr, "INSERT (%u %u %u) here: %2d\n", lcs.nodes[j].row, lcs.nodes[j].col, lcs.nodes[j].length, here);
             } // if
         } // for
     } // for
 
-    size_t head = lcs.index[0].head;
-    VA_LCS_Node3 source = lcs.nodes[head];
+    size_t head_idx = lcs.index[0].head;
+    VA_LCS_Node3 source = lcs.nodes[head_idx];
     if (source.row == shift && source.col == shift)
     {
-        head = source.next;
+        head_idx = source.next;
     } // if
     else
     {
@@ -413,7 +392,7 @@ build3(VA_Allocator const allocator,
         source.idx = add_node(allocator, &graph, source.row, source.col, source.length);
     } // else
 
-    for (uint32_t i = head; i != GVA_NULL; i = lcs.nodes[i].next)
+    for (uint32_t i = head_idx; i != GVA_NULL; i = lcs.nodes[i].next)
     {
         if (lcs.nodes[i].idx == GVA_NULL)
         {
@@ -421,7 +400,6 @@ build3(VA_Allocator const allocator,
         } // if
 
         eq_count += 1;
-        fprintf(stderr, "(%u, %u, %u) vs (%u, %u, %u)\n", source.row, source.col, source.length, lcs.nodes[i].row, lcs.nodes[i].col, lcs.nodes[i].length);
 
         VA_Variant const variant = {source.row, lcs.nodes[i].row + lcs.nodes[i].length - 1, source.col - shift, lcs.nodes[i].col + lcs.nodes[i].length - 1 - shift};
 
@@ -429,7 +407,7 @@ build3(VA_Allocator const allocator,
     } // for
 
     uint32_t min_source = GVA_NULL;
-    for (uint32_t i = graph.nodes[source.idx].edges; i != (uint32_t) -1; i = graph.edges[i].next)
+    for (uint32_t i = graph.nodes[source.idx].edges; i != GVA_NULL; i = graph.edges[i].next)
     {
         min_source = MIN(min_source, graph.edges[i].variant.start);
     } // for

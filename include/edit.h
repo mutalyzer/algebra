@@ -46,7 +46,8 @@ typedef struct
 {
     uint32_t row;
     uint32_t col;
-    uint32_t length;
+    uint32_t length : 31;
+    uint32_t moved  :  1;
     uint32_t incoming;
     uint32_t idx;
     uint32_t next;

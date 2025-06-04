@@ -87,7 +87,7 @@ expand(Context const context,
             ptrdiff_t const d_col = context.len_obs - col;
             size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
             size_t const length = row - match_row;
-            va_array_append(context.allocator, lcs->nodes, ((VA_LCS_Node3) {match_row, match_col, length, -1, -1, -1}));
+            va_array_append(context.allocator, lcs->nodes, ((VA_LCS_Node3) {match_row, match_col, length, false, -1, -1, -1}));
             if (lcs->index[lcs_pos].head != (uint32_t) -1)
             {
                 lcs->nodes[lcs->index[lcs_pos].tail].next = va_array_length(lcs->nodes) - 1;
@@ -126,7 +126,7 @@ expand(Context const context,
         ptrdiff_t const d_col = context.len_obs - col;
         size_t const lcs_pos = (row + col - imaxabs(delta) - 2 * p + imaxabs(d_row - d_col)) / 2 - 1;
         size_t const length = row - match_row;
-        va_array_append(context.allocator, lcs->nodes, ((VA_LCS_Node3) {match_row, match_col, length, -1, -1, -1}));
+        va_array_append(context.allocator, lcs->nodes, ((VA_LCS_Node3) {match_row, match_col, length, false, -1, -1, -1}));
         if (lcs->index[lcs_pos].head != (uint32_t) -1)
         {
             lcs->nodes[lcs->index[lcs_pos].tail].next = va_array_length(lcs->nodes) - 1;

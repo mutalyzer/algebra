@@ -22,6 +22,7 @@ typedef struct
     uint32_t lambda;
 } Node;
 
+
 typedef struct
 {
     Node* nodes;
