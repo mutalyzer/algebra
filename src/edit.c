@@ -5,7 +5,7 @@
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "array.h"  // ARRAY_APPEND
-#include "base.h"   // ABS, MAX, MIN, GVA_NULL
+#include "base.h"   // GVA_NULL, ABS, MAX, MIN
 #include "edit.h"   // LCS, LCS_Node, edit
 
 
@@ -181,7 +181,6 @@ edit(GVA_Allocator const allocator,
 
     size_t const lower = delta > 0 ? 0 : delta;
     size_t const upper = delta > 0 ? delta : 0;
-
     size_t const len = MAX(len_ref, len_obs) - ABS(delta);
     size_t p = 0;
     while (context.diagonals[offset + delta] <= len)

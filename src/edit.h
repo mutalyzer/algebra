@@ -4,7 +4,8 @@
 
 #include <stddef.h>     // size_t
 
-#include "../include/types.h"   // gva_uint
+#include "../include/allocator.h"   // GVA_Allocator
+#include "../include/types.h"       // gva_uint
 
 
 typedef struct

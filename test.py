@@ -126,7 +126,6 @@ def check(reference, observed, debug=False, timeout=2):
     #if debug:
     #    print(list(reversed(cgraph["canonical"])), canonical(graph))
 
-
     #print()
     #print(cgraph["canonical"])
     #print(canonical(graph))

@@ -42,9 +42,9 @@ array_header(void* const self);
 
 
 // Internal: Returns the possibly (re)allocated array with place for
-// `capacity` number of additional elements.
+// one additional element.
 void*
-array_ensure_one(GVA_Allocator const allocator, void* const restrict self,
+array_ensure_one(GVA_Allocator const allocator, void* const self,
     size_t const item_size);
 
 
@@ -52,6 +52,7 @@ array_ensure_one(GVA_Allocator const allocator, void* const restrict self,
 // Returns `NULL`.
 // Usage:
 //     a = ARRAY_DESTROY(gva_std_allocator, a);
+// Warning: `self` is evaluated multiple times.
 #define ARRAY_DESTROY(allocator, self) (                                \
     (self) == NULL ? NULL :                                             \
         allocator.allocate(                                             \

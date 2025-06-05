@@ -33,7 +33,7 @@ array_header(void* const self)
 
 
 void*
-array_ensure_one(GVA_Allocator const allocator, void* const restrict self,
+array_ensure_one(GVA_Allocator const allocator, void* const self,
     size_t const item_size)
 {
     // Initial allocation
