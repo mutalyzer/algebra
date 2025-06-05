@@ -1,0 +1,20 @@
+#ifndef GVA_BASE_H
+#define GVA_BASE_H
+
+
+#include "../include/types.h"     // GVA_NULL, gva_uint
+
+
+// Generic abs function. Evaluates its parameters multiple times.
+#define ABS(x) (((x) >= 0) ? (x) : -(x))
+
+
+// Generic max function. Evaluates its parameters multiple times.
+#define MAX(lhs, rhs) (((lhs) > (rhs)) ? (lhs) : (rhs))
+
+
+// Generic min function. Evaluates its parameters multiple times.
+#define MIN(lhs, rhs) (((lhs) < (rhs)) ? (lhs) : (rhs))
+
+
+#endif // GVA_BASE_H

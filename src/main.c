@@ -1,301 +1,191 @@
-#include <stdbool.h>    // bool, false, true
-#include <stddef.h>     // NULL, size_t
-#include <stdint.h>     // uint32_t
-#include <stdio.h>      // stderr, fprintf, printf
-#include <stdlib.h>     // EXIT_*, atoi, rand, srand
+#include <stddef.h>     // size_t
+#include <stdio.h>      // FILE, stderr, fprintf
+#include <stdlib.h>     // EXIT_*
 #include <string.h>     // strlen
-#include "../include/array.h"           // va_array_*
-#include "../include/edit.h"            // va_edit
-#include "../include/graph.h"           // Graph, to_dot
-#include "../include/graph2.h"          // build
-#include "../include/std_alloc.h"       // va_std_allocator
+
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
+#include "../include/std_alloc.h"   // gva_std_allocator
+#include "../include/types.h"       // GVA_NULL, gva_uint
+#include "array.h"  // array_length
 
 
-#define print_variant(variant, observed) variant.start, variant.end, (int) variant.obs_end - variant.obs_start, observed + variant.obs_start
+#define PRI_VAR(variant, observed) variant.start, variant.end, (int) variant.obs_end - variant.obs_start, observed + variant.obs_start
 #define VAR_FMT "%u:%u/%.*s"
 
 
-static uint32_t const GVA_NULL = UINT32_MAX;
-
-
-static size_t
-random_sequence(size_t const min, size_t const max, char sequence[static max])
+static void
+lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph,
+    size_t const len_obs, char const observed[static len_obs])
 {
-    size_t const len = rand() % (max - min) + min;
-
-    for (size_t i = 0; i < len; ++i)
+    fprintf(stream, "strict digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->%u\n", graph.source);
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
-        sequence[i] = "ACGT"[rand() % 4];
-    } // for
-
-    return len;
-} // random_sequence
-
-
-static int
-check(size_t const len_ref, char const reference[static len_ref],
-      size_t const len_obs, char const observed[static len_obs],
-      bool const debug)
-{
-    VA_LCS_Node** lcs_nodes = NULL;
-    size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
-
-    if (debug)
-    {
-        fprintf(stderr, "%zu\n", len_lcs);
-        for (size_t i = 0; i < len_lcs; ++i)
-        {
-            fprintf(stderr, "%zu:  ", i);
-            for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
-            {
-                fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
-            } // for
-            fprintf(stderr, "\n");
-        } // for
-    } // if
-
-    Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
-
-    if (debug)
-    {
-        to_dot(graph, len_obs, observed);
-    } // if
-
-    printf("#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
-    printf("source: %u\n", graph.source);
-    for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
-    {
-        printf("%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        fprintf(stream, "%zu[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == GVA_NULL ? ",peripheries=2" : "");
         if (graph.nodes[i].lambda != GVA_NULL)
         {
-            printf("    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
-        }
-        for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+            fprintf(stream, "%zu->%u[label=\"&lambda;\",style=dashed]\n", i, graph.nodes[i].lambda);
+        } // if
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
         {
-            printf("    (%u, %u, %u): " VAR_FMT "\n", graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length, print_variant(graph.edges[j].variant, observed));
+            GVA_Variant variant;
+            gva_uint const count = gva_edges(graph.nodes[i], graph.nodes[graph.edges[j].tail],
+                i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                &variant);
+            if (count > 1)
+            {
+                fprintf(stream, "%zu->%u[label=\"" VAR_FMT " x %u\",penwidth=2]\n", i, graph.edges[j].tail, PRI_VAR(variant, observed), count);
+            } // if
+            else
+            {
+                fprintf(stream, "%zu->%u[label=\"" VAR_FMT "\"]\n", i, graph.edges[j].tail, PRI_VAR(variant, observed));
+            } // else
         } // for
     } // for
-
-    size_t count = 0;
-    for (uint32_t head = 0; head < va_array_length(graph.nodes); ++head)
-    {
-        uint32_t* tails = va_array_init(va_std_allocator, 10, sizeof(*tails));
-        for (uint32_t i = graph.nodes[head].edges; i != (uint32_t) -1; i = graph.edges[i].next)
-        {
-            uint32_t const tail = graph.edges[i].tail;
-
-            bool found = false;
-            for (uint32_t j = 0; j < va_array_length(tails); ++j)
-            {
-                if (tail == tails[j])
-                {
-                    found = true;
-                    break;
-                } // if
-            } // for
-
-            va_array_append(va_std_allocator, tails, tail);
-
-            size_t const n = edges(
-                graph.nodes[head].row, graph.nodes[head].col, graph.nodes[head].length,
-                graph.nodes[tail].row, graph.nodes[tail].col, graph.nodes[tail].length + (graph.nodes[tail].edges == (uint32_t) -1),
-                graph.source == head,
-                len_obs, observed,
-                graph.edges[i].variant
-            );
-            if (n == (size_t) -1)
-            {
-                printf("EDGE NOT FOUND: " VAR_FMT "\n", print_variant(graph.edges[i].variant, observed));
-                return EXIT_FAILURE;
-            } // if
-            if (!found)
-            {
-                count += n;
-            } // if
-        } // for
-        tails = va_array_destroy(va_std_allocator, tails);
-    } // for
-
-    if (count != va_array_length(graph.edges))
-    {
-        printf("COUNTS: %zu vs %zu\n", count, va_array_length(graph.edges));
-        return EXIT_FAILURE;
-    } // if
-
-    destroy(va_std_allocator, &graph);
-    return EXIT_SUCCESS;
-} // check
+    fprintf(stream, "}\n");
+} // lcs_graph_dot
 
 
 static void
-print_graph(Graph const graph, size_t const len_obs, char const observed[static len_obs]) {
-    fprintf(stderr, "#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
-    fprintf(stderr, "source: %u\n", graph.source);
-    if (graph.nodes == NULL)
+bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph,
+    size_t const len_obs, char const observed[static len_obs])
+{
+    struct
+    {
+        gva_uint depth;
+        gva_uint next;
+    }* table = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, sizeof(*table) * array_length(graph.nodes));
+
+    if (table == NULL)
     {
         return;
     } // if
-    for (size_t i = 0; i < va_array_length(graph.nodes); ++i) {
-        fprintf(stderr, "%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
-        if (graph.nodes[i].lambda != GVA_NULL) {
-            fprintf(stderr, "    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
-        } // if
-        for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next) {
-            fprintf(stderr, "    %u: (%u, %u, %u): ", graph.edges[j].tail, graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
-            fprintf(stderr, VAR_FMT "\n", print_variant(graph.edges[j].variant, observed));
-        } // for
+
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        table[i].depth = 0;
+        table[i].next = GVA_NULL;
     } // for
-} // print_graph
+    gva_uint head = graph.source;
+    gva_uint tail = graph.source;
 
-
-static void
-print_graph3(Graph3 const graph, size_t const len_obs, char const observed[static len_obs]) {
-    fprintf(stderr, "#nodes: %zu\n#edges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
-    fprintf(stderr, "source: %u\n", graph.source);
-    if (graph.nodes == NULL)
+    bool first = true;
+    fprintf(stream, "    \"edges\": [\n");
+    while (head != GVA_NULL)
     {
-        return;
-    } // if
-    for (size_t i = 0; i < va_array_length(graph.nodes); ++i) {
-        fprintf(stderr, "%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
-        if (graph.nodes[i].lambda != GVA_NULL) {
-            fprintf(stderr, "    (%u, %u, %u): lambda\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
-        } // if
-        for (uint32_t j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next) {
-            fprintf(stderr, "    %u: (%u, %u, %u): ", graph.edges[j].tail, graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
-            VA_Variant variant;
-            uint32_t const count = edges2(
-                    ((VA_LCS_Node) {.row = graph.nodes[i].row, .col = graph.nodes[i].col, .length = graph.nodes[i].length}),
-                    ((VA_LCS_Node) {.row = graph.nodes[graph.edges[j].tail].row, .col = graph.nodes[graph.edges[j].tail].col, .length = graph.nodes[graph.edges[j].tail].length}),
-                    i == graph.source,
-                    graph.nodes[graph.edges[j].tail].edges == GVA_NULL && graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+        gva_uint len = graph.nodes[head].length;
+        for (gva_uint i = head; i != GVA_NULL; i = graph.nodes[i].lambda)
+        {
+            if (i != head)
+            {
+                len += graph.nodes[i].length;
+            } // if
+            for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+            {
+                GVA_Variant variant;
+                gva_uint const count = gva_edges(graph.nodes[i], graph.nodes[graph.edges[j].tail],
+                    i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
                     &variant);
-            fprintf(stderr, VAR_FMT " x %u\n", print_variant(variant, observed), count);
+
+                for (gva_uint k = 0; k < count; ++k)
+                {
+                    if (!first)
+                    {
+                        printf(",\n");
+                    } // if
+                    first = false;
+                    fprintf(stream, "         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" VAR_FMT "\"}", head, graph.edges[j].tail, PRI_VAR(variant, observed));
+                    variant.start += 1;
+                    variant.end += 1;
+                    variant.obs_start += 1;
+                    variant.obs_end += 1;
+                } // for
+
+                if (table[graph.edges[j].tail].depth > 0)
+                {
+                    continue;
+                } // if
+
+                table[graph.edges[j].tail].depth = table[i].depth + 1;
+                table[tail].next = graph.edges[j].tail;
+                tail = graph.edges[j].tail;
+            } // for
+        } // for
+        head = table[head].next;
+    } // while
+
+    fprintf(stream, "\n    ]\n");
+
+    table = gva_std_allocator.allocate(gva_std_allocator.context, table, sizeof(*table) * array_length(graph.nodes), 0);
+} // bfs_traversal
+
+
+static void
+lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph,
+    size_t const len_obs, char const observed[static len_obs])
+{
+    fprintf(stream, "{\n    \"source\": \"s%u\",\n    \"nodes\": {\n", graph.source);
+    for (gva_uint i = 0; i < array_length(graph.nodes); ++i)
+    {
+        fprintf(stream, "        \"s%u\": {\"row\": %u, \"col\": %u, \"length\": %u}%s\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, i < array_length(graph.nodes) - 1 ? "," : "");
+    } // for
+    fprintf(stream, "    },\n");
+    bfs_traversal(stream, graph, len_obs, observed);
+    fprintf(stream, "}\n");
+} // lcs_graph_json
+
+
+static void
+lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph,
+    size_t const len_obs, char const observed[static len_obs])
+{
+    fprintf(stream, "#nodes: %zu\n#edges: %zu\n", array_length(graph.nodes), array_length(graph.edges));
+    fprintf(stream, "source: %u\n", graph.source);
+    if (graph.nodes == NULL)
+    {
+        return;
+    } // if
+
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        fprintf(stream, "%zu: (%u, %u, %u):\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        if (graph.nodes[i].lambda != GVA_NULL)
+        {
+            fprintf(stream, "    lambda: (%u, %u, %u)\n", graph.nodes[graph.nodes[i].lambda].row, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
+        } // if
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            fprintf(stream, "    %u: (%u, %u, %u): ", graph.edges[j].tail, graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
+            GVA_Variant variant;
+            gva_uint const count = gva_edges(graph.nodes[i], graph.nodes[graph.edges[j].tail],
+                i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                &variant);
+            fprintf(stream, VAR_FMT " x %u\n", PRI_VAR(variant, observed), count);
         } // for
     } // for
-} // print_graph3
+} // lcs_graph_raw
 
 
 int
 main(int argc, char* argv[static argc + 1])
 {
-/*
-    (void) argv;
-    char const* const restrict reference = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTTGGGCTCAGATCTGTGATAGAACAGTTTCCTGGGAAGCTTGACTTTGTCCTTGTGGATGGGGGCTGTGTCCTAAGCCATGGCCACAAGCAGTTGATGTGCTTGGCTAGATCTGTTCTCAGTAAGGCGAAGATCTTGCTGCTTGATGAACCCAGTGCTCATTTGGATCCAGTGTGAGTTTCAGATGTTCTGTTACTTAATAGCACAGTGGGAACAGAATCATTATGCCTGCTTCATGGTGACACATATTTCTATTAGGCTGTCATGTCTGCGTGTGGGGGTCTCCCCCAAGATATGAAATAATTGCCCAGTGGAAATGAGCATAAATGCATATTTCCTTGCTAAGAGTCTTGTGTTTTCTTCCGAAGATAGTTTTTAGTTTCATACAAACTCTTCCCCCTTGTCAACACATGATGAAGCTTTTAAATACATGGGCCTAATCTGATCCTTATGATTTGCCTTTGTATCCCATTTATACCATAAGCATGTTTATAGCCCCAAATAAAGAAGTACTGGTGATTCTACATAATGAAAAATGTACTCATTTATTAAAGTTTCTTTGAAATATTTGTCCTGTTTATTTATGGATACTTAGAGTCTACCCCATGGTTGAAAAGCTGATTGTGGCTAACGCTATATCAACATTATGTGAAAAGAACTTAAAGAAATAAGTAATTTAAAGAGATAATAGAACAATAGACATATTATCAAGGTAAATACAGATCATTACTGTTCTGTGATATTATGTGTGGTATTTTCTTTCTTTTCTAGAACATACCAAATAATTAGAAGAACTCTAAAACAAGCATTTGCTGATTGCACAGTAATTCTCTGTGAACACAGGATAGAAGCAATGCTGGAATGCCAACAATTTTTGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
-    char const* const restrict observed = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";
+    if (argc != 3)
+    {
+        fprintf(stderr, "usage %s reference observed\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    char const* const restrict reference = argv[1];
+    char const* const restrict observed = argv[2];
     size_t const len_ref = strlen(reference);
     size_t const len_obs = strlen(observed);
-    eq_count = 0;
-    //Graph2 graph = build(len_ref, reference, len_obs, observed, 0);
-    //VA_LCS_Node2* lcs_nodes = va_edit2(va_std_allocator, len_ref, reference, len_obs, observed, &(uint32_t) {0});
-    //VA_LCS_Node** lcs_nodes = NULL;
-    //size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
-    //Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
-    Graph3 graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
 
-    printf("nodes: %zu\nedges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
-    printf("%zu\n", eq_count);
-    va_array_destroy(va_std_allocator, graph.nodes);
-    va_array_destroy(va_std_allocator, graph.edges);
-    return 0;
-*/
-    if (argc == 2)
-    {
-        srand(atoi(argv[1]));
-        size_t count = 0;
-        while (true)
-        {
-            char reference[4096];
-            char observed[4096];
-            size_t const len_ref = random_sequence(0, 40, reference);
-            size_t const len_obs = random_sequence(0, 40, observed);
+    GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref, reference, len_obs, observed, 0);
 
-            printf("%zu: %.*s %.*s\n", count, (int) len_ref, reference, (int) len_obs, observed);
-            if (check(len_ref, reference, len_obs, observed, false) == EXIT_FAILURE)
-            {
-                return EXIT_FAILURE;
-            } // if
-            count += 1;
-        } // while
-    } // if
-    else if (argc == 3)
-    {
-        char const* const restrict reference = argv[1];
-        char const* const restrict observed = argv[2];
-        size_t const len_ref = strlen(reference);
-        size_t const len_obs = strlen(observed);
+    lcs_graph_raw(stderr, graph, len_obs, observed);
+    lcs_graph_dot(stderr, graph, len_obs, observed);
+    lcs_graph_json(stdout, graph, len_obs, observed);
 
-        Graph3 graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
-        print_graph3(graph, len_obs, observed);
-        to_json3(graph, len_obs, observed);
-
-        va_array_destroy(va_std_allocator, graph.nodes);
-        va_array_destroy(va_std_allocator, graph.edges);
-
-        //to_json(graph, len_obs, observed, false);
-
-        //destroy(va_std_allocator, &graph);
-/*
-        for (size_t i = 0; i < len_lcs; ++i)
-        {
-            fprintf(stderr, "%2zu:  ", i);
-            for (size_t j = 0; j < va_array_length(lcs_nodes[i]); ++j)
-            {
-                fprintf(stderr, "(%u, %u, %u) ", lcs_nodes[i][j].row, lcs_nodes[i][j].col, lcs_nodes[i][j].length);
-            } // for
-            fprintf(stderr, "\n");
-        } // for
-        fprintf(stderr, "\n");
-
-        eq_count = 0;
-        //check(len_ref, reference, len_obs, observed, true);
-        Graph2 graph2 = build(len_ref, reference, len_obs, observed, 0);
-        fprintf(stderr, "new count: %zu\n", eq_count);
-*/
-        //to_json2(graph2, len_obs, observed);
-/*
-        VA_LCS_Node** lcs_nodes = NULL;
-        size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
-        eq_count = 0;
-        Graph graph_old = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
-        fprintf(stderr, "old count: %zu\n\n", eq_count);
-
-        print_graph(graph_old, len_obs, observed);
-        // to_dot(graph, len_obs, observed);
-        // to_json(graph, len_obs, observed, false);
-
-        // destroy graph2
-        //va_array_destroy(va_std_allocator, graph2.nodes);
-        //va_array_destroy(va_std_allocator, graph2.edges);
-
-        destroy(va_std_allocator, &graph_old);
-        */
-    } // if
-    else
-    {
-        fprintf(stderr, "usage: %s\n", argv[0]);
-        return EXIT_FAILURE;
-    } // else
-
-/*
-    printf("nodes (%zu)\n  #\t(row, col, len)\tedges\tlambda\n", va_array_length(graph.nodes));
-    for (size_t i = 0; i < va_array_length(graph.nodes); ++i)
-
-    {
-        printf("%c%2zu:\t(%u, %u, %u)\t%5d\t%6d\n", i == graph.source ? '*' : ' ', i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, (signed) graph.nodes[i].edges, (signed) graph.nodes[i].lambda);
-    } // for
-    printf("edges (%zu)\n  #\ttail\t\"start:end/seq\"\tnext\n", va_array_length(graph.edges));
-    for (size_t i = 0; i < va_array_length(graph.edges); ++i)
-    {
-        printf("%3zu:\t%4u\t  \"%u:%u/%.*s\"\t%4d\n", i, graph.edges[i].tail, graph.edges[i].variant.start, graph.edges[i].variant.end, (int) graph.edges[i].variant.obs_end - graph.edges[i].variant.obs_start, observed + graph.edges[i].variant.obs_start, (signed) graph.edges[i].next);
-    } // for
-*/
-
-    //local_supremal(va_std_allocator, graph, len_obs, observed);
-
-    //canonical(va_std_allocator, graph, len_obs, observed);
-
-    //to_json(graph, len_obs, observed, lambda);
+    gva_lcs_graph_destroy(gva_std_allocator, graph);
 
     return EXIT_SUCCESS;
 } // main

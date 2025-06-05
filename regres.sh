@@ -34,5 +34,4 @@ AGAGAAAAA AAAA
 
 for ((i=0; i<${#TESTS[@]}; i+=2)); do
     python test.py "${TESTS[i]}" "${TESTS[i+1]}"
-    #./a.out "${TESTS[i]}" "${TESTS[i+1]}" > /dev/null
 done
