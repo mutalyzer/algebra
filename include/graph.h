@@ -75,6 +75,10 @@ void
 to_json(Graph const graph, size_t const len_obs, char const observed[static len_obs], bool const lambda);
 
 
+void
+to_json3(Graph3 const graph, size_t const len_obs, char const observed[static len_obs]);
+
+
 size_t
 edges(uint32_t const head_row, uint32_t const head_col, uint32_t const head_length,
       uint32_t const tail_row, uint32_t const tail_col, uint32_t const tail_length,

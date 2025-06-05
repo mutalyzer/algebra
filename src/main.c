@@ -176,7 +176,6 @@ print_graph3(Graph3 const graph, size_t const len_obs, char const observed[stati
 } // print_graph3
 
 
-
 int
 main(int argc, char* argv[static argc + 1])
 {
@@ -192,14 +191,14 @@ main(int argc, char* argv[static argc + 1])
     //VA_LCS_Node** lcs_nodes = NULL;
     //size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
     //Graph graph = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
-    Graph graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
+    Graph3 graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
 
     printf("nodes: %zu\nedges: %zu\n", va_array_length(graph.nodes), va_array_length(graph.edges));
     printf("%zu\n", eq_count);
-    destroy(va_std_allocator, &graph);
+    va_array_destroy(va_std_allocator, graph.nodes);
+    va_array_destroy(va_std_allocator, graph.edges);
     return 0;
 */
-
     if (argc == 2)
     {
         srand(atoi(argv[1]));
@@ -228,6 +227,7 @@ main(int argc, char* argv[static argc + 1])
 
         Graph3 graph = build3(va_std_allocator, len_ref, reference, len_obs, observed, 0);
         print_graph3(graph, len_obs, observed);
+        to_json3(graph, len_obs, observed);
 
         va_array_destroy(va_std_allocator, graph.nodes);
         va_array_destroy(va_std_allocator, graph.edges);
@@ -236,9 +236,6 @@ main(int argc, char* argv[static argc + 1])
 
         //destroy(va_std_allocator, &graph);
 /*
-        VA_LCS_Node** lcs_nodes = NULL;
-        size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
-
         for (size_t i = 0; i < len_lcs; ++i)
         {
             fprintf(stderr, "%2zu:  ", i);
@@ -257,6 +254,8 @@ main(int argc, char* argv[static argc + 1])
 */
         //to_json2(graph2, len_obs, observed);
 /*
+        VA_LCS_Node** lcs_nodes = NULL;
+        size_t const len_lcs = va_edit(va_std_allocator, len_ref, reference, len_obs, observed, &lcs_nodes);
         eq_count = 0;
         Graph graph_old = build_graph(va_std_allocator, len_ref, len_obs, len_lcs, lcs_nodes, 0, false);
         fprintf(stderr, "old count: %zu\n\n", eq_count);
