@@ -23,7 +23,7 @@ gva_std_allocate(void* const restrict context, void* const restrict ptr, size_t 
         return NULL;
     } // if
 
-    void* const restrict new_ptr = realloc(ptr, new_size);
+    void* const new_ptr = realloc(ptr, new_size);
     if (new_ptr == NULL)
     {
         free(ptr);

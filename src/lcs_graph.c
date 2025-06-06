@@ -2,6 +2,7 @@
 #include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // size_t
 
+
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*
 #include "array.h"  // ARRAY_*, array_length
@@ -23,11 +24,6 @@ gva_edges(GVA_Node const head, GVA_Node const tail,
 
     gva_uint const head_offset = offset > 0 ? MIN(head_length, offset + 1) : 1;
     gva_uint const tail_offset = offset < 0 ? MIN(tail_length, -offset) : 0;
-
-    if (head_offset > head_length || (tail_length > 0 && tail_offset >= tail_length))
-    {
-        return 0;
-    } // if
 
     *variant = (GVA_Variant) {
         row + head_offset, tail.row + tail_offset,
@@ -98,7 +94,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         gva_uint next = GVA_NULL;
         for (gva_uint j = lcs.index[i].head; j != GVA_NULL; j = next)
         {
-            LCS_Node* const tail = &lcs.nodes[j];
+            LCS_Node* const restrict tail = &lcs.nodes[j];
             next = tail->next;
             if (lcs.nodes[j].idx == GVA_NULL)
             {
@@ -108,9 +104,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             gva_uint here = GVA_NULL;
             for (gva_uint k = lcs.index[i - 1].head; k != GVA_NULL; k = lcs.nodes[k].next)
             {
-                LCS_Node* const head = &lcs.nodes[k];
+                LCS_Node* const restrict head = &lcs.nodes[k];
 
-                if (k > j ||
+                if (k >= j ||
                     head->row + head->length >= tail->row + tail->length ||
                     head->col + head->length >= tail->col + tail->length)
                 {
