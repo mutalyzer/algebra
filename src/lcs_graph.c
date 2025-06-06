@@ -1,13 +1,16 @@
 #include <inttypes.h>   // intmax_t
 #include <stdbool.h>    // bool, false, true
-#include <stddef.h>     // size_t
+#include <stddef.h>     // NULL, size_t
+
+
+#include <stdio.h>      // DEBUG
 
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*
+#include "align.h"  // LCS_Alignment, lcs_align
 #include "array.h"  // ARRAY_*, array_length
 #include "base.h"   // gva_uint, MAX, MIN
-#include "edit.h"   // LCS, edit
 
 
 gva_uint
@@ -39,7 +42,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const len_obs, char const observed[static restrict len_obs],
     size_t const shift)
 {
-    LCS const lcs = edit(allocator, len_ref, reference, len_obs, observed);
+    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed);
 
     GVA_LCS_Graph graph = {.nodes = NULL, .edges = NULL};
 
@@ -61,6 +64,24 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         })) - 1;
         return graph;
     } // if
+
+    struct
+    {
+        gva_uint count;
+        gva_uint idx;
+    }* table = allocator.allocate(allocator.context, NULL, 0, sizeof(*table) * lcs.length);
+
+    for (gva_uint i = 0; i < lcs.length; ++i)
+    {
+        table[i].count = 0;
+        table[i].idx = GVA_NULL;
+        fprintf(stderr, "%u: ", i);
+        for (gva_uint j = lcs.index[i].head; j != GVA_NULL; j = lcs.nodes[j].next)
+        {
+            fprintf(stderr, "(%u, %u, %u) ", lcs.nodes[j].row, lcs.nodes[j].col, lcs.nodes[j].length);
+        } // for
+        fprintf(stderr, "\n");
+    } // for
 
     gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
     LCS_Node sink = lcs.nodes[tail_idx];
@@ -100,6 +121,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             {
                 continue;
             } // if
+
+            table[i].count += 1;
+            table[i].idx = j;
 
             gva_uint here = GVA_NULL;
             for (gva_uint k = lcs.index[i - 1].head; k != GVA_NULL; k = lcs.nodes[k].next)
@@ -168,6 +192,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     LCS_Node source = lcs.nodes[head_idx];
     if (source.row == shift && source.col == shift)
     {
+        table[0].count += 1;
+        table[0].idx = head_idx;
+
         head_idx = source.next;
     } // if
     else
@@ -184,6 +211,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             continue;
         } // if
 
+        table[0].count += 1;
+        table[0].idx = i;
+
         if (source.length == 0 || !lcs.nodes[i].moved)
         {
             graph.nodes[source.idx].edges = ARRAY_APPEND(allocator, graph.edges, ((GVA_Edge) {
@@ -191,6 +221,31 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             })) - 1;
         } // if
     } // for
+
+    gva_uint uniq_match = 0;
+    for (gva_uint i = 0; i < lcs.length; ++i)
+    {
+        gva_uint const idx = lcs.nodes[table[i].idx].idx;
+        fprintf(stderr, "%u: %u  (%u, %u, %u)\n", i, table[i].count, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length);
+        if (table[i].count > 1)
+        {
+            if (uniq_match != 0)
+            {
+                gva_uint const idx = lcs.nodes[table[i - 1].idx].idx;
+                fprintf(stderr, "#uniq_match: %u in (%u, %u, %u)\n", uniq_match, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length);
+            } // if
+            uniq_match = 0;
+        } // if
+        else
+        {
+            uniq_match += 1;
+        } // else
+    } // for
+    if (uniq_match != 0)
+    {
+        gva_uint const idx = lcs.nodes[table[lcs.length - 1].idx].idx;
+        fprintf(stderr, "#uniq_match: %u in (%u, %u, %u)\n", uniq_match, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length);
+    } // if
 
     gva_uint min_source = GVA_NULL;
     for (gva_uint i = graph.nodes[source.idx].edges; i != GVA_NULL; i = graph.edges[i].next)
@@ -212,8 +267,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
     graph.source = source.idx;
 
-    allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
-    ARRAY_DESTROY(allocator, lcs.nodes);
+    table = allocator.allocate(allocator.context, table, sizeof(*table) * lcs.length, 0);
+    lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
+    lcs.nodes = ARRAY_DESTROY(allocator, lcs.nodes);
     return graph;
 } // gva_lcs_graph_init
 

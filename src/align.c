@@ -4,9 +4,9 @@
 
 
 #include "../include/allocator.h"   // GVA_Allocator
+#include "align.h"  // LCS_Alignment, LCS_Node, lcs_align
 #include "array.h"  // ARRAY_APPEND
 #include "base.h"   // GVA_NULL, ABS, MAX, MIN
-#include "edit.h"   // LCS, LCS_Node, edit
 
 
 typedef struct
@@ -24,7 +24,7 @@ static size_t
 expand(Context const context,
     intmax_t const idx,
     size_t const p,
-    LCS* const lcs)
+    LCS_Alignment* const lcs)
 {
     intmax_t const delta = context.len_obs - context.len_ref;
     size_t const offset = context.len_ref + 1;
@@ -136,8 +136,8 @@ expand(Context const context,
 } // expand
 
 
-LCS
-edit(GVA_Allocator const allocator,
+LCS_Alignment
+lcs_align(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs])
 {
@@ -145,7 +145,7 @@ edit(GVA_Allocator const allocator,
     size_t const offset = len_ref + 1;
     size_t const size = len_ref + len_obs + 3;
 
-    LCS lcs = {0, NULL, NULL};
+    LCS_Alignment lcs = {0, NULL, NULL};
 
     Context const context =
     {
@@ -201,4 +201,4 @@ edit(GVA_Allocator const allocator,
     allocator.allocate(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
     lcs.index = allocator.allocate(allocator.context, lcs.index, MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
     return lcs;
-} // edit
+} // align

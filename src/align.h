@@ -1,5 +1,5 @@
-#ifndef GVA_EDIT_H
-#define GVA_EDIT_H
+#ifndef GVA_ALIGN_H
+#define GVA_ALIGN_H
 
 
 #include <stddef.h>     // size_t
@@ -29,13 +29,13 @@ typedef struct
         gva_uint tail;
     }* index;
     LCS_Node* nodes;
-} LCS;
+} LCS_Alignment;
 
 
-LCS
-edit(GVA_Allocator const allocator,
+LCS_Alignment
+lcs_align(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs]);
 
 
-#endif // GVA_EDIT_H
+#endif // GVA_ALIGN_H
