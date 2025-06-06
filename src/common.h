@@ -1,5 +1,5 @@
-#ifndef GVA_BASE_H
-#define GVA_BASE_H
+#ifndef GVA_COMMON_H
+#define GVA_COMMON_H
 
 
 #include "../include/types.h"     // GVA_NULL, gva_uint
@@ -17,4 +17,4 @@
 #define MIN(lhs, rhs) (((lhs) < (rhs)) ? (lhs) : (rhs))
 
 
-#endif // GVA_BASE_H
+#endif // GVA_COMMON_H

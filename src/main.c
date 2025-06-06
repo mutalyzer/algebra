@@ -1,9 +1,10 @@
-#include <stddef.h>     // size_t
+#include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, fprintf
 #include <stdlib.h>     // EXIT_*
 #include <string.h>     // strlen
 
 
+#include "../include/edit.h"        // gva_edit_distance
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/types.h"       // GVA_NULL, gva_uint
@@ -188,6 +189,9 @@ main(int argc, char* argv[static argc + 1])
     lcs_graph_raw(stderr, graph, len_obs, observed);
     lcs_graph_dot(stderr, graph, len_obs, observed);
     lcs_graph_json(stdout, graph, len_obs, observed);
+
+    size_t const distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
+    fprintf(stderr, "distance: %zu\n", distance);
 
     gva_lcs_graph_destroy(gva_std_allocator, graph);
 

@@ -4,9 +4,9 @@
 
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "align.h"  // LCS_Alignment, LCS_Node, lcs_align
-#include "array.h"  // ARRAY_APPEND
-#include "base.h"   // GVA_NULL, ABS, MAX, MIN
+#include "align.h"      // LCS_Alignment, LCS_Node, lcs_align
+#include "array.h"      // ARRAY_APPEND
+#include "common.h"     // GVA_NULL, ABS, MAX, MIN
 
 
 typedef struct
