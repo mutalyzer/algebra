@@ -186,8 +186,8 @@ main(int argc, char* argv[static argc + 1])
     GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref, reference, len_obs, observed, 0);
 
     lcs_graph_raw(stderr, graph, len_obs, observed);
-    //lcs_graph_dot(stderr, graph, len_obs, observed);
-    //lcs_graph_json(stdout, graph, len_obs, observed);
+    lcs_graph_dot(stderr, graph, len_obs, observed);
+    lcs_graph_json(stdout, graph, len_obs, observed);
 
     gva_lcs_graph_destroy(gva_std_allocator, graph);
 

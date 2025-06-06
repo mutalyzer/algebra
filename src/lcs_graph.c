@@ -222,29 +222,28 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         } // if
     } // for
 
-    gva_uint uniq_match = 0;
+    gva_uint len = 0;
+    gva_uint prev = GVA_NULL;
     for (gva_uint i = 0; i < lcs.length; ++i)
     {
-        gva_uint const idx = lcs.nodes[table[i].idx].idx;
-        fprintf(stderr, "%u: %u  (%u, %u, %u)\n", i, table[i].count, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length);
-        if (table[i].count > 1)
+        //gva_uint const idx = lcs.nodes[table[i].idx].idx;
+        //fprintf(stderr, "%u: %u  (%u, %u, %u)\n", i, table[i].count, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length);
+        if ((prev != table[i].idx || table[i].count > 1) && len > 0)
         {
-            if (uniq_match != 0)
-            {
-                gva_uint const idx = lcs.nodes[table[i - 1].idx].idx;
-                fprintf(stderr, "#uniq_match: %u in (%u, %u, %u)\n", uniq_match, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length);
-            } // if
-            uniq_match = 0;
+            gva_uint const idx = lcs.nodes[table[i - 1].idx].idx;
+            fprintf(stderr, "uniq_match in (%u, %u, %u) @ %u of length %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, i - len, len);
+            len = 0;
         } // if
-        else
+        if (table[i].count == 1)
         {
-            uniq_match += 1;
-        } // else
+            len += 1;
+        } // if
+        prev = table[i].idx;
     } // for
-    if (uniq_match != 0)
+    if (len > 0)
     {
         gva_uint const idx = lcs.nodes[table[lcs.length - 1].idx].idx;
-        fprintf(stderr, "#uniq_match: %u in (%u, %u, %u)\n", uniq_match, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length);
+        fprintf(stderr, "uniq_match in (%u, %u, %u) @ %zu of length %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, lcs.length - len - 1, len);
     } // if
 
     gva_uint min_source = GVA_NULL;
