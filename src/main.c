@@ -1,5 +1,5 @@
 #include <stddef.h>     // NULL, size_t
-#include <stdio.h>      // FILE, stderr, fprintf
+#include <stdio.h>      // FILE, stderr, fclose, fopen, fprintf
 #include <stdlib.h>     // EXIT_*
 #include <string.h>     // strlen
 
@@ -8,11 +8,8 @@
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/types.h"       // GVA_NULL, gva_uint
+#include "../include/utils.h"       // GVA_String, gva_fasta_sequence, GVA_VARIANT_*
 #include "array.h"  // array_length
-
-
-#define PRI_VAR(variant, observed) variant.start, variant.end, (int) variant.obs_end - variant.obs_start, observed + variant.obs_start
-#define VAR_FMT "%u:%u/%.*s"
 
 
 static void
@@ -35,11 +32,11 @@ lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph,
                 &variant);
             if (count > 1)
             {
-                fprintf(stream, "%zu->%u[label=\"" VAR_FMT " x %u\",penwidth=2]\n", i, graph.edges[j].tail, PRI_VAR(variant, observed), count);
+                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT " x %u\",penwidth=2]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant, observed), count);
             } // if
             else
             {
-                fprintf(stream, "%zu->%u[label=\"" VAR_FMT "\"]\n", i, graph.edges[j].tail, PRI_VAR(variant, observed));
+                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT "\"]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant, observed));
             } // else
         } // for
     } // for
@@ -95,7 +92,7 @@ bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph,
                         printf(",\n");
                     } // if
                     first = false;
-                    fprintf(stream, "         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" VAR_FMT "\"}", head, graph.edges[j].tail, PRI_VAR(variant, observed));
+                    fprintf(stream, "         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" GVA_VARIANT_FMT "\"}", head, graph.edges[j].tail, GVA_VARIANT_PRINT(variant, observed));
                     variant.start += 1;
                     variant.end += 1;
                     variant.obs_start += 1;
@@ -161,7 +158,7 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph,
             gva_uint const count = gva_edges(graph.nodes[i], graph.nodes[graph.edges[j].tail],
                 i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
                 &variant);
-            fprintf(stream, VAR_FMT " x %u\n", PRI_VAR(variant, observed), count);
+            fprintf(stream, GVA_VARIANT_FMT " x %u\n", GVA_VARIANT_PRINT(variant, observed), count);
         } // for
     } // for
 } // lcs_graph_raw
@@ -174,6 +171,14 @@ main(int argc, char* argv[static argc + 1])
     {
         fprintf(stderr, "usage %s reference observed\n", argv[0]);
         return EXIT_FAILURE;
+    } // if
+
+    FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
+    if (stream != NULL)
+    {
+        GVA_String seq = gva_fasta_sequence(gva_std_allocator, stream);
+        gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
+        fclose(stream);
     } // if
 
     //char const* const restrict reference = "ATTCTATCTTCTGTCTACATAAGATGTCATACTAGAGGGCATATCTGCAATGTATACATATTATCTTTTCCAGCATGCATTCAGTTGTGTTGGAATAATTTATGTACACCTTTATAAACGCTGAGCCTCACAAGAGCCATGTGCCACGTATTGTTTTCTTACTACTTTTTGGGATACCTGGCACGTAATAGACACTCATTGAAAGTTTCCTAATGAATGAAGTACAAAGATAAAACAAGTTATAGACTGATTCTTTTGAGCTGTCAAGGTTGTAAATAGACTTTTGCTCAATCAATTCAAATGGTGGCAGGTAGTGGGGGTAGAGGGATTGGTATGAAAAACATAAGCTTTCAGAACTCCTGTGTTTATTTTTAGAATGTCAACTGCTTGAGTGTTTTTAACTCTGTGGTATCTGAACTATCTTCTCTAACTGCAGGTTGGGCTCAGATCTGTGATAGAACAGTTTCCTGGGAAGCTTGACTTTGTCCTTGTGGATGGGGGCTGTGTCCTAAGCCATGGCCACAAGCAGTTGATGTGCTTGGCTAGATCTGTTCTCAGTAAGGCGAAGATCTTGCTGCTTGATGAACCCAGTGCTCATTTGGATCCAGTGTGAGTTTCAGATGTTCTGTTACTTAATAGCACAGTGGGAACAGAATCATTATGCCTGCTTCATGGTGACACATATTTCTATTAGGCTGTCATGTCTGCGTGTGGGGGTCTCCCCCAAGATATGAAATAATTGCCCAGTGGAAATGAGCATAAATGCATATTTCCTTGCTAAGAGTCTTGTGTTTTCTTCCGAAGATAGTTTTTAGTTTCATACAAACTCTTCCCCCTTGTCAACACATGATGAAGCTTTTAAATACATGGGCCTAATCTGATCCTTATGATTTGCCTTTGTATCCCATTTATACCATAAGCATGTTTATAGCCCCAAATAAAGAAGTACTGGTGATTCTACATAATGAAAAATGTACTCATTTATTAAAGTTTCTTTGAAATATTTGTCCTGTTTATTTATGGATACTTAGAGTCTACCCCATGGTTGAAAAGCTGATTGTGGCTAACGCTATATCAACATTATGTGAAAAGAACTTAAAGAAATAAGTAATTTAAAGAGATAATAGAACAATAGACATATTATCAAGGTAAATACAGATCATTACTGTTCTGTGATATTATGTGTGGTATTTTCTTTCTTTTCTAGAACATACCAAATAATTAGAAGAACTCTAAAACAAGCATTTGCTGATTGCACAGTAATTCTCTGTGAACACAGGATAGAAGCAATGCTGGAATGCCAACAATTTTTGGTGAGTCTTTATAACTTTACTTAAGATCTCATTGCCCTTGTAATTCTTGATAACAATCTCACATGTGATAGTTCCTGCAAATTGCAACAATGTACAAGTTCTTTTCAAAAATATGTATCATACAGCCATCCAGCTTTACTCAAAATAGCTGCACAAGTTTTTCACTTTGATCTGAGCCATGTGGTGAGGTTGAAATATAGTAAATCTAAAATGGCAGCATATTACTAAGTTATGTTTATAAATAGGATATATATACTTTTTGAGCCCTTTATTTGGGGACCAAGTCATACAAAATACTCTACTGTTTAAGATTTTAAAAAAGGTCCCTGTGATTCTTTCAATAACTAAATGTCCCATGGATGTGGTCTGGGACAGGCCTAGTTGTCTTACAGTCTGATTTATGGTATTAATGACAAAGTTGAGAGGCACATTTCATTTTT";

@@ -243,7 +243,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     if (len > 0)
     {
         gva_uint const idx = lcs.nodes[table[lcs.length - 1].idx].idx;
-        fprintf(stderr, "uniq_match in (%u, %u, %u) @ %zu of length %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, lcs.length - len - 1, len);
+        fprintf(stderr, "uniq_match in (%u, %u, %u) @ %zu of length %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, lcs.length - len, len);
     } // if
 
     gva_uint min_source = GVA_NULL;
