@@ -44,7 +44,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 {
     LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed);
 
-    GVA_LCS_Graph graph = {.nodes = NULL, .edges = NULL};
+    GVA_LCS_Graph graph = {NULL, NULL, NULL, GVA_NULL};
 
     if (lcs.nodes == NULL)
     {
@@ -203,6 +203,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         source.idx = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
             source.row, source.col, source.length, GVA_NULL, GVA_NULL
         })) - 1;
+        ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
+            source.row, source.col, source.length, GVA_NULL, GVA_NULL
+        }));
     } // else
     for (gva_uint i = head_idx; i != GVA_NULL; i = lcs.nodes[i].next)
     {
@@ -232,6 +235,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         {
             gva_uint const idx = lcs.nodes[table[i - 1].idx].idx;
             fprintf(stderr, "uniq_match in (%u, %u, %u) @ %u of length %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, i - len, len);
+            ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
+                graph.nodes[idx].row, graph.nodes[idx].col, len, GVA_NULL, GVA_NULL
+            }));
             len = 0;
         } // if
         if (table[i].count == 1)
@@ -244,6 +250,13 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     {
         gva_uint const idx = lcs.nodes[table[lcs.length - 1].idx].idx;
         fprintf(stderr, "uniq_match in (%u, %u, %u) @ %zu of length %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, lcs.length - len, len);
+        ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
+            graph.nodes[idx].row, graph.nodes[idx].col, len, GVA_NULL, GVA_NULL
+        }));
+    } // if
+    if (lcs.nodes[table[lcs.length - 1].idx].idx != 0)
+    {
+        ARRAY_APPEND(allocator, graph.local_supremal, graph.nodes[0]);
     } // if
 
     gva_uint min_source = GVA_NULL;
@@ -278,4 +291,5 @@ gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
 {
     self.nodes = ARRAY_DESTROY(allocator, self.nodes);
     self.edges = ARRAY_DESTROY(allocator, self.edges);
+    self.local_supremal = ARRAY_DESTROY(allocator, self.local_supremal);
 } // gva_lcs_graph_destroy
