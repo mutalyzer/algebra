@@ -164,7 +164,7 @@ lcs_align(GVA_Allocator const allocator,
     lcs.index = allocator.allocate(allocator.context, NULL, 0, MIN(len_ref, len_obs) * sizeof(*lcs.index));
     if (lcs.index == NULL)
     {
-        allocator.allocate(allocator.context, NULL, 0, size * sizeof(*context.diagonals));
+        allocator.allocate(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
         return lcs;
     } // if
 
