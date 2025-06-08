@@ -40,6 +40,10 @@ lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph,
             } // else
         } // for
     } // for
+    for (size_t i = 0; i < array_length(graph.local_supremal); ++i)
+    {
+        fprintf(stream, "%u[penwidth=2]\n", graph.local_supremal[i].lambda);
+    } // for
     fprintf(stream, "}\n");
 } // lcs_graph_dot
 
@@ -201,9 +205,12 @@ main(int argc, char* argv[static argc + 1])
     {
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
         {
-            fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u)\n",
+            GVA_Variant variant;
+            gva_edges(graph.local_supremal[i], graph.local_supremal[i + 1], i == 0, i == array_length(graph.local_supremal) - 2, &variant);
+            fprintf(stderr, "(%u, %u, %u) -> (%u, %u, %u): " GVA_VARIANT_FMT "\n",
                 graph.local_supremal[i].row, graph.local_supremal[i].col, graph.local_supremal[i].length,
-                graph.local_supremal[i + 1].row, graph.local_supremal[i + 1].col, graph.local_supremal[i + 1].length);
+                graph.local_supremal[i + 1].row, graph.local_supremal[i + 1].col, graph.local_supremal[i + 1].length,
+                GVA_VARIANT_PRINT(variant, observed));
         } // for
     } // if
 
