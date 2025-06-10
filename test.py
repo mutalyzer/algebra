@@ -96,7 +96,8 @@ def check(reference, observed, debug=False, timeout=2):
         print(f'\"{stdout}\"')
         raise exc
 
-    assert str(graph.supremal) == cgraph["supremal"], f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
+    assert cgraph["distance"] == graph.distance, f'disances differ: {cgraph["distance"]} vs {graph.distance}'
+    assert cgraph["supremal"] == str(graph.supremal), f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
 
     nodes = list(graph.nodes())
     edges = list(graph.bfs_traversal())
