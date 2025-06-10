@@ -243,8 +243,9 @@ main(int argc, char* argv[static argc + 1])
     /*
     size_t const distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
     fprintf(stderr, "distance only: %zu\n", distance);
-    gva_lcs_graph_destroy(gva_std_allocator, graph);
     */
+
+    gva_lcs_graph_destroy(gva_std_allocator, graph);
 
     return EXIT_SUCCESS;
 } // main
