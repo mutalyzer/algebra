@@ -7,7 +7,7 @@
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*
 #include "align.h"      // LCS_Alignment, lcs_align
 #include "array.h"      // ARRAY_*, array_length
-#include "common.h"     // gva_uint, MAX, MIN
+#include "common.h"     // GVA_NULL, gva_uint, MAX, MIN
 
 
 gva_uint
