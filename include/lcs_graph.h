@@ -41,6 +41,7 @@ typedef struct
     GVA_Edge* edges;
     GVA_Node* local_supremal;
     gva_uint  source;
+    gva_uint  distance;
 } GVA_LCS_Graph;
 
 

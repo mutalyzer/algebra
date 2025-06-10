@@ -96,7 +96,7 @@ def check(reference, observed, debug=True, timeout=2):
         print(f'\"{stdout}\"')
         raise exc
 
-    #assert str(graph.supremal) == cgraph["supremal"], f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
+    assert str(graph.supremal) == cgraph["supremal"], f'supremals differ: {cgraph["supremal"]} vs {graph.supremal}'
 
     nodes = list(graph.nodes())
     edges = list(graph.bfs_traversal())
@@ -118,10 +118,10 @@ def check(reference, observed, debug=True, timeout=2):
         except StopIteration:
             raise ValueError(f'{cedge} not in edges of {head}') from None
 
-    #assert len(cgraph["local_supremal"]) == len(local_supremal(reference, graph)), f'local supremal length'
+    assert len(cgraph["local_supremal"]) == len(local_supremal(reference, graph)), f'local supremal length'
 
-    #for lhs, rhs in zip(cgraph["local_supremal"], local_supremal(reference, graph)):
-    #    assert lhs == str(rhs), f'local supremal elements differ: {lhs} vs {rhs}'
+    for lhs, rhs in zip(cgraph["local_supremal"], local_supremal(reference, graph)):
+        assert lhs == str(rhs), f'local supremal elements differ: {lhs} vs {rhs}'
 
     #if debug:
     #    print(list(reversed(cgraph["canonical"])), canonical(graph))

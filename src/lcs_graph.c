@@ -3,9 +3,6 @@
 #include <stddef.h>     // NULL, size_t
 
 
-#include <stdio.h>      // DEBUG
-
-
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*
 #include "align.h"      // LCS_Alignment, lcs_align
@@ -44,16 +41,25 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 {
     LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed);
 
-    GVA_LCS_Graph graph = {NULL, NULL, NULL, GVA_NULL};
+    GVA_LCS_Graph graph = {NULL, NULL, NULL, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
 
-    if (lcs.nodes == NULL)
+    if (lcs.nodes == NULL || graph.distance == 0)
     {
         gva_uint const sink = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
             len_ref, len_obs, 0, GVA_NULL, GVA_NULL
         })) - 1;
-        if (len_ref == 0 && len_obs == 0)
+        if ((len_ref == 0 && len_obs == 0) || graph.distance == 0)
         {
             graph.source = sink;
+            graph.nodes[sink].row = 0;
+            graph.nodes[sink].col = 0;
+            graph.nodes[sink].length = 0;
+            ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
+                shift, shift, 0, GVA_NULL, graph.source
+            }));
+
+            lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
+            lcs.nodes = ARRAY_DESTROY(allocator, lcs.nodes);
             return graph;
         } // if
 
@@ -62,6 +68,13 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             ARRAY_APPEND(allocator, graph.edges, ((GVA_Edge) {sink, GVA_NULL})) - 1,
             GVA_NULL
         })) - 1;
+
+        ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
+            shift, shift, 0, GVA_NULL, GVA_NULL
+        }));
+        ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
+            len_ref, len_obs, 0, GVA_NULL, GVA_NULL
+        }));
         return graph;
     } // if
 
@@ -70,17 +83,11 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         gva_uint count;
         gva_uint idx;
         gva_uint offset;
-    }* table = allocator.allocate(allocator.context, NULL, 0, sizeof(*table) * lcs.length);
+    }* matches = allocator.allocate(allocator.context, NULL, 0, sizeof(*matches) * lcs.length);
 
     for (gva_uint i = 0; i < lcs.length; ++i)
     {
-        table[i].count = 0;
-        fprintf(stderr, "%u: ", i);
-        for (gva_uint j = lcs.index[i].head; j != GVA_NULL; j = lcs.nodes[j].next)
-        {
-            fprintf(stderr, "(%u, %u, %u) ", lcs.nodes[j].row, lcs.nodes[j].col, lcs.nodes[j].length);
-        } // for
-        fprintf(stderr, "\n");
+        matches[i].count = 0;
     } // for
 
     gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
@@ -122,9 +129,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                 continue;
             } // if
 
-            table[i].count += 1;
-            table[i].idx = j;
-            table[i].offset = graph.nodes[tail->idx].length - tail->length;
+            matches[i].count += 1;
+            matches[i].idx = j;
+            matches[i].offset = graph.nodes[tail->idx].length - tail->length;
 
             gva_uint here = GVA_NULL;
             for (gva_uint k = lcs.index[i - 1].head; k != GVA_NULL; k = lcs.nodes[k].next)
@@ -193,9 +200,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     LCS_Node source = lcs.nodes[head_idx];
     if (source.row == shift && source.col == shift)
     {
-        table[0].count += 1;
-        table[0].idx = head_idx;
-        table[0].offset = graph.nodes[source.idx].length - source.length;
+        matches[0].count += 1;
+        matches[0].idx = head_idx;
+        matches[0].offset = graph.nodes[source.idx].length - source.length;
 
         head_idx = source.next;
     } // if
@@ -205,9 +212,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         source.idx = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
             source.row, source.col, source.length, GVA_NULL, GVA_NULL
         })) - 1;
-        ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            source.row, source.col, source.length, GVA_NULL, source.idx
-        }));
     } // else
     for (gva_uint i = head_idx; i != GVA_NULL; i = lcs.nodes[i].next)
     {
@@ -216,9 +220,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             continue;
         } // if
 
-        table[0].count += 1;
-        table[0].idx = i;
-        table[0].offset = graph.nodes[lcs.nodes[i].idx].length - lcs.nodes[i].length;
+        matches[0].count += 1;
+        matches[0].idx = i;
+        matches[0].offset = graph.nodes[lcs.nodes[i].idx].length - lcs.nodes[i].length;
 
         if (source.length == 0 || !lcs.nodes[i].moved)
         {
@@ -232,61 +236,55 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     gva_uint prev = GVA_NULL;
     for (gva_uint i = 0; i < lcs.length; ++i)
     {
-        if ((prev != table[i].idx || table[i].count > 1) && len > 0)
+        if (prev == GVA_NULL && lcs.nodes[matches[i].idx].idx != source.idx)
         {
-            gva_uint const idx = lcs.nodes[table[i - 1].idx].idx;
-            gva_uint const offset = graph.nodes[idx].length - table[i - len].offset + (graph.nodes[idx].length == table[i - len].offset ? 0 : -1);
-            fprintf(stderr, "uniq_match in (%u, %u, %u) @ %u of length %u offset: %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, i - len, len, offset);
+            ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
+                graph.nodes[source.idx].row + len, graph.nodes[source.idx].col + len, 0, GVA_NULL, source.idx
+            }));
+        } // if
+        if (len > 0 && (matches[i].count > 1 || prev != matches[i].idx))
+        {
+            gva_uint const idx = lcs.nodes[prev].idx;
+            gva_uint const offset = graph.nodes[idx].length - matches[i - 1].offset - len;
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
                 graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
             }));
             len = 0;
         } // if
-        if (table[i].count == 1)
+        if (matches[i].count == 1)
         {
             len += 1;
         } // if
-        prev = table[i].idx;
-        gva_uint const idx = lcs.nodes[table[i].idx].idx;
-        fprintf(stderr, "%u: %u  (%u, %u, %u)  @ %u\n", i, table[i].count, graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, table[i].offset);
+
+        prev = matches[i].idx;
     } // for
     if (len > 0)
     {
-        gva_uint const idx = lcs.nodes[table[lcs.length - 1].idx].idx;
-        gva_uint const offset = graph.nodes[idx].length - table[lcs.length - len].offset + (graph.nodes[idx].length == table[lcs.length - len].offset ? 0 : -1);
-        fprintf(stderr, "uniq_match in (%u, %u, %u) @ %zu of length %u offset: %u\n", graph.nodes[idx].row, graph.nodes[idx].col, graph.nodes[idx].length, lcs.length - len, len, offset);
+        gva_uint const idx = lcs.nodes[prev].idx;
+        gva_uint const offset = graph.nodes[idx].length - matches[lcs.length - 1].offset - len;
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
         }));
     } // if
-    if (table[lcs.length - 1].count > 1 || lcs.nodes[table[lcs.length - 1].idx].idx != 0)
+    if (len == 0 || lcs.nodes[prev].idx != 0)
     {
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            graph.nodes[0].row + graph.nodes[0].length, graph.nodes[0].col + graph.nodes[0].length, len, GVA_NULL, 0
+            graph.nodes[0].row + graph.nodes[0].length, graph.nodes[0].col + graph.nodes[0].length, 0, GVA_NULL, 0
         }));
-    } // if
+    } //if
 
-    gva_uint min_source = GVA_NULL;
-    for (gva_uint i = graph.nodes[source.idx].edges; i != GVA_NULL; i = graph.edges[i].next)
+    if (graph.local_supremal != NULL)
     {
-        GVA_Variant variant;
-        gva_edges(graph.nodes[source.idx], graph.nodes[graph.edges[i].tail], true, false, &variant);
-        min_source = MIN(min_source, variant.start);
-    } // for
-    if (min_source != GVA_NULL)
-    {
-        graph.nodes[source.idx].row += min_source;
-        graph.nodes[source.idx].col += min_source;
-        graph.nodes[source.idx].length -= min_source;
+        graph.nodes[source.idx].row += graph.local_supremal[0].length;
+        graph.nodes[source.idx].col += graph.local_supremal[0].length;
+        graph.nodes[source.idx].length -= graph.local_supremal[0].length;
+
+        graph.nodes[0].length -= len;
     } // if
-    else
-    {
-        graph.nodes[source.idx].length = 0;
-    } // else
 
     graph.source = source.idx;
 
-    table = allocator.allocate(allocator.context, table, sizeof(*table) * lcs.length, 0);
+    matches = allocator.allocate(allocator.context, matches, sizeof(*matches) * lcs.length, 0);
     lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
     lcs.nodes = ARRAY_DESTROY(allocator, lcs.nodes);
     return graph;
