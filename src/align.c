@@ -177,6 +177,7 @@ lcs_align(GVA_Allocator const allocator,
     {
         lcs.index[i].head = GVA_NULL;
         lcs.index[i].tail = GVA_NULL;
+        lcs.index[i].count = 0;
     } // for
 
     size_t const lower = delta > 0 ? 0 : delta;

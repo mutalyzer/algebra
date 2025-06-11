@@ -81,18 +81,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         return graph;
     } // if
 
-    struct
-    {
-        gva_uint count;
-        gva_uint idx;
-        gva_uint offset;
-    }* matches = allocator.allocate(allocator.context, NULL, 0, sizeof(*matches) * lcs.length);
-
-    for (gva_uint i = 0; i < lcs.length; ++i)
-    {
-        matches[i].count = 0;
-    } // for
-
     gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
     LCS_Node sink = lcs.nodes[tail_idx];
     if (sink.row + sink.length == len_ref + shift && sink.col + sink.length == len_obs + shift)
@@ -132,9 +120,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                 continue;
             } // if
 
-            matches[i].count += 1;
-            matches[i].idx = j;
-            matches[i].offset = graph.nodes[tail->idx].length - tail->length;
+            lcs.index[i].tail = j;
+            lcs.index[i].count += 1;
+            lcs.index[i].offset = graph.nodes[tail->idx].length - tail->length;
 
             gva_uint here = GVA_NULL;
             for (gva_uint k = lcs.index[i - 1].head; k != GVA_NULL; k = lcs.nodes[k].next)
@@ -203,9 +191,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     LCS_Node source = lcs.nodes[head_idx];
     if (source.row == shift && source.col == shift)
     {
-        matches[0].count += 1;
-        matches[0].idx = head_idx;
-        matches[0].offset = graph.nodes[source.idx].length - source.length;
+        lcs.index[0].tail = head_idx;
+        lcs.index[0].count += 1;
+        lcs.index[0].offset = graph.nodes[source.idx].length - source.length;
 
         head_idx = source.next;
     } // if
@@ -223,9 +211,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             continue;
         } // if
 
-        matches[0].count += 1;
-        matches[0].idx = i;
-        matches[0].offset = graph.nodes[lcs.nodes[i].idx].length - lcs.nodes[i].length;
+        lcs.index[0].tail = i;
+        lcs.index[0].count += 1;
+        lcs.index[0].offset = graph.nodes[lcs.nodes[i].idx].length - lcs.nodes[i].length;
 
         if (source.length == 0 || !lcs.nodes[i].moved)
         {
@@ -239,32 +227,32 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     gva_uint prev = GVA_NULL;
     for (gva_uint i = 0; i < lcs.length; ++i)
     {
-        if (prev == GVA_NULL && lcs.nodes[matches[i].idx].idx != source.idx)
+        if (prev == GVA_NULL && lcs.nodes[lcs.index[i].tail].idx != source.idx)
         {
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
                 graph.nodes[source.idx].row + len, graph.nodes[source.idx].col + len, 0, GVA_NULL, source.idx
             }));
         } // if
-        if (len > 0 && (matches[i].count > 1 || prev != matches[i].idx))
+        if (len > 0 && (lcs.index[i].count > 1 || prev != lcs.index[i].tail))
         {
             gva_uint const idx = lcs.nodes[prev].idx;
-            gva_uint const offset = graph.nodes[idx].length - matches[i - 1].offset - len;
+            gva_uint const offset = graph.nodes[idx].length - lcs.index[i - 1].offset - len;
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
                 graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
             }));
             len = 0;
         } // if
-        if (matches[i].count == 1)
+        if (lcs.index[i].count == 1)
         {
             len += 1;
         } // if
 
-        prev = matches[i].idx;
+        prev = lcs.index[i].tail;
     } // for
     if (len > 0)
     {
         gva_uint const idx = lcs.nodes[prev].idx;
-        gva_uint const offset = graph.nodes[idx].length - matches[lcs.length - 1].offset - len;
+        gva_uint const offset = graph.nodes[idx].length - lcs.index[lcs.length - 1].offset - len;
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
         }));
@@ -287,7 +275,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
     graph.source = source.idx;
 
-    matches = allocator.allocate(allocator.context, matches, sizeof(*matches) * lcs.length, 0);
     lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
     lcs.nodes = ARRAY_DESTROY(allocator, lcs.nodes);
     return graph;

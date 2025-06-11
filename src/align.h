@@ -27,6 +27,8 @@ typedef struct
     {
         gva_uint head;
         gva_uint tail;
+        gva_uint count;
+        gva_uint offset;
     }* index;
     LCS_Node* nodes;
 } LCS_Alignment;
