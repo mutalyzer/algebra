@@ -11,7 +11,8 @@
 
 
 gva_uint
-gva_edges(GVA_Node const head, GVA_Node const tail,
+gva_edges(char const* const restrict observed,
+    GVA_Node const head, GVA_Node const tail,
     bool const is_source, bool const is_sink,
     GVA_Variant* const variant)
 {
@@ -26,8 +27,10 @@ gva_edges(GVA_Node const head, GVA_Node const tail,
     gva_uint const tail_offset = offset < 0 ? MIN(tail_length, -offset) : 0;
 
     *variant = (GVA_Variant) {
-        row + head_offset, tail.row + tail_offset,
-        col + head_offset, tail.col + tail_offset
+        row + head_offset, tail.row + tail_offset, {
+            observed + col + head_offset,
+            (tail.col + tail_offset) - (col + head_offset)
+        }
     };
     return MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
 } // gva_edges
@@ -41,7 +44,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 {
     LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed);
 
-    GVA_LCS_Graph graph = {NULL, NULL, NULL, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
+    GVA_LCS_Graph graph = {{observed, len_obs}, NULL, NULL, NULL, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
 
     if (lcs.nodes == NULL || graph.distance == 0)
     {

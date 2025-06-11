@@ -10,8 +10,7 @@
 
 
 void
-gva_extract(GVA_Allocator const allocator,
-    GVA_LCS_Graph const graph, size_t const len_obs, char const observed[static len_obs]);
+gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
 
 
 #endif // GVA_EXTRACT_H

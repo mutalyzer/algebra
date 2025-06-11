@@ -7,7 +7,7 @@
 
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
 #include "array.h"      // array_length
-#include "common.h"     // GVA_NULL, MAX, MIN, gva_uint
+#include "common.h"     // GVA_NULL, MAX, MIN, GVA_String, gva_uint
 
 
 typedef struct
@@ -62,8 +62,7 @@ lca(gva_uint* const start, gva_uint lhs, gva_uint rhs, size_t const length, LCA_
 
 
 void
-gva_extract(GVA_Allocator const allocator,
-    GVA_LCS_Graph const graph, size_t const len_obs, char const observed[static len_obs])
+gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
 {
     gva_uint const length = array_length(graph.nodes);
     LCA_Table* visited = allocator.allocate(allocator.context, NULL, 0, sizeof(*visited) * length);
@@ -161,7 +160,7 @@ gva_extract(GVA_Allocator const allocator,
                 // add regular successors in queue order
                 fprintf(stderr, "    push %u @ %u\n", edge_tail, visited[head].depth + 1);
                 GVA_Variant variant;
-                gva_uint const count = gva_edges(graph.nodes[head], graph.nodes[edge_tail], head == graph.source, edge_tail == 0, &variant);
+                gva_uint const count = gva_edges(graph.observed.str, graph.nodes[head], graph.nodes[edge_tail], head == graph.source, edge_tail == 0, &variant);
                 visited[edge_tail] = (LCA_Table) {head, rank, visited[head].depth + 1, variant.start, variant.end + count - 1, tail, GVA_NULL};
                 rank += 1;
                 visited[tail].next = edge_tail;
@@ -172,7 +171,7 @@ gva_extract(GVA_Allocator const allocator,
                 fprintf(stderr, "    update %u @ %u\n", edge_tail, visited[edge_tail].depth);
                 fprintf(stderr, "        lca(%u, %u)\n", visited[edge_tail].lca, head);
                 GVA_Variant variant;
-                gva_uint const count = gva_edges(graph.nodes[head], graph.nodes[edge_tail], head == graph.source, edge_tail == 0, &variant);
+                gva_uint const count = gva_edges(graph.observed.str, graph.nodes[head], graph.nodes[edge_tail], head == graph.source, edge_tail == 0, &variant);
                 visited[edge_tail].start = MIN(visited[edge_tail].start, variant.start);
                 visited[edge_tail].lca = lca(&visited[edge_tail].start, visited[edge_tail].lca, head, length, visited);
                 visited[edge_tail].end = MAX(visited[edge_tail].end, variant.end + count - 1);
@@ -198,13 +197,18 @@ gva_extract(GVA_Allocator const allocator,
             // we need to skip lambda edges: start && end == -1
             gva_uint const start_offset = visited[tail].start - graph.nodes[head].row;
             gva_uint const end_offset = visited[tail].end - graph.nodes[tail].row;
-            GVA_Variant const variant = {visited[tail].start, visited[tail].end, graph.nodes[head].col + start_offset, graph.nodes[tail].col + end_offset};
+            GVA_Variant const variant = {
+                visited[tail].start, visited[tail].end, {
+                    graph.observed.str + graph.nodes[head].col + start_offset,
+                    (graph.nodes[tail].col + end_offset) - (graph.nodes[head].col + start_offset)
+                }
+            };
 
             if (tail != sink)
             {
                 fprintf(stderr, ",\n");
             } // if
-            fprintf(stderr, "        \"" GVA_VARIANT_FMT "\"", GVA_VARIANT_PRINT(variant, observed));
+            fprintf(stderr, "        \"" GVA_VARIANT_FMT "\"", GVA_VARIANT_PRINT(variant));
         } // if
     } // while
 

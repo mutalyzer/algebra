@@ -13,13 +13,13 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const restrict stream)
 {
     static size_t const FASTA_LINE_SIZE = 65536;
     size_t capacity = FASTA_LINE_SIZE;
-    GVA_String seq = {0, allocator.allocate(allocator.context, NULL, 0, capacity)};
+    GVA_String seq = {allocator.allocate(allocator.context, NULL, 0, capacity), 0};
     if (seq.str == NULL)
     {
         return seq;
     } // if
 
-    while (fgets(seq.str + seq.len, FASTA_LINE_SIZE, stream) != NULL)
+    while (fgets((char*) seq.str + seq.len, FASTA_LINE_SIZE, stream) != NULL)
     {
         if (seq.str[seq.len] == '>')
         {
@@ -33,7 +33,7 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const restrict stream)
 
         if (capacity - FASTA_LINE_SIZE < seq.len)
         {
-            seq.str = allocator.allocate(allocator.context, seq.str, capacity, capacity + FASTA_LINE_SIZE);
+            seq.str = allocator.allocate(allocator.context, (char*) seq.str, capacity, capacity + FASTA_LINE_SIZE);
             if (seq.str == NULL)
             {
                 seq.len = 0;
@@ -42,6 +42,6 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const restrict stream)
             capacity += FASTA_LINE_SIZE;
         } // if
     } // while
-    seq.str = allocator.allocate(allocator.context, seq.str, capacity, seq.len);
+    seq.str = allocator.allocate(allocator.context, (char*) seq.str, capacity, seq.len);
     return seq;
 } // gva_fasta_sequence

@@ -8,14 +8,13 @@
 #include "../include/extract.h"     // gva_extract
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
-#include "../include/types.h"       // GVA_NULL, gva_uint
-#include "../include/utils.h"       // GVA_String, gva_fasta_sequence, GVA_VARIANT_*
+#include "../include/types.h"       // GVA_NULL, GVA_String, gva_uint
+#include "../include/utils.h"       // gva_fasta_sequence, GVA_VARIANT_*
 #include "array.h"  // array_length
 
 
 static void
-lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph,
-    size_t const len_obs, char const observed[static len_obs])
+lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph)
 {
     fprintf(stream, "strict digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->%u\n", graph.source);
     for (size_t i = 0; i < array_length(graph.nodes); ++i)
@@ -28,16 +27,17 @@ lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph,
         for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
         {
             GVA_Variant variant;
-            gva_uint const count = gva_edges(graph.nodes[i], graph.nodes[graph.edges[j].tail],
+            gva_uint const count = gva_edges(graph.observed.str,
+                graph.nodes[i], graph.nodes[graph.edges[j].tail],
                 i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
                 &variant);
             if (count > 1)
             {
-                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT " x %u\",penwidth=2]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant, observed), count);
+                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT " x %u\",penwidth=2]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant), count);
             } // if
             else
             {
-                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT "\"]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant, observed));
+                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT "\"]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant));
             } // else
         } // for
     } // for
@@ -50,8 +50,7 @@ lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph,
 
 
 static void
-bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph,
-    size_t const len_obs, char const observed[static len_obs])
+bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph)
 {
     struct
     {
@@ -86,7 +85,8 @@ bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph,
             for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
             {
                 GVA_Variant variant;
-                gva_uint const count = gva_edges(graph.nodes[i], graph.nodes[graph.edges[j].tail],
+                gva_uint const count = gva_edges(graph.observed.str,
+                    graph.nodes[i], graph.nodes[graph.edges[j].tail],
                     i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
                     &variant);
 
@@ -97,11 +97,10 @@ bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph,
                         printf(",\n");
                     } // if
                     first = false;
-                    fprintf(stream, "         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" GVA_VARIANT_FMT "\"}", head, graph.edges[j].tail, GVA_VARIANT_PRINT(variant, observed));
+                    fprintf(stream, "         {\"head\": \"s%u\", \"tail\": \"s%u\", \"variant\": \"" GVA_VARIANT_FMT "\"}", head, graph.edges[j].tail, GVA_VARIANT_PRINT(variant));
                     variant.start += 1;
                     variant.end += 1;
-                    variant.obs_start += 1;
-                    variant.obs_end += 1;
+                    variant.sequence.str += 1;
                 } // for
 
                 if (table[graph.edges[j].tail].depth > 0)
@@ -124,8 +123,7 @@ bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph,
 
 
 static void
-lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph,
-    size_t const len_obs, char const observed[static len_obs])
+lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph)
 {
     fprintf(stream, "{\n    \"source\": \"s%u\",\n    \"nodes\": {\n", graph.source);
     for (gva_uint i = 0; i < array_length(graph.nodes); ++i)
@@ -133,23 +131,29 @@ lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph,
         fprintf(stream, "        \"s%u\": {\"row\": %u, \"col\": %u, \"length\": %u}%s\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, i < array_length(graph.nodes) - 1 ? "," : "");
     } // for
     fprintf(stream, "    },\n");
-    bfs_traversal(stream, graph, len_obs, observed);
+    bfs_traversal(stream, graph);
     fprintf(stream, "    \"local_supremal\": [\n");
     if (array_length(graph.local_supremal) > 1)
     {
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
         {
             GVA_Variant variant;
-            gva_edges(graph.local_supremal[i], graph.local_supremal[i + 1], i == 0, i == array_length(graph.local_supremal) - 2, &variant);
-            fprintf(stream, "        \"" GVA_VARIANT_FMT "\"%s\n", GVA_VARIANT_PRINT(variant, observed), i < array_length(graph.local_supremal) - 2 ? "," : "");
+            gva_edges(graph.observed.str,
+                graph.local_supremal[i], graph.local_supremal[i + 1],
+                i == 0, i == array_length(graph.local_supremal) - 2,
+                &variant);
+            fprintf(stream, "        \"" GVA_VARIANT_FMT "\"%s\n", GVA_VARIANT_PRINT(variant), i < array_length(graph.local_supremal) - 2 ? "," : "");
         } // for
     } // if
     fprintf(stream, "    ],\n    \"supremal\": ");
     if (array_length(graph.local_supremal) > 1)
     {
         GVA_Variant variant;
-        gva_edges(graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1], true, true, &variant);
-        fprintf(stream, "\"" GVA_VARIANT_FMT "\",\n", GVA_VARIANT_PRINT(variant, observed));
+        gva_edges(graph.observed.str,
+            graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
+            true, true,
+            &variant);
+        fprintf(stream, "\"" GVA_VARIANT_FMT "\",\n", GVA_VARIANT_PRINT(variant));
     } // if
     else
     {
@@ -161,8 +165,7 @@ lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph,
 
 
 static void
-lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph,
-    size_t const len_obs, char const observed[static len_obs])
+lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph)
 {
     fprintf(stream, "#nodes: %zu\n#edges: %zu\n", array_length(graph.nodes), array_length(graph.edges));
     fprintf(stream, "distance: %u\n", graph.distance);
@@ -173,11 +176,14 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph,
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
         {
             GVA_Variant variant;
-            gva_edges(graph.local_supremal[i], graph.local_supremal[i + 1], i == 0, i == array_length(graph.local_supremal) - 2, &variant);
+            gva_edges(graph.observed.str,
+                graph.local_supremal[i], graph.local_supremal[i + 1],
+                i == 0, i == array_length(graph.local_supremal) - 2,
+                &variant);
             fprintf(stream, "    (%u, %u, %u) -> (%u, %u, %u): " GVA_VARIANT_FMT "\n",
                 graph.local_supremal[i].row, graph.local_supremal[i].col, graph.local_supremal[i].length,
                 graph.local_supremal[i + 1].row, graph.local_supremal[i + 1].col, graph.local_supremal[i + 1].length,
-                GVA_VARIANT_PRINT(variant, observed));
+                GVA_VARIANT_PRINT(variant));
         } // for
     } // if
 
@@ -197,10 +203,11 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph,
         {
             fprintf(stream, "    %u: (%u, %u, %u): ", graph.edges[j].tail, graph.nodes[graph.edges[j].tail].row, graph.nodes[graph.edges[j].tail].col, graph.nodes[graph.edges[j].tail].length);
             GVA_Variant variant;
-            gva_uint const count = gva_edges(graph.nodes[i], graph.nodes[graph.edges[j].tail],
+            gva_uint const count = gva_edges(graph.observed.str,
+                graph.nodes[i], graph.nodes[graph.edges[j].tail],
                 i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
                 &variant);
-            fprintf(stream, GVA_VARIANT_FMT " x %u\n", GVA_VARIANT_PRINT(variant, observed), count);
+            fprintf(stream, GVA_VARIANT_FMT " x %u\n", GVA_VARIANT_PRINT(variant), count);
         } // for
     } // for
 } // lcs_graph_raw
@@ -220,7 +227,7 @@ main(int argc, char* argv[static argc + 1])
     if (stream != NULL)
     {
         GVA_String seq = gva_fasta_sequence(gva_std_allocator, stream);
-        gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
+        gva_std_allocator.allocate(gva_std_allocator.context, (char*) seq.str, seq.len, 0);
         fclose(stream);
     } // if
     */
@@ -237,11 +244,11 @@ main(int argc, char* argv[static argc + 1])
 
     GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref, reference, len_obs, observed, 0);
 
-    lcs_graph_raw(stderr, graph, len_obs, observed);
-    lcs_graph_dot(stderr, graph, len_obs, observed);
-    lcs_graph_json(stdout, graph, len_obs, observed);
+    lcs_graph_raw(stderr, graph);
+    lcs_graph_dot(stderr, graph);
+    lcs_graph_json(stdout, graph);
 
-    gva_extract(gva_std_allocator, graph, len_obs, observed);
+    gva_extract(gva_std_allocator, graph);
 
     /*
     size_t const distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
