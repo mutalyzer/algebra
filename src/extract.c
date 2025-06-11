@@ -198,7 +198,7 @@ gva_extract(GVA_Allocator const allocator,
             // we need to skip lambda edges: start && end == -1
             gva_uint const start_offset = visited[tail].start - graph.nodes[head].row;
             gva_uint const end_offset = visited[tail].end - graph.nodes[tail].row;
-            GVA_Variant const variant =  {visited[tail].start, visited[tail].end, graph.nodes[head].col + start_offset, graph.nodes[tail].col + end_offset};
+            GVA_Variant const variant = {visited[tail].start, visited[tail].end, graph.nodes[head].col + start_offset, graph.nodes[tail].col + end_offset};
 
             if (tail != sink)
             {
