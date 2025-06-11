@@ -44,7 +44,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 {
     LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed);
 
-    GVA_LCS_Graph graph = {{observed, len_obs}, NULL, NULL, NULL, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
+    GVA_LCS_Graph graph = {NULL, NULL, NULL, {observed, len_obs}, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
 
     if (lcs.nodes == NULL || graph.distance == 0)
     {

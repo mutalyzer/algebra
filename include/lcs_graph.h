@@ -37,10 +37,10 @@ typedef struct
 // entry point in the `nodes` array.
 typedef struct
 {
-    GVA_String observed;
     GVA_Node*  nodes;
     GVA_Edge*  edges;
     GVA_Node*  local_supremal;
+    GVA_String observed;
     gva_uint   source;
     gva_uint   distance;
 } GVA_LCS_Graph;
