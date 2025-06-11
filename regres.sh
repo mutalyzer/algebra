@@ -54,6 +54,8 @@ TCTC TC
 TTGTA TTTGTGTT
 AA ACA
 ACA AA
+# paper
+ACCTGACT ATCTTACTT
 )
 
 for ((i=0; i<${#TESTS[@]}; i+=2)); do
