@@ -113,3 +113,10 @@ gva_parse_spdi(size_t const len, char const expression[static restrict len],
 
     return idx == len;
 } // gva_parse_spdi
+
+
+inline size_t
+gva_variant_length(GVA_Variant const variant)
+{
+    return variant.end - variant.start + variant.sequence.len;
+} // gva_variant_length

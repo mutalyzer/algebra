@@ -25,4 +25,8 @@ gva_parse_spdi(size_t const len, char const expression[static restrict len],
     GVA_Variant variants[static restrict 1]);
 
 
+size_t
+gva_variant_length(GVA_Variant const variant);
+
+
 #endif // GVA_VARIANT_H

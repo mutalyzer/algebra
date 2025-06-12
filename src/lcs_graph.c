@@ -4,7 +4,8 @@
 
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
+#include "../include/variant.h"     // GVA_Variant, gva_variant_length
 #include "align.h"      // LCS_Alignment, lcs_align
 #include "array.h"      // ARRAY_*, array_length
 #include "common.h"     // GVA_NULL, gva_uint, MAX, MIN
@@ -279,6 +280,57 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     lcs.nodes = ARRAY_DESTROY(allocator, lcs.nodes);
     return graph;
 } // gva_lcs_graph_init
+
+
+GVA_LCS_Graph
+gva_lcs_graph_from_variant(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const variant)
+{
+    gva_uint offset = MAX(1, gva_variant_length(variant) / 2);
+    size_t old_len = 0;
+    char* observed = NULL;
+
+    while (true)
+    {
+        gva_uint const start = MAX(0, (intmax_t) variant.start - offset);
+        gva_uint const end = MIN(len_ref, variant.end + offset);
+
+        size_t const len = (variant.start - start) + variant.sequence.len + (end - variant.end);
+        observed = allocator.allocate(allocator.context, observed, old_len, len);
+        if (observed == NULL)
+        {
+            return (GVA_LCS_Graph) {NULL, NULL, NULL, {NULL, 0}, GVA_NULL, 0};
+        } // if
+
+        for (size_t i = start; i < variant.start; ++i)
+        {
+            observed[i - start] = reference[i];
+        } // for
+        for (size_t i = 0; i < variant.sequence.len; ++i)
+        {
+            observed[i + (variant.start - start)] = variant.sequence.str[i];
+        } // for
+        for (size_t i = variant.end; i < end; ++i)
+        {
+            observed[i + (variant.end - start)] = reference[i];
+        } // for
+
+        GVA_LCS_Graph graph = gva_lcs_graph_init(allocator, end - start, reference + start, len, observed, start);
+        return graph;
+        /*
+        if ((graph.supremal.start > start || graph.supremal.start == 0) &&
+            (graph.supremal.end   < end   || graph.supremal.end   == len_ref))
+        {
+            return graph;
+        } // if
+        */
+        gva_lcs_graph_destroy(allocator, graph);
+
+        old_len = len;
+        offset *= 2;  // OVERFLOW
+    } // while
+} // gva_lcs_graph_from_variant
 
 
 inline void
