@@ -69,7 +69,7 @@ gva_uint
 gva_edges(char const* const restrict observed,
     GVA_Node const head, GVA_Node const tail,
     bool const is_source, bool const is_sink,
-    GVA_Variant* const variant);
+    GVA_Variant* const restrict variant);
 
 
 #endif // GVA_LCS_GRAPH_H

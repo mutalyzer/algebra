@@ -6,7 +6,7 @@
 
 
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
-#include "array.h"      // array_length
+#include "array.h"      // ARRAY_APPEND, array_length
 #include "common.h"     // GVA_NULL, MAX, MIN, GVA_String, gva_uint
 
 
@@ -35,7 +35,9 @@ print_lca_table(size_t const length, LCA_Table const visited[static length], gva
 
 
 static inline gva_uint
-lca(gva_uint* const start, gva_uint lhs, gva_uint rhs, size_t const length, LCA_Table const visited[static length])
+lca(gva_uint* const start,
+    gva_uint lhs, gva_uint rhs,
+    size_t const length, LCA_Table const visited[static length])
 {
     gva_uint lhs_start = *start;
     gva_uint rhs_start = *start;
@@ -61,25 +63,19 @@ lca(gva_uint* const start, gva_uint lhs, gva_uint rhs, size_t const length, LCA_
 } // lca
 
 
-void
+GVA_Variant*
 gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
 {
     gva_uint const length = array_length(graph.nodes);
     LCA_Table* visited = allocator.allocate(allocator.context, NULL, 0, sizeof(*visited) * length);
     if (visited == NULL)
     {
-        return;
+        return NULL;
     } // if
 
     for (gva_uint i = 0; i < length; ++i)
     {
         visited[i].depth = GVA_NULL;
-        visited[i].lca = GVA_NULL;
-        visited[i].rank = GVA_NULL;
-        visited[i].start = GVA_NULL;
-        visited[i].end = GVA_NULL;
-        visited[i].prev = GVA_NULL;
-        visited[i].next = GVA_NULL;
     } // for
 
     gva_uint sink = GVA_NULL;
@@ -148,8 +144,6 @@ gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
                 visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, GVA_NULL, GVA_NULL, head, visited[head].next};
                 visited[head].next = lambda;
             } // else
-
-            //print_lca_table(length, visited, head, tail);
         } // if
 
         for (gva_uint i = graph.nodes[head].edges; i != GVA_NULL; i = graph.edges[i].next)
@@ -181,14 +175,12 @@ gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
             {
                 fprintf(stderr, "    skip %u @ %u\n", edge_tail, visited[edge_tail].depth);
             } // else
-
-            //print_lca_table(length, visited, head, tail);
         } // for
     } // for
 
     print_lca_table(length, visited, GVA_NULL, GVA_NULL);
 
-    // the canonical variant is given in the reverse order (for now): the Python checker needs to reverse this list
+    GVA_Variant* canonical = NULL;
     for (gva_uint tail = sink; tail != GVA_NULL; tail = visited[tail].lca)
     {
         gva_uint const head = visited[tail].lca;
@@ -203,14 +195,19 @@ gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
                     (graph.nodes[tail].col + end_offset) - (graph.nodes[head].col + start_offset)
                 }
             };
-
-            if (tail != sink)
-            {
-                fprintf(stderr, ",\n");
-            } // if
-            fprintf(stderr, "        \"" GVA_VARIANT_FMT "\"", GVA_VARIANT_PRINT(variant));
+            ARRAY_APPEND(allocator, canonical, variant);
         } // if
-    } // while
+    } // for
+    if (canonical != NULL)
+    {
+        for (gva_uint i = 0; i < array_length(canonical) / 2; ++i)
+        {
+            GVA_Variant const temp = canonical[i];
+            canonical[i] = canonical[array_length(canonical) - i - 1];
+            canonical[array_length(canonical) - i - 1] = temp;
+        } // for
+    } // if
 
     visited = allocator.allocate(allocator.context, visited, sizeof(*visited) * length, 0);
+    return canonical;
 } // gva_extract

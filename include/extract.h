@@ -2,14 +2,11 @@
 #define GVA_EXTRACT_H
 
 
-#include <stddef.h>     // size_t
-
-
 #include "allocator.h"      // GVA_Allocator
-#include "lcs_graph.h"      // GVA_LCS_Graph
+#include "lcs_graph.h"      // GVA_LCS_Graph, GVA_Variant
 
 
-void
+GVA_Variant*
 gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
 
 

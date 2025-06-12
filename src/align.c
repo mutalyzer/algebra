@@ -147,6 +147,12 @@ lcs_align(GVA_Allocator const allocator,
 
     LCS_Alignment lcs = {0, NULL, NULL};
 
+    lcs.index = allocator.allocate(allocator.context, NULL, 0, MIN(len_ref, len_obs) * sizeof(*lcs.index));
+    if (lcs.index == NULL)
+    {
+        return lcs;
+    } // if
+
     Context const context =
     {
         allocator,
@@ -158,13 +164,7 @@ lcs_align(GVA_Allocator const allocator,
     };
     if (context.diagonals == NULL)
     {
-        return lcs;
-    } // if
-
-    lcs.index = allocator.allocate(allocator.context, NULL, 0, MIN(len_ref, len_obs) * sizeof(*lcs.index));
-    if (lcs.index == NULL)
-    {
-        allocator.allocate(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
+        lcs.index = allocator.allocate(allocator.context, lcs.index, MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
         return lcs;
     } // if
 
@@ -199,7 +199,7 @@ lcs_align(GVA_Allocator const allocator,
         p += 1;
     } // while
 
-    allocator.allocate(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
     lcs.index = allocator.allocate(allocator.context, lcs.index, MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
+    allocator.allocate(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
     return lcs;
 } // align

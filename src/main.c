@@ -10,7 +10,7 @@
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/types.h"       // GVA_NULL, GVA_String, gva_uint
 #include "../include/utils.h"       // gva_fasta_sequence, GVA_VARIANT_*
-#include "array.h"  // array_length
+#include "array.h"  // ARRAY_DESTROY, array_length
 
 
 static void
@@ -57,7 +57,6 @@ bfs_traversal(FILE* const stream, GVA_LCS_Graph const graph)
         gva_uint depth;
         gva_uint next;
     }* table = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, sizeof(*table) * array_length(graph.nodes));
-
     if (table == NULL)
     {
         return;
@@ -248,7 +247,13 @@ main(int argc, char* argv[static argc + 1])
     lcs_graph_dot(stderr, graph);
     lcs_graph_json(stdout, graph);
 
-    gva_extract(gva_std_allocator, graph);
+    GVA_Variant* canonical = gva_extract(gva_std_allocator, graph);
+    for (size_t i = 0; i < array_length(canonical); ++i)
+    {
+        fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(canonical[i]));
+    } // for
+
+    ARRAY_DESTROY(gva_std_allocator, canonical);
 
     /*
     size_t const distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
