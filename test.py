@@ -124,16 +124,10 @@ def check(reference, observed, debug=False, timeout=2):
     for lhs, rhs in zip(cgraph["local_supremal"], local_supremal(reference, graph)):
         assert lhs == str(rhs), f'local supremal elements differ: {lhs} vs {rhs}'
 
-    #if debug:
-    #    print(list(reversed(cgraph["canonical"])), canonical(graph))
+    assert len(cgraph["canonical"]) == len(canonical(graph)), f'canonical length'
 
-    #print()
-    #print(cgraph["canonical"])
-    #print(canonical(graph))
-    #assert len(cgraph["canonical"]) == len(canonical(graph)), f'canonical length'
-
-    #for lhs, rhs in zip(reversed(cgraph["canonical"]), canonical(graph)):
-    #    assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
+    for lhs, rhs in zip(cgraph["canonical"], canonical(graph)):
+        assert lhs == str(rhs), f'canonical elements differ: {lhs} vs {rhs}'
 
 
 def main():

@@ -158,7 +158,16 @@ lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph)
     {
         fprintf(stream, "\"0:0/\",\n");
     } // else
-    fprintf(stream, "    \"distance\": %u\n", graph.distance);
+    
+    fprintf(stream, "    \"canonical\": [\n");
+    GVA_Variant* canonical = gva_extract(gva_std_allocator, graph);
+    for (size_t i = 0; i < array_length(canonical); ++i)
+    {
+        fprintf(stream, "        \"" GVA_VARIANT_FMT "\"%s\n", GVA_VARIANT_PRINT(canonical[i]), i < array_length(canonical) - 1 ? "," : "");
+    } // for
+    canonical = ARRAY_DESTROY(gva_std_allocator, canonical);
+
+    fprintf(stream, "    ],\n    \"distance\": %u\n", graph.distance);
     fprintf(stream, "}\n");
 } // lcs_graph_json
 
@@ -253,7 +262,7 @@ main(int argc, char* argv[static argc + 1])
         fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(canonical[i]));
     } // for
 
-    ARRAY_DESTROY(gva_std_allocator, canonical);
+    canonical = ARRAY_DESTROY(gva_std_allocator, canonical);
 
     /*
     size_t const distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
