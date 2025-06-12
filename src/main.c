@@ -245,6 +245,8 @@ main(int argc, char* argv[static argc + 1])
         fprintf(stderr, "%s: " GVA_VARIANT_FMT "\n", spdi, GVA_VARIANT_PRINT(variant));
         GVA_LCS_Graph graph = gva_lcs_graph_from_variant(gva_std_allocator, seq.len, seq.str, variant);
 
+        lcs_graph_raw(stderr, graph);
+
         graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) graph.observed.str, graph.observed.len, 0);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
     } // while

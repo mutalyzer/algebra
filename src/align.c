@@ -16,6 +16,7 @@ typedef struct
     char const* const restrict reference;
     size_t const len_obs;
     char const* const restrict observed;
+    size_t const shift;
     size_t* const restrict diagonals;
 } Context;
 
@@ -74,7 +75,7 @@ expand(Context const context,
             size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2 - 1;
             size_t const length = row - match_row;
             gva_uint const len = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
-                match_row, match_col, length, false, 0, GVA_NULL, GVA_NULL
+                match_row + context.shift, match_col, length, false, 0, GVA_NULL, GVA_NULL
             })) - 1;
             if (lcs->index[lcs_pos].head != GVA_NULL)
             {
@@ -115,7 +116,7 @@ expand(Context const context,
         size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2 - 1;
         size_t const length = row - match_row;
         gva_uint const len = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
-            match_row, match_col, length, false, 0, GVA_NULL, GVA_NULL
+            match_row + context.shift, match_col + context.shift, length, false, 0, GVA_NULL, GVA_NULL
         })) - 1;
         if (lcs->index[lcs_pos].head != GVA_NULL)
         {
@@ -139,7 +140,8 @@ expand(Context const context,
 LCS_Alignment
 lcs_align(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
-    size_t const len_obs, char const observed[static restrict len_obs])
+    size_t const len_obs, char const observed[static restrict len_obs],
+    size_t const shift)
 {
     intmax_t const delta = len_obs - len_ref;
     size_t const offset = len_ref + 1;
@@ -160,6 +162,7 @@ lcs_align(GVA_Allocator const allocator,
         reference,
         len_obs,
         observed,
+        shift,
         .diagonals = allocator.allocate(allocator.context, NULL, 0, size * sizeof(*context.diagonals)),
     };
     if (context.diagonals == NULL)

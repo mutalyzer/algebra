@@ -37,7 +37,8 @@ typedef struct
 LCS_Alignment
 lcs_align(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
-    size_t const len_obs, char const observed[static restrict len_obs]);
+    size_t const len_obs, char const observed[static restrict len_obs],
+    size_t const shift);
 
 
 #endif // GVA_ALIGN_H

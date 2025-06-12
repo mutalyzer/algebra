@@ -3,6 +3,9 @@
 #include <stddef.h>     // NULL, size_t
 
 
+#include <stdio.h>      // DEBUG
+
+
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/variant.h"     // GVA_Variant, gva_variant_length
@@ -43,7 +46,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const len_obs, char const observed[static restrict len_obs],
     size_t const shift)
 {
-    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed);
+    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, shift);
 
     GVA_LCS_Graph graph = {NULL, NULL, NULL, {observed, len_obs}, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
 
@@ -59,7 +62,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             graph.nodes[sink].col = 0;
             graph.nodes[sink].length = 0;
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-                shift, shift, 0, GVA_NULL, graph.source
+                shift, 0, 0, GVA_NULL, graph.source
             }));
 
             lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
@@ -68,13 +71,13 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         } // if
 
         graph.source = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
-            shift, shift, 0,
+            shift, 0, 0,
             ARRAY_APPEND(allocator, graph.edges, ((GVA_Edge) {sink, GVA_NULL})) - 1,
             GVA_NULL
         })) - 1;
 
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            shift, shift, 0, GVA_NULL, GVA_NULL
+            shift, 0, 0, GVA_NULL, GVA_NULL
         }));
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             len_ref, len_obs, 0, GVA_NULL, GVA_NULL
@@ -84,7 +87,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
     gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
     LCS_Node sink = lcs.nodes[tail_idx];
-    if (sink.row + sink.length == len_ref + shift && sink.col + sink.length == len_obs + shift)
+    if (sink.row + sink.length == len_ref + shift && sink.col + sink.length == len_obs)
     {
         lcs.nodes[tail_idx].idx = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
             sink.row, sink.col, sink.length, GVA_NULL, GVA_NULL
@@ -94,7 +97,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     } // if
     else
     {
-        sink = (LCS_Node) {.row = len_ref + shift, .col = len_obs + shift, .length = 0};
+        sink = (LCS_Node) {.row = len_ref + shift, .col = len_obs, .length = 0};
         sink.idx = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
             sink.row, sink.col, sink.length, GVA_NULL, GVA_NULL
         })) - 1;
@@ -190,7 +193,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
     gva_uint head_idx = lcs.index[0].head;
     LCS_Node source = lcs.nodes[head_idx];
-    if (source.row == shift && source.col == shift)
+    if (source.row == shift && source.col == 0)
     {
         lcs.index[0].tail = head_idx;
         lcs.index[0].count += 1;
@@ -200,7 +203,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     } // if
     else
     {
-        source = (LCS_Node) {.row = shift, .col = shift, .length = 0};
+        source = (LCS_Node) {.row = shift, .col = 0, .length = 0};
         source.idx = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
             source.row, source.col, source.length, GVA_NULL, GVA_NULL
         })) - 1;
@@ -231,7 +234,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         if (prev == GVA_NULL && lcs.nodes[lcs.index[i].tail].idx != source.idx)
         {
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-                graph.nodes[source.idx].row + len, graph.nodes[source.idx].col + len, 0, GVA_NULL, source.idx
+                graph.nodes[source.idx].row, graph.nodes[source.idx].col, 0, GVA_NULL, source.idx
             }));
         } // if
         if (len > 0 && (lcs.index[i].count > 1 || prev != lcs.index[i].tail))
@@ -282,9 +285,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 } // gva_lcs_graph_init
 
 
-#include <stdio.h>      // DEBUG
-
-
 GVA_LCS_Graph
 gva_lcs_graph_from_variant(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
@@ -319,15 +319,16 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
             observed[i - start] = reference[i];
         } // for
 
+        fprintf(stderr, "%u--%u\n", start, end);
+        fprintf(stderr, "%.*s\n%.*s\n", (int) (end - start), reference + start, (int) len, observed);
+
         GVA_LCS_Graph graph = gva_lcs_graph_init(allocator, end - start, reference + start, len, observed, start);
-        fprintf(stderr, "OK\n");
 
         GVA_Variant supremal;
         gva_edges(graph.observed.str,
             graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
             true, true,
             &supremal);
-        return graph;
 
         fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
 
