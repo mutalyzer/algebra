@@ -225,11 +225,11 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph)
 int
 main(int argc, char* argv[static argc + 1])
 {
+    GVA_String seq = {NULL, 0};
     FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
     if (stream != NULL)
     {
-        GVA_String seq = gva_fasta_sequence(gva_std_allocator, stream);
-        seq.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) seq.str, seq.len, 0);
+        seq = gva_fasta_sequence(gva_std_allocator, stream);
         fclose(stream);
     } // if
 
@@ -243,6 +243,10 @@ main(int argc, char* argv[static argc + 1])
         GVA_Variant variant;
         gva_parse_spdi(strlen(spdi), spdi, &variant);
         fprintf(stderr, "%s: " GVA_VARIANT_FMT "\n", spdi, GVA_VARIANT_PRINT(variant));
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variant(gva_std_allocator, seq.len, seq.str, variant);
+
+        graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) graph.observed.str, graph.observed.len, 0);
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
     } // while
 
     fprintf(stderr, "%zu\n", count);
