@@ -261,7 +261,6 @@ main(int argc, char* argv[static argc + 1])
     {
         fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(canonical[i]));
     } // for
-
     canonical = ARRAY_DESTROY(gva_std_allocator, canonical);
 
     /*
