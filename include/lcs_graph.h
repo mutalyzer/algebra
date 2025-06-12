@@ -7,6 +7,7 @@
 
 #include "allocator.h"  // GVA_Allocator
 #include "types.h"      // GVA_String, gva_uint
+#include "variant.h"    // GVA_Variant
 
 
 // Internal: Each edge tracks its tail as an index to a node (in the
@@ -46,14 +47,6 @@ typedef struct
 } GVA_LCS_Graph;
 
 
-typedef struct
-{
-    gva_uint   start;
-    gva_uint   end;
-    GVA_String sequence;
-} GVA_Variant;
-
-
 GVA_LCS_Graph
 gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
@@ -69,7 +62,7 @@ gva_uint
 gva_edges(char const* const restrict observed,
     GVA_Node const head, GVA_Node const tail,
     bool const is_source, bool const is_sink,
-    GVA_Variant* const restrict variant);
+    GVA_Variant variant[static restrict 1]);
 
 
 #endif // GVA_LCS_GRAPH_H

@@ -3,7 +3,8 @@
 
 
 #include "allocator.h"      // GVA_Allocator
-#include "lcs_graph.h"      // GVA_LCS_Graph, GVA_Variant
+#include "lcs_graph.h"      // GVA_LCS_Graph
+#include "variant.h"        // GVA_Variant
 
 
 GVA_Variant*

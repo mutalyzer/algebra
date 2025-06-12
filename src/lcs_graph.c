@@ -14,7 +14,7 @@ gva_uint
 gva_edges(char const* const restrict observed,
     GVA_Node const head, GVA_Node const tail,
     bool const is_source, bool const is_sink,
-    GVA_Variant* const restrict variant)
+    GVA_Variant variant[static restrict 1])
 {
     intmax_t const row = (intmax_t) head.row - is_source;
     intmax_t const col = (intmax_t) head.col - is_source;
