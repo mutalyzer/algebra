@@ -294,8 +294,6 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
     size_t old_len = 0;
     char* observed = NULL;
 
-    fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
-
     while (true)
     {
         gva_uint const start = MAX(0, (intmax_t) variant.start - offset);
@@ -332,9 +330,11 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
             true, true,
             &supremal);
 
+/*
         fprintf(stderr, "%u--%u\n", start, end);
         fprintf(stderr, "%.*s\n%.*s\n", (int) (end - start), reference + start, (int) len, observed);
         fprintf(stderr, "SUPREMAL: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
+*/
 
         if ((supremal.start > start || supremal.start == 0) &&
             (supremal.end   < end   || supremal.end   == len_ref))

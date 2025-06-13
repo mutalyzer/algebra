@@ -247,9 +247,16 @@ main(int argc, char* argv[static argc + 1])
         } // if
         count += 1;
         GVA_LCS_Graph graph = gva_lcs_graph_from_variant(gva_std_allocator, seq.len, seq.str, variant);
-        fprintf(stdout, "%zu\t%s\t%s\t" GVA_VARIANT_FMT "\n", rsid, spdi, hgvs, GVA_VARIANT_PRINT(variant));
 
-        lcs_graph_raw(stderr, graph);
+        GVA_Variant supremal;
+        gva_edges(graph.observed.str,
+            graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
+            true, true,
+            &supremal);
+
+        fprintf(stdout, "%zu\t%s\t%s\t" GVA_VARIANT_FMT "\n", rsid, spdi, hgvs, GVA_VARIANT_PRINT(supremal));
+
+        //lcs_graph_raw(stderr, graph);
 
         graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) graph.observed.str, graph.observed.len, 0);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
