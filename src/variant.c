@@ -88,10 +88,6 @@ gva_parse_spdi(size_t const len, char const expression[static restrict len],
     if (tok == 0)
     {
         tok = match_sequence(len - idx, expression + idx);
-        if (tok == 0)
-        {
-            return 0;  // expected number (length) or sequence
-        } // if
         variants[0].end = tok;  // OVERFLOW
     } // if
     idx += tok;
@@ -105,10 +101,6 @@ gva_parse_spdi(size_t const len, char const expression[static restrict len],
 
     variants[0].sequence.str = expression + idx;
     tok = match_sequence(len - idx, expression + idx);
-    if (tok == 0)
-    {
-        return 0;  // expected sequence
-    } // if
     variants[0].sequence.len = tok;
     idx += tok;
 
