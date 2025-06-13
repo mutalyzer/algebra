@@ -290,9 +290,11 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const variant)
 {
-    gva_uint offset = MAX(10, gva_variant_length(variant) / 2);
+    gva_uint offset = MAX(8, gva_variant_length(variant) / 2);
     size_t old_len = 0;
     char* observed = NULL;
+
+    fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
 
     while (true)
     {
@@ -306,21 +308,21 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
             return (GVA_LCS_Graph) {NULL, NULL, NULL, {NULL, 0}, GVA_NULL, 0};
         } // if
 
-        for (size_t i = start; i < variant.start; ++i)
+        for (size_t i = 0; i < len; ++i)
         {
-            observed[i - start] = reference[i];
+            if (i + start < variant.start)
+            {
+                observed[i] = reference[i + start];
+            } // if
+            else if (i + start < variant.start + variant.sequence.len)
+            {
+                observed[i] = variant.sequence.str[i - (variant.start - start)];
+            } // if
+            else
+            {
+                observed[i] = reference[i + (variant.end - variant.start) + start - variant.sequence.len];
+            } // else
         } // for
-        for (size_t i = 0; i < variant.sequence.len; ++i)
-        {
-            observed[i + (variant.start - start)] = variant.sequence.str[i];
-        } // for
-        for (size_t i = variant.end; i < end; ++i)
-        {
-            observed[i - start] = reference[i];
-        } // for
-
-        fprintf(stderr, "%u--%u\n", start, end);
-        fprintf(stderr, "%.*s\n%.*s\n", (int) (end - start), reference + start, (int) len, observed);
 
         GVA_LCS_Graph graph = gva_lcs_graph_init(allocator, end - start, reference + start, len, observed, start);
 
@@ -330,7 +332,9 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
             true, true,
             &supremal);
 
-        fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
+        fprintf(stderr, "%u--%u\n", start, end);
+        fprintf(stderr, "%.*s\n%.*s\n", (int) (end - start), reference + start, (int) len, observed);
+        fprintf(stderr, "SUPREMAL: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
 
         if ((supremal.start > start || supremal.start == 0) &&
             (supremal.end   < end   || supremal.end   == len_ref))

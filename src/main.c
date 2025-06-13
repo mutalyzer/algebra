@@ -239,11 +239,15 @@ main(int argc, char* argv[static argc + 1])
     size_t count = 0;
     while (fscanf(stdin, "%zu\t%4096s\t%4096s\n", &rsid, spdi, hgvs) == 3)
     {
-        count += 1;
         GVA_Variant variant;
-        gva_parse_spdi(strlen(spdi), spdi, &variant);
-        fprintf(stderr, "%s: " GVA_VARIANT_FMT "\n", spdi, GVA_VARIANT_PRINT(variant));
+        if (!gva_parse_spdi(strlen(spdi), spdi, &variant))
+        {
+            fprintf(stderr, "PARSE ERROR: %zu\t%s\t%s\n", rsid, spdi, hgvs);
+            continue;
+        } // if
+        count += 1;
         GVA_LCS_Graph graph = gva_lcs_graph_from_variant(gva_std_allocator, seq.len, seq.str, variant);
+        fprintf(stdout, "%zu\t%s\t%s\t" GVA_VARIANT_FMT "\n", rsid, spdi, hgvs, GVA_VARIANT_PRINT(variant));
 
         lcs_graph_raw(stderr, graph);
 
@@ -252,6 +256,8 @@ main(int argc, char* argv[static argc + 1])
     } // while
 
     fprintf(stderr, "%zu\n", count);
+
+    seq.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) seq.str, seq.len, 0);
 
     return EXIT_SUCCESS;
 
