@@ -236,13 +236,17 @@ main(int argc, char* argv[static argc + 1])
     size_t rsid;
     char spdi[4096];
     char hgvs[4096];
+    char python[4096];
+    size_t distance;
+    size_t nodes;
+    size_t edges;
     size_t count = 0;
-    while (fscanf(stdin, "%zu\t%4096s\t%4096s\n", &rsid, spdi, hgvs) == 3)
+    while (fscanf(stdin, "%zu %4096s %4096s %4096s %zu %zu %zu\n", &rsid, spdi, hgvs, python, &distance, &nodes, &edges) == 7)
     {
         GVA_Variant variant;
         if (!gva_parse_spdi(strlen(spdi), spdi, &variant))
         {
-            fprintf(stderr, "PARSE ERROR: %zu\t%s\t%s\n", rsid, spdi, hgvs);
+            fprintf(stderr, "PARSE ERROR: %zu %s %s %s %zu %zu %zu\n", rsid, spdi, hgvs, python, distance, nodes, edges);
             continue;
         } // if
         count += 1;
@@ -254,9 +258,10 @@ main(int argc, char* argv[static argc + 1])
             true, true,
             &supremal);
 
-        fprintf(stdout, "%zu\t%s\t%s\t" GVA_VARIANT_FMT "\n", rsid, spdi, hgvs, GVA_VARIANT_PRINT(supremal));
+        fprintf(stdout, "%zu %s %s %s %zu %zu %zu " GVA_VARIANT_FMT " %u %zu %zu\n", rsid, spdi, hgvs, python, distance, nodes, edges, GVA_VARIANT_PRINT(supremal), graph.distance, array_length(graph.nodes), array_length(graph.edges));
 
         //lcs_graph_raw(stderr, graph);
+        //lcs_graph_dot(stderr, graph);
 
         graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) graph.observed.str, graph.observed.len, 0);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
