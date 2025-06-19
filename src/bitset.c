@@ -4,7 +4,8 @@
 
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "array.h"  // ARRAY_*, array_*
+#include "array.h"      // ARRAY_*, array_*
+#include "bitset.h"     // bitset_*
 
 
 inline size_t*

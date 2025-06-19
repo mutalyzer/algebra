@@ -11,7 +11,8 @@
 #include "../include/types.h"       // GVA_NULL, GVA_String, gva_uint
 #include "../include/utils.h"       // gva_fasta_sequence
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi
-#include "array.h"  // ARRAY_DESTROY, array_length
+#include "array.h"      // ARRAY_DESTROY, array_length
+#include "bitset.h"     // bitset_*
 
 
 static void
@@ -211,6 +212,7 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph)
 int
 main(int argc, char* argv[static argc + 1])
 {
+    /*
     GVA_String seq = {NULL, 0};
     FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
     if (stream != NULL)
@@ -252,7 +254,7 @@ main(int argc, char* argv[static argc + 1])
     seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 
     return EXIT_SUCCESS;
-
+    */
 
     if (argc != 3)
     {
@@ -282,6 +284,91 @@ main(int argc, char* argv[static argc + 1])
         fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(canonical[i]));
     } // for
     canonical = ARRAY_DESTROY(gva_std_allocator, canonical);
+
+    size_t* dels = bitset_init(gva_std_allocator, graph.supremal.end - graph.supremal.start);
+    size_t* as = bitset_init(gva_std_allocator, graph.supremal.end - graph.supremal.start + 1);
+    size_t* cs = bitset_init(gva_std_allocator, graph.supremal.end - graph.supremal.start + 1);
+    size_t* gs = bitset_init(gva_std_allocator, graph.supremal.end - graph.supremal.start + 1);
+    size_t* ts = bitset_init(gva_std_allocator, graph.supremal.end - graph.supremal.start + 1);
+
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            GVA_Variant variant;
+            gva_uint const count = gva_edges(graph.observed.str,
+                graph.nodes[i], graph.nodes[graph.edges[j].tail],
+                i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                &variant);
+            for (gva_uint k = variant.start; k < variant.end + count - 1; ++k)
+            {
+                bitset_add(dels, k - graph.supremal.start);
+            } // for
+            size_t mask = 0;
+            for (size_t k = 0; k < variant.sequence.len; ++k)
+            {
+                if (variant.sequence.str[k] == 'A')
+                {
+                    mask |= 1;
+                } // if
+                else if (variant.sequence.str[k] == 'C')
+                {
+                    mask |= 2;
+                } // if
+                else if (variant.sequence.str[k] == 'G')
+                {
+                    mask |= 4;
+                } // if
+                else if (variant.sequence.str[k] == 'T')
+                {
+                    mask |= 8;
+                } // if
+            } // for
+            if ((mask & 1) == 1)
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
+                    bitset_add(as, k - graph.supremal.start);
+                } // for
+            } // if
+            if ((mask & 2) == 2)
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
+                    bitset_add(cs, k - graph.supremal.start);
+                } // for
+            } // if
+            if ((mask & 4) == 4)
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
+                    bitset_add(gs, k - graph.supremal.start);
+                } // for
+            } // if
+            if ((mask & 8) == 8)
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
+                    bitset_add(ts, k - graph.supremal.start);
+                } // for
+            } // if
+        } // for
+    } // for
+
+    for (size_t i = 0; i < array_length(dels); ++i)
+    {
+        fprintf(stderr, "%2zu: %064zx\n", i, dels[i]);
+        fprintf(stderr, "%2zu: %064zx\n", i, as[i]);
+        fprintf(stderr, "%2zu: %064zx\n", i, cs[i]);
+        fprintf(stderr, "%2zu: %064zx\n", i, gs[i]);
+        fprintf(stderr, "%2zu: %064zx\n", i, ts[i]);
+    } // for
+
+    ts = bitset_destroy(gva_std_allocator, ts);
+    gs = bitset_destroy(gva_std_allocator, gs);
+    cs = bitset_destroy(gva_std_allocator, cs);
+    as = bitset_destroy(gva_std_allocator, as);
+    dels = bitset_destroy(gva_std_allocator, dels);
 
     /*
     size_t const distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
