@@ -3,9 +3,6 @@
 #include <stddef.h>     // NULL, size_t
 
 
-#include <stdio.h>      // DEBUG
-
-
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/variant.h"     // GVA_Variant, gva_variant_length
@@ -15,7 +12,7 @@
 
 
 gva_uint
-gva_edges(char const* const restrict observed,
+gva_edges(char const observed[static restrict 1],
     GVA_Node const head, GVA_Node const tail,
     bool const is_source, bool const is_sink,
     GVA_Variant variant[static restrict 1])
@@ -48,7 +45,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 {
     LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, shift);
 
-    GVA_LCS_Graph graph = {NULL, NULL, NULL, {observed, len_obs}, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
+    GVA_LCS_Graph graph = {NULL, NULL, NULL, {0, 0, {observed, 0}}, {observed, len_obs}, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
 
     if (lcs.nodes == NULL || graph.distance == 0)
     {
@@ -82,6 +79,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             len_ref, len_obs, 0, GVA_NULL, GVA_NULL
         }));
+        graph.supremal = (GVA_Variant) {shift, len_ref, {observed, len_obs}};
         return graph;
     } // if
 
@@ -261,7 +259,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
         }));
     } // if
-    if (len == 0 || lcs.nodes[prev].idx != 0)
+    if (graph.nodes != NULL && (len == 0 || lcs.nodes[prev].idx != 0))
     {
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[0].row + graph.nodes[0].length, graph.nodes[0].col + graph.nodes[0].length, 0, GVA_NULL, 0
@@ -275,6 +273,11 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         graph.nodes[source.idx].length -= graph.local_supremal[0].length;
 
         graph.nodes[0].length -= len;
+
+        gva_edges(graph.observed.str,
+            graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
+            true, true,
+            &graph.supremal);
     } // if
 
     graph.source = source.idx;
@@ -303,7 +306,7 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
         observed = allocator.allocate(allocator.context, observed, old_len, len);
         if (observed == NULL)
         {
-            return (GVA_LCS_Graph) {NULL, NULL, NULL, {NULL, 0}, GVA_NULL, 0};
+            return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {NULL, 0}}, {NULL, 0}, GVA_NULL, 0};
         } // if
 
         for (size_t i = 0; i < len; ++i)
@@ -324,20 +327,8 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
 
         GVA_LCS_Graph graph = gva_lcs_graph_init(allocator, end - start, reference + start, len, observed, start);
 
-        GVA_Variant supremal;
-        gva_edges(graph.observed.str,
-            graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
-            true, true,
-            &supremal);
-
-/*
-        fprintf(stderr, "%u--%u\n", start, end);
-        fprintf(stderr, "%.*s\n%.*s\n", (int) (end - start), reference + start, (int) len, observed);
-        fprintf(stderr, "SUPREMAL: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
-*/
-
-        if ((supremal.start > start || supremal.start == 0) &&
-            (supremal.end   < end   || supremal.end   == len_ref))
+        if ((graph.supremal.start > start || graph.supremal.start == 0) &&
+            (graph.supremal.end   < end   || graph.supremal.end   == len_ref))
         {
             return graph;
         } // if

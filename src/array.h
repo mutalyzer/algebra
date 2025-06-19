@@ -32,13 +32,13 @@ array_init(GVA_Allocator const allocator, size_t const capacity,
 
 // Returns the number of elements currently in use by the array.
 size_t
-array_length(void* const self);
+array_length(void const* const self);
 
 
 // Internal: Returns the metadata of the array.
 // `self` must not be `NULL`.
 Array*
-array_header(void* const self);
+array_header(void const* const self);
 
 
 // Internal: Returns the possibly (re)allocated array with place for

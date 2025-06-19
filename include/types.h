@@ -2,6 +2,7 @@
 #define GVA_TYPES_H
 
 
+#include <stddef.h>     // size_t
 #include <stdint.h>     // uint32_t, UINT32_MAX
 
 
@@ -18,7 +19,7 @@ static gva_uint const GVA_NULL = UINT32_MAX;
 typedef struct
 {
     char const* str;
-    gva_uint    len;
+    size_t      len;
 } GVA_String;
 
 

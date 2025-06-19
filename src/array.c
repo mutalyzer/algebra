@@ -20,14 +20,14 @@ array_init(GVA_Allocator const allocator, size_t const capacity,
 
 
 inline size_t
-array_length(void* const self)
+array_length(void const* const self)
 {
     return self == NULL ? 0 : array_header(self)->length;
 } // array_length
 
 
 inline Array*
-array_header(void* const self)
+array_header(void const* const self)
 {
     return (Array*) self - 1;
 } // array_header

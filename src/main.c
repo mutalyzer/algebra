@@ -145,21 +145,7 @@ lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph)
             fprintf(stream, "        \"" GVA_VARIANT_FMT "\"%s\n", GVA_VARIANT_PRINT(variant), i < array_length(graph.local_supremal) - 2 ? "," : "");
         } // for
     } // if
-    fprintf(stream, "    ],\n    \"supremal\": ");
-    if (array_length(graph.local_supremal) > 1)
-    {
-        GVA_Variant variant;
-        gva_edges(graph.observed.str,
-            graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
-            true, true,
-            &variant);
-        fprintf(stream, "\"" GVA_VARIANT_FMT "\",\n", GVA_VARIANT_PRINT(variant));
-    } // if
-    else
-    {
-        fprintf(stream, "\"0:0/\",\n");
-    } // else
-    
+    fprintf(stream, "    ],\n    \"supremal\": \"" GVA_VARIANT_FMT "\",\n", GVA_VARIANT_PRINT(graph.supremal));
     fprintf(stream, "    \"canonical\": [\n");
     GVA_Variant* canonical = gva_extract(gva_std_allocator, graph);
     for (size_t i = 0; i < array_length(canonical); ++i)
@@ -252,24 +238,18 @@ main(int argc, char* argv[static argc + 1])
         count += 1;
         GVA_LCS_Graph graph = gva_lcs_graph_from_variant(gva_std_allocator, seq.len, seq.str, variant);
 
-        GVA_Variant supremal;
-        gva_edges(graph.observed.str,
-            graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
-            true, true,
-            &supremal);
-
-        fprintf(stdout, "%zu %s %s %s %zu %zu %zu " GVA_VARIANT_FMT " %u %zu %zu\n", rsid, spdi, hgvs, python, distance, nodes, edges, GVA_VARIANT_PRINT(supremal), graph.distance, array_length(graph.nodes), array_length(graph.edges));
+        fprintf(stdout, "%zu %s %s %s %zu %zu %zu " GVA_VARIANT_FMT " %u %zu %zu\n", rsid, spdi, hgvs, python, distance, nodes, edges, GVA_VARIANT_PRINT(graph.supremal), graph.distance, array_length(graph.nodes), array_length(graph.edges));
 
         //lcs_graph_raw(stderr, graph);
         //lcs_graph_dot(stderr, graph);
 
-        graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) graph.observed.str, graph.observed.len, 0);
+        graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, graph.observed.str, graph.observed.len, 0);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
     } // while
 
     fprintf(stderr, "%zu\n", count);
 
-    seq.str = gva_std_allocator.allocate(gva_std_allocator.context, (char*) seq.str, seq.len, 0);
+    seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 
     return EXIT_SUCCESS;
 

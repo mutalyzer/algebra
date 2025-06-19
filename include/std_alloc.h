@@ -12,21 +12,21 @@
 // Provides a simple global allocation strategy based on `realloc` from
 // libc.
 static inline void*
-gva_std_allocate(void* const restrict context, void* const restrict ptr, size_t const old_size, size_t const new_size)
+gva_std_allocate(void* const restrict context, void const* const restrict ptr, size_t const old_size, size_t const new_size)
 {
     (void) context;
     (void) old_size;
 
     if (new_size == 0)
     {
-        free(ptr);
+        free((void*) ptr);
         return NULL;
     } // if
 
-    void* const new_ptr = realloc(ptr, new_size);
+    void* const new_ptr = realloc((void*) ptr, new_size);
     if (new_ptr == NULL)
     {
-        free(ptr);
+        free((void*) ptr);
         return NULL;  // OOM
     } // if
 

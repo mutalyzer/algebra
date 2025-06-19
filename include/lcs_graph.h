@@ -38,12 +38,13 @@ typedef struct
 // entry point in the `nodes` array.
 typedef struct
 {
-    GVA_Node*  nodes;
-    GVA_Edge*  edges;
-    GVA_Node*  local_supremal;
-    GVA_String observed;
-    gva_uint   source;
-    gva_uint   distance;
+    GVA_Node*   nodes;
+    GVA_Edge*   edges;
+    GVA_Node*   local_supremal;
+    GVA_Variant supremal;
+    GVA_String  observed;  // FIXME: ownership and destroy
+    gva_uint    source;
+    gva_uint    distance;
 } GVA_LCS_Graph;
 
 
@@ -65,7 +66,7 @@ gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self);
 
 
 gva_uint
-gva_edges(char const* const restrict observed,
+gva_edges(char const observed[static restrict 1],
     GVA_Node const head, GVA_Node const tail,
     bool const is_source, bool const is_sink,
     GVA_Variant variant[static restrict 1]);
