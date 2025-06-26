@@ -1,6 +1,7 @@
 #include <inttypes.h>   // intmax_t
 #include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
+#include <string.h>     // memset
 
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -171,10 +172,7 @@ lcs_align(GVA_Allocator const allocator,
         return lcs;
     } // if
 
-    for (size_t i = 0; i < size; ++i)
-    {
-        context.diagonals[i] = 0;
-    } // for
+    memset(context.diagonals, 0, size * sizeof(*context.diagonals));
 
     for (size_t i = 0; i < MIN(len_ref, len_obs); ++i)
     {

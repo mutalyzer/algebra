@@ -1,6 +1,7 @@
 // FIXME: __builtin_popcountll
 #include <limits.h>     // CHAR_BIT
 #include <stddef.h>     // NULL, size_t
+#include <string.h>     // memset
 
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -18,11 +19,7 @@ bitset_init(GVA_Allocator const allocator, size_t const size)
         return NULL;
     } // if
     array_header(bitset)->length = len;
-    for (size_t i = 0; i < len; ++i)
-    {
-        bitset[i] = 0;
-    } // for
-    return bitset;
+    return memset(bitset, 0, len * sizeof(*bitset));
 } // bitset_init
 
 

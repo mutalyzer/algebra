@@ -1,6 +1,7 @@
 #include <inttypes.h>   // intmax_t
 #include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
+#include <string.h>     // memcpy
 
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -302,6 +303,7 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
         gva_uint const start = MAX(0, (intmax_t) variant.start - offset);
         gva_uint const end = MIN(len_ref, variant.end + offset);
 
+        // FIXME: len == 0?
         size_t const len = (variant.start - start) + variant.sequence.len + (end - variant.end);
         observed = allocator.allocate(allocator.context, observed, old_len, len);
         if (observed == NULL)
@@ -309,21 +311,9 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
             return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL, 0};
         } // if
 
-        for (size_t i = 0; i < len; ++i)
-        {
-            if (i + start < variant.start)
-            {
-                observed[i] = reference[i + start];
-            } // if
-            else if (i + start < variant.start + variant.sequence.len)
-            {
-                observed[i] = variant.sequence.str[i - (variant.start - start)];
-            } // if
-            else
-            {
-                observed[i] = reference[i + (variant.end - variant.start) + start - variant.sequence.len];
-            } // else
-        } // for
+        memcpy(observed, reference + start, variant.start - start);
+        memcpy(observed + variant.start - start, variant.sequence.str, variant.sequence.len);
+        memcpy(observed + variant.start - start + variant.sequence.len, reference + variant.end, end - variant.end);
 
         GVA_LCS_Graph graph = gva_lcs_graph_init(allocator, end - start, reference + start, len, observed, start);
 
