@@ -29,8 +29,8 @@ gva_edges(char const observed[static restrict 1],
 
     *variant = (GVA_Variant) {
         row + head_offset, tail.row + tail_offset, {
-            observed + col + head_offset,
-            (tail.col + tail_offset) - (col + head_offset)
+            (tail.col + tail_offset) - (col + head_offset),
+            observed + col + head_offset
         }
     };
     return MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
@@ -45,7 +45,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 {
     LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, shift);
 
-    GVA_LCS_Graph graph = {NULL, NULL, NULL, {0, 0, {observed, 0}}, {observed, len_obs}, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
+    GVA_LCS_Graph graph = {NULL, NULL, NULL, {0, 0, {0, observed}}, {len_obs, observed}, GVA_NULL, len_ref + len_obs - 2 * lcs.length};
 
     if (lcs.nodes == NULL || graph.distance == 0)
     {
@@ -79,7 +79,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             len_ref, len_obs, 0, GVA_NULL, GVA_NULL
         }));
-        graph.supremal = (GVA_Variant) {shift, len_ref, {observed, len_obs}};
+        graph.supremal = (GVA_Variant) {shift, len_ref, {len_obs, observed}};
         return graph;
     } // if
 
@@ -306,7 +306,7 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
         observed = allocator.allocate(allocator.context, observed, old_len, len);
         if (observed == NULL)
         {
-            return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {NULL, 0}}, {NULL, 0}, GVA_NULL, 0};
+            return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL, 0};
         } // if
 
         for (size_t i = 0; i < len; ++i)

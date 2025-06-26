@@ -18,8 +18,8 @@ static gva_uint const GVA_NULL = UINT32_MAX;
 
 typedef struct
 {
-    char const* str;
     size_t      len;
+    char const* str;
 } GVA_String;
 
 

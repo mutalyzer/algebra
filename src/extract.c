@@ -141,8 +141,8 @@ gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
             gva_uint const end_offset = visited[tail].end - graph.nodes[tail].row;
             GVA_Variant const variant = {
                 visited[tail].start, visited[tail].end, {
-                    graph.observed.str + graph.nodes[head].col + start_offset,
-                    (graph.nodes[tail].col + end_offset) - (graph.nodes[head].col + start_offset)
+                    (graph.nodes[tail].col + end_offset) - (graph.nodes[head].col + start_offset),
+                    graph.observed.str + graph.nodes[head].col + start_offset
                 }
             };
             ARRAY_APPEND(allocator, canonical, variant);

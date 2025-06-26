@@ -13,7 +13,7 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const restrict stream)
 {
     static size_t const FASTA_LINE_SIZE = 65536;
     size_t capacity = FASTA_LINE_SIZE;
-    GVA_String seq = {allocator.allocate(allocator.context, NULL, 0, capacity), 0};
+    GVA_String seq = {0, allocator.allocate(allocator.context, NULL, 0, capacity)};
     if (seq.str == NULL)
     {
         return seq;
