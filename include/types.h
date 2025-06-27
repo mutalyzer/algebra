@@ -2,8 +2,12 @@
 #define GVA_TYPES_H
 
 
+#include <inttypes.h>   // PRIu32
 #include <stddef.h>     // size_t
 #include <stdint.h>     // uint32_t, UINT32_MAX
+
+
+#define GVA_UINT_FMT PRIu32
 
 
 // An unsigned integer type to store any position on a reference

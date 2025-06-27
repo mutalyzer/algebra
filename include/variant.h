@@ -5,11 +5,11 @@
 #include <stddef.h>     // size_t
 
 
-#include "types.h"      // GVA_String
+#include "types.h"      // GVA_UINT_FMT, GVA_String
 
 
 #define GVA_VARIANT_PRINT(variant) variant.start, variant.end, (int) variant.sequence.len, variant.sequence.str
-#define GVA_VARIANT_FMT "%u:%u/%.*s"
+#define GVA_VARIANT_FMT "%" GVA_UINT_FMT ":%" GVA_UINT_FMT "/%.*s"
 
 
 typedef struct
