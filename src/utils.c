@@ -5,7 +5,8 @@
 
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/utils.h"       // GVA_String, gva_fasta_sequence
+#include "../include/types.h"       // GVA_String
+#include "../include/utils.h"       // gva_fasta_sequence
 
 
 GVA_String

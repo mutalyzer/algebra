@@ -1,9 +1,11 @@
 #include <stdbool.h>    // bool
-#include <stddef.h>     // size_t
+#include <stddef.h>     // NULL, size_t
+#include <string.h>     // memcpy
 
 
-#include "../include/variant.h"     // gva_parse_spdi
-#include "common.h"     // gva_uint
+#include "../include/allocator.h"   // GVA_Allocator
+#include "../include/types.h"       // gva_uint, GVA_String
+#include "../include/variant.h"     // gva_parse_spdi, gva_patch
 
 
 static inline bool
@@ -56,6 +58,23 @@ match_until(size_t const len, char const expression[static len], char const deli
     } // while
     return idx < len && expression[idx] == delim ? idx : 0;
 } // match_until
+
+
+static inline GVA_String
+concat(GVA_Allocator const allocator,
+    GVA_String lhs, GVA_String const rhs)
+{
+    size_t const len = lhs.len + rhs.len;
+    lhs.str = allocator.allocate(allocator.context, lhs.str, lhs.len, len);
+    if (lhs.str == NULL)
+    {
+        return (GVA_String) {0, NULL};
+    } // if
+
+    memcpy((char*) lhs.str + lhs.len, rhs.str, rhs.len);
+    lhs.len = len;
+    return lhs;
+} // concat
 
 
 size_t
@@ -113,3 +132,26 @@ gva_variant_length(GVA_Variant const variant)
 {
     return variant.end - variant.start + variant.sequence.len;
 } // gva_variant_length
+
+
+GVA_String
+gva_patch(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const n, GVA_Variant const variants[static restrict n])
+{
+    GVA_String observed = {0, NULL};
+    size_t start = 0;
+    for (size_t i = 0; i < n; ++i)
+    {
+        observed = concat(allocator, observed, (GVA_String) {variants[i].start - start, reference + start});
+        observed = concat(allocator, observed, variants[i].sequence);
+        start = variants[i].end;
+    } // for
+
+    if (start < len_ref)
+    {
+        observed = concat(allocator, observed, (GVA_String) {len_ref - start, reference + start});
+    } // if
+
+    return observed;
+} // gva_patch
