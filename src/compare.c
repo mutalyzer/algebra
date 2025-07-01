@@ -1,20 +1,25 @@
-#include <stdio.h>
-#include <string.h>                 // memchr, memcpy, strncmp
+#include <stdio.h>      // FIXME: DEBUG
+
+
+#include <stddef.h>     // NULL, size_t
+#include <string.h>     // memchr, memcpy, strncmp
+
+
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
-#include "../include/relations.h"   // GVA_Relation, GVA_DISJOINT
+#include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS, GVA_DISJOINT,
+                                    // GVA_EQUIVALENT GVA_IS_CONTAINED, GVA_OVERLAP
 #include "../include/variant.h"     // GVA_Variant
 #include "array.h"      // ARRAY_DESTROY, array_length
 #include "common.h"     // GVA_NULL, gva_uint, MAX, MIN
 #include "bitset.h"     // bitset_*
 
 
-
 GVA_Relation
 gva_compare(GVA_Allocator const allocator,
-            size_t const len_ref, char const reference[static len_ref],
-            GVA_Variant const lhs, GVA_Variant const rhs)
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const lhs, GVA_Variant const rhs)
 {
     GVA_Relation relation;
 
@@ -23,12 +28,12 @@ gva_compare(GVA_Allocator const allocator,
         strncmp(lhs.sequence.str, rhs.sequence.str, MIN(lhs.sequence.len, rhs.sequence.len)) == 0)
     {
         return GVA_EQUIVALENT;
-    }
+    } // if
 
     if (lhs.start > rhs.end || rhs.start > lhs.end)
     {
         return GVA_DISJOINT;
-    }
+    } // if
 
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
@@ -40,7 +45,7 @@ gva_compare(GVA_Allocator const allocator,
     if (lhs_len > 0 && lhs_obs == NULL)
     {
         return -1;
-    }
+    } // if
 
     size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
 //    fprintf(stderr, "rhs_len: %zu\n", rhs_len);
@@ -49,7 +54,7 @@ gva_compare(GVA_Allocator const allocator,
     {
         lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
         return -1;
-    }
+    } // if
 
     size_t const lhs_dist = gva_edit_distance(allocator, lhs.end - lhs.start, reference + lhs.start, lhs.sequence.len, lhs.sequence.str);
     size_t const rhs_dist = gva_edit_distance(allocator, rhs.end - rhs.start, reference + rhs.start, rhs.sequence.len, rhs.sequence.str);
@@ -73,7 +78,7 @@ gva_compare(GVA_Allocator const allocator,
     if (lhs_dist + rhs_dist == dist)
     {
         relation = GVA_DISJOINT;
-    } //
+    } // if
     else if (lhs_dist - rhs_dist == dist)
     {
         relation = GVA_CONTAINS;
@@ -82,13 +87,13 @@ gva_compare(GVA_Allocator const allocator,
     {
         relation = GVA_IS_CONTAINED;
     } // if
-    else {
-
+    else
+    {
         // inject random bits
         GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, lhs_len, lhs_obs, start);
         GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, rhs_len, rhs_obs, start);
 
-        gva_uint lhs_sup_len = end - start;
+        gva_uint const lhs_sup_len = end - start;
 //        fprintf(stderr, "lhs suplen %d\n", lhs_sup_len);
         size_t* lhs_dels = bitset_init(allocator, lhs_sup_len + 1); // can be one shorter
         size_t* lhs_as = bitset_init(allocator, lhs_sup_len + 1);
@@ -96,7 +101,7 @@ gva_compare(GVA_Allocator const allocator,
         size_t* lhs_gs = bitset_init(allocator, lhs_sup_len + 1);
         size_t* lhs_ts = bitset_init(allocator, lhs_sup_len + 1);
 
-        gva_uint rhs_sup_len = end - start;
+        gva_uint const rhs_sup_len = end - start;
 //        fprintf(stderr, "rhs suplen %d\n", rhs_sup_len);
         size_t* rhs_dels = bitset_init(allocator, rhs_sup_len + 1); // can be one shorter
         size_t* rhs_as = bitset_init(allocator, rhs_sup_len + 1);
@@ -159,11 +164,10 @@ gva_compare(GVA_Allocator const allocator,
         rhs_cs = bitset_destroy(allocator, rhs_cs);
         rhs_as = bitset_destroy(allocator, rhs_as);
         rhs_dels = bitset_destroy(allocator, rhs_dels);
-
     } // else
 
     rhs_obs = allocator.allocate(allocator.context, rhs_obs, rhs_len, 0);
     lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
 
     return relation;
-}
+} // gva_compare
