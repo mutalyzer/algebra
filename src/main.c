@@ -4,6 +4,7 @@
 #include <string.h>     // strlen
 
 
+#include "../include/compare.h"
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/extract.h"     // gva_extract
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
@@ -212,6 +213,58 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph)
 int
 main(int argc, char* argv[static argc + 1])
 {
+    GVA_String seq = {0, NULL};
+    FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
+    if (stream != NULL)
+    {
+        seq = gva_fasta_sequence(gva_std_allocator, stream);
+        fclose(stream);
+    } // if
+
+    // NC_000001.11:169556314:6:TTTTTCTCT 3 NC_000001.11:169556314:8:TTTTTGTCTGGCTGC 7 4 is_contained
+    char lhs_spdi[4096];
+    size_t lhs_dist;
+    char rhs_spdi[4096];
+    size_t rhs_dist;
+    size_t dist;
+    char python[32];
+    size_t count = 0;
+    while (fscanf(stdin, "%4096s %zu %4096s %zu %zu %32s\n", lhs_spdi, &lhs_dist, rhs_spdi, &rhs_dist, &dist, python) == 6)
+    {
+        GVA_Variant lhs;
+        if (!gva_parse_spdi(strlen(lhs_spdi), lhs_spdi, &lhs))
+        {
+            fprintf(stderr, "PARSE ERROR: %s\n", lhs_spdi);
+            continue;
+        } // if
+        GVA_Variant rhs;
+        if (!gva_parse_spdi(strlen(rhs_spdi), rhs_spdi, &rhs))
+        {
+            fprintf(stderr, "PARSE ERROR: %s\n", rhs_spdi);
+            continue;
+        } // if
+        count += 1;
+//        printf("%d\n", gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs));
+        if (strcmp(python, GVA_RELATION_LABELS[gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs)]) != 0)
+        {
+            printf("different %s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs)]);
+        }
+
+    }
+    printf("%zu\n", count);
+
+    return 0;
+
+
+    char const* const r = "CCACC";
+    GVA_Variant lhs = {1, 1, {1, "T"}};
+    GVA_Variant rhs = {1, 1, {1, "G"}};
+
+    printf("%s\n", GVA_RELATION_LABELS[gva_compare(gva_std_allocator, strlen(r), r, lhs, rhs)]);
+//    return gva_compare(gva_std_allocator, strlen(r), r, lhs, rhs);
+
+    return 0;
+
     /*
     GVA_String seq = {NULL, 0};
     FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
@@ -304,48 +357,48 @@ main(int argc, char* argv[static argc + 1])
             {
                 bitset_add(dels, k - graph.supremal.start);
             } // for
-            size_t mask = 0;
-            for (size_t k = 0; k < variant.sequence.len; ++k)
+            size_t mask = 0x0;
+            for (size_t k = 0; k < variant.sequence.len && mask < 0xFULL; ++k)
             {
                 if (variant.sequence.str[k] == 'A')
                 {
-                    mask |= 1;
+                    mask |= 0x1ULL;
                 } // if
                 else if (variant.sequence.str[k] == 'C')
                 {
-                    mask |= 2;
+                    mask |= 0x2ULL;
                 } // if
                 else if (variant.sequence.str[k] == 'G')
                 {
-                    mask |= 4;
+                    mask |= 0x4ULL;
                 } // if
                 else if (variant.sequence.str[k] == 'T')
                 {
-                    mask |= 8;
+                    mask |= 0x8ULL;
                 } // if
             } // for
-            if ((mask & 1) == 1)
+            if ((mask & 0x1ULL) == 0x1ULL)
             {
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
                     bitset_add(as, k - graph.supremal.start);
                 } // for
             } // if
-            if ((mask & 2) == 2)
+            if ((mask & 0x2ULL) == 0x2ULL)
             {
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
                     bitset_add(cs, k - graph.supremal.start);
                 } // for
             } // if
-            if ((mask & 4) == 4)
+            if ((mask & 0x4ULL) == 0x4ULL)
             {
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
                     bitset_add(gs, k - graph.supremal.start);
                 } // for
             } // if
-            if ((mask & 8) == 8)
+            if ((mask & 0x8ULL) == 0x8ULL)
             {
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
@@ -357,11 +410,11 @@ main(int argc, char* argv[static argc + 1])
 
     for (size_t i = 0; i < array_length(dels); ++i)
     {
-        fprintf(stderr, "%2zu: %064zx\n", i, dels[i]);
-        fprintf(stderr, "%2zu: %064zx\n", i, as[i]);
-        fprintf(stderr, "%2zu: %064zx\n", i, cs[i]);
-        fprintf(stderr, "%2zu: %064zx\n", i, gs[i]);
-        fprintf(stderr, "%2zu: %064zx\n", i, ts[i]);
+        fprintf(stderr, "%2zu: %016zx\n", i, dels[i]);
+        fprintf(stderr, "%2zu: %016zx\n", i, as[i]);
+        fprintf(stderr, "%2zu: %016zx\n", i, cs[i]);
+        fprintf(stderr, "%2zu: %016zx\n", i, gs[i]);
+        fprintf(stderr, "%2zu: %016zx\n", i, ts[i]);
     } // for
 
     ts = bitset_destroy(gva_std_allocator, ts);
