@@ -1,13 +1,14 @@
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, fclose, fopen, fprintf
 #include <stdlib.h>     // EXIT_*
-#include <string.h>     // strlen
+#include <string.h>     // strcmp, strlen
 
 
-#include "../include/compare.h"
+#include "../include/compare.h"     // gva_compare
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/extract.h"     // gva_extract
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
+#include "../include/relations.h"   // GVA_RELATION_LABELS
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/types.h"       // GVA_NULL, GVA_String, gva_uint
 #include "../include/utils.h"       // gva_fasta_sequence
@@ -209,8 +210,9 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph)
     } // for
 } // lcs_graph_raw
 
-int
-compare()
+
+static int
+compare(void)
 {
     GVA_String seq = {0, NULL};
     FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
@@ -256,11 +258,12 @@ compare()
     seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 
     return 0;
-}
+} // compare
 
 
+// FIXME: static
 int
-all_graphs()
+all_graphs(void)
 {
     GVA_String seq = {0, NULL};
     FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
@@ -303,11 +306,12 @@ all_graphs()
     seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 
     return EXIT_SUCCESS;
-}
+} // all_graphs
 
 
+// FIXME: static
 int
-extract(int argc, char* argv[static argc + 1])
+extract(int const argc, char* argv[static argc + 1])
 {
     if (argc != 3)
     {
@@ -346,12 +350,13 @@ extract(int argc, char* argv[static argc + 1])
     gva_lcs_graph_destroy(gva_std_allocator, graph);
 
     return EXIT_SUCCESS;
+} // extract
 
-}
 
 int
 main(int argc, char* argv[static argc + 1])
 {
+    (void) argv;
     //check python relation output
     return compare();
 
@@ -360,5 +365,4 @@ main(int argc, char* argv[static argc + 1])
 
     //extract single variant
     //return extract(argc, argv);
-
 } // main
