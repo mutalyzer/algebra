@@ -8,8 +8,9 @@
 
 
 GVA_Relation
-gva_compare(GVA_Allocator const allocator, size_t const len_ref, char const reference[static len_ref],
-            GVA_Variant const lhs, GVA_Variant const rhs);
+gva_compare(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const lhs, GVA_Variant const rhs);
 
 
 #endif // GVA_COMPARE_H
