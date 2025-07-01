@@ -252,6 +252,7 @@ main(int argc, char* argv[static argc + 1])
 
     }
     printf("%zu\n", count);
+    seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 
     return 0;
 
