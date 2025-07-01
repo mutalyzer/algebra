@@ -273,7 +273,8 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         graph.nodes[source.idx].col += graph.local_supremal[0].length;
         graph.nodes[source.idx].length -= graph.local_supremal[0].length;
 
-        graph.nodes[0].length -= len;
+        // TODO: what to do with length?!
+        // graph.nodes[0].length -= len;
 
         gva_edges(graph.observed.str,
             graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],
