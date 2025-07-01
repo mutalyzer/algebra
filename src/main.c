@@ -270,29 +270,59 @@ all_graphs()
         fclose(stream);
     } // if
 
+    bool check = true;
     size_t rsid;
     char spdi[4096];
     char hgvs[4096];
-    char python[4096];
-    size_t distance;
-    size_t nodes;
-    size_t edges;
+    char python_sup[4096];
+    char c_sup[4096];
+    size_t python_distance;
+    size_t python_nodes;
+    size_t python_edges;
     size_t count = 0;
-    while (fscanf(stdin, "%zu %4096s %4096s %4096s %zu %zu %zu\n", &rsid, spdi, hgvs, python, &distance, &nodes, &edges) == 7)
+    while (fscanf(stdin, "%zu %4096s %4096s %4096s %zu %zu %zu\n", &rsid, spdi, hgvs, python_sup, &python_distance, &python_nodes, &python_edges) == 7)
     {
         GVA_Variant variant;
         if (!gva_parse_spdi(strlen(spdi), spdi, &variant))
         {
-            fprintf(stderr, "PARSE ERROR: %zu %s %s %s %zu %zu %zu\n", rsid, spdi, hgvs, python, distance, nodes, edges);
+            fprintf(stderr, "PARSE ERROR: %zu %s %s %s %zu %zu %zu\n", rsid, spdi, hgvs, python_sup, python_distance, python_nodes, python_edges);
             continue;
         } // if
         count += 1;
         GVA_LCS_Graph graph = gva_lcs_graph_from_variant(gva_std_allocator, seq.len, seq.str, variant);
 
-        fprintf(stdout, "%zu %s %s %s %zu %zu %zu " GVA_VARIANT_FMT " %u %zu %zu\n", rsid, spdi, hgvs, python, distance, nodes, edges, GVA_VARIANT_PRINT(graph.supremal), graph.distance, array_length(graph.nodes), array_length(graph.edges));
+        //fprintf(stdout, "%zu %s %s %s %zu %zu %zu " GVA_VARIANT_FMT " %u %zu %zu\n",
+        //        rsid, spdi, hgvs, python_sup, python_distance, python_nodes, python_edges, GVA_VARIANT_PRINT(graph.supremal), graph.distance, array_length(graph.nodes), array_length(graph.edges));
+        sprintf(c_sup, GVA_VARIANT_FMT, GVA_VARIANT_PRINT(graph.supremal));
+        fprintf(stderr, "%s %s\n", python_sup, c_sup);
+        if (check && strcmp(python_sup, c_sup))
+        {
+            fprintf(stderr, "Different supremal!\n");
+        }
 
         //lcs_graph_raw(stderr, graph);
         //lcs_graph_dot(stderr, graph);
+
+        gva_uint start = 42;
+        gva_uint end = 42;
+        gva_uint start_accent = 42;
+        gva_uint end_accent = 42;
+
+        gva_uint sup_len = end - start;
+        size_t* dels = bitset_init(gva_std_allocator, sup_len + 1);
+        size_t* as = bitset_init(gva_std_allocator, sup_len + 1);
+        size_t* cs = bitset_init(gva_std_allocator, sup_len + 1);
+        size_t* gs = bitset_init(gva_std_allocator, sup_len + 1);
+        size_t* ts = bitset_init(gva_std_allocator, sup_len + 1);
+        bitset_fill(graph, start, start_accent, end_accent, dels, as, cs, gs, ts);
+        for (size_t i = 0; i < array_length(dels); ++i)
+        {
+            fprintf(stderr, "%2zu: %016zx\n", i, dels[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, as[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, cs[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, gs[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, ts[i]);
+        } // for
 
         graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, graph.observed.str, graph.observed.len, 0);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
@@ -352,11 +382,11 @@ extract(int argc, char* argv[static argc + 1])
 int
 main(int argc, char* argv[static argc + 1])
 {
-    //check python relation output
-    return compare();
+    // check python relation output
+    //return compare();
 
-    //calcuate graphs for all inputs
-    //return all_graphs();
+    // calculate graphs for all inputs
+    return all_graphs();
 
     //extract single variant
     //return extract(argc, argv);
