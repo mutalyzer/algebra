@@ -272,12 +272,12 @@ all_graphs(void)
         fclose(stream);
     } // if
 
-    bool check = true;
+    //bool check = false;
     size_t rsid;
     char spdi[4096];
     char hgvs[4096];
     char python_sup[4096];
-    char c_sup[4096];
+    //char c_sup[4096];
     size_t python_distance;
     size_t python_nodes;
     size_t python_edges;
@@ -295,36 +295,41 @@ all_graphs(void)
 
         //fprintf(stdout, "%zu %s %s %s %zu %zu %zu " GVA_VARIANT_FMT " %u %zu %zu\n",
         //        rsid, spdi, hgvs, python_sup, python_distance, python_nodes, python_edges, GVA_VARIANT_PRINT(graph.supremal), graph.distance, array_length(graph.nodes), array_length(graph.edges));
-        sprintf(c_sup, GVA_VARIANT_FMT, GVA_VARIANT_PRINT(graph.supremal));
-        fprintf(stderr, "%s %s\n", python_sup, c_sup);
-        if (check && strcmp(python_sup, c_sup))
-        {
-            fprintf(stderr, "Different supremal!\n");
-        }
+        //fprintf(stdout, "%zu %s %s %s %zu %zu %zu " GVA_VARIANT_FMT " %u %zu %zu\n",
+        //        rsid, spdi, hgvs, python_sup, python_distance, python_nodes, python_edges, GVA_VARIANT_PRINT(graph.supremal), graph.distance, array_length(graph.nodes), array_length(graph.edges));
+        //sprintf(c_sup, GVA_VARIANT_FMT, GVA_VARIANT_PRINT(graph.supremal));
+        //fprintf(stderr, "%s %s\n", python_sup, c_sup);
+        //if (check && strcmp(python_sup, c_sup))
+        //{
+        //    fprintf(stderr, "Different supremal!\n");
+        //}
 
         //lcs_graph_raw(stderr, graph);
         //lcs_graph_dot(stderr, graph);
 
-        gva_uint start = 42;
-        gva_uint end = 42;
-        gva_uint start_accent = 42;
-        gva_uint end_accent = 42;
-
-        gva_uint sup_len = end - start;
+        gva_uint sup_len = graph.supremal.end - graph.supremal.start;
         size_t* dels = bitset_init(gva_std_allocator, sup_len + 1);
         size_t* as = bitset_init(gva_std_allocator, sup_len + 1);
         size_t* cs = bitset_init(gva_std_allocator, sup_len + 1);
         size_t* gs = bitset_init(gva_std_allocator, sup_len + 1);
         size_t* ts = bitset_init(gva_std_allocator, sup_len + 1);
-        bitset_fill(graph, start, start_accent, end_accent, dels, as, cs, gs, ts);
-        for (size_t i = 0; i < array_length(dels); ++i)
-        {
-            fprintf(stderr, "%2zu: %016zx\n", i, dels[i]);
-            fprintf(stderr, "%2zu: %016zx\n", i, as[i]);
-            fprintf(stderr, "%2zu: %016zx\n", i, cs[i]);
-            fprintf(stderr, "%2zu: %016zx\n", i, gs[i]);
-            fprintf(stderr, "%2zu: %016zx\n", i, ts[i]);
-        } // for
+
+        bitset_fill(graph, graph.supremal.start, graph.supremal.start, graph.supremal.end, dels, as, cs, gs, ts);
+
+        //for (size_t i = 0; i < array_length(dels); ++i)
+        //{
+        //    fprintf(stderr, "%2zu: %016zx\n", i, dels[i]);
+        //    fprintf(stderr, "%2zu: %016zx\n", i, as[i]);
+        //    fprintf(stderr, "%2zu: %016zx\n", i, cs[i]);
+        //    fprintf(stderr, "%2zu: %016zx\n", i, gs[i]);
+        //    fprintf(stderr, "%2zu: %016zx\n", i, ts[i]);
+        //} // for
+
+        //ts = bitset_destroy(gva_std_allocator, ts);
+        //gs = bitset_destroy(gva_std_allocator, gs);
+        //cs = bitset_destroy(gva_std_allocator, cs);
+        //as = bitset_destroy(gva_std_allocator, as);
+        //dels = bitset_destroy(gva_std_allocator, dels);
 
         graph.observed.str = gva_std_allocator.allocate(gva_std_allocator.context, graph.observed.str, graph.observed.len, 0);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
