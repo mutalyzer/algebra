@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <string.h>                 // memcpy, strncmp
+#include <string.h>                 // memchr, memcpy, strncmp
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
@@ -10,56 +10,50 @@
 #include "bitset.h"     // bitset_*
 
 
-void bitfill(GVA_LCS_Graph graph, gva_uint start, size_t* dels, size_t* as, size_t* cs, size_t* gs, size_t* ts) {
-    for (size_t i = 0; i < array_length(graph.nodes); ++i) {
-        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next) {
+static void
+bitfill(GVA_LCS_Graph graph, gva_uint start, size_t* dels, size_t* as, size_t* cs, size_t* gs, size_t* ts)
+{
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
             GVA_Variant variant;
             gva_uint const count = gva_edges(graph.observed.str,
                                              graph.nodes[i], graph.nodes[graph.edges[j].tail],
                                              i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
                                              &variant);
-//            fprintf(stderr, "count: %d\n", count);
-//            fprintf(stderr, "\"" GVA_VARIANT_FMT "\"\n", GVA_VARIANT_PRINT(variant));
-//            printf("variant start: %d end: %d str: %s \n", variant.start, variant.end, variant.sequence.str);
             for (gva_uint z = 0; z < count; ++z)
             {
-                for (gva_uint k = variant.start; k < variant.end; ++k) {
+                for (gva_uint k = variant.start; k < variant.end; ++k)
+                {
                     bitset_add(dels, k + z - start);
                 } // for
-            }
-            size_t mask = 0x0;
-            for (size_t k = 0; k < variant.sequence.len && mask < 0xFULL; ++k) {
-                if (variant.sequence.str[k] == 'A') {
-                    mask |= 0x1ULL;
-                } // if
-                else if (variant.sequence.str[k] == 'C') {
-                    mask |= 0x2ULL;
-                } // if
-                else if (variant.sequence.str[k] == 'G') {
-                    mask |= 0x4ULL;
-                } // if
-                else if (variant.sequence.str[k] == 'T') {
-                    mask |= 0x8ULL;
-                } // if
             } // for
-
-            if ((mask & 0x1ULL) == 0x1ULL) {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k) {
+            if (memchr(variant.sequence.str, 'A', variant.sequence.len))
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
                     bitset_add(as, k - start);
                 } // for
             } // if
-            if ((mask & 0x2ULL) == 0x2ULL) {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k) {
+            if (memchr(variant.sequence.str, 'C', variant.sequence.len))
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
                     bitset_add(cs, k - start);
                 } // for
             } // if
-            if ((mask & 0x4ULL) == 0x4ULL) {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k) {
+            if (memchr(variant.sequence.str, 'G', variant.sequence.len))
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
                     bitset_add(gs, k - start);
                 } // for
             } // if
-            if ((mask & 0x8ULL) == 0x8ULL) {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k) {
+            if (memchr(variant.sequence.str, 'T', variant.sequence.len))
+            {
+                for (gva_uint k = variant.start; k < variant.end + count; ++k)
+                {
                     bitset_add(ts, k - start);
                 } // for
             } // if
@@ -185,13 +179,21 @@ gva_compare(GVA_Allocator const allocator,
 //            fprintf(stderr, "%2zu: %016zx\n", i, rhs_ts[i]);
 //        } // for
 
-
         size_t const common =
             bitset_intersection_cnt(lhs_dels, rhs_dels) +
             bitset_intersection_cnt(lhs_as, rhs_as) +
             bitset_intersection_cnt(lhs_cs, rhs_cs) +
             bitset_intersection_cnt(lhs_gs, rhs_gs) +
             bitset_intersection_cnt(lhs_ts, rhs_ts);
+
+        if (common > 0)
+        {
+            relation = GVA_OVERLAP;
+        } // if
+        else
+        {
+            relation = GVA_DISJOINT;
+        } // else
 
         lhs_ts = bitset_destroy(allocator, lhs_ts);
         lhs_gs = bitset_destroy(allocator, lhs_gs);
@@ -204,14 +206,6 @@ gva_compare(GVA_Allocator const allocator,
         rhs_cs = bitset_destroy(allocator, rhs_cs);
         rhs_as = bitset_destroy(allocator, rhs_as);
         rhs_dels = bitset_destroy(allocator, rhs_dels);
-
-        if (common > 0)
-        {
-            relation = GVA_OVERLAP;
-        }
-        else {
-            relation = GVA_DISJOINT;
-        }
 
     } // else
 
