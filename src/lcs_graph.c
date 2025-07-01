@@ -51,7 +51,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     if (lcs.nodes == NULL || graph.distance == 0)
     {
         gva_uint const sink = ARRAY_APPEND(allocator, graph.nodes, ((GVA_Node) {
-            len_ref, len_obs, 0, GVA_NULL, GVA_NULL
+            len_ref + shift, len_obs, 0, GVA_NULL, GVA_NULL
         })) - 1;
         if ((len_ref == 0 && len_obs == 0) || graph.distance == 0)
         {
@@ -78,9 +78,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             shift, 0, 0, GVA_NULL, GVA_NULL
         }));
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            len_ref, len_obs, 0, GVA_NULL, GVA_NULL
+            len_ref + shift, len_obs, 0, GVA_NULL, GVA_NULL
         }));
-        graph.supremal = (GVA_Variant) {shift, len_ref, {len_obs, observed}};
+        graph.supremal = (GVA_Variant) {shift, len_ref + shift, {len_obs, observed}};
         return graph;
     } // if
 
