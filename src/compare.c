@@ -10,60 +10,6 @@
 #include "bitset.h"     // bitset_*
 
 
-static void
-bitfill(GVA_LCS_Graph graph, gva_uint start, gva_uint start_accent, gva_uint end_accent, size_t* dels, size_t* as, size_t* cs, size_t* gs, size_t* ts)
-{
-    for (size_t i = 0; i < array_length(graph.nodes); ++i)
-    {
-        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
-        {
-            if (graph.nodes[i].row > end_accent || graph.nodes[graph.edges[j].tail].row + graph.nodes[graph.edges[j].tail].length <= start_accent)
-            {
-                continue;
-            }
-            GVA_Variant variant;
-            gva_uint const count = gva_edges(graph.observed.str,
-                                             graph.nodes[i], graph.nodes[graph.edges[j].tail],
-                                             i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
-                                             &variant);
-            for (gva_uint z = 0; z < count; ++z)
-            {
-                for (gva_uint k = variant.start; k < variant.end; ++k)
-                {
-                    bitset_add(dels, k + z - start);
-                } // for
-            } // for
-            if (memchr(variant.sequence.str, 'A', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(as, k - start);
-                } // for
-            } // if
-            if (memchr(variant.sequence.str, 'C', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(cs, k - start);
-                } // for
-            } // if
-            if (memchr(variant.sequence.str, 'G', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(gs, k - start);
-                } // for
-            } // if
-            if (memchr(variant.sequence.str, 'T', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(ts, k - start);
-                } // for
-            } // if
-        } // for
-    } // for
-}
 
 GVA_Relation
 gva_compare(GVA_Allocator const allocator,
@@ -162,7 +108,7 @@ gva_compare(GVA_Allocator const allocator,
         size_t const end_accent = MIN(lhs.end, rhs.end);
 
         // could be done on intersection instead of union
-        bitfill(lhs_graph, start, start_accent, end_accent, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+        bitset_fill(lhs_graph, start, start_accent, end_accent, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
         gva_lcs_graph_destroy(allocator, lhs_graph);
 
 //        for (size_t i = 0; i < array_length(lhs_dels); ++i)
@@ -174,7 +120,7 @@ gva_compare(GVA_Allocator const allocator,
 //            fprintf(stderr, "%2zu: %016zx\n", i, lhs_ts[i]);
 //        } // for
 
-        bitfill(rhs_graph, start, start_accent, end_accent, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+        bitset_fill(rhs_graph, start, start_accent, end_accent, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
         gva_lcs_graph_destroy(allocator, rhs_graph);
 
 //        for (size_t i = 0; i < array_length(rhs_dels); ++i)
