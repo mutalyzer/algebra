@@ -209,9 +209,8 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph)
     } // for
 } // lcs_graph_raw
 
-
 int
-main(int argc, char* argv[static argc + 1])
+compare()
 {
     GVA_String seq = {0, NULL};
     FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
@@ -245,29 +244,25 @@ main(int argc, char* argv[static argc + 1])
         } // if
         count += 1;
 //        printf("%d\n", gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs));
+
         if (strcmp(python, GVA_RELATION_LABELS[gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs)]) != 0)
         {
             printf("different %s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs)]);
         }
+//        printf("%s %s\n", lhs_spdi, rhs_spdi);
 
     }
     printf("%zu\n", count);
     seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 
     return 0;
+}
 
 
-    char const* const r = "CCACC";
-    GVA_Variant lhs = {1, 1, {1, "T"}};
-    GVA_Variant rhs = {1, 1, {1, "G"}};
-
-    printf("%s\n", GVA_RELATION_LABELS[gva_compare(gva_std_allocator, strlen(r), r, lhs, rhs)]);
-//    return gva_compare(gva_std_allocator, strlen(r), r, lhs, rhs);
-
-    return 0;
-
-    /*
-    GVA_String seq = {NULL, 0};
+int
+all_graphs()
+{
+    GVA_String seq = {0, NULL};
     FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
     if (stream != NULL)
     {
@@ -308,8 +303,12 @@ main(int argc, char* argv[static argc + 1])
     seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 
     return EXIT_SUCCESS;
-    */
+}
 
+
+int
+extract(int argc, char* argv[static argc + 1])
+{
     if (argc != 3)
     {
         fprintf(stderr, "usage %s reference observed\n", argv[0]);
@@ -339,7 +338,6 @@ main(int argc, char* argv[static argc + 1])
     } // for
     canonical = ARRAY_DESTROY(gva_std_allocator, canonical);
 
-
     /*
     size_t const distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
     fprintf(stderr, "distance only: %zu\n", distance);
@@ -348,4 +346,19 @@ main(int argc, char* argv[static argc + 1])
     gva_lcs_graph_destroy(gva_std_allocator, graph);
 
     return EXIT_SUCCESS;
+
+}
+
+int
+main(int argc, char* argv[static argc + 1])
+{
+    //check python relation output
+    return compare();
+
+    //calcuate graphs for all inputs
+    //return all_graphs();
+
+    //extract single variant
+    //return extract(argc, argv);
+
 } // main
