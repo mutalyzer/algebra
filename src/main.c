@@ -282,6 +282,7 @@ all_graphs(void)
     size_t python_nodes;
     size_t python_edges;
     size_t count = 0;
+    size_t counter = 0;
     while (fscanf(stdin, "%zu %4096s %4096s %4096s %zu %zu %zu\n", &rsid, spdi, hgvs, python_sup, &python_distance, &python_nodes, &python_edges) == 7)
     {
         GVA_Variant variant;
@@ -314,7 +315,7 @@ all_graphs(void)
         size_t* gs = bitset_init(gva_std_allocator, sup_len + 1);
         size_t* ts = bitset_init(gva_std_allocator, sup_len + 1);
 
-        bitset_fill(graph, graph.supremal.start, graph.supremal.start, graph.supremal.end, dels, as, cs, gs, ts);
+        counter += bitset_fill(graph, graph.supremal.start, graph.supremal.start, graph.supremal.end, dels, as, cs, gs, ts);
 
         //for (size_t i = 0; i < array_length(dels); ++i)
         //{
@@ -335,7 +336,7 @@ all_graphs(void)
         gva_lcs_graph_destroy(gva_std_allocator, graph);
     } // while
 
-    fprintf(stderr, "%zu\n", count);
+    fprintf(stderr, "%zu %zu\n", count, counter);
 
     seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
 

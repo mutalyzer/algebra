@@ -50,7 +50,7 @@ bitset_destroy(GVA_Allocator const allocator, size_t bitset[static 1])
 } // bitset_destroy
 
 
-void
+size_t
 bitset_fill(GVA_LCS_Graph const graph,
     gva_uint const start, gva_uint const start_accent, gva_uint const end_accent,
     size_t dels[static restrict 1],
@@ -59,6 +59,7 @@ bitset_fill(GVA_LCS_Graph const graph,
     size_t gs[static restrict 1],
     size_t ts[static restrict 1])
 {
+    size_t counter = 0;
     for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
         for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
@@ -78,6 +79,7 @@ bitset_fill(GVA_LCS_Graph const graph,
                 for (gva_uint k = variant.start; k < variant.end; ++k)
                 {
                     bitset_add(dels, k + z - start);
+                    counter += 1;
                 } // for
             } // for
 
@@ -86,6 +88,7 @@ bitset_fill(GVA_LCS_Graph const graph,
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
                     bitset_add(as, k - start);
+                    counter += 1;
                 } // for
             } // if
             if (memchr(variant.sequence.str, 'C', variant.sequence.len))
@@ -93,6 +96,7 @@ bitset_fill(GVA_LCS_Graph const graph,
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
                     bitset_add(cs, k - start);
+                    counter += 1;
                 } // for
             } // if
             if (memchr(variant.sequence.str, 'G', variant.sequence.len))
@@ -100,6 +104,7 @@ bitset_fill(GVA_LCS_Graph const graph,
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
                     bitset_add(gs, k - start);
+                    counter += 1;
                 } // for
             } // if
             if (memchr(variant.sequence.str, 'T', variant.sequence.len))
@@ -107,8 +112,10 @@ bitset_fill(GVA_LCS_Graph const graph,
                 for (gva_uint k = variant.start; k < variant.end + count; ++k)
                 {
                     bitset_add(ts, k - start);
+                    counter += 1;
                 } // for
             } // if
         } // for
     } // for
+    return counter;
 } // bitfill
