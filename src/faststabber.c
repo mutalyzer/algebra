@@ -11,32 +11,14 @@
 #include <string.h>
 #include <time.h>
 
-#include <unistd.h>
+#include "../include/faststabber.h"     // Node, Stack
 
 
 #define TIC(X) clock_t const X = clock()
 #define TOC(X) fprintf(stderr, "time %s: %.3f s\n", (#X), (double)(clock() - (X)) / CLOCKS_PER_SEC)
 
 
-typedef struct Node
-{
-    uint32_t start;
-    uint32_t end;
-
-    struct Node* restrict parent;
-    struct Node* restrict leftsibling;
-    struct Node* restrict rightchild;
-} Node;
-
-
-typedef struct Stack
-{
-    Node* restrict node;
-    struct Stack* restrict next;
-} Stack;
-
-
-static inline Node*
+Node*
 stack_top(Stack const* const restrict stack)
 {
     assert(stack != NULL);
@@ -44,7 +26,7 @@ stack_top(Stack const* const restrict stack)
 } // stack_top
 
 
-static inline Stack*
+Stack*
 stack_push(Stack* const restrict stack, Node* const restrict node)
 {
     Stack* const restrict top = malloc(sizeof(*top));
@@ -55,7 +37,7 @@ stack_push(Stack* const restrict stack, Node* const restrict node)
 } // stack_push
 
 
-static inline Stack*
+Stack*
 stack_pop(Stack* const restrict stack)
 {
     assert(stack != NULL);
@@ -65,7 +47,7 @@ stack_pop(Stack* const restrict stack)
 } // stack_pop
 
 
-static inline Node*
+Node*
 create_node(uint32_t const start, uint32_t const end)
 {
     Node* const restrict node = malloc(sizeof(*node));
@@ -80,7 +62,7 @@ create_node(uint32_t const start, uint32_t const end)
 } // create_node
 
 
-static inline Node*
+Node*
 add_node(Node* const restrict last_node, Node* const restrict node)
 {
     assert(node != NULL);
@@ -102,7 +84,7 @@ add_node(Node* const restrict last_node, Node* const restrict node)
 } // add_node
 
 
-static size_t
+size_t
 draw_edge(Node const* const restrict node, void* const restrict arg)
 {
     assert(node != NULL);
@@ -114,14 +96,14 @@ draw_edge(Node const* const restrict node, void* const restrict arg)
 } // draw_edge
 
 
-static size_t
+size_t
 draw_node(Node const* const restrict node, void* const restrict arg)
 {
     return fprintf(arg, "n%p[label=\"%u&ndash;%u\"];\n", (void*) node, node->start, node->end);
 } // draw_node
 
 
-static size_t
+size_t
 traverse(Node* const restrict node,
          size_t (*func)(Node const* const restrict, void* const restrict),
          void* const restrict arg)
@@ -137,7 +119,7 @@ traverse(Node* const restrict node,
 } // traverse
 
 
-static size_t
+size_t
 write_dot(FILE* const restrict fp, Node* const restrict root)
 {
     assert(fp != NULL);
@@ -149,7 +131,7 @@ write_dot(FILE* const restrict fp, Node* const restrict root)
 } // write_dot
 
 
-static void
+void
 destroy(Node* const restrict node)
 {
     if (node == NULL)
@@ -163,7 +145,7 @@ destroy(Node* const restrict node)
 } // destroy
 
 
-static void
+void
 read_bed(FILE* const restrict fp,
          uint32_t const max,
          Node** tree,
@@ -228,7 +210,7 @@ read_bed(FILE* const restrict fp,
 } // read_bed
 
 
-static size_t
+size_t
 trav(Node* const node,
      uint32_t const start,
      uint32_t const end,
@@ -250,7 +232,7 @@ trav(Node* const node,
 } // trav
 
 
-static size_t
+size_t
 stab(Node* const node,
      uint32_t const start,
      uint32_t const end,
@@ -273,20 +255,9 @@ stab(Node* const node,
 } // stab
 
 
-struct Bed_entry
-{
-    char reference[32];
-    size_t count;
-    size_t node_count;
-    int start;
-    int end;
-}; // Bed_entry
-
-
 static struct Bed_entry bed[250000000];
 
-
-static void
+void
 query_bed(FILE* const restrict fp,
           Node* const start_table[restrict])
 {
@@ -323,146 +294,3 @@ query_bed(FILE* const restrict fp,
     } // for
     TOC(write_ann);
 } // query_bed
-
-
-int
-main(int argc, char* argv[])
-{
-/*
-    check(stdin, 38);
-    return -1;
-*/
-    uint32_t n = 0;
-    uint32_t q = 0;
-    uint32_t r = 0;
-    char *dot_path = NULL, *vcf_path = NULL, *bed_path = NULL;
-    int opt = -1;
-    while ((opt = getopt(argc, argv, "b:hd:n:q:r:v:")) != -1)
-    {
-        switch (opt)
-        {
-            case 'b':
-                bed_path = malloc(strlen(optarg) +1);
-                assert(NULL != bed_path);
-                strcpy(bed_path, optarg);
-                break;
-            case 'd':
-                dot_path = malloc(strlen(optarg) + 1);
-                assert(dot_path != NULL);
-                strcpy(dot_path, optarg);
-                break;
-            case 'n':
-                n = atoi(optarg);
-                break;
-            case 'q':
-                q = atoi(optarg);
-                break;
-            case 'r':
-                r = atoi(optarg);
-                break;
-            case 'v':
-                vcf_path = malloc(strlen(optarg) + 1);
-                assert(vcf_path != NULL);
-                strcpy(vcf_path, optarg);
-                break;
-            case 'h':
-            default:
-                fprintf(stderr, "Usage: %s [-h] [-d path] -b bed_file -n size [ -q left [-r right] | -v vcf_file ] \n", argv[0]);
-                return EXIT_FAILURE;
-        } // switch
-    } // while
-
-    if ((bed_path && !strncmp("-", bed_path, 1)) && (vcf_path && !strncmp("-", vcf_path, 1))) {
-        fprintf(stderr, "Can't read both VCF and BED from STDIN\n");
-        return EXIT_FAILURE;
-    }
-
-    if (!bed_path) {
-        fprintf(stderr, "BED file not specified!\n");
-        return EXIT_FAILURE;
-    }
-    if (vcf_path && q) {
-        fprintf(stderr, "Either specify a 'VCF file' or a query range, not both!\n");
-        return EXIT_FAILURE;
-    }
-
-    if (0 == n)
-    {
-        fprintf(stderr, "Specify size with -n\n");
-        return EXIT_FAILURE;
-    } // if
-
-    if (!vcf_path && q >= n)
-    {
-        fprintf(stderr, "Invalid parameter combination (n > q): n=%" PRIu32 ", q=%" PRIu32 "\n", n, q);
-        return EXIT_FAILURE;
-    } // if
-
-    if (r < q)
-    {
-        r = q;
-    } // if
-
-    // allocate start node lookup table
-    Node** start_table = malloc(n * sizeof(*start_table));
-    assert(start_table != NULL);
-
-    Node* tree = NULL;
-    FILE *restrict fp = NULL;
-    if (1 == strlen(bed_path) && !strncmp("-", bed_path, 1)) {
-        fp = stdin;
-    } else {
-        fp = fopen(bed_path, "r");
-    }
-    free(bed_path);
-    assert(fp != NULL);
-
-    TIC(construct);
-    read_bed(fp, n, &tree, start_table);
-    TOC(construct);
-
-    fclose(fp);
-
-    if (dot_path != NULL)
-    {
-        FILE* const restrict fp_dot = fopen(dot_path, "w");
-        assert(fp_dot != NULL);
-
-        write_dot(fp_dot, tree);
-
-        fclose(fp_dot);
-        free(dot_path);
-    } // if
-
-    if (q)
-    {
-        Stack *output = NULL;
-        stab(start_table[r], q, r, &output);
-
-        printf("q: %" PRIu32 "--%" PRIu32 "\n", q, r);
-        while (output != NULL) {
-            printf("%" PRIu32 "--%" PRIu32 "\n", stack_top(output)->start, stack_top(output)->end);
-            output = stack_pop(output);
-        } // while
-
-    } // if
-    else if (vcf_path != NULL)
-    {
-
-        FILE* restrict fp_vcf = NULL;
-        if (1 == strlen(vcf_path) && !strncmp("-", vcf_path, 1)) {
-            fp_vcf = stdin;
-        } else {
-            fp_vcf = fopen(vcf_path, "r");
-        }
-        free(vcf_path);
-        assert(fp_vcf != NULL);
-        query_bed(fp_vcf, start_table);
-    } // if
-
-    destroy(tree);
-
-    free(start_table);
-
-    return EXIT_SUCCESS;
-} // main

@@ -1,12 +1,16 @@
+#define _XOPEN_SOURCE
+#include <assert.h>
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, fclose, fopen, fprintf
 #include <stdlib.h>     // EXIT_*
 #include <string.h>     // strcmp, strlen
+#include <unistd.h>     // optarg
 
 
 #include "../include/compare.h"     // gva_compare
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/extract.h"     // gva_extract
+#include "../include/faststabber.h" // Node, Stack
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/relations.h"   // GVA_RELATION_LABELS
 #include "../include/std_alloc.h"   // gva_std_allocator
@@ -388,15 +392,164 @@ extract(int const argc, char* argv[static argc + 1])
 
 
 int
+faststabber(int argc, char* argv[static argc + 1])
+{
+/*
+    check(stdin, 38);
+    return -1;
+*/
+    uint32_t n = 0;
+    uint32_t q = 0;
+    uint32_t r = 0;
+    char *dot_path = NULL, *vcf_path = NULL, *bed_path = NULL;
+    int opt = -1;
+    while ((opt = getopt(argc, argv, "b:hd:n:q:r:v:")) != -1)
+    {
+        switch (opt)
+        {
+            case 'b':
+                bed_path = malloc(strlen(optarg) +1);
+                assert(NULL != bed_path);
+                strcpy(bed_path, optarg);
+                break;
+            case 'd':
+                dot_path = malloc(strlen(optarg) + 1);
+                assert(dot_path != NULL);
+                strcpy(dot_path, optarg);
+                break;
+            case 'n':
+                n = atoi(optarg);
+                break;
+            case 'q':
+                q = atoi(optarg);
+                break;
+            case 'r':
+                r = atoi(optarg);
+                break;
+            case 'v':
+                vcf_path = malloc(strlen(optarg) + 1);
+                assert(vcf_path != NULL);
+                strcpy(vcf_path, optarg);
+                break;
+            case 'h':
+            default:
+                fprintf(stderr, "Usage: %s [-h] [-d path] -b bed_file -n size [ -q left [-r right] | -v vcf_file ] \n", argv[0]);
+                return EXIT_FAILURE;
+        } // switch
+    } // while
+
+    if ((bed_path && !strncmp("-", bed_path, 1)) && (vcf_path && !strncmp("-", vcf_path, 1))) {
+        fprintf(stderr, "Can't read both VCF and BED from STDIN\n");
+        return EXIT_FAILURE;
+    }
+
+    if (!bed_path) {
+        fprintf(stderr, "BED file not specified!\n");
+        return EXIT_FAILURE;
+    }
+    if (vcf_path && q) {
+        fprintf(stderr, "Either specify a 'VCF file' or a query range, not both!\n");
+        return EXIT_FAILURE;
+    }
+
+    if (0 == n)
+    {
+        fprintf(stderr, "Specify size with -n\n");
+        return EXIT_FAILURE;
+    } // if
+
+    if (!vcf_path && q >= n)
+    {
+        fprintf(stderr, "Invalid parameter combination (n > q): n=%" PRIu32 ", q=%" PRIu32 "\n", n, q);
+        return EXIT_FAILURE;
+    } // if
+
+    if (r < q)
+    {
+        r = q;
+    } // if
+
+    // allocate start node lookup table
+    Node** start_table = malloc(n * sizeof(*start_table));
+    assert(start_table != NULL);
+
+    Node* tree = NULL;
+    FILE *restrict fp = NULL;
+    if (1 == strlen(bed_path) && !strncmp("-", bed_path, 1)) {
+        fp = stdin;
+    } else {
+        fp = fopen(bed_path, "r");
+    }
+    free(bed_path);
+    assert(fp != NULL);
+
+    //TIC(construct);
+    read_bed(fp, n, &tree, start_table);
+    //TOC(construct);
+
+    fclose(fp);
+
+    if (dot_path != NULL)
+    {
+        FILE* const restrict fp_dot = fopen(dot_path, "w");
+        assert(fp_dot != NULL);
+
+        write_dot(fp_dot, tree);
+
+        fclose(fp_dot);
+        free(dot_path);
+    } // if
+
+    if (q)
+    {
+        Stack *output = NULL;
+        stab(start_table[r], q, r, &output);
+
+        printf("q: %" PRIu32 "--%" PRIu32 "\n", q, r);
+        while (output != NULL) {
+            printf("%" PRIu32 "--%" PRIu32 "\n", stack_top(output)->start, stack_top(output)->end);
+            output = stack_pop(output);
+        } // while
+
+    } // if
+    else if (vcf_path != NULL)
+    {
+
+        FILE* restrict fp_vcf = NULL;
+        if (1 == strlen(vcf_path) && !strncmp("-", vcf_path, 1)) {
+            fp_vcf = stdin;
+        } else {
+            fp_vcf = fopen(vcf_path, "r");
+        }
+        free(vcf_path);
+        assert(fp_vcf != NULL);
+        query_bed(fp_vcf, start_table);
+    } // if
+
+    destroy(tree);
+
+    free(start_table);
+
+    return EXIT_SUCCESS;
+
+}
+
+
+int
 main(int argc, char* argv[static argc + 1])
 {
     (void) argv;
     // check python relation output
-    //return compare();
+    // return compare();
 
     // calculate graphs for all inputs
-    return all_graphs();
+    // return all_graphs();
 
-    //extract single variant
-    //return extract(argc, argv);
+    // extract single variant
+    // return extract(argc, argv);
+
+    // faststabber
+    return faststabber(argc, argv);
+
+
 } // main
