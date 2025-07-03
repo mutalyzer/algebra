@@ -440,6 +440,7 @@ faststabber(int argc, char* argv[static argc + 1])
 
     if ((bed_path && !strncmp("-", bed_path, 1)) && (vcf_path && !strncmp("-", vcf_path, 1))) {
         fprintf(stderr, "Can't read both VCF and BED from STDIN\n");
+        free(bed_path);
         return EXIT_FAILURE;
     }
 
