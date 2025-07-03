@@ -255,42 +255,42 @@ stab(Node* const node,
 } // stab
 
 
-static struct Bed_entry bed[250000000];
-
-void
-query_bed(FILE* const restrict fp,
-          Node* const start_table[restrict])
-{
-    assert(fp != NULL);
-
-    TIC(read_bed);
-    size_t idx = 0;
-    while (fscanf(fp, "%31s %d %d", bed[idx].reference, &bed[idx].start, &bed[idx].end) == 3)
-    {
-        idx += 1;
-    } // while
-    TOC(read_bed);
-
-    TIC(annotate);
-    for (size_t i = 0; i < idx; ++i)
-    {
-        Stack* restrict output = NULL;
-        bed[i].count = stab(start_table[bed[i].end], bed[i].start, bed[i].end, &output);
-        bed[i].node_count = 0;
-        /*
-        while (output != NULL)
-        {
-            output = stack_pop(output);
-            bed[i].count += 1;
-        } // while
-        */
-    } // for
-    TOC(annotate);
-
-    TIC(write_ann);
-    for (size_t i = 0; i < idx; ++i)
-    {
-        printf("%s\t%d\t%d\t%zu\t%zu\n", bed[i].reference, bed[i].start, bed[i].end, bed[i].count, bed[i].node_count);
-    } // for
-    TOC(write_ann);
-} // query_bed
+//static struct Bed_entry bed[250000000];
+//
+//void
+//query_bed(FILE* const restrict fp,
+//          Node* const start_table[restrict])
+//{
+//    assert(fp != NULL);
+//
+//    TIC(read_bed);
+//    size_t idx = 0;
+//    while (fscanf(fp, "%31s %d %d", bed[idx].reference, &bed[idx].start, &bed[idx].end) == 3)
+//    {
+//        idx += 1;
+//    } // while
+//    TOC(read_bed);
+//
+//    TIC(annotate);
+//    for (size_t i = 0; i < idx; ++i)
+//    {
+//        Stack* restrict output = NULL;
+//        bed[i].count = stab(start_table[bed[i].end], bed[i].start, bed[i].end, &output);
+//        bed[i].node_count = 0;
+//        /*
+//        while (output != NULL)
+//        {
+//            output = stack_pop(output);
+//            bed[i].count += 1;
+//        } // while
+//        */
+//    } // for
+//    TOC(annotate);
+//
+//    TIC(write_ann);
+//    for (size_t i = 0; i < idx; ++i)
+//    {
+//        printf("%s\t%d\t%d\t%zu\t%zu\n", bed[i].reference, bed[i].start, bed[i].end, bed[i].count, bed[i].node_count);
+//    } // for
+//    TOC(write_ann);
+//} // query_bed

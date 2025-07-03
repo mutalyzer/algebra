@@ -513,19 +513,19 @@ faststabber(int argc, char* argv[static argc + 1])
         } // while
 
     } // if
-    else if (vcf_path != NULL)
-    {
-
-        FILE* restrict fp_vcf = NULL;
-        if (1 == strlen(vcf_path) && !strncmp("-", vcf_path, 1)) {
-            fp_vcf = stdin;
-        } else {
-            fp_vcf = fopen(vcf_path, "r");
-        }
-        free(vcf_path);
-        assert(fp_vcf != NULL);
-        query_bed(fp_vcf, start_table);
-    } // if
+    //else if (vcf_path != NULL)
+    //{
+    //
+    //    FILE* restrict fp_vcf = NULL;
+    //    if (1 == strlen(vcf_path) && !strncmp("-", vcf_path, 1)) {
+    //        fp_vcf = stdin;
+    //    } else {
+    //        fp_vcf = fopen(vcf_path, "r");
+    //    }
+    //    free(vcf_path);
+    //    assert(fp_vcf != NULL);
+    //    query_bed(fp_vcf, start_table);
+    //} // if
 
     destroy(tree);
 
