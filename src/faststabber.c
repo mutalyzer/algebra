@@ -224,7 +224,7 @@ trav(Node* const node,
         if (start >= tmp->start)
         {
             count += trav(tmp->rightchild, start, end, output) + 1;
-            //*output = stack_push(*output, tmp);
+            *output = stack_push(*output, tmp);
         } // if
         tmp = tmp->leftsibling;
     } // while
@@ -246,7 +246,7 @@ stab(Node* const node,
         if (start >= tmp->start)
         {
             count += 1;
-            //*output = stack_push(*output, tmp);
+            *output = stack_push(*output, tmp);
         } // if
         count += trav(tmp->leftsibling, start, end, output);
         tmp = tmp->parent;
