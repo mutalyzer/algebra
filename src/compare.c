@@ -1,6 +1,3 @@
-#include <stdio.h>      // FIXME: DEBUG
-
-
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memchr, memcpy, strncmp
 
@@ -115,28 +112,28 @@ gva_compare(GVA_Allocator const allocator,
         // could be done on intersection instead of union
         bitset_fill(lhs_graph, start, start_accent, end_accent, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
         gva_lcs_graph_destroy(allocator, lhs_graph);
-
-//        for (size_t i = 0; i < array_length(lhs_dels); ++i)
-//        {
-//            fprintf(stderr, "%2zu: %016zx\n", i, lhs_dels[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, lhs_as[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, lhs_cs[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, lhs_gs[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, lhs_ts[i]);
-//        } // for
-
+/*
+        for (size_t i = 0; i < array_length(lhs_dels); ++i)
+        {
+            fprintf(stderr, "%2zu: %016zx\n", i, lhs_dels[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, lhs_as[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, lhs_cs[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, lhs_gs[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, lhs_ts[i]);
+        } // for
+*/
         bitset_fill(rhs_graph, start, start_accent, end_accent, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
         gva_lcs_graph_destroy(allocator, rhs_graph);
-
-//        for (size_t i = 0; i < array_length(rhs_dels); ++i)
-//        {
-//            fprintf(stderr, "%2zu: %016zx\n", i, rhs_dels[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, rhs_as[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, rhs_cs[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, rhs_gs[i]);
-//            fprintf(stderr, "%2zu: %016zx\n", i, rhs_ts[i]);
-//        } // for
-
+/*
+        for (size_t i = 0; i < array_length(rhs_dels); ++i)
+        {
+            fprintf(stderr, "%2zu: %016zx\n", i, rhs_dels[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, rhs_as[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, rhs_cs[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, rhs_gs[i]);
+            fprintf(stderr, "%2zu: %016zx\n", i, rhs_ts[i]);
+        } // for
+*/
         size_t const common =
             bitset_intersection_cnt(lhs_dels, rhs_dels) +
             bitset_intersection_cnt(lhs_as, rhs_as) +
