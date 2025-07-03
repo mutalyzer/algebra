@@ -85,4 +85,5 @@ void
 query_bed(FILE* const restrict fp,
           Node* const start_table[restrict]);
 
+
 #endif  // GVA_FASTSTABBER_H

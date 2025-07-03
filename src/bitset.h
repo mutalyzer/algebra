@@ -27,11 +27,13 @@ bitset_destroy(GVA_Allocator const allocator, size_t bitset[static 1]);
 
 size_t
 bitset_fill(GVA_LCS_Graph const graph,
-            gva_uint const start, gva_uint const start_accent, gva_uint const end_accent,
-            size_t dels[static restrict 1],
-            size_t as[static restrict 1],
-            size_t cs[static restrict 1],
-            size_t gs[static restrict 1],
-            size_t ts[static restrict 1]);
+    gva_uint const offset,
+    gva_uint const start, gva_uint const end,
+    size_t dels[static restrict 1],
+    size_t as[static restrict 1],
+    size_t cs[static restrict 1],
+    size_t gs[static restrict 1],
+    size_t ts[static restrict 1]);
+
 
 #endif  // GVA_BITSET_H

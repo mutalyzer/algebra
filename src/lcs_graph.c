@@ -252,18 +252,20 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
         prev = lcs.index[i].tail;
     } // for
-    if (len > 0)
+
+    if (len > 0 && lcs.nodes[prev].idx != 0)
     {
         gva_uint const idx = lcs.nodes[prev].idx;
         gva_uint const offset = graph.nodes[idx].length - lcs.index[lcs.length - 1].offset - len;
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
         }));
+        len = 0;
     } // if
-    if (graph.nodes != NULL && (len == 0 || lcs.nodes[prev].idx != 0))
+    if (graph.nodes != NULL)
     {
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            graph.nodes[0].row + graph.nodes[0].length, graph.nodes[0].col + graph.nodes[0].length, 0, GVA_NULL, 0
+            graph.nodes[0].row + graph.nodes[0].length - len, graph.nodes[0].col + graph.nodes[0].length - len, 0, GVA_NULL, 0
         }));
     } //if
 
@@ -273,8 +275,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         graph.nodes[source.idx].col += graph.local_supremal[0].length;
         graph.nodes[source.idx].length -= graph.local_supremal[0].length;
 
-        // TODO: what to do with length?!
-        // graph.nodes[0].length -= len;
+        graph.nodes[0].length -= len;
 
         gva_edges(graph.observed.str,
             graph.local_supremal[0], graph.local_supremal[array_length(graph.local_supremal) - 1],

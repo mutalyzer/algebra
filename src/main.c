@@ -312,7 +312,7 @@ all_graphs(void)
         //lcs_graph_raw(stderr, graph);
         //lcs_graph_dot(stderr, graph);
 
-        gva_uint sup_len = graph.supremal.end - graph.supremal.start;
+        gva_uint const sup_len = graph.supremal.end - graph.supremal.start;
         size_t* dels = bitset_init(gva_std_allocator, sup_len + 1);
         size_t* as = bitset_init(gva_std_allocator, sup_len + 1);
         size_t* cs = bitset_init(gva_std_allocator, sup_len + 1);
@@ -532,8 +532,7 @@ faststabber(int argc, char* argv[static argc + 1])
     free(start_table);
 
     return EXIT_SUCCESS;
-
-}
+} // faststabber
 
 
 int
@@ -547,10 +546,8 @@ main(int argc, char* argv[static argc + 1])
     // return all_graphs();
 
     // extract single variant
-    // return extract(argc, argv);
+    //return extract(argc, argv);
 
     // faststabber
     return faststabber(argc, argv);
-
-
 } // main
