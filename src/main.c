@@ -251,10 +251,11 @@ compare(void)
         count += 1;
 //        printf("%d\n", gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs));
 
-        if (strcmp(python, GVA_RELATION_LABELS[gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs)]) != 0)
+        size_t const relation = gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs);
+        if (strcmp(python, GVA_RELATION_LABELS[relation]) != 0)
         {
-            printf("different %s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs)]);
-        }
+            printf("different %s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[relation]);
+        } // if
 //        printf("%s %s\n", lhs_spdi, rhs_spdi);
 
     }
@@ -540,7 +541,7 @@ main(int argc, char* argv[static argc + 1])
 {
     (void) argv;
     // check python relation output
-    // return compare();
+    return compare();
 
     // calculate graphs for all inputs
     // return all_graphs();
@@ -549,5 +550,5 @@ main(int argc, char* argv[static argc + 1])
     //return extract(argc, argv);
 
     // faststabber
-    return faststabber(argc, argv);
+    //return faststabber(argc, argv);
 } // main
