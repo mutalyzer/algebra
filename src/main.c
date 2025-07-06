@@ -1,5 +1,6 @@
 #define _XOPEN_SOURCE
 #include <assert.h>
+#include <limits.h>     // CHAR_BIT
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, fclose, fopen, fprintf
 #include <stdlib.h>     // EXIT_*
@@ -534,6 +535,31 @@ faststabber(int argc, char* argv[static argc + 1])
 
     return EXIT_SUCCESS;
 } // faststabber
+
+
+void
+bitset_print(size_t const bitset[static 1], size_t const size)
+{
+    for (intmax_t i = array_length(bitset) * sizeof(*bitset) * CHAR_BIT - 1; i >= 0; --i)
+    {
+        if ((size_t) i > size)
+        {
+            fprintf(stderr, " ");
+        } // if
+        else
+        {
+            fprintf(stderr, "%zu", bitset[i / (sizeof(*bitset) * CHAR_BIT)] >> (i % (sizeof(*bitset) * CHAR_BIT)) & 0x1);
+        } // else
+        if (i % (sizeof(*bitset) * CHAR_BIT) == 0)
+        {
+            fprintf(stderr, "\n");
+        } // if
+        else if (i % CHAR_BIT == 0)
+        {
+            fprintf(stderr, " ");
+        } // if
+    } // for
+} // bitset_print
 
 
 int
