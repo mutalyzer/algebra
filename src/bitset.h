@@ -17,6 +17,10 @@ void
 bitset_add(size_t bitset[static 1], size_t const value);
 
 
+void
+bitset_add_block(size_t bitset[static 1], size_t const start, size_t const end);
+
+
 size_t
 bitset_intersection_cnt(size_t const lhs[static 1], size_t const rhs[static 1]);
 

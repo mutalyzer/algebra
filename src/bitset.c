@@ -26,8 +26,28 @@ bitset_init(GVA_Allocator const allocator, size_t const size)
 inline void
 bitset_add(size_t bitset[static 1], size_t const value)
 {
-    bitset[value / (sizeof(size_t) * CHAR_BIT)] |= (1ULL << (value % (sizeof(size_t) * CHAR_BIT)));
+    bitset[value / (sizeof(*bitset) * CHAR_BIT)] |= (1ULL << (value % (sizeof(*bitset) * CHAR_BIT)));
 } // bitset_add
+
+
+inline void
+bitset_add_block(size_t bitset[static 1], size_t const start, size_t const end)
+{
+    size_t const len = ((end - start) + sizeof(*bitset) * CHAR_BIT - 1) / (sizeof(*bitset) * CHAR_BIT);
+    for (size_t i = 0; i < len; ++i)
+    {
+        size_t mask = ~0x0ULL;
+        if (i == len - 1)
+        {
+            mask &= ~0x0ULL >> (sizeof(*bitset) * CHAR_BIT - (end % (sizeof(*bitset) * CHAR_BIT)));
+        } // if
+        if (i == 0)
+        {
+            mask &= ~0x0ULL << (start % (sizeof(*bitset) * CHAR_BIT));
+        } // if
+        bitset[start / (sizeof(*bitset) * CHAR_BIT) + i] |= mask;
+    } // for
+} // bitset_add_block
 
 
 inline size_t
