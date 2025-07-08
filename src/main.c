@@ -252,10 +252,11 @@ compare(void)
         count += 1;
 //        printf("%d\n", gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs));
 
+        //fprintf(stderr, "%s %zu %s %zu %zu %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python);
         size_t const relation = gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs);
         if (strcmp(python, GVA_RELATION_LABELS[relation]) != 0)
         {
-            printf("different %s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[relation]);
+            printf("%s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[relation]);
         } // if
 //        printf("%s %s\n", lhs_spdi, rhs_spdi);
 
@@ -314,23 +315,14 @@ all_graphs(void)
         //lcs_graph_raw(stderr, graph);
         //lcs_graph_dot(stderr, graph);
 
-        gva_uint const sup_len = graph.supremal.end - graph.supremal.start;
-        size_t* dels = bitset_init(gva_std_allocator, sup_len + 1);
-        size_t* as = bitset_init(gva_std_allocator, sup_len + 1);
-        size_t* cs = bitset_init(gva_std_allocator, sup_len + 1);
-        size_t* gs = bitset_init(gva_std_allocator, sup_len + 1);
-        size_t* ts = bitset_init(gva_std_allocator, sup_len + 1);
+        //gva_uint const sup_len = graph.supremal.end - graph.supremal.start;
+        //size_t* dels = bitset_init(gva_std_allocator, sup_len + 1);
+        //size_t* as = bitset_init(gva_std_allocator, sup_len + 1);
+        //size_t* cs = bitset_init(gva_std_allocator, sup_len + 1);
+        //size_t* gs = bitset_init(gva_std_allocator, sup_len + 1);
+        //size_t* ts = bitset_init(gva_std_allocator, sup_len + 1);
 
-        counter += bitset_fill(graph, graph.supremal.start, graph.supremal.start, graph.supremal.end, dels, as, cs, gs, ts);
-
-        //for (size_t i = 0; i < array_length(dels); ++i)
-        //{
-        //    fprintf(stderr, "%2zu: %016zx\n", i, dels[i]);
-        //    fprintf(stderr, "%2zu: %016zx\n", i, as[i]);
-        //    fprintf(stderr, "%2zu: %016zx\n", i, cs[i]);
-        //    fprintf(stderr, "%2zu: %016zx\n", i, gs[i]);
-        //    fprintf(stderr, "%2zu: %016zx\n", i, ts[i]);
-        //} // for
+        //counter += bitset_fill(graph, graph.supremal.start, graph.supremal.start, graph.supremal.end, dels, as, cs, gs, ts);
 
         //ts = bitset_destroy(gva_std_allocator, ts);
         //gs = bitset_destroy(gva_std_allocator, gs);
@@ -535,31 +527,6 @@ faststabber(int argc, char* argv[static argc + 1])
 
     return EXIT_SUCCESS;
 } // faststabber
-
-
-void
-bitset_print(size_t const bitset[static 1], size_t const size)
-{
-    for (intmax_t i = array_length(bitset) * sizeof(*bitset) * CHAR_BIT - 1; i >= 0; --i)
-    {
-        if ((size_t) i > size)
-        {
-            fprintf(stderr, " ");
-        } // if
-        else
-        {
-            fprintf(stderr, "%zu", bitset[i / (sizeof(*bitset) * CHAR_BIT)] >> (i % (sizeof(*bitset) * CHAR_BIT)) & 0x1);
-        } // else
-        if (i % (sizeof(*bitset) * CHAR_BIT) == 0)
-        {
-            fprintf(stderr, "\n");
-        } // if
-        else if (i % CHAR_BIT == 0)
-        {
-            fprintf(stderr, " ");
-        } // if
-    } // for
-} // bitset_print
 
 
 int

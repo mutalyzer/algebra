@@ -24,30 +24,24 @@ bitset_init(GVA_Allocator const allocator, size_t const size)
 
 
 inline void
-bitset_add(size_t bitset[static 1], size_t const value)
+bitset_add(size_t bitset[static 1], size_t const start, size_t const end)
 {
-    bitset[value / (sizeof(*bitset) * CHAR_BIT)] |= (1ULL << (value % (sizeof(*bitset) * CHAR_BIT)));
-} // bitset_add
-
-
-inline void
-bitset_add_block(size_t bitset[static 1], size_t const start, size_t const end)
-{
-    size_t const len = ((end - start) + sizeof(*bitset) * CHAR_BIT - 1) / (sizeof(*bitset) * CHAR_BIT);
-    for (size_t i = 0; i < len; ++i)
+    size_t const start_idx = start / (sizeof(*bitset) * CHAR_BIT);
+    size_t const end_idx = (end - 1) / (sizeof(*bitset) * CHAR_BIT);
+    for (size_t i = start_idx; i <= end_idx; ++i)
     {
         size_t mask = ~0x0ULL;
-        if (i == len - 1)
-        {
-            mask &= ~0x0ULL >> (sizeof(*bitset) * CHAR_BIT - (end % (sizeof(*bitset) * CHAR_BIT)));
-        } // if
-        if (i == 0)
+        if (i == start_idx)
         {
             mask &= ~0x0ULL << (start % (sizeof(*bitset) * CHAR_BIT));
         } // if
-        bitset[start / (sizeof(*bitset) * CHAR_BIT) + i] |= mask;
+        if (i == end_idx)
+        {
+            mask &= ~0x0ULL >> (sizeof(*bitset) * CHAR_BIT - (end % (sizeof(*bitset) * CHAR_BIT)));
+        } // if
+        bitset[i] |= mask;
     } // for
-} // bitset_add_block
+} // bitset_add
 
 
 inline size_t
@@ -68,76 +62,3 @@ bitset_destroy(GVA_Allocator const allocator, size_t bitset[static 1])
 {
     return ARRAY_DESTROY(allocator, bitset);
 } // bitset_destroy
-
-
-size_t
-bitset_fill(GVA_LCS_Graph const graph,
-    gva_uint const offset,
-    gva_uint const start, gva_uint const end,
-    size_t dels[static restrict 1],
-    size_t as[static restrict 1],
-    size_t cs[static restrict 1],
-    size_t gs[static restrict 1],
-    size_t ts[static restrict 1])
-{
-    size_t counter = 0;
-    for (size_t i = 0; i < array_length(graph.nodes); ++i)
-    {
-        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
-        {
-            if (graph.nodes[i].row > end || graph.nodes[graph.edges[j].tail].row + graph.nodes[graph.edges[j].tail].length < start)
-            {
-                continue;
-            } // if
-
-            GVA_Variant variant;
-            gva_uint const count = gva_edges(graph.observed.str,
-                                             graph.nodes[i], graph.nodes[graph.edges[j].tail],
-                                             i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
-                                             &variant);
-
-            for (gva_uint z = 0; z < count; ++z)
-            {
-                for (gva_uint k = variant.start; k < variant.end; ++k)
-                {
-                    bitset_add(dels, k + z - offset);
-                    counter += 1;
-                } // for
-            } // for
-
-            if (memchr(variant.sequence.str, 'A', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(as, k - offset);
-                    counter += 1;
-                } // for
-            } // if
-            if (memchr(variant.sequence.str, 'C', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(cs, k - offset);
-                    counter += 1;
-                } // for
-            } // if
-            if (memchr(variant.sequence.str, 'G', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(gs, k - offset);
-                    counter += 1;
-                } // for
-            } // if
-            if (memchr(variant.sequence.str, 'T', variant.sequence.len))
-            {
-                for (gva_uint k = variant.start; k < variant.end + count; ++k)
-                {
-                    bitset_add(ts, k - offset);
-                    counter += 1;
-                } // for
-            } // if
-        } // for
-    } // for
-    return counter;
-} // bitfill
