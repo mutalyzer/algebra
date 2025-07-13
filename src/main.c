@@ -1,11 +1,12 @@
-#define _XOPEN_SOURCE
-#include <assert.h>
+//#define _XOPEN_SOURCE
+//#include <assert.h>
+#include <errno.h>      // errno
 #include <limits.h>     // CHAR_BIT
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, fclose, fopen, fprintf
 #include <stdlib.h>     // EXIT_*
-#include <string.h>     // strcmp, strlen
-#include <unistd.h>     // optarg
+#include <string.h>     // strcmp, strerror, strlen
+//#include <unistd.h>     // optarg
 
 
 #include "../include/compare.h"     // gva_compare
@@ -281,25 +282,35 @@ lcs_graph_raw(FILE* const stream, GVA_LCS_Graph const graph)
 
 
 int
-compare(void)
+compare(int argc, char* argv[static argc + 1])
 {
-    GVA_String seq = {0, NULL};
-    FILE* const restrict stream = fopen("data/NC_000001.11.fasta", "r");
-    if (stream != NULL)
+    GVA_String reference = {0, NULL};
+    errno = 0;
+    FILE* const restrict stream = fopen(argv[1], "r");
+    if (stream == NULL)
     {
-        seq = gva_fasta_sequence(gva_std_allocator, stream);
-        fclose(stream);
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
     } // if
+    reference = gva_fasta_sequence(gva_std_allocator, stream);
+    fclose(stream);
+
+    disjoint_count = 0;
 
     // NC_000001.11:169556314:6:TTTTTCTCT 3 NC_000001.11:169556314:8:TTTTTGTCTGGCTGC 7 4 is_contained
+    // NC_000001.10:g.103496806_103496807delAA NC_000001.10:103496805:13:AAAAAAAAAAA NC_000001.10:g.103496811A>C NC_000001.10:103496805:13:AAAAACAAAAAAA overlap
+    char lhs_hgvs[4096];
     char lhs_spdi[4096];
-    size_t lhs_dist;
+    //size_t lhs_dist;
+    char rhs_hgvs[4096];
     char rhs_spdi[4096];
-    size_t rhs_dist;
-    size_t dist;
-    char python[32];
+    //size_t rhs_dist;
+    //size_t dist;
+    //char python[32];
+    char relation[32];
     size_t count = 0;
-    while (fscanf(stdin, "%4096s %zu %4096s %zu %zu %32s\n", lhs_spdi, &lhs_dist, rhs_spdi, &rhs_dist, &dist, python) == 6)
+    //while (fscanf(stdin, "%4096s %zu %4096s %zu %zu %32s\n", lhs_spdi, &lhs_dist, rhs_spdi, &rhs_dist, &dist, python) == 6)
+    while (fscanf(stdin, "%4096s %4096s %4096s %4096s %32s\n", lhs_hgvs, lhs_spdi, rhs_hgvs, rhs_spdi, relation) == 5)
     {
         GVA_Variant lhs;
         if (!gva_parse_spdi(strlen(lhs_spdi), lhs_spdi, &lhs))
@@ -313,20 +324,20 @@ compare(void)
             fprintf(stderr, "PARSE ERROR: %s\n", rhs_spdi);
             continue;
         } // if
-        count += 1;
-//        printf("%d\n", gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs));
 
         //fprintf(stderr, "%s %zu %s %zu %zu %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python);
-        size_t const relation = gva_compare(gva_std_allocator, seq.len, seq.str, lhs, rhs);
-        if (strcmp(python, GVA_RELATION_LABELS[relation]) != 0)
+        size_t const relation = gva_compare(gva_std_allocator, reference.len, reference.str, lhs, rhs);
+        //if (strcmp(python, GVA_RELATION_LABELS[relation]) != 0)
         {
-            printf("%s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[relation]);
+            //printf("%s %zu %s %zu %zu %s %s\n", lhs_spdi, lhs_dist, rhs_spdi, rhs_dist, dist, python, GVA_RELATION_LABELS[relation]);
+            printf("%s %s %s %s %s\n", lhs_hgvs, lhs_spdi, rhs_hgvs, rhs_spdi, GVA_RELATION_LABELS[relation]);
         } // if
-//        printf("%s %s\n", lhs_spdi, rhs_spdi);
 
-    }
-    printf("%zu\n", count);
-    seq.str = gva_std_allocator.allocate(gva_std_allocator.context, seq.str, seq.len, 0);
+        count += 1;
+    } // while
+    fprintf(stderr, "total: %zu\n", count);
+    fprintf(stderr, "disjoint: %zu\n", disjoint_count);
+    reference.str = gva_std_allocator.allocate(gva_std_allocator.context, reference.str, reference.len, 0);
 
     return 0;
 } // compare
@@ -450,13 +461,13 @@ extract(int const argc, char* argv[static argc + 1])
 } // extract
 
 
+/*
 int
 faststabber(int argc, char* argv[static argc + 1])
 {
-/*
-    check(stdin, 38);
-    return -1;
-*/
+    //check(stdin, 38);
+    //return -1;
+
     uint32_t n = 0;
     uint32_t q = 0;
     uint32_t r = 0;
@@ -592,6 +603,7 @@ faststabber(int argc, char* argv[static argc + 1])
 
     return EXIT_SUCCESS;
 } // faststabber
+*/
 
 
 int
@@ -599,10 +611,10 @@ main(int argc, char* argv[static argc + 1])
 {
     (void) argv;
     // check python relation output
-    return compare();
+    return compare(argc, argv);
 
     // calculate graphs for all inputs
-    // return all_graphs();
+    //return all_graphs();
 
     // extract single variant
     //return extract(argc, argv);
