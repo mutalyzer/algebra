@@ -54,9 +54,14 @@ bitset_fill(GVA_LCS_Graph const graph,
     size_t counter = 0;
     for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
+        if (graph.nodes[i].row > end)
+        {
+            continue;
+        } // if
+
         for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
         {
-            if (graph.nodes[i].row > end || graph.nodes[graph.edges[j].tail].row + graph.nodes[graph.edges[j].tail].length < start)
+            if (graph.nodes[graph.edges[j].tail].row + graph.nodes[graph.edges[j].tail].length < start)
             {
                 continue;
             } // if
