@@ -95,6 +95,9 @@ bitset_fill(GVA_LCS_Graph const graph,
 } // bitset_fill
 
 
+size_t disjoint_count = 0;
+
+
 GVA_Relation
 gva_compare(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
@@ -199,6 +202,7 @@ gva_compare(GVA_Allocator const allocator,
         else
         {
             relation = GVA_DISJOINT;
+            disjoint_count += 1;
         } // else
 
         lhs_ts = bitset_destroy(allocator, lhs_ts);
