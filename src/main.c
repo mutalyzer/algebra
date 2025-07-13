@@ -23,6 +23,70 @@
 
 
 static void
+lcs_graph_svg(FILE* const stream, GVA_LCS_Graph const graph)
+{
+    gva_uint const offset = graph.nodes[graph.source].row;
+    gva_uint const scale = 30;
+    fprintf(stream, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %u %u\">\n", (graph.nodes[0].col + graph.nodes[0].length) * scale + 2 * scale, (graph.nodes[0].row + graph.nodes[0].length - offset) * scale + 2 * scale);
+
+    fprintf(stream, "<g stroke=\"black\">\n");
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        if (graph.nodes[i].lambda != GVA_NULL)
+        {
+            gva_uint const row = (graph.nodes[i].row - offset) * scale + scale;
+            gva_uint const col = graph.nodes[i].col * scale + scale;
+            gva_uint const to_row = (graph.nodes[graph.nodes[i].lambda].row - offset) * scale + scale;
+            gva_uint const to_col = graph.nodes[graph.nodes[i].lambda].col * scale + scale;
+            fprintf(stream, "<line x1=\"%u\" y1=\"%u\" x2=\"%u\" y2=\"%u\" stroke-dasharray=\"2\"/>\n", col, row, to_col, to_row);
+        } // if
+
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            GVA_Variant variant;
+            gva_uint const count = gva_edges(graph.observed.str,
+                                             graph.nodes[i], graph.nodes[graph.edges[j].tail],
+                                             i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                                             &variant);
+
+            gva_uint const row = (variant.start - (variant.start > 0) - offset); // * scale + scale;
+            gva_uint const col = (variant.sequence.str - graph.observed.str - (variant.start > 0)); //  * scale + scale;
+            gva_uint const to_row = (variant.end + count - 1 - offset); //  * scale + scale;
+            gva_uint const to_col = (col + count - (variant.start == 0) + variant.sequence.len); // * scale + scale;
+
+            fprintf(stream, "<line x1=\"%u\" y1=\"%u\" x2=\"%u\" y2=\"%u\" stroke-width=\"%.2f\"/>\n", col * scale + scale, row * scale + scale, to_col * scale + scale, to_row * scale + scale, (double) count / 2.0);
+        } // for
+    } // for
+    fprintf(stream, "</g>\n");
+
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        gva_uint const row = (graph.nodes[i].row - offset) * scale + scale;
+        gva_uint const col = graph.nodes[i].col * scale + scale;
+        if (graph.nodes[i].length < 2)
+        {
+            fprintf(stream, "<circle cx=\"%u\" cy=\"%u\" r=\"10\" fill=\"white\" stroke=\"black\" stroke-width=\".5\"/>\n", col, row);
+        } // if
+        else
+        {
+            gva_uint const to_row = (graph.nodes[i].row - offset + graph.nodes[i].length) * scale + scale;
+            gva_uint const to_col = (graph.nodes[i].col + graph.nodes[i].length) * scale + scale;
+            fprintf(stream, "<line x1=\"%u\" y1=\"%u\" x2=\"%u\" y2=\"%u\" stroke=\"black\" stroke-width=\"20.5\" stroke-linecap=\"round\"/>\n", col, row, to_col, to_row);
+            fprintf(stream, "<line x1=\"%u\" y1=\"%u\" x2=\"%u\" y2=\"%u\" stroke=\"white\" stroke-width=\"19.5\" stroke-linecap=\"round\"/>\n", col, row, to_col, to_row);
+        } // else
+        fprintf(stream, "<text x=\"%u\" y=\"%u\" font-size=\"4px\" text-anchor=\"middle\">(%u, %u, %u)</text>\n", col, row + 1, graph.nodes[i].row - offset, graph.nodes[i].col, graph.nodes[i].length);
+        if (graph.nodes[i].lambda != GVA_NULL)
+        {
+            gva_uint const row = (graph.nodes[graph.nodes[i].lambda].row - offset) * scale + scale;
+            gva_uint const col = graph.nodes[graph.nodes[i].lambda].col * scale + scale;
+            fprintf(stream, "<text x=\"%u\" y=\"%u\" font-size=\"4px\" text-anchor=\"middle\">(%u, %u, %u)</text>\n", col, row + 1, graph.nodes[graph.nodes[i].lambda].row - offset, graph.nodes[graph.nodes[i].lambda].col, graph.nodes[graph.nodes[i].lambda].length);
+        } // ifr
+    } // for
+    fprintf(stream, "</svg>\n");
+} // lcs_graph_svg
+
+
+static void
 lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph)
 {
     fprintf(stream, "strict digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->%u\n", graph.source);
@@ -366,6 +430,7 @@ extract(int const argc, char* argv[static argc + 1])
     lcs_graph_raw(stderr, graph);
     lcs_graph_dot(stderr, graph);
     lcs_graph_json(stdout, graph);
+    lcs_graph_svg(stderr, graph);
 
     GVA_Variant* canonical = gva_extract(gva_std_allocator, graph);
     for (size_t i = 0; i < array_length(canonical); ++i)
