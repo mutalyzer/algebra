@@ -12,9 +12,9 @@
 #include "../include/compare.h"     // gva_compare
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/extract.h"     // gva_extract
-#include "../include/faststabber.h" // Node, Stack
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/relations.h"   // GVA_RELATION_LABELS
+#include "../include/stabbing.h"    // GVA_Stabbing_*, gva_stabbing_*
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/types.h"       // GVA_NULL, GVA_String, gva_uint
 #include "../include/utils.h"       // gva_fasta_sequence
@@ -299,18 +299,18 @@ compare(int argc, char* argv[static argc + 1])
 
     // NC_000001.11:169556314:6:TTTTTCTCT 3 NC_000001.11:169556314:8:TTTTTGTCTGGCTGC 7 4 is_contained
     // NC_000001.10:g.103496806_103496807delAA NC_000001.10:103496805:13:AAAAAAAAAAA NC_000001.10:g.103496811A>C NC_000001.10:103496805:13:AAAAACAAAAAAA overlap
-    char lhs_hgvs[4096];
-    char lhs_spdi[4096];
-    //size_t lhs_dist;
-    char rhs_hgvs[4096];
-    char rhs_spdi[4096];
-    //size_t rhs_dist;
-    //size_t dist;
-    //char python[32];
-    char relation[32];
+    char lhs_hgvs[4096] = {0};
+    char lhs_spdi[4096] = {0};
+    //size_t lhs_dist = 0;
+    char rhs_hgvs[4096] = {0};
+    char rhs_spdi[4096] = {0};
+    //size_t rhs_dist = 0;
+    //size_t dist = 0;
+    //char python[32] = {0};
+    char relation[32] = {0};
     size_t count = 0;
     //while (fscanf(stdin, "%4096s %zu %4096s %zu %zu %32s\n", lhs_spdi, &lhs_dist, rhs_spdi, &rhs_dist, &dist, python) == 6)
-    while (fscanf(stdin, "%4096s %4096s %4096s %4096s %32s\n", lhs_hgvs, lhs_spdi, rhs_hgvs, rhs_spdi, relation) == 5)
+    while (fscanf(stdin, "%4095s %4095s %4095s %4095s %31s\n", lhs_hgvs, lhs_spdi, rhs_hgvs, rhs_spdi, relation) == 5)
     {
         GVA_Variant lhs;
         if (!gva_parse_spdi(strlen(lhs_spdi), lhs_spdi, &lhs))
@@ -355,17 +355,17 @@ all_graphs(void)
     } // if
 
     //bool check = false;
-    size_t rsid;
-    char spdi[4096];
-    char hgvs[4096];
-    char python_sup[4096];
-    //char c_sup[4096];
-    size_t python_distance;
-    size_t python_nodes;
-    size_t python_edges;
+    size_t rsid = 0;
+    char spdi[4096] = {0};
+    char hgvs[4096] = {0};
+    char python_sup[4096] = {0};
+    //char c_sup[4096] = {0};
+    size_t python_distance = 0;
+    size_t python_nodes = 0;
+    size_t python_edges = 0;
     size_t count = 0;
     size_t counter = 0;
-    while (fscanf(stdin, "%zu %4096s %4096s %4096s %zu %zu %zu\n", &rsid, spdi, hgvs, python_sup, &python_distance, &python_nodes, &python_edges) == 7)
+    while (fscanf(stdin, "%zu %4095s %4095s %4095s %zu %zu %zu\n", &rsid, spdi, hgvs, python_sup, &python_distance, &python_nodes, &python_edges) == 7)
     {
         GVA_Variant variant;
         if (!gva_parse_spdi(strlen(spdi), spdi, &variant))
@@ -461,157 +461,81 @@ extract(int const argc, char* argv[static argc + 1])
 } // extract
 
 
-/*
-int
-faststabber(int argc, char* argv[static argc + 1])
+static void
+index_dot(FILE* const stream, GVA_Stabbing_Index const index)
 {
-    //check(stdin, 38);
-    //return -1;
-
-    uint32_t n = 0;
-    uint32_t q = 0;
-    uint32_t r = 0;
-    char *dot_path = NULL, *vcf_path = NULL, *bed_path = NULL;
-    int opt = -1;
-    while ((opt = getopt(argc, argv, "b:hd:n:q:r:v:")) != -1)
+    fprintf(stream, "strict digraph{\nrankdir=BT\n%u[label=\"\"]\n", GVA_NULL);
+    for (gva_uint i = 0; i < array_length(index.entries); ++i)
     {
-        switch (opt)
+        fprintf(stream, "%u[label=\"[%u, %u]\"]\n", i, index.entries[i].start, index.entries[i].end);
+        if (index.entries[i].leftsibling != GVA_NULL)
         {
-            case 'b':
-                bed_path = malloc(strlen(optarg) +1);
-                assert(NULL != bed_path);
-                strcpy(bed_path, optarg);
-                break;
-            case 'd':
-                dot_path = malloc(strlen(optarg) + 1);
-                assert(dot_path != NULL);
-                strcpy(dot_path, optarg);
-                break;
-            case 'n':
-                n = atoi(optarg);
-                break;
-            case 'q':
-                q = atoi(optarg);
-                break;
-            case 'r':
-                r = atoi(optarg);
-                break;
-            case 'v':
-                vcf_path = malloc(strlen(optarg) + 1);
-                assert(vcf_path != NULL);
-                strcpy(vcf_path, optarg);
-                break;
-            case 'h':
-            default:
-                fprintf(stderr, "Usage: %s [-h] [-d path] -b bed_file -n size [ -q left [-r right] | -v vcf_file ] \n", argv[0]);
-                return EXIT_FAILURE;
-        } // switch
+            fprintf(stream, "%u->%u[dir=None,style=\"dashed\"]\n", i, index.entries[i].leftsibling);
+        } // if
+        if (index.entries[i].rightchild != GVA_NULL)
+        {
+            fprintf(stream, "%u->%u\n", i, index.entries[i].rightchild);
+        } // if
+        fprintf(stream, "%u->%u\n", i, index.entries[i].parent);
+    } // for
+    fprintf(stream, "}\n");
+} // index_dot
+
+
+int
+faststabber(int const argc, char* argv[static argc + 1])
+{
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage: %s path_to_variant_tsv\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_Stabbing_Entry* entries = NULL;
+
+    char reference[128] = {0};
+    gva_uint start = 0;
+    gva_uint end = 0;;
+    char inserted[4096] = {0};
+    while (fscanf(stream, "%127s %u %u %4095s\n", reference, &start, &end, inserted) == 4)
+    {
+        ARRAY_APPEND(gva_std_allocator, entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, start, end}));
     } // while
+    fclose(stream);
 
-    if ((bed_path && !strncmp("-", bed_path, 1)) && (vcf_path && !strncmp("-", vcf_path, 1))) {
-        fprintf(stderr, "Can't read both VCF and BED from STDIN\n");
-        free(bed_path);
-        return EXIT_FAILURE;
-    }
+    fprintf(stderr, "%zu\n", array_length(entries));
+    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 30, entries);
 
-    if (!bed_path) {
-        fprintf(stderr, "BED file not specified!\n");
-        return EXIT_FAILURE;
-    }
-    if (vcf_path && q) {
-        fprintf(stderr, "Either specify a 'VCF file' or a query range, not both!\n");
-        return EXIT_FAILURE;
-    }
+    index_dot(stderr, index);
 
-    if (0 == n)
+    gva_uint* result = gva_stabbing_index_stab(gva_std_allocator, index, 13, 13);
+    for (size_t i = 0; i < array_length(result); ++i)
     {
-        fprintf(stderr, "Specify size with -n\n");
-        return EXIT_FAILURE;
-    } // if
+        fprintf(stderr, "%2zu: (%2u) [%2u, %2u]\n", i, result[i], index.entries[result[i]].start, index.entries[result[i]].end);
+    } // for
+    result = ARRAY_DESTROY(gva_std_allocator, result);
 
-    if (!vcf_path && q >= n)
-    {
-        fprintf(stderr, "Invalid parameter combination (n > q): n=%" PRIu32 ", q=%" PRIu32 "\n", n, q);
-        return EXIT_FAILURE;
-    } // if
-
-    if (r < q)
-    {
-        r = q;
-    } // if
-
-    // allocate start node lookup table
-    Node** start_table = malloc(n * sizeof(*start_table));
-    assert(start_table != NULL);
-
-    Node* tree = NULL;
-    FILE *restrict fp = NULL;
-    if (1 == strlen(bed_path) && !strncmp("-", bed_path, 1)) {
-        fp = stdin;
-    } else {
-        fp = fopen(bed_path, "r");
-    }
-    free(bed_path);
-    assert(fp != NULL);
-
-    //TIC(construct);
-    read_bed(fp, n, &tree, start_table);
-    //TOC(construct);
-
-    fclose(fp);
-
-    if (dot_path != NULL)
-    {
-        FILE* const restrict fp_dot = fopen(dot_path, "w");
-        assert(fp_dot != NULL);
-
-        write_dot(fp_dot, tree);
-
-        fclose(fp_dot);
-        free(dot_path);
-    } // if
-
-    if (q)
-    {
-        Stack *output = NULL;
-        stab(start_table[r], q, r, &output);
-
-        printf("q: %" PRIu32 "--%" PRIu32 "\n", q, r);
-        while (output != NULL) {
-            printf("%" PRIu32 "--%" PRIu32 "\n", stack_top(output)->start, stack_top(output)->end);
-            output = stack_pop(output);
-        } // while
-
-    } // if
-    //else if (vcf_path != NULL)
-    //{
-    //
-    //    FILE* restrict fp_vcf = NULL;
-    //    if (1 == strlen(vcf_path) && !strncmp("-", vcf_path, 1)) {
-    //        fp_vcf = stdin;
-    //    } else {
-    //        fp_vcf = fopen(vcf_path, "r");
-    //    }
-    //    free(vcf_path);
-    //    assert(fp_vcf != NULL);
-    //    query_bed(fp_vcf, start_table);
-    //} // if
-
-    destroy(tree);
-
-    free(start_table);
+    gva_stabbing_index_destroy(gva_std_allocator, index);
 
     return EXIT_SUCCESS;
 } // faststabber
-*/
 
 
 int
 main(int argc, char* argv[static argc + 1])
 {
     (void) argv;
+
     // check python relation output
-    return compare(argc, argv);
+    //return compare(argc, argv);
 
     // calculate graphs for all inputs
     //return all_graphs();
@@ -620,5 +544,5 @@ main(int argc, char* argv[static argc + 1])
     //return extract(argc, argv);
 
     // faststabber
-    //return faststabber(argc, argv);
+    return faststabber(argc, argv);
 } // main
