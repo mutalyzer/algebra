@@ -514,34 +514,30 @@ faststabber(int const argc, char* argv[static argc + 1])
     fclose(stream);
 
     fprintf(stderr, "%zu\n", array_length(entries));
-    // 248956422
-    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 30, entries);
+
+    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 248956422, entries);
 
     fprintf(stderr, "init done\n");
 
-    index_dot(stderr, index);
+    //index_dot(stderr, index);
 
-    gva_uint* results = gva_stabbing_index_stab(gva_std_allocator, index, 10, 13);
-    for (size_t j = 0; j < array_length(results); ++j)
-    {
-        printf("%u [%u, %u]\n", results[j], index.entries[results[j]].start, index.entries[results[j]].end);
-    } // for
-    results = ARRAY_DESTROY(gva_std_allocator, results);
-
-/*
     size_t count = 0;
     for (size_t i = 0; i < array_length(index.entries); ++i)
     {
-        gva_uint* result = gva_stabbing_index_stab(gva_std_allocator, index, index.entries[i].start, index.entries[i].end);
-        for (size_t j = 0; j < array_length(result); ++j)
+        gva_uint* results = gva_stabbing_index_stab(gva_std_allocator, index, index.entries[i].start, index.entries[i].end);
+        //count += array_length(results);
+        for (size_t j = 0; j < array_length(results); ++j)
         {
-            printf("%2zu [%u, %u] %u [%u, %u]\n", i + 1, index.entries[i].start, index.entries[i].end, result[j] + 1, index.entries[result[j]].start, index.entries[result[j]].end);
+            if (i < results[j])
+            {
+                printf("%2zu [%u, %u] %u [%u, %u]\n", i + 1, index.entries[i].start, index.entries[i].end, results[j] + 1, index.entries[results[j]].start, index.entries[results[j]].end);
+                count += 1;
+            } // if
         } // for
-        result = ARRAY_DESTROY(gva_std_allocator, result);
+        results = ARRAY_DESTROY(gva_std_allocator, results);
     } // for
-*/
+    fprintf(stderr, "total: %zu\n", count);
 
-    //entries = ARRAY_DESTROY(gva_std_allocator, entries);
     gva_stabbing_index_destroy(gva_std_allocator, index);
 
     return EXIT_SUCCESS;
