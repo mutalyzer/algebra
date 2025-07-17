@@ -468,6 +468,7 @@ index_dot(FILE* const stream, GVA_Stabbing_Index const index)
     for (gva_uint i = 0; i < array_length(index.entries); ++i)
     {
         fprintf(stream, "%u[label=\"[%u, %u]\"]\n", i, index.entries[i].start, index.entries[i].end);
+        /*
         if (index.entries[i].leftsibling != GVA_NULL)
         {
             fprintf(stream, "%u->%u[dir=None,style=\"dashed\"]\n", i, index.entries[i].leftsibling);
@@ -476,6 +477,7 @@ index_dot(FILE* const stream, GVA_Stabbing_Index const index)
         {
             fprintf(stream, "%u->%u\n", i, index.entries[i].rightchild);
         } // if
+        */
         fprintf(stream, "%u->%u\n", i, index.entries[i].parent);
     } // for
     fprintf(stream, "}\n");
@@ -512,17 +514,34 @@ faststabber(int const argc, char* argv[static argc + 1])
     fclose(stream);
 
     fprintf(stderr, "%zu\n", array_length(entries));
+    // 248956422
     GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 30, entries);
+
+    fprintf(stderr, "init done\n");
 
     index_dot(stderr, index);
 
-    gva_uint* result = gva_stabbing_index_stab(gva_std_allocator, index, 13, 13);
-    for (size_t i = 0; i < array_length(result); ++i)
+    gva_uint* results = gva_stabbing_index_stab(gva_std_allocator, index, 10, 13);
+    for (size_t j = 0; j < array_length(results); ++j)
     {
-        fprintf(stderr, "%2zu: (%2u) [%2u, %2u]\n", i, result[i], index.entries[result[i]].start, index.entries[result[i]].end);
+        printf("%u [%u, %u]\n", results[j], index.entries[results[j]].start, index.entries[results[j]].end);
     } // for
-    result = ARRAY_DESTROY(gva_std_allocator, result);
+    results = ARRAY_DESTROY(gva_std_allocator, results);
 
+/*
+    size_t count = 0;
+    for (size_t i = 0; i < array_length(index.entries); ++i)
+    {
+        gva_uint* result = gva_stabbing_index_stab(gva_std_allocator, index, index.entries[i].start, index.entries[i].end);
+        for (size_t j = 0; j < array_length(result); ++j)
+        {
+            printf("%2zu [%u, %u] %u [%u, %u]\n", i + 1, index.entries[i].start, index.entries[i].end, result[j] + 1, index.entries[result[j]].start, index.entries[result[j]].end);
+        } // for
+        result = ARRAY_DESTROY(gva_std_allocator, result);
+    } // for
+*/
+
+    //entries = ARRAY_DESTROY(gva_std_allocator, entries);
     gva_stabbing_index_destroy(gva_std_allocator, index);
 
     return EXIT_SUCCESS;
