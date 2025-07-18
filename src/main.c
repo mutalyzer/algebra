@@ -477,6 +477,14 @@ index_dot(FILE* const stream, GVA_Stabbing_Index const index)
 } // index_dot
 
 
+static inline bool
+intersect(size_t const lhs_start, size_t const lhs_end,
+    size_t const rhs_start, size_t const rhs_end)
+{
+    return rhs_end >= lhs_start && rhs_start <= lhs_end;
+} // intersect
+
+
 int
 faststabber(int const argc, char* argv[static argc + 1])
 {
@@ -512,9 +520,11 @@ faststabber(int const argc, char* argv[static argc + 1])
     gva_stabbing_index_build(gva_std_allocator, index);
 
     index_dot(stderr, index);
+    //gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, 2, 10);
+    //results = ARRAY_DESTROY(gva_std_allocator, results);
 
     size_t count = 0;
-    for (size_t i = 1; i < 2; ++i)
+    for (size_t i = 1; i < array_length(index.entries); ++i)
     {
         gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, index.entries[i].start, index.entries[i].end);
         //count += array_length(results);
@@ -527,6 +537,20 @@ faststabber(int const argc, char* argv[static argc + 1])
             } // if
         } // for
         results = ARRAY_DESTROY(gva_std_allocator, results);
+    } // for
+    fprintf(stderr, "total: %zu\n", count);
+
+    count = 0;
+    for (size_t i = 1; i < array_length(index.entries); ++i)
+    {
+        for (size_t j = i + 1; j < array_length(index.entries); ++j)
+        {
+            if (intersect(index.entries[i].start, index.entries[i].end, index.entries[j].start, index.entries[j].end))
+            {
+                printf("%2zu [%u, %u] %2zu [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, j, index.entries[j].start, index.entries[j].end);
+                count += 1;
+            } // if
+        } // for
     } // for
     fprintf(stderr, "total: %zu\n", count);
 
