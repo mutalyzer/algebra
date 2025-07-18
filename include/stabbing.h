@@ -22,22 +22,31 @@ typedef struct
 
 typedef struct
 {
-    GVA_Stabbing_Entry* entries;
-    gva_uint*           start_table;
     size_t              len_ref;
+    gva_uint*           start_table;
+    GVA_Stabbing_Entry* entries;
 } GVA_Stabbing_Index;
 
 
 GVA_Stabbing_Index
-gva_stabbing_index_init(GVA_Allocator const allocator, size_t const len_ref, GVA_Stabbing_Entry* const entries);
+gva_stabbing_index_init(GVA_Allocator const allocator, size_t const len_ref);
+
+
+size_t
+gva_stabbing_index_add(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1],
+    size_t const start, size_t const end);
 
 
 void
-gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index index);
+gva_stabbing_index_build(GVA_Allocator const allocator, GVA_Stabbing_Index const index);
+
+
+void
+gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1]);
 
 
 gva_uint*
-gva_stabbing_index_stab(GVA_Allocator const allocator, GVA_Stabbing_Index const index,
+gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index const index,
     gva_uint const start, gva_uint const end);
 
 

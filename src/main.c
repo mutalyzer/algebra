@@ -464,21 +464,14 @@ extract(int const argc, char* argv[static argc + 1])
 static void
 index_dot(FILE* const stream, GVA_Stabbing_Index const index)
 {
-    fprintf(stream, "strict digraph{\nrankdir=BT\n%u[label=\"\"]\n", GVA_NULL);
+    fprintf(stream, "strict digraph{\nrankdir=BT\n");
     for (gva_uint i = 0; i < array_length(index.entries); ++i)
     {
-        fprintf(stream, "%u[label=\"[%u, %u]\"]\n", i, index.entries[i].start, index.entries[i].end);
-        /*
-        if (index.entries[i].leftsibling != GVA_NULL)
+        fprintf(stream, "%u[label=\"%u\\n[%u, %u]\"]\n", i, i, index.entries[i].start, index.entries[i].end);
+        if (index.entries[i].parent != GVA_NULL)
         {
-            fprintf(stream, "%u->%u[dir=None,style=\"dashed\"]\n", i, index.entries[i].leftsibling);
+            fprintf(stream, "%u->%u\n", i, index.entries[i].parent);
         } // if
-        if (index.entries[i].rightchild != GVA_NULL)
-        {
-            fprintf(stream, "%u->%u\n", i, index.entries[i].rightchild);
-        } // if
-        */
-        fprintf(stream, "%u->%u\n", i, index.entries[i].parent);
     } // for
     fprintf(stream, "}\n");
 } // index_dot
@@ -501,36 +494,35 @@ faststabber(int const argc, char* argv[static argc + 1])
         return EXIT_FAILURE;
     } // if
 
-    GVA_Stabbing_Entry* entries = NULL;
+    //248956422
+    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 30);
 
     char reference[128] = {0};
-    gva_uint start = 0;
-    gva_uint end = 0;;
+    size_t start = 0;
+    size_t end = 0;;
     char inserted[4096] = {0};
-    while (fscanf(stream, "%127s %u %u %4095s\n", reference, &start, &end, inserted) == 4)
+    while (fscanf(stream, "%127s %zu %zu %4095s\n", reference, &start, &end, inserted) == 4)
     {
-        ARRAY_APPEND(gva_std_allocator, entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, start, end}));
+        gva_stabbing_index_add(gva_std_allocator, &index, start, end);
     } // while
     fclose(stream);
 
-    fprintf(stderr, "%zu\n", array_length(entries));
+    fprintf(stderr, "%zu\n", array_length(index.entries));
 
-    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 248956422, entries);
+    gva_stabbing_index_build(gva_std_allocator, index);
 
-    fprintf(stderr, "init done\n");
-
-    //index_dot(stderr, index);
+    index_dot(stderr, index);
 
     size_t count = 0;
-    for (size_t i = 0; i < array_length(index.entries); ++i)
+    for (size_t i = 1; i < 2; ++i)
     {
-        gva_uint* results = gva_stabbing_index_stab(gva_std_allocator, index, index.entries[i].start, index.entries[i].end);
+        gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, index.entries[i].start, index.entries[i].end);
         //count += array_length(results);
         for (size_t j = 0; j < array_length(results); ++j)
         {
             if (i < results[j])
             {
-                printf("%2zu [%u, %u] %u [%u, %u]\n", i + 1, index.entries[i].start, index.entries[i].end, results[j] + 1, index.entries[results[j]].start, index.entries[results[j]].end);
+                printf("%2zu [%u, %u] %2u [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, results[j], index.entries[results[j]].start, index.entries[results[j]].end);
                 count += 1;
             } // if
         } // for
@@ -538,7 +530,7 @@ faststabber(int const argc, char* argv[static argc + 1])
     } // for
     fprintf(stderr, "total: %zu\n", count);
 
-    gva_stabbing_index_destroy(gva_std_allocator, index);
+    gva_stabbing_index_destroy(gva_std_allocator, &index);
 
     return EXIT_SUCCESS;
 } // faststabber
