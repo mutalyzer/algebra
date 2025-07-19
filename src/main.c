@@ -503,24 +503,25 @@ faststabber(int const argc, char* argv[static argc + 1])
     } // if
 
     //248956422
-    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 30);
+    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 248956422);
 
-    char reference[128] = {0};
+    size_t rsid = 0;
     size_t start = 0;
-    size_t end = 0;;
+    size_t end = 0;
     char inserted[4096] = {0};
-    while (fscanf(stream, "%127s %zu %zu %4095s\n", reference, &start, &end, inserted) == 4)
+    size_t distance = 0;
+    while (fscanf(stream, "%zu %zu %zu %4095s %zu\n", &rsid, &start, &end, inserted, &distance) == 5)
     {
         gva_stabbing_index_add(gva_std_allocator, &index, start, end);
     } // while
     fclose(stream);
 
-    fprintf(stderr, "%zu\n", array_length(index.entries));
+    fprintf(stderr, "%zu\n", array_length(index.entries) - 1);
 
     gva_stabbing_index_build(gva_std_allocator, index);
 
-    index_dot(stderr, index);
-    //gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, 2, 10);
+    //index_dot(stdout, index);
+    //gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, 15807, 15813);
     //results = ARRAY_DESTROY(gva_std_allocator, results);
 
     size_t count = 0;
@@ -532,7 +533,7 @@ faststabber(int const argc, char* argv[static argc + 1])
         {
             if (i < results[j])
             {
-                printf("%2zu [%u, %u] %2u [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, results[j], index.entries[results[j]].start, index.entries[results[j]].end);
+                //fprintf(stdout, "%2zu [%u, %u] %2u [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, results[j], index.entries[results[j]].start, index.entries[results[j]].end);
                 count += 1;
             } // if
         } // for
@@ -545,9 +546,13 @@ faststabber(int const argc, char* argv[static argc + 1])
     {
         for (size_t j = i + 1; j < array_length(index.entries); ++j)
         {
+            if (index.entries[i].end < index.entries[j].start)
+            {
+                break;
+            } // if
             if (intersect(index.entries[i].start, index.entries[i].end, index.entries[j].start, index.entries[j].end))
             {
-                printf("%2zu [%u, %u] %2zu [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, j, index.entries[j].start, index.entries[j].end);
+                //fprintf(stdout, "%2zu [%u, %u] %2zu [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, j, index.entries[j].start, index.entries[j].end);
                 count += 1;
             } // if
         } // for

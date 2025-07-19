@@ -115,22 +115,25 @@ gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index c
 
     //fprintf(stderr, "start_table: %2u\n", index.start_table[end]);
 
-    if (index.entries[stab].rightchild != GVA_NULL && start <= index.entries[index.entries[stab].rightchild].end && end >= index.entries[index.entries[stab].rightchild].start)
+    if (index.entries[stab].rightchild != GVA_NULL)
     {
         ARRAY_APPEND(allocator, stack, index.entries[stab].rightchild);
         while (array_length(stack) > 0)
         {
             array_header(stack)->length -= 1;
             gva_uint trav = stack[array_length(stack)];
-            //fprintf(stderr, "Rtrav: %2u: [%2u, %2u]\n", trav, index.entries[trav].start, index.entries[trav].end);
-            ARRAY_APPEND(allocator, results, trav);
+            if (end >= index.entries[trav].start)
+            {
+                //fprintf(stderr, "Rtrav: %2u: [%2u, %2u]\n", trav, index.entries[trav].start, index.entries[trav].end);
+                ARRAY_APPEND(allocator, results, trav);
+            } // if
 
-            if (index.entries[trav].leftsibling != GVA_NULL && start <= index.entries[index.entries[trav].leftsibling].end)
+            if (index.entries[trav].leftsibling != GVA_NULL)
             {
                 ARRAY_APPEND(allocator, stack, index.entries[trav].leftsibling);
             } // if
 
-            if (index.entries[trav].rightchild != GVA_NULL && start <= index.entries[index.entries[trav].rightchild].end)
+            if (index.entries[trav].rightchild != GVA_NULL && end >= index.entries[index.entries[trav].rightchild].start)
             {
                 ARRAY_APPEND(allocator, stack, index.entries[trav].rightchild);
             } // if
@@ -160,7 +163,7 @@ gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index c
                     ARRAY_APPEND(allocator, stack, index.entries[trav].leftsibling);
                 } // if
 
-                if (index.entries[trav].rightchild != GVA_NULL && start <= index.entries[index.entries[trav].rightchild].end)
+                if (index.entries[trav].rightchild != GVA_NULL)
                 {
                     ARRAY_APPEND(allocator, stack, index.entries[trav].rightchild);
                 } // if
