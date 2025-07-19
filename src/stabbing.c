@@ -106,6 +106,80 @@ gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index ind
 
 
 gva_uint*
+gva_stabbing_index_self_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index const index)
+{
+    gva_uint* results = NULL;
+    gva_uint* stack = NULL;
+
+    for (gva_uint i = 1; i < array_length(index.entries); ++i)
+    {
+        //fprintf(stderr, "%2u: [%u, %u]\n", i, index.entries[i].start, index.entries[i].end);
+        if (index.entries[i].rightchild != GVA_NULL)
+        {
+            ARRAY_APPEND(allocator, stack, index.entries[i].rightchild);
+            while (array_length(stack) > 0)
+            {
+                array_header(stack)->length -= 1;
+                gva_uint trav = stack[array_length(stack)];
+                //fprintf(stderr, "    Strav: %2u: [%u, %u]\n", trav, index.entries[trav].start, index.entries[trav].end);
+                //printf("%2u [%u, %u] %2u [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, trav, index.entries[trav].start, index.entries[trav].end);
+                ARRAY_APPEND(allocator, results, trav);
+
+                if (index.entries[trav].leftsibling != GVA_NULL)
+                {
+                    ARRAY_APPEND(allocator, stack, index.entries[trav].leftsibling);
+                } // if
+
+                if (index.entries[trav].rightchild != GVA_NULL)
+                {
+                    ARRAY_APPEND(allocator, stack, index.entries[trav].rightchild);
+                } // if
+            } // while
+        } // if
+
+        gva_uint stab = index.entries[i].parent;
+        while (stab != GVA_NULL)
+        {
+            if (index.entries[stab].rightchild != GVA_NULL)
+            {
+                ARRAY_APPEND(allocator, stack, index.entries[stab].rightchild);
+                while (array_length(stack) > 0)
+                {
+                    array_header(stack)->length -= 1;
+                    gva_uint trav = stack[array_length(stack)];
+
+                    //fprintf(stderr, "    VISIT: %2u: [%u, %u]\n", trav, index.entries[trav].start, index.entries[trav].end);
+
+                    if (trav > i && index.entries[i].end >= index.entries[trav].start)
+                    {
+                        //fprintf(stderr, "    Rtrav: %2u: [%u, %u]\n", trav, index.entries[trav].start, index.entries[trav].end);
+                        //printf("%2u [%u, %u] %2u [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, trav, index.entries[trav].start, index.entries[trav].end);
+                        ARRAY_APPEND(allocator, results, trav);
+
+                        if (index.entries[trav].rightchild != GVA_NULL)
+                        {
+                            ARRAY_APPEND(allocator, stack, index.entries[trav].rightchild);
+                        } // if
+                    } // if
+
+                    if (index.entries[trav].leftsibling != GVA_NULL && index.entries[trav].leftsibling > i)
+                    {
+                        ARRAY_APPEND(allocator, stack, index.entries[trav].leftsibling);
+                    } // if
+                } // while
+            } // if
+
+            stab = index.entries[stab].parent;
+        } // while
+
+    } // for
+    stack = ARRAY_DESTROY(allocator, stack);
+
+    return results;
+} // gva_stabbing_index_self_intersect
+
+
+gva_uint*
 gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index const index,
     gva_uint const start, gva_uint const end)
 {

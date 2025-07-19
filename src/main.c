@@ -485,6 +485,19 @@ intersect(size_t const lhs_start, size_t const lhs_end,
 } // intersect
 
 
+static inline size_t
+parse_number(char const buffer[static 1], size_t idx[static 1])
+{
+    size_t number = 0;
+    while (buffer[*idx] >= '0' && buffer[*idx] <= '9')
+    {
+        number = number * 10 + buffer[*idx] - '0';
+        *idx += 1;
+    } // while
+    return number;
+} // parse_number
+
+
 int
 faststabber(int const argc, char* argv[static argc + 1])
 {
@@ -505,25 +518,45 @@ faststabber(int const argc, char* argv[static argc + 1])
     //248956422
     GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 248956422);
 
-    size_t rsid = 0;
-    size_t start = 0;
-    size_t end = 0;
-    char inserted[4096] = {0};
-    size_t distance = 0;
-    while (fscanf(stream, "%zu %zu %zu %4095s %zu\n", &rsid, &start, &end, inserted, &distance) == 5)
+    size_t line_count = 0;
+    char line[4096] = {0};
+    while (fgets(line, sizeof(line), stream) != NULL)
     {
+        size_t idx = 0;
+
+        // ignore rsid
+        parse_number(line, &idx);
+        idx += 1;
+        size_t const start = parse_number(line, &idx);
+        idx += 1;
+        size_t const end = parse_number(line, &idx);
+        // ignore remainder of the line
+
         gva_stabbing_index_add(gva_std_allocator, &index, start, end);
+        line_count += 1;
     } // while
+
+    errno = 0;
+    if (feof(stream) == 0)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        fclose(stream);
+        gva_stabbing_index_destroy(gva_std_allocator, &index);
+        return EXIT_FAILURE;
+    } // if
     fclose(stream);
 
-    fprintf(stderr, "%zu\n", array_length(index.entries) - 1);
+    fprintf(stderr, "line count:  %zu\n", line_count);
+    fprintf(stderr, "entry count: %zu\n", array_length(index.entries) - 1);
 
-    gva_stabbing_index_build(gva_std_allocator, index);
+    //gva_stabbing_index_build(gva_std_allocator, index);
 
-    //index_dot(stdout, index);
-    //gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, 15807, 15813);
+    //index_dot(stderr, index);
+    //gva_uint* results = gva_stabbing_index_self_intersect(gva_std_allocator, index);
+    //fprintf(stderr, "total: %zu\n", array_length(results));
     //results = ARRAY_DESTROY(gva_std_allocator, results);
 
+/*
     size_t count = 0;
     for (size_t i = 1; i < array_length(index.entries); ++i)
     {
@@ -540,8 +573,8 @@ faststabber(int const argc, char* argv[static argc + 1])
         results = ARRAY_DESTROY(gva_std_allocator, results);
     } // for
     fprintf(stderr, "total: %zu\n", count);
-
-    count = 0;
+*/
+    size_t count = 0;
     for (size_t i = 1; i < array_length(index.entries); ++i)
     {
         for (size_t j = i + 1; j < array_length(index.entries); ++j)

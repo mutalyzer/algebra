@@ -46,6 +46,10 @@ gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index ind
 
 
 gva_uint*
+gva_stabbing_index_self_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index const index);
+
+
+gva_uint*
 gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index const index,
     gva_uint const start, gva_uint const end);
 
