@@ -670,8 +670,12 @@ trie_dot_node(FILE* const stream, Trie const* const trie)
 static void
 trie_dot(FILE* const stream, Trie const* const trie)
 {
-    fprintf(stream, "strict digraph{\n");
-    trie_dot_node(stream, trie);
+    fprintf(stream, "strict digraph{\n\"root\"[label=\"\",shape=point]\n");
+    for (Trie const* child = trie; child != NULL; child = child->next)
+    {
+        fprintf(stream, "\"root\"->\"%p\"\n", (void*) child);
+        trie_dot_node(stream, child);
+    } // for
     fprintf(stream, "}\n");
 } // trie_dot
 
@@ -734,10 +738,8 @@ trie(int argc, char* argv[static argc + 1])
 
     fprintf(stderr, "total: %zu\n", count);
 
-    trie_print(stderr, trie, 0);
-    trie_dot(stderr, trie);
-
-    fprintf(stderr, "%p\n", (void*) trie_find(trie, 4, "ruber"));
+    //trie_print(stderr, trie, 0);
+    trie_dot(stdout, trie);
 
     trie_destroy(trie);
 
