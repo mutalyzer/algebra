@@ -21,6 +21,7 @@
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi
 #include "array.h"      // ARRAY_DESTROY, array_length
 #include "bitset.h"     // bitset_*
+#include "trie.h"       // Trie, trie_*
 
 
 static void
@@ -589,7 +590,7 @@ faststabber(int const argc, char* argv[static argc + 1])
         return EXIT_FAILURE;
     } // if
 
-    qsort(intervals, array_length(intervals), sizeof(*intervals), interval_cmp);
+    //qsort(intervals, array_length(intervals), sizeof(*intervals), interval_cmp);
     //fprintf(stderr, "entry count: %zu\n", array_length(index.entries) - 1);
 
     /*
@@ -649,6 +650,101 @@ faststabber(int const argc, char* argv[static argc + 1])
 } // faststabber
 
 
+static void
+trie_dot_node(FILE* const stream, Trie const* const trie)
+{
+    if (trie == NULL)
+    {
+        return;
+    } // if
+
+    fprintf(stream, "\"%p\"[label=\"%.*s\"]\n", (void*) trie, (int) trie->len, trie->key);
+    for (Trie const* child = trie->link; child != NULL; child = child->next)
+    {
+        fprintf(stream, "\"%p\"->\"%p\"\n", (void*) trie, (void*) child);
+        trie_dot_node(stream, child);
+    } // for
+} // trie_dot_node
+
+
+static void
+trie_dot(FILE* const stream, Trie const* const trie)
+{
+    fprintf(stream, "strict digraph{\n");
+    trie_dot_node(stream, trie);
+    fprintf(stream, "}\n");
+} // trie_dot
+
+
+static void
+trie_print(FILE* const stream, Trie const* const trie, int const indent)
+{
+    if (trie == NULL)
+    {
+        return;
+    } // if
+
+    enum
+    {
+        INDENT = 4
+    }; // constants
+
+    trie_print(stream, trie->next, indent);
+    fprintf(stream, "%*s%.*s (%p) %zu\n", indent, "", (int) trie->len, trie->key, (void*) trie, trie->len);
+    trie_print(stream, trie->link, indent + INDENT);
+} // trie_print
+
+
+int
+trie(int argc, char* argv[static argc + 1])
+{
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage %s path_to_strings\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    Trie* trie = NULL;
+
+    size_t count = 0;
+    static char line[4096] = {0};
+    while (fgets(line, sizeof(line), stream) != NULL)
+    {
+        trie = trie_insert(trie, strlen(line) - 1, line);
+        count += 1;
+    } // while
+
+    errno = 0;
+    if (feof(stream) == 0)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        fclose(stream);
+        trie_destroy(trie);
+        return EXIT_FAILURE;
+    } // if
+    fclose(stream);
+
+    fprintf(stderr, "total: %zu\n", count);
+
+    trie_print(stderr, trie, 0);
+    trie_dot(stderr, trie);
+
+    fprintf(stderr, "%p\n", (void*) trie_find(trie, 4, "ruber"));
+
+    trie_destroy(trie);
+
+    return EXIT_SUCCESS;
+} // trie
+
+
 int
 main(int argc, char* argv[static argc + 1])
 {
@@ -664,5 +760,7 @@ main(int argc, char* argv[static argc + 1])
     //return extract(argc, argv);
 
     // faststabber
-    return faststabber(argc, argv);
+    //return faststabber(argc, argv);
+    // trie
+    return trie(argc, argv);
 } // main
