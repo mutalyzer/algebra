@@ -498,6 +498,39 @@ parse_number(char const buffer[static 1], size_t idx[static 1])
 } // parse_number
 
 
+typedef struct
+{
+    gva_uint start;
+    gva_uint end;
+} Interval;
+
+
+static inline int
+interval_cmp(void const* lhs, void const* rhs)
+{
+    Interval const* const lhs_interval = lhs;
+    Interval const* const rhs_interval = rhs;
+
+    if (lhs_interval->start < rhs_interval->start)
+    {
+        return -1;
+    } // if
+    if (lhs_interval->start > rhs_interval->start)
+    {
+        return 1;
+    } // if
+    if (lhs_interval->end > rhs_interval->end)
+    {
+        return -1;
+    } // if
+    if (lhs_interval->end < rhs_interval->end)
+    {
+        return 1;
+    } // if
+    return 0;
+} // interval cmp
+
+
 int
 faststabber(int const argc, char* argv[static argc + 1])
 {
@@ -516,10 +549,12 @@ faststabber(int const argc, char* argv[static argc + 1])
     } // if
 
     //248956422
-    GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 248956422);
+    //GVA_Stabbing_Index index = gva_stabbing_index_init(gva_std_allocator, 248956422);
+
+    Interval* intervals = NULL;
 
     size_t line_count = 0;
-    char line[4096] = {0};
+    static char line[4096] = {0};
     while (fgets(line, sizeof(line), stream) != NULL)
     {
         size_t idx = 0;
@@ -532,7 +567,8 @@ faststabber(int const argc, char* argv[static argc + 1])
         size_t const end = parse_number(line, &idx);
         // ignore remainder of the line
 
-        gva_stabbing_index_add(gva_std_allocator, &index, start, end);
+        //gva_stabbing_index_add(gva_std_allocator, &index, start, end);
+        ARRAY_APPEND(gva_std_allocator, intervals, ((Interval) {start, end}));
         line_count += 1;
     } // while
 
@@ -541,13 +577,27 @@ faststabber(int const argc, char* argv[static argc + 1])
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
         fclose(stream);
-        gva_stabbing_index_destroy(gva_std_allocator, &index);
+        //gva_stabbing_index_destroy(gva_std_allocator, &index);
+        intervals = ARRAY_DESTROY(gva_std_allocator, intervals);
         return EXIT_FAILURE;
     } // if
     fclose(stream);
 
     fprintf(stderr, "line count:  %zu\n", line_count);
-    fprintf(stderr, "entry count: %zu\n", array_length(index.entries) - 1);
+    if (intervals == NULL)
+    {
+        return EXIT_FAILURE;
+    } // if
+
+    qsort(intervals, array_length(intervals), sizeof(*intervals), interval_cmp);
+    //fprintf(stderr, "entry count: %zu\n", array_length(index.entries) - 1);
+
+    /*
+    for (size_t i = 0; i < array_length(intervals); ++i)
+    {
+        printf("%u %u\n", intervals[i].start, intervals[i].end);
+    } // for
+    */
 
     //gva_stabbing_index_build(gva_std_allocator, index);
 
@@ -555,7 +605,6 @@ faststabber(int const argc, char* argv[static argc + 1])
     //gva_uint* results = gva_stabbing_index_self_intersect(gva_std_allocator, index);
     //fprintf(stderr, "total: %zu\n", array_length(results));
     //results = ARRAY_DESTROY(gva_std_allocator, results);
-
 /*
     size_t count = 0;
     for (size_t i = 1; i < array_length(index.entries); ++i)
@@ -574,16 +623,17 @@ faststabber(int const argc, char* argv[static argc + 1])
     } // for
     fprintf(stderr, "total: %zu\n", count);
 */
+
     size_t count = 0;
-    for (size_t i = 1; i < array_length(index.entries); ++i)
+    for (size_t i = 0; i < array_length(intervals); ++i)
     {
-        for (size_t j = i + 1; j < array_length(index.entries); ++j)
+        for (size_t j = i + 1; j < array_length(intervals); ++j)
         {
-            if (index.entries[i].end < index.entries[j].start)
+            if (intervals[i].end < intervals[j].start)
             {
                 break;
             } // if
-            if (intersect(index.entries[i].start, index.entries[i].end, index.entries[j].start, index.entries[j].end))
+            if (intersect(intervals[i].start, intervals[i].end, intervals[j].start, intervals[j].end))
             {
                 //fprintf(stdout, "%2zu [%u, %u] %2zu [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, j, index.entries[j].start, index.entries[j].end);
                 count += 1;
@@ -592,7 +642,8 @@ faststabber(int const argc, char* argv[static argc + 1])
     } // for
     fprintf(stderr, "total: %zu\n", count);
 
-    gva_stabbing_index_destroy(gva_std_allocator, &index);
+//    gva_stabbing_index_destroy(gva_std_allocator, &index);
+    intervals = ARRAY_DESTROY(gva_std_allocator, intervals);
 
     return EXIT_SUCCESS;
 } // faststabber
