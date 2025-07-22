@@ -26,7 +26,7 @@ static size_t
 expand(Context const context,
     intmax_t const idx,
     size_t const p,
-    LCS_Alignment* const lcs)
+    LCS_Alignment lcs[static 1])
 {
     intmax_t const delta = context.len_obs - context.len_ref;
     size_t const offset = context.len_ref + 1;
