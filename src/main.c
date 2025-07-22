@@ -650,55 +650,27 @@ faststabber(int const argc, char* argv[static argc + 1])
 } // faststabber
 
 
-/*
 static void
-trie_dot_node(FILE* const stream, Trie const* const trie)
-{
-    if (trie == NULL)
-    {
-        return;
-    } // if
-
-    fprintf(stream, "\"%p\"[label=\"%.*s\"]\n", (void*) trie, (int) trie->len, trie->key);
-    for (Trie const* child = trie->link; child != NULL; child = child->next)
-    {
-        fprintf(stream, "\"%p\"->\"%p\"\n", (void*) trie, (void*) child);
-        trie_dot_node(stream, child);
-    } // for
-} // trie_dot_node
-
-
-static void
-trie_dot(FILE* const stream, Trie const* const trie)
+trie_dot(FILE* const stream, Trie const self)
 {
     fprintf(stream, "strict digraph{\n\"root\"[label=\"\",shape=point]\n");
-    for (Trie const* child = trie; child != NULL; child = child->next)
+    if (self.nodes != NULL)
     {
-        fprintf(stream, "\"root\"->\"%p\"\n", (void*) child);
-        trie_dot_node(stream, child);
-    } // for
+        for (gva_uint i = 0; i != GVA_NULL; i = self.nodes[i].next)
+        {
+            fprintf(stream, "root->%u\n", i);
+        } // for
+        for (size_t i = 0; i < array_length(self.nodes); ++i)
+        {
+            fprintf(stream, "%zu[label=\"%.*s\"]\n", i, (int) (self.nodes[i].end - self.nodes[i].start), self.strings + self.nodes[i].start);
+            for (gva_uint j = self.nodes[i].link; j != GVA_NULL; j = self.nodes[j].next)
+            {
+                fprintf(stream, "%zu->%u\n", i, j);
+            } // for
+        } // for
+    } // if
     fprintf(stream, "}\n");
 } // trie_dot
-
-
-static void
-trie_print(FILE* const stream, Trie const* const trie, int const indent)
-{
-    if (trie == NULL)
-    {
-        return;
-    } // if
-
-    enum
-    {
-        INDENT = 4
-    }; // constants
-
-    trie_print(stream, trie->next, indent);
-    fprintf(stream, "%*s%.*s (%p) %zu\n", indent, "", (int) trie->len, trie->key, (void*) trie, trie->len);
-    trie_print(stream, trie->link, indent + INDENT);
-} // trie_print
-*/
 
 
 static void
@@ -737,10 +709,13 @@ trie(int argc, char* argv[static argc + 1])
     while (fgets(line, sizeof(line), stream) != NULL)
     {
         size_t const len = strlen(line) - 1;
+        if (len == 1 && line[0] == '.')
+        {
+           continue;
+        } // if
         line[len] = '\0';
-        fprintf(stderr, "insert \"%s\" (%.*s)[%zu]\n", line, (int) len, line, len);
+        //fprintf(stderr, "INSERT %.*s\n", (int) len, line);
         trie_insert(gva_std_allocator, &trie, len, line);
-        trie_raw(stderr, trie);
         count += 1;
     } // while
 
@@ -749,23 +724,23 @@ trie(int argc, char* argv[static argc + 1])
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
         fclose(stream);
-        //trie_destroy(trie);
+        trie_destroy(gva_std_allocator, &trie);
         return EXIT_FAILURE;
     } // if
     fclose(stream);
 
     fprintf(stderr, "total: %zu\n", count);
 
+    //trie_print(stderr, trie, 0);
+    trie_dot(stdout, trie);
+
+    //fprintf(stderr, "%p\n", (void*) trie_find(trie, 1, "AA"));
+
 
     trie.strings = ARRAY_DESTROY(gva_std_allocator, trie.strings);
     trie.nodes = ARRAY_DESTROY(gva_std_allocator, trie.nodes);
 
-    //trie_print(stderr, trie, 0);
-    //trie_dot(stdout, trie);
-
-    //fprintf(stderr, "%p\n", (void*) trie_find(trie, 1, "AA"));
-
-    //trie_destroy(trie);
+    trie_destroy(gva_std_allocator, &trie);
 
     return EXIT_SUCCESS;
 } // trie
