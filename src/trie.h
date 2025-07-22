@@ -4,30 +4,29 @@
 
 #include <stddef.h>     // size_t
 
+#include "../include/allocator.h"   // GVA_Allocator
+#include "../include/types.h"       // gva_uint
 
-typedef struct Trie
+
+typedef struct
 {
-    struct Trie* link;
-    struct Trie* next;
-    size_t len;
-    char*  key;
+    gva_uint link;
+    gva_uint next;
+    gva_uint start;
+    gva_uint end;
+} TrieNode;
+
+
+typedef struct
+{
+    char*     strings;
+    TrieNode* nodes;
 } Trie;
 
 
-Trie*
-trie_init(size_t const len, char const key[static len]);
-
-
 void
-trie_destroy(Trie* const trie);
-
-
-Trie const*
-trie_find(Trie* const trie, size_t const len, char const key[static len]);
-
-
-Trie*
-trie_insert(Trie* const trie, size_t const len, char const key[static len]);
+trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
+    size_t const len, char const key[static restrict len]);
 
 
 #endif  // GVA_TRIE_H

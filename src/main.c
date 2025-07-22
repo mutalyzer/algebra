@@ -650,6 +650,7 @@ faststabber(int const argc, char* argv[static argc + 1])
 } // faststabber
 
 
+/*
 static void
 trie_dot_node(FILE* const stream, Trie const* const trie)
 {
@@ -697,6 +698,19 @@ trie_print(FILE* const stream, Trie const* const trie, int const indent)
     fprintf(stream, "%*s%.*s (%p) %zu\n", indent, "", (int) trie->len, trie->key, (void*) trie, trie->len);
     trie_print(stream, trie->link, indent + INDENT);
 } // trie_print
+*/
+
+
+static void
+trie_raw(FILE* const stream, Trie const self)
+{
+    fprintf(stream, "strings (%zu): %.*s\n", array_length(self.strings), (int) array_length(self.strings), self.strings);
+    fprintf(stream, "nodes (%zu):\n", array_length(self.nodes));
+    for (size_t i = 0; i < array_length(self.nodes); ++i)
+    {
+        fprintf(stream, "[%zu]\n    .link:  %2d\n    .next:  %2d\n    .start: %2u\n    .end:   %2u\n", i, self.nodes[i].link, self.nodes[i].next, self.nodes[i].start, self.nodes[i].end);
+    } // for
+} // trie_raw
 
 
 int
@@ -716,13 +730,17 @@ trie(int argc, char* argv[static argc + 1])
         return EXIT_FAILURE;
     } // if
 
-    Trie* trie = NULL;
+    Trie trie = {NULL, NULL};
 
     size_t count = 0;
     static char line[4096] = {0};
     while (fgets(line, sizeof(line), stream) != NULL)
     {
-        trie = trie_insert(trie, strlen(line) - 1, line);
+        size_t const len = strlen(line) - 1;
+        line[len] = '\0';
+        fprintf(stderr, "insert \"%s\" (%.*s)[%zu]\n", line, (int) len, line, len);
+        trie_insert(gva_std_allocator, &trie, len, line);
+        trie_raw(stderr, trie);
         count += 1;
     } // while
 
@@ -731,17 +749,23 @@ trie(int argc, char* argv[static argc + 1])
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
         fclose(stream);
-        trie_destroy(trie);
+        //trie_destroy(trie);
         return EXIT_FAILURE;
     } // if
     fclose(stream);
 
     fprintf(stderr, "total: %zu\n", count);
 
-    //trie_print(stderr, trie, 0);
-    trie_dot(stdout, trie);
 
-    trie_destroy(trie);
+    trie.strings = ARRAY_DESTROY(gva_std_allocator, trie.strings);
+    trie.nodes = ARRAY_DESTROY(gva_std_allocator, trie.nodes);
+
+    //trie_print(stderr, trie, 0);
+    //trie_dot(stdout, trie);
+
+    //fprintf(stderr, "%p\n", (void*) trie_find(trie, 1, "AA"));
+
+    //trie_destroy(trie);
 
     return EXIT_SUCCESS;
 } // trie
