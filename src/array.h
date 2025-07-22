@@ -42,10 +42,10 @@ array_header(void const* const self);
 
 
 // Internal: Returns the possibly (re)allocated array with place for
-// one additional element.
+// `extra` additional element(s).
 void*
-array_ensure_one(GVA_Allocator const allocator, void* const self,
-    size_t const item_size);
+array_ensure(GVA_Allocator const allocator, void* const self,
+    size_t const item_size, size_t const extra);
 
 
 // Destroys an array. Does not destroy the elements of the array.
@@ -68,7 +68,7 @@ array_ensure_one(GVA_Allocator const allocator, void* const self,
 // array. 0 if (re)allocation failed.
 // Warning: `self` is evaluated multiple times.
 #define ARRAY_APPEND(allocator, self, value) (                          \
-    (self) = array_ensure_one(allocator, (self), sizeof(*(self))),      \
+    (self) = array_ensure(allocator, (self), sizeof(*(self)), 1),       \
     (self) == NULL ? 0 : (                                              \
         (self)[array_header(self)->length] = (value),                   \
         array_header(self)->length += 1                                 \

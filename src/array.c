@@ -9,13 +9,23 @@ inline void*
 array_init(GVA_Allocator const allocator, size_t const capacity,
     size_t const item_size)
 {
+    if (capacity == 0)
+    {
+        return NULL;  // Empty array
+    } // if
     Array* const header = allocator.allocate(
         allocator.context,
         NULL,
         0,
         sizeof(*header) + capacity * item_size  // OVERFLOW
     );
-    return header == NULL ? NULL : header + 1;
+    if (header == NULL)
+    {
+        return NULL;  // OOM
+    } // if
+    header->capacity = capacity;
+    header->length = 0;
+    return header + 1;
 } // array_init
 
 
@@ -34,36 +44,28 @@ array_header(void const* const self)
 
 
 void*
-array_ensure_one(GVA_Allocator const allocator, void* const self,
-    size_t const item_size)
+array_ensure(GVA_Allocator const allocator, void* const self,
+    size_t const item_size, size_t const extra)
 {
     // Initial allocation
     if (self == NULL)
     {
-        Array* const restrict header = allocator.allocate(
-            allocator.context,
-            NULL,
-            0,
-            sizeof(*header) + item_size  // OVERFLOW
-        );
-        if (header == NULL)
-        {
-            return NULL;  // OOM
-        } // if
-        header->capacity = 1;
-        header->length = 0;
-        return header + 1;
+        return array_init(allocator, extra, item_size);
     } // if
 
     // The current capacity is sufficient.
     Array* const restrict header = array_header(self);
-    if (header->capacity > header->length)
+    if (header->capacity - header->length >= extra)
     {
         return header + 1;
     } // if
 
     // A simple geometric growth reallocation scheme.
     size_t new_capacity = header->capacity * 2;  // OVERFLOW
+    while (new_capacity - header->length < extra)
+    {
+        new_capacity *= 2;  // OVERFLOW
+    } // while
 
     Array* const restrict new_header = allocator.allocate(
         allocator.context,
