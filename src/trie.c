@@ -103,7 +103,7 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
                 gva_uint const end = array_length(self->strings);
                 next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
             } // if
-            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {idx, GVA_NULL, self->nodes[idx].p_start, self->nodes[idx].start, self->nodes[idx].p_start + k})) - 1;
+            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {idx, self->nodes[idx].next, self->nodes[idx].p_start, self->nodes[idx].start, self->nodes[idx].p_start + k})) - 1;
             self->nodes[idx].next = next;
             self->nodes[idx].p_start += k;
             if (prev != GVA_NULL)

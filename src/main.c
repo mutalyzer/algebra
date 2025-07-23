@@ -679,6 +679,7 @@ trie_dot(FILE* const stream, Trie const self)
 static void
 trie_raw(FILE* const stream, Trie const self)
 {
+    fprintf(stream, "root: %u\n", self.root);
     fprintf(stream, "strings (%zu): %.*s\n", array_length(self.strings), (int) array_length(self.strings), self.strings);
     fprintf(stream, "nodes (%zu):\n", array_length(self.nodes));
     for (size_t i = 0; i < array_length(self.nodes); ++i)
@@ -717,9 +718,9 @@ trie(int argc, char* argv[static argc + 1])
            continue;
         } // if
         line[len] = '\0';
-        fprintf(stderr, "INSERT %.*s\n", (int) len, line);
         gva_uint const idx = trie_insert(gva_std_allocator, &trie, len, line);
-        fprintf(stderr, "%u\n", idx);
+        fprintf(stderr, "INSERT %.*s: %u\n", (int) len, line, idx);
+        //trie_raw(stderr, trie);
         count += 1;
     } // while
 
