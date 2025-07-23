@@ -656,7 +656,7 @@ trie_dot(FILE* const stream, Trie const self)
     fprintf(stream, "strict digraph{\n\"root\"[label=\"\",shape=point]\n");
     if (self.nodes != NULL)
     {
-        for (gva_uint i = 0; i != GVA_NULL; i = self.nodes[i].next)
+        for (gva_uint i = self.root; i != GVA_NULL; i = self.nodes[i].next)
         {
             int const p_len = self.nodes[i].end - self.nodes[i].p_start;
             fprintf(stream, "root->%u[label=\"%.*s\"]\n", i, p_len, self.strings + self.nodes[i].p_start);
@@ -664,7 +664,7 @@ trie_dot(FILE* const stream, Trie const self)
         for (size_t i = 0; i < array_length(self.nodes); ++i)
         {
             int const len = self.nodes[i].end - self.nodes[i].start;
-            fprintf(stream, "%zu[label=\"%.*s\"]\n", i, len, self.strings + self.nodes[i].start);
+            fprintf(stream, "%zu[label=\"%zu\\n%.*s\"]\n", i, i, len, self.strings + self.nodes[i].start);
             for (gva_uint j = self.nodes[i].link; j != GVA_NULL; j = self.nodes[j].next)
             {
                 int const p_len = self.nodes[j].end - self.nodes[j].p_start;
@@ -705,7 +705,7 @@ trie(int argc, char* argv[static argc + 1])
         return EXIT_FAILURE;
     } // if
 
-    Trie trie = {NULL, NULL};
+    Trie trie = {NULL, NULL, GVA_NULL};
 
     size_t count = 0;
     static char line[4096] = {0};
@@ -717,8 +717,9 @@ trie(int argc, char* argv[static argc + 1])
            continue;
         } // if
         line[len] = '\0';
-        //fprintf(stderr, "INSERT %.*s\n", (int) len, line);
-        trie_insert(gva_std_allocator, &trie, len, line);
+        fprintf(stderr, "INSERT %.*s\n", (int) len, line);
+        gva_uint const idx = trie_insert(gva_std_allocator, &trie, len, line);
+        fprintf(stderr, "%u\n", idx);
         count += 1;
     } // while
 

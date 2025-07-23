@@ -22,10 +22,11 @@ typedef struct
 {
     char*     strings;
     TrieNode* nodes;
+    gva_uint  root;
 } Trie;
 
 
-void
+gva_uint
 trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
     size_t const len, char const key[static restrict len]);
 

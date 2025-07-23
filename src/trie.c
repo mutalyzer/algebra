@@ -3,7 +3,7 @@
 #include <string.h>     // memcpy
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/types.h"       // GVA_NULL
+#include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"  // ARRAY_*, array_*
 #include "trie.h"   // Trie, TrieNode, trie_*
 
@@ -43,26 +43,27 @@ concat(GVA_Allocator const allocator, Trie self[static restrict 1],
 } // concat
 
 
-void
+gva_uint
 trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
     size_t const len, char const key[static restrict len])
 {
-    if (self->nodes == NULL)
+    if (self->root == GVA_NULL)
     {
         gva_uint const start = concat(allocator, self, len, key);
-        ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start, start, len}));
-        return;
+        self->root = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start, start, len})) - 1;
+        return self->root;
     } // if
 
+    gva_uint prev = GVA_NULL;
     size_t prefix = 0;
-    gva_uint idx = 0;
+    gva_uint idx = self->root;
     while (true)
     {
         gva_uint const p_len = self->nodes[idx].end - self->nodes[idx].p_start;
         size_t const k = prefix_length(len - prefix, key + prefix, p_len, self->strings + self->nodes[idx].p_start);
         if (k == len - prefix && k == p_len)
         {
-            return;  // existing found
+            return idx;  // existing found
         } // if
 
         if (k == 0)
@@ -73,8 +74,9 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
                 gva_uint const end = array_length(self->strings);
                 gva_uint const next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
                 self->nodes[idx].next = next;
-                return;
+                return next;
             } // if
+            prev = idx;
             idx = self->nodes[idx].next;
         } // if
         else if (k == p_len)
@@ -86,8 +88,9 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
                 gva_uint const end = array_length(self->strings);
                 gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
                 self->nodes[idx].link = link;
-                return;
+                return link;
             } // if
+            prev = idx;
             idx = self->nodes[idx].link;
         } // if
         else
@@ -100,10 +103,29 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
                 gva_uint const end = array_length(self->strings);
                 next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
             } // if
-            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {self->nodes[idx].link, next, self->nodes[idx].start + prefix, self->nodes[idx].start, self->nodes[idx].end})) - 1;
-            self->nodes[idx].link = link;
-            self->nodes[idx].end = self->nodes[idx].p_start + k;
-            return;
+            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {idx, GVA_NULL, self->nodes[idx].p_start, self->nodes[idx].start, self->nodes[idx].p_start + k})) - 1;
+            self->nodes[idx].next = next;
+            self->nodes[idx].p_start += k;
+            if (prev != GVA_NULL)
+            {
+                if (self->nodes[prev].link == idx)
+                {
+                    self->nodes[prev].link = link;
+                } // if
+                else
+                {
+                    self->nodes[prev].next = link;
+                } // else
+            } // if
+            else
+            {
+                self->root = link;
+            } // else
+            if (next != GVA_NULL)
+            {
+                return next;
+            } // if
+            return link;
         } // else
     } // while
 } // trie_insert
