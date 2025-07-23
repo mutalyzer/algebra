@@ -49,7 +49,8 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
 {
     if (self->nodes == NULL)
     {
-        ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, concat(allocator, self, len, key), len}));
+        gva_uint const start = concat(allocator, self, len, key);
+        ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start, start, len}));
         return;
     } // if
 
@@ -57,28 +58,33 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
     gva_uint idx = 0;
     while (true)
     {
-        size_t const k = prefix_length(len - prefix, key + prefix, self->nodes[idx].end - self->nodes[idx].start, self->strings + self->nodes[idx].start);
-        if (k == len - prefix && k == self->nodes[idx].end - self->nodes[idx].start)
+        gva_uint const p_len = self->nodes[idx].end - self->nodes[idx].p_start;
+        size_t const k = prefix_length(len - prefix, key + prefix, p_len, self->strings + self->nodes[idx].p_start);
+        if (k == len - prefix && k == p_len)
         {
-            return;  // duplicate found
+            return;  // existing found
         } // if
 
         if (k == 0)
         {
             if (self->nodes[idx].next == GVA_NULL)
             {
-                gva_uint const next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, concat(allocator, self, len - prefix, key + prefix), array_length(self->strings)})) - 1;
+                gva_uint const start = concat(allocator, self, len, key);
+                gva_uint const end = array_length(self->strings);
+                gva_uint const next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
                 self->nodes[idx].next = next;
                 return;
             } // if
             idx = self->nodes[idx].next;
         } // if
-        else if (k == self->nodes[idx].end - self->nodes[idx].start)
+        else if (k == p_len)
         {
             prefix += k;
             if (self->nodes[idx].link == GVA_NULL)
             {
-                gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, concat(allocator, self, len - prefix, key + prefix), array_length(self->strings)})) - 1;
+                gva_uint const start = concat(allocator, self, len, key);
+                gva_uint const end = array_length(self->strings);
+                gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
                 self->nodes[idx].link = link;
                 return;
             } // if
@@ -86,17 +92,18 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
         } // if
         else
         {
+            prefix += k;
             gva_uint next = GVA_NULL;
-            if (k < len - prefix)
+            if (prefix < len)
             {
-                prefix += k;
-                next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, concat(allocator, self, len - prefix, key + prefix), array_length(self->strings)})) - 1;
+                gva_uint const start = concat(allocator, self, len, key);
+                gva_uint const end = array_length(self->strings);
+                next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
             } // if
-            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {self->nodes[idx].link, next, self->nodes[idx].start + k, self->nodes[idx].end})) - 1;
+            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {self->nodes[idx].link, next, self->nodes[idx].start + prefix, self->nodes[idx].start, self->nodes[idx].end})) - 1;
             self->nodes[idx].link = link;
-            self->nodes[idx].end = self->nodes[idx].start + k;
+            self->nodes[idx].end = self->nodes[idx].p_start + k;
             return;
         } // else
     } // while
 } // trie_insert
-

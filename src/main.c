@@ -658,14 +658,17 @@ trie_dot(FILE* const stream, Trie const self)
     {
         for (gva_uint i = 0; i != GVA_NULL; i = self.nodes[i].next)
         {
-            fprintf(stream, "root->%u\n", i);
+            int const p_len = self.nodes[i].end - self.nodes[i].p_start;
+            fprintf(stream, "root->%u[label=\"%.*s\"]\n", i, p_len, self.strings + self.nodes[i].p_start);
         } // for
         for (size_t i = 0; i < array_length(self.nodes); ++i)
         {
-            fprintf(stream, "%zu[label=\"%.*s\"]\n", i, (int) (self.nodes[i].end - self.nodes[i].start), self.strings + self.nodes[i].start);
+            int const len = self.nodes[i].end - self.nodes[i].start;
+            fprintf(stream, "%zu[label=\"%.*s\"]\n", i, len, self.strings + self.nodes[i].start);
             for (gva_uint j = self.nodes[i].link; j != GVA_NULL; j = self.nodes[j].next)
             {
-                fprintf(stream, "%zu->%u\n", i, j);
+                int const p_len = self.nodes[j].end - self.nodes[j].p_start;
+                fprintf(stream, "%zu->%u[label=\"%.*s\"]\n", i, j, p_len, self.strings + self.nodes[j].p_start);
             } // for
         } // for
     } // if
@@ -680,7 +683,7 @@ trie_raw(FILE* const stream, Trie const self)
     fprintf(stream, "nodes (%zu):\n", array_length(self.nodes));
     for (size_t i = 0; i < array_length(self.nodes); ++i)
     {
-        fprintf(stream, "[%zu]\n    .link:  %2d\n    .next:  %2d\n    .start: %2u\n    .end:   %2u\n", i, self.nodes[i].link, self.nodes[i].next, self.nodes[i].start, self.nodes[i].end);
+        fprintf(stream, "[%zu]\n    .link: %2d\n    .next: %2d\n    .p_start: %2u\n    .start: %2u\n    .end:   %2u\n", i, self.nodes[i].link, self.nodes[i].next, self.nodes[i].p_start, self.nodes[i].start, self.nodes[i].end);
     } // for
 } // trie_raw
 
@@ -732,8 +735,11 @@ trie(int argc, char* argv[static argc + 1])
     fprintf(stderr, "total: %zu\n", count);
 
     //trie_print(stderr, trie, 0);
+    //trie_raw(stderr, trie);
     trie_dot(stdout, trie);
 
+    fprintf(stderr, "str len: %zu\n", array_length(trie.strings));
+    fprintf(stderr, "#nodes : %zu\n", array_length(trie.nodes));
     //fprintf(stderr, "%p\n", (void*) trie_find(trie, 1, "AA"));
 
 

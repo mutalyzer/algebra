@@ -12,6 +12,7 @@ typedef struct
 {
     gva_uint link;
     gva_uint next;
+    gva_uint p_start;
     gva_uint start;
     gva_uint end;
 } TrieNode;
