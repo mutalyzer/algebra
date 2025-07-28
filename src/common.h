@@ -2,9 +2,6 @@
 #define GVA_COMMON_H
 
 
-#include "../include/types.h"     // GVA_NULL, gva_uint
-
-
 // Generic abs function. Evaluates its parameters multiple times.
 #define ABS(x) (((x) >= 0) ? (x) : -(x))
 

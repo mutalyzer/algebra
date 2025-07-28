@@ -2,14 +2,11 @@
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memset
 
-
-#include <stdio.h>      // DEBUG
-
-
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/stabbing.h"    // GVA_Stabbing_Entry, GVA_Stabbing_Index, gva_stabbing_index_*
+#include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"      // ARRAY_*, array_*
-#include "common.h"     // GVA_NULL, gva_uint, MAX
+#include "common.h"     // MAX
 
 
 GVA_Stabbing_Index
@@ -23,17 +20,27 @@ gva_stabbing_index_init(GVA_Allocator const allocator, size_t const len_ref)
 
     memset(start_table, 0, len_ref * sizeof(*start_table));
     GVA_Stabbing_Entry* entries = NULL;
-    ARRAY_APPEND(allocator, entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, 0, len_ref}));
+    ARRAY_APPEND(allocator, entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, 0, len_ref, 0, 0, 0}));
 
     return (GVA_Stabbing_Index) {len_ref, start_table, entries};
 } // gva_stabbing_index_init
 
 
+void
+gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1])
+{
+    index->entries = ARRAY_DESTROY(allocator, index->entries);
+    index->start_table = allocator.allocate(allocator.context, index->start_table, index->len_ref * sizeof(*index->start_table), 0);
+    index->len_ref = 0;
+} // gva_stabbing_index_destroy
+
+
 inline size_t
 gva_stabbing_index_add(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1],
-    size_t const start, size_t const end)
+    gva_uint const start, gva_uint const end, gva_uint const inserted,
+    gva_uint const distance, size_t const data)
 {
-    return ARRAY_APPEND(allocator, index->entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, start, end}));
+    return ARRAY_APPEND(allocator, index->entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, start, end, inserted, distance, data}));
 } // gva_stabbing_index_add
 
 
@@ -58,11 +65,8 @@ gva_stabbing_index_build(GVA_Allocator const allocator, GVA_Stabbing_Index const
     stack[top] = 0;
     for (gva_uint i = 0; i < index.len_ref; ++i)
     {
-        //fprintf(stderr, "index iteration: %u\n", i);
-
         while (index.entries[stack[top]].end < i)
         {
-            //fprintf(stderr, "Popping [%u, %u] from stack\n", index.entries[stack[top]].start, index.entries[stack[top]].end);
             top -= 1;
         } // while
 
@@ -71,7 +75,6 @@ gva_stabbing_index_build(GVA_Allocator const allocator, GVA_Stabbing_Index const
         {
             do
             {
-                //fprintf(stderr, "Pushing [%u, %u] on stack\n", index.entries[idx].start, index.entries[idx].end);
                 top += 1;
                 stack[top] = idx;
 
@@ -88,7 +91,6 @@ gva_stabbing_index_build(GVA_Allocator const allocator, GVA_Stabbing_Index const
            } while (idx < len && index.entries[idx].start == index.entries[stack[top]].start && index.entries[idx].end == index.entries[stack[top]].end);
         } /// while
 
-        //fprintf(stderr, "start_table[%u] := [%u, %u]\n", i, index.entries[stack[top]].start, index.entries[stack[top]].end);
         index.start_table[i] = stack[top];
     } // for
 
@@ -96,85 +98,24 @@ gva_stabbing_index_build(GVA_Allocator const allocator, GVA_Stabbing_Index const
 } // gva_stabbing_index_init
 
 
-void
-gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1])
-{
-    index->entries = ARRAY_DESTROY(allocator, index->entries);
-    index->start_table = allocator.allocate(allocator.context, index->start_table, index->len_ref * sizeof(*index->start_table), 0);
-    index->len_ref = 0;
-} // gva_stabbing_index_destroy
-
-
 gva_uint*
 gva_stabbing_index_self_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index const index)
 {
     gva_uint* results = NULL;
-    gva_uint* stack = NULL;
-
-    for (gva_uint i = 1; i < array_length(index.entries); ++i)
+    for (size_t i = 1; i < array_length(index.entries); ++i)
     {
-        //fprintf(stderr, "%2u: [%u, %u]\n", i, index.entries[i].start, index.entries[i].end);
-        if (index.entries[i].rightchild != GVA_NULL)
+        for (size_t j = i + 1; j < array_length(index.entries); ++j)
         {
-            ARRAY_APPEND(allocator, stack, index.entries[i].rightchild);
-            while (array_length(stack) > 0)
+            if (index.entries[i].end < index.entries[j].start)
             {
-                array_header(stack)->length -= 1;
-                gva_uint trav = stack[array_length(stack)];
-                //fprintf(stderr, "    Strav: %2u: [%u, %u]\n", trav, index.entries[trav].start, index.entries[trav].end);
-                //printf("%2u [%u, %u] %2u [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, trav, index.entries[trav].start, index.entries[trav].end);
-                ARRAY_APPEND(allocator, results, trav);
-
-                if (index.entries[trav].leftsibling != GVA_NULL)
-                {
-                    ARRAY_APPEND(allocator, stack, index.entries[trav].leftsibling);
-                } // if
-
-                if (index.entries[trav].rightchild != GVA_NULL)
-                {
-                    ARRAY_APPEND(allocator, stack, index.entries[trav].rightchild);
-                } // if
-            } // while
-        } // if
-
-        gva_uint stab = index.entries[i].parent;
-        while (stab != GVA_NULL)
-        {
-            if (index.entries[stab].rightchild != GVA_NULL)
-            {
-                ARRAY_APPEND(allocator, stack, index.entries[stab].rightchild);
-                while (array_length(stack) > 0)
-                {
-                    array_header(stack)->length -= 1;
-                    gva_uint trav = stack[array_length(stack)];
-
-                    //fprintf(stderr, "    VISIT: %2u: [%u, %u]\n", trav, index.entries[trav].start, index.entries[trav].end);
-
-                    if (trav > i && index.entries[i].end >= index.entries[trav].start)
-                    {
-                        //fprintf(stderr, "    Rtrav: %2u: [%u, %u]\n", trav, index.entries[trav].start, index.entries[trav].end);
-                        //printf("%2u [%u, %u] %2u [%u, %u]\n", i, index.entries[i].start, index.entries[i].end, trav, index.entries[trav].start, index.entries[trav].end);
-                        ARRAY_APPEND(allocator, results, trav);
-
-                        if (index.entries[trav].rightchild != GVA_NULL)
-                        {
-                            ARRAY_APPEND(allocator, stack, index.entries[trav].rightchild);
-                        } // if
-                    } // if
-
-                    if (index.entries[trav].leftsibling != GVA_NULL && index.entries[trav].leftsibling > i)
-                    {
-                        ARRAY_APPEND(allocator, stack, index.entries[trav].leftsibling);
-                    } // if
-                } // while
+                break;
             } // if
-
-            stab = index.entries[stab].parent;
-        } // while
-
+            if (index.entries[j].end >= index.entries[i].start && index.entries[j].start <= index.entries[i].end)
+            {
+                ARRAY_APPEND(allocator, results, 0);
+            } // if
+        } // for
     } // for
-    stack = ARRAY_DESTROY(allocator, stack);
-
     return results;
 } // gva_stabbing_index_self_intersect
 
@@ -187,8 +128,6 @@ gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index c
     gva_uint* stack = NULL;
     gva_uint stab = index.start_table[end];
 
-    //fprintf(stderr, "start_table: %2u\n", index.start_table[end]);
-
     if (index.entries[stab].rightchild != GVA_NULL)
     {
         ARRAY_APPEND(allocator, stack, index.entries[stab].rightchild);
@@ -198,7 +137,6 @@ gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index c
             gva_uint trav = stack[array_length(stack)];
             if (end >= index.entries[trav].start)
             {
-                //fprintf(stderr, "Rtrav: %2u: [%2u, %2u]\n", trav, index.entries[trav].start, index.entries[trav].end);
                 ARRAY_APPEND(allocator, results, trav);
             } // if
 
@@ -218,7 +156,6 @@ gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index c
     {
         if (stab > 0)
         {
-            //fprintf(stderr, "stab: %2u: [%2u, %2u]\n", stab, index.entries[stab].start, index.entries[stab].end);
             ARRAY_APPEND(allocator, results, stab);
         } // if
 
@@ -229,7 +166,6 @@ gva_stabbing_index_intersect(GVA_Allocator const allocator, GVA_Stabbing_Index c
             {
                 array_header(stack)->length -= 1;
                 gva_uint trav = stack[array_length(stack)];
-                //fprintf(stderr, "trav: %2u: [%2u, %2u]\n", trav, index.entries[trav].start, index.entries[trav].end);
                 ARRAY_APPEND(allocator, results, trav);
 
                 if (index.entries[trav].leftsibling != GVA_NULL && start <= index.entries[index.entries[trav].leftsibling].end)

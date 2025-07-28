@@ -3,14 +3,13 @@
 #include <stdio.h>      // FILE, fgets
 #include <string.h>     // strcspn
 
-
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/types.h"       // GVA_String
+#include "../include/string.h"      // GVA_String
 #include "../include/utils.h"       // gva_fasta_sequence
 
 
 GVA_String
-gva_fasta_sequence(GVA_Allocator const allocator, FILE* const restrict stream)
+gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream)
 {
     static size_t const FASTA_LINE_SIZE = 65536;
     size_t capacity = FASTA_LINE_SIZE;

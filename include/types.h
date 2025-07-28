@@ -3,11 +3,10 @@
 
 
 #include <inttypes.h>   // PRIu32
-#include <stddef.h>     // size_t
 #include <stdint.h>     // uint32_t, UINT32_MAX
 
 
-#define GVA_UINT_FMT PRIu32
+#define GVA_UINT_FMT "%" PRIu32
 
 
 // An unsigned integer type to store any position on a reference
@@ -18,13 +17,6 @@ typedef uint32_t gva_uint;
 
 // The maximum value for the `gva_uint` type.
 static gva_uint const GVA_NULL = UINT32_MAX;
-
-
-typedef struct
-{
-    size_t      len;
-    char const* str;
-} GVA_String;
 
 
 #endif // GVA_TYPES_H

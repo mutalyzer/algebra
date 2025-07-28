@@ -4,7 +4,6 @@
 
 #include <stddef.h>     // size_t
 
-
 #include "allocator.h"  // GVA_Allocator
 
 

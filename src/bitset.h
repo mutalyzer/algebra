@@ -20,7 +20,7 @@ bitset_intersection_cnt(size_t const lhs[static 1], size_t const rhs[static 1]);
 
 
 size_t*
-bitset_destroy(GVA_Allocator const allocator, size_t self[static 1]);
+bitset_destroy(GVA_Allocator const allocator, size_t const* const self);
 
 
 #endif  // GVA_BITSET_H

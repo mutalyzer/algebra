@@ -1,11 +1,12 @@
 #include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
-#include <string.h>     // memcpy
-
+#include <string.h>     // memcmp
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/types.h"       // gva_uint, GVA_String
+#include "../include/types.h"       // gva_uint
+#include "../include/string.h"      // GVA_String, gva_string_concat
 #include "../include/variant.h"     // gva_parse_spdi, gva_patch
+#include "common.h"     // MIN
 
 
 static inline bool
@@ -60,23 +61,6 @@ match_until(size_t const len, char const expression[static len], char const deli
 } // match_until
 
 
-static inline GVA_String
-concat(GVA_Allocator const allocator,
-    GVA_String lhs, GVA_String const rhs)
-{
-    size_t const len = lhs.len + rhs.len;
-    lhs.str = allocator.allocate(allocator.context, lhs.str, lhs.len, len);
-    if (lhs.str == NULL)
-    {
-        return (GVA_String) {0, NULL};
-    } // if
-
-    memcpy((char*) lhs.str + lhs.len, rhs.str, rhs.len);
-    lhs.len = len;
-    return lhs;
-} // concat
-
-
 size_t
 gva_parse_spdi(size_t const len, char const expression[static restrict len],
     GVA_Variant variants[static restrict 1])
@@ -127,6 +111,15 @@ gva_parse_spdi(size_t const len, char const expression[static restrict len],
 } // gva_parse_spdi
 
 
+inline bool
+gva_variant_eq(GVA_Variant const lhs, GVA_Variant const rhs)
+{
+    return lhs.start == rhs.start && lhs.end == rhs.end &&
+        lhs.sequence.len == rhs.sequence.len &&
+        memcmp(lhs.sequence.str, rhs.sequence.str, MIN(lhs.sequence.len, rhs.sequence.len)) == 0;
+} // gva_variant_eq
+
+
 inline size_t
 gva_variant_length(GVA_Variant const variant)
 {
@@ -143,14 +136,14 @@ gva_patch(GVA_Allocator const allocator,
     size_t start = 0;
     for (size_t i = 0; i < n; ++i)
     {
-        observed = concat(allocator, observed, (GVA_String) {variants[i].start - start, reference + start});
-        observed = concat(allocator, observed, variants[i].sequence);
+        observed = gva_string_concat(allocator, observed, (GVA_String) {variants[i].start - start, reference + start});
+        observed = gva_string_concat(allocator, observed, variants[i].sequence);
         start = variants[i].end;
     } // for
 
     if (start < len_ref)
     {
-        observed = concat(allocator, observed, (GVA_String) {len_ref - start, reference + start});
+        observed = gva_string_concat(allocator, observed, (GVA_String) {len_ref - start, reference + start});
     } // if
 
     return observed;

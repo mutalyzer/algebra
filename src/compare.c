@@ -2,15 +2,16 @@
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memcpy, strncmp
 
-
 #include "../include/allocator.h"   // GVA_Allocator
+#include "../include/compare.h"     // gva_compare_supremals
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
 #include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS, GVA_DISJOINT,
                                     // GVA_EQUIVALENT GVA_IS_CONTAINED, GVA_OVERLAP
+#include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/variant.h"     // GVA_Variant
 #include "array.h"      // ARRAY_DESTROY, array_length
-#include "common.h"     // GVA_NULL, gva_uint, MAX, MIN
+#include "common.h"     // MAX, MIN
 #include "bitset.h"     // bitset_*
 
 
@@ -20,7 +21,7 @@ static uint8_t const NUC_G = 0x4;
 static uint8_t const NUC_T = 0x8;
 
 
-static inline uint8_t
+inline static uint8_t
 nucleotides(size_t const len, char const sequence[static len])
 {
     static uint8_t const MASK[256] =
@@ -41,7 +42,7 @@ nucleotides(size_t const len, char const sequence[static len])
 } // nucleotides
 
 
-static size_t
+void
 bitset_fill(GVA_LCS_Graph const graph,
     gva_uint const offset,
     gva_uint const start, gva_uint const end,
@@ -51,7 +52,6 @@ bitset_fill(GVA_LCS_Graph const graph,
     size_t gs[static restrict 1],
     size_t ts[static restrict 1])
 {
-    size_t counter = 0;
     for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
         if (graph.nodes[i].row > end)
@@ -96,15 +96,11 @@ bitset_fill(GVA_LCS_Graph const graph,
             } // if
         } // for
     } // for
-    return counter;
 } // bitset_fill
 
 
-size_t disjoint_count = 0;
-
-
 GVA_Relation
-gva_compare(GVA_Allocator const allocator,
+gva_compare_supremals(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const lhs, GVA_Variant const rhs)
 {
@@ -207,7 +203,6 @@ gva_compare(GVA_Allocator const allocator,
         else
         {
             relation = GVA_DISJOINT;
-            disjoint_count += 1;
         } // else
 
         lhs_ts = bitset_destroy(allocator, lhs_ts);
@@ -227,4 +222,4 @@ gva_compare(GVA_Allocator const allocator,
     lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
 
     return relation;
-} // gva_compare
+} // gva_compare_supremals

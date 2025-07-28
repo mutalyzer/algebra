@@ -3,11 +3,11 @@
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memset
 
-
 #include "../include/allocator.h"   // GVA_Allocator
+#include "../include/types.h"       // GVA_NULL, gva_uint
 #include "align.h"      // LCS_Alignment, LCS_Node, lcs_align
 #include "array.h"      // ARRAY_APPEND
-#include "common.h"     // GVA_NULL, ABS, MAX, MIN
+#include "common.h"     // ABS, MAX, MIN
 
 
 typedef struct
@@ -203,4 +203,4 @@ lcs_align(GVA_Allocator const allocator,
     lcs.index = allocator.allocate(allocator.context, lcs.index, MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
     allocator.allocate(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
     return lcs;
-} // align
+} // lcs_align

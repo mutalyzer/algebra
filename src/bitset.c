@@ -6,6 +6,7 @@
 #include "../include/allocator.h"   // GVA_Allocator
 #include "array.h"      // ARRAY_*, array_*
 #include "bitset.h"     // bitset_*
+#include "common.h"     // MIN
 
 
 inline size_t*
@@ -46,8 +47,8 @@ bitset_add(size_t self[static 1], size_t const start, size_t const end)
 inline size_t
 bitset_intersection_cnt(size_t const lhs[static 1], size_t const rhs[static 1])
 {
-    size_t const len = array_length(lhs);
     size_t count = 0;
+    size_t const len = MIN(array_length(lhs), array_length(rhs));
     for (size_t i = 0; i < len; ++i)
     {
         count += __builtin_popcountll(lhs[i] & rhs[i]);
@@ -57,7 +58,7 @@ bitset_intersection_cnt(size_t const lhs[static 1], size_t const rhs[static 1])
 
 
 inline size_t*
-bitset_destroy(GVA_Allocator const allocator, size_t self[static 1])
+bitset_destroy(GVA_Allocator const allocator, size_t const* const self)
 {
     return ARRAY_DESTROY(allocator, self);
 } // bitset_destroy

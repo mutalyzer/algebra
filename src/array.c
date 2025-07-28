@@ -1,6 +1,5 @@
 #include <stddef.h>     // NULL, size_t
 
-
 #include "../include/allocator.h"   // GVA_Allocator
 #include "array.h"       // GVA_Array, gva_array_*
 

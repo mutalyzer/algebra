@@ -5,6 +5,7 @@
 #include <stddef.h>     // size_t
 
 #include "../include/allocator.h"   // GVA_Allocator
+#include "../include/string.h"      // GVA_String
 #include "../include/types.h"       // gva_uint
 
 
@@ -20,19 +21,19 @@ typedef struct
 
 typedef struct
 {
-    char*     strings;
-    TrieNode* nodes;
-    gva_uint  root;
+    GVA_String strings;
+    TrieNode*  nodes;
+    gva_uint   root;
 } Trie;
+
+
+void
+trie_destroy(GVA_Allocator const allocator, Trie self[static 1]);
 
 
 gva_uint
 trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
     size_t const len, char const key[static restrict len]);
-
-
-void
-trie_destroy(GVA_Allocator const allocator, Trie self[static 1]);
 
 
 #endif  // GVA_TRIE_H

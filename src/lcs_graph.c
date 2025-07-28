@@ -3,7 +3,6 @@
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memcpy
 
-
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/variant.h"     // GVA_Variant, gva_variant_length
@@ -339,4 +338,5 @@ gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
     self.nodes = ARRAY_DESTROY(allocator, self.nodes);
     self.edges = ARRAY_DESTROY(allocator, self.edges);
     self.local_supremal = ARRAY_DESTROY(allocator, self.local_supremal);
+    // FIXME: ownership of observed
 } // gva_lcs_graph_destroy

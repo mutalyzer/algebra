@@ -1,9 +1,9 @@
 #include <stddef.h>     // NULL, size_t
 
-
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
+#include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"      // ARRAY_APPEND, array_length
-#include "common.h"     // GVA_NULL, MAX, MIN, GVA_String, gva_uint
+#include "common.h"     // MAX, MIN
 
 
 typedef struct

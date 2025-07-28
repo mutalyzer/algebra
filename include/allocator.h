@@ -18,7 +18,7 @@
 // See `std_alloc.h` for a simple libc wrapper.
 typedef struct
 {
-    void* (*allocate)(void* const restrict context, void const* const restrict ptr, size_t const old_size, size_t const new_size);
+    void* (*allocate)(void* const restrict context, void* const restrict ptr, size_t const old_size, size_t const new_size);
     void* context;
 } GVA_Allocator;
 

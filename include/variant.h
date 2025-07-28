@@ -2,15 +2,19 @@
 #define GVA_VARIANT_H
 
 
+#include <stdbool.h>    // bool
 #include <stddef.h>     // size_t
 
-
 #include "allocator.h"  // GVA_Allocator
-#include "types.h"      // GVA_UINT_FMT, gva_uint, GVA_String
+#include "string.h"     // GVA_STRING_*, GVA_String
+#include "types.h"      // GVA_UINT_FMT, gva_uint
 
 
-#define GVA_VARIANT_PRINT(variant) variant.start, variant.end, (int) variant.sequence.len, variant.sequence.str
-#define GVA_VARIANT_FMT "%" GVA_UINT_FMT ":%" GVA_UINT_FMT "/%.*s"
+#define GVA_VARIANT_PRINT(variant) variant.start, variant.end, GVA_STRING_PRINT(variant.sequence)
+#define GVA_VARIANT_FMT GVA_UINT_FMT ":" GVA_UINT_FMT "/" GVA_STRING_FMT
+
+#define GVA_VARIANT_PRINT_SPDI(ref_id, variant) ref_id, variant.start, (variant.end - variant.start), GVA_STRING_PRINT(variant.sequence)
+#define GVA_VARIANT_FMT_SPDI "%s:" GVA_UINT_FMT ":" GVA_UINT_FMT ":" GVA_STRING_FMT
 
 
 typedef struct
@@ -24,6 +28,10 @@ typedef struct
 size_t
 gva_parse_spdi(size_t const len, char const expression[static restrict len],
     GVA_Variant variants[static restrict 1]);
+
+
+bool
+gva_variant_eq(GVA_Variant const lhs, GVA_Variant const rhs);
 
 
 size_t
