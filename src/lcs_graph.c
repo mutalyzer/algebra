@@ -11,32 +11,6 @@
 #include "common.h"     // GVA_NULL, gva_uint, MAX, MIN
 
 
-gva_uint
-gva_edges(char const observed[static restrict 1],
-    GVA_Node const head, GVA_Node const tail,
-    bool const is_source, bool const is_sink,
-    GVA_Variant variant[static restrict 1])
-{
-    intmax_t const row = (intmax_t) head.row - is_source;
-    intmax_t const col = (intmax_t) head.col - is_source;
-    gva_uint const head_length = head.length + is_source;
-    gva_uint const tail_length = tail.length + is_sink;
-
-    intmax_t const offset = MIN((intmax_t) tail.row - row, (intmax_t) tail.col - col) - 1;
-
-    gva_uint const head_offset = offset > 0 ? MIN(head_length, offset + 1) : 1;
-    gva_uint const tail_offset = offset < 0 ? MIN(tail_length, -offset) : 0;
-
-    *variant = (GVA_Variant) {
-        row + head_offset, tail.row + tail_offset, {
-            (tail.col + tail_offset) - (col + head_offset),
-            observed + col + head_offset
-        }
-    };
-    return MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
-} // gva_edges
-
-
 GVA_LCS_Graph
 gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
@@ -290,6 +264,16 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 } // gva_lcs_graph_init
 
 
+inline void
+gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
+{
+    self.nodes = ARRAY_DESTROY(allocator, self.nodes);
+    self.edges = ARRAY_DESTROY(allocator, self.edges);
+    self.local_supremal = ARRAY_DESTROY(allocator, self.local_supremal);
+    // FIXME: ownership of observed
+} // gva_lcs_graph_destroy
+
+
 GVA_LCS_Graph
 gva_lcs_graph_from_variant(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
@@ -332,11 +316,27 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
 } // gva_lcs_graph_from_variant
 
 
-inline void
-gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
+gva_uint
+gva_edges(char const observed[static restrict 1],
+    GVA_Node const head, GVA_Node const tail,
+    bool const is_source, bool const is_sink,
+    GVA_Variant variant[static restrict 1])
 {
-    self.nodes = ARRAY_DESTROY(allocator, self.nodes);
-    self.edges = ARRAY_DESTROY(allocator, self.edges);
-    self.local_supremal = ARRAY_DESTROY(allocator, self.local_supremal);
-    // FIXME: ownership of observed
-} // gva_lcs_graph_destroy
+    intmax_t const row = (intmax_t) head.row - is_source;
+    intmax_t const col = (intmax_t) head.col - is_source;
+    gva_uint const head_length = head.length + is_source;
+    gva_uint const tail_length = tail.length + is_sink;
+
+    intmax_t const offset = MIN((intmax_t) tail.row - row, (intmax_t) tail.col - col) - 1;
+
+    gva_uint const head_offset = offset > 0 ? MIN(head_length, offset + 1) : 1;
+    gva_uint const tail_offset = offset < 0 ? MIN(tail_length, -offset) : 0;
+
+    *variant = (GVA_Variant) {
+        row + head_offset, tail.row + tail_offset, {
+            (tail.col + tail_offset) - (col + head_offset),
+            observed + col + head_offset
+        }
+    };
+    return MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
+} // gva_edges

@@ -12,7 +12,7 @@
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/stabbing.h"    // GVA_Stabbing_*, gva_stabbing_*
 #include "../include/std_alloc.h"   // gva_std_allocator
-#include "../include/string.h"      // gva_string_destroy
+#include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/utils.h"       // gva_fasta_sequence
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi

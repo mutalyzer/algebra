@@ -6,7 +6,8 @@
 #include <stddef.h>     // size_t
 
 #include "allocator.h"  // GVA_Allocator
-#include "types.h"      // GVA_String, gva_uint
+#include "string.h"     // GVA_String
+#include "types.h"      // gva_uint
 #include "variant.h"    // GVA_Variant
 
 
@@ -55,14 +56,14 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const shift);
 
 
+void
+gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self);
+
+
 GVA_LCS_Graph
 gva_lcs_graph_from_variant(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const variant);
-
-
-void
-gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self);
 
 
 gva_uint
