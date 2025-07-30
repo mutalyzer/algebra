@@ -422,22 +422,32 @@ bitset_print(size_t const bitset[static 1], size_t const size)
 static inline int
 entry_cmp(void const* lhs, void const* rhs)
 {
-    GVA_Stabbing_Entry const* const lhs_interval = lhs;
-    GVA_Stabbing_Entry const* const rhs_interval = rhs;
+    GVA_Stabbing_Entry const* const lhs_entry = lhs;
+    GVA_Stabbing_Entry const* const rhs_entry = rhs;
 
-    if (lhs_interval->start < rhs_interval->start)
+    if (lhs_entry->start < rhs_entry->start)
     {
         return -1;
     } // if
-    if (lhs_interval->start > rhs_interval->start)
+    if (lhs_entry->start > rhs_entry->start)
     {
         return 1;
     } // if
-    if (lhs_interval->end > rhs_interval->end)
+    /*
+    if (lhs_entry->end > rhs_entry->end)
     {
         return -1;
     } // if
-    if (lhs_interval->end < rhs_interval->end)
+    if (lhs_entry->end < rhs_entry->end)
+    {
+        return 1;
+    } // if
+    */
+    if (lhs_entry->distance > rhs_entry->distance)
+    {
+        return -1;
+    } // if
+    if (lhs_entry->distance < rhs_entry->distance)
     {
         return 1;
     } // if
@@ -582,12 +592,6 @@ all(int argc, char* argv[static argc + 1])
                 if (index.entries[i].distance - index.entries[j].distance == distance)
                 {
                     printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " contains\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
-                    continue;
-                } // if
-
-                if (index.entries[j].distance - index.entries[i].distance == distance)
-                {
-                    printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " is_contained\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
                     continue;
                 } // if
 
