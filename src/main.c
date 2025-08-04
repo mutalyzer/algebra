@@ -494,7 +494,7 @@ all(int argc, char* argv[static argc + 1])
         GVA_Variant variant;
         if (gva_parse_spdi(len, line + idx, &variant) == 0)
         {
-            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s\n", count + 1, line);
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", count + 1, line);
             continue;
         } // if
 
@@ -554,27 +554,42 @@ all(int argc, char* argv[static argc + 1])
                 size_t const end = MAX(lhs.end, rhs.end);
 
                 size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
-                char* lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, lhs_len);
-                if (lhs_obs != NULL)
+                size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
+
+                size_t distance = 0;
+                if (lhs_len == 0)
                 {
+                    distance = rhs_len;
+                } // if
+                else if (rhs_len == 0)
+                {
+                    distance = lhs_len;
+                } // if
+                else
+                {
+                    char* lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, lhs_len);
+                    if (lhs_obs == NULL)
+                    {
+                        continue;
+                    } // if
                     memcpy(lhs_obs, reference.str + start, lhs.start - start);
                     memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
                     memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
-                } // if
 
-                size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
-                char* rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, rhs_len);
-                if (rhs_obs != NULL)
-                {
+                    char* rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, rhs_len);
+                    if (rhs_obs == NULL)
+                    {
+                        lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
+                        continue;
+                    } // if
                     memcpy(rhs_obs, reference.str + start, rhs.start - start);
                     memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
                     memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
-                } // if
 
-                size_t const distance = gva_edit_distance(gva_std_allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
-
-                rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, rhs_obs, rhs_len, 0);
-                lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
+                    distance = gva_edit_distance(gva_std_allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
+                    rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, rhs_obs, rhs_len, 0);
+                    lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
+                } // else
 
                 if (index.entries[i].distance + index.entries[j].distance == distance)
                 {
