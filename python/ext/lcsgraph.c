@@ -6,8 +6,9 @@
 #include "lcsgraph.h"   // LCSgraph, LCSgraph_*
 #include "variant.h"    // Variant, Variant_*
 
-#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_from_variant
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/std_alloc.h"   // gva_std_allocator
+#include "../include/types.h"       // GVA_NULL
 
 
 PyObject*
@@ -22,7 +23,7 @@ LCSgraph_new(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         return NULL;
     } // if
 
-    self->graph = (GVA_LCS_Graph) {0};
+    self->graph = (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL, 0};
     return (PyObject*) self;
 } // LCSgraph_new
 
@@ -73,7 +74,7 @@ LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
         return NULL;
     } // if
 
-    self->graph = gva_lcs_graph_from_variant(gva_std_allocator, len_ref, reference, variants[0]);
+    self->graph = gva_lcs_graph_from_variants(gva_std_allocator, len_ref, reference, PyList_GET_SIZE(variant_list), variants);
 
     PySys_FormatStderr("supremal: " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("reference", self->graph.supremal));
 

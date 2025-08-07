@@ -41,7 +41,8 @@ gva_variant_length(GVA_Variant const variant);
 GVA_String
 gva_patch(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
-    size_t const n, GVA_Variant const variants[static restrict n]);
+    size_t const n, GVA_Variant const variants[static restrict n],
+    size_t const shift);
 
 
 #endif // GVA_VARIANT_H

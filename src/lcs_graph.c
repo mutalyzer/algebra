@@ -5,10 +5,11 @@
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
-#include "../include/variant.h"     // GVA_Variant, gva_variant_length
+#include "../include/string.h"      // GVA_String, gva_string_destroy
+#include "../include/variant.h"     // GVA_Variant, gva_patch, gva_variant_length
 #include "align.h"      // LCS_Alignment, lcs_align
 #include "array.h"      // ARRAY_*, array_length
-#include "common.h"     // GVA_NULL, gva_uint, MAX, MIN
+#include "common.h"     // GVA_NULL, MAX, MIN, gva_uint
 
 
 GVA_LCS_Graph
@@ -275,14 +276,22 @@ gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
 
 
 GVA_LCS_Graph
-gva_lcs_graph_from_variant(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    GVA_Variant const variant)
+gva_lcs_graph_from_variants(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const n, GVA_Variant const variants[static restrict n])
 {
+    // FIXME: n == 0?
+    GVA_Variant variant = {variants[0].start, variants[0].end, {0, NULL}};
+    for (size_t i = 1; i < n; ++i)
+    {
+        variant.start = MIN(variant.start, variants[i].start);
+        variant.end = MAX(variant.end, variants[i].end);
+    } // for
+    variant.sequence = gva_patch(allocator, variant.end - variant.start, reference + variant.start, n, variants, variant.start);
+
     gva_uint offset = MAX(8, gva_variant_length(variant) / 2);
     size_t old_len = 0;
     char* observed = NULL;
-
     while (true)
     {
         gva_uint const start = MAX(0, (intmax_t) variant.start - offset);
@@ -313,7 +322,8 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
         old_len = len;
         offset *= 2;  // OVERFLOW
     } // while
-} // gva_lcs_graph_from_variant
+    gva_string_destroy(allocator, variant.sequence);
+} // gva_lcs_graph_from_variants
 
 
 gva_uint

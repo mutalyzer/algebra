@@ -130,15 +130,16 @@ gva_variant_length(GVA_Variant const variant)
 GVA_String
 gva_patch(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
-    size_t const n, GVA_Variant const variants[static restrict n])
+    size_t const n, GVA_Variant const variants[static restrict n],
+    size_t const shift)
 {
     GVA_String observed = {0, NULL};
     size_t start = 0;
     for (size_t i = 0; i < n; ++i)
     {
-        observed = gva_string_concat(allocator, observed, (GVA_String) {variants[i].start - start, reference + start});
+        observed = gva_string_concat(allocator, observed, (GVA_String) {variants[i].start - start - shift, reference + start});
         observed = gva_string_concat(allocator, observed, variants[i].sequence);
-        start = variants[i].end;
+        start = variants[i].end - shift;
     } // for
 
     if (start < len_ref)

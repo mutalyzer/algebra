@@ -498,7 +498,7 @@ all(int argc, char* argv[static argc + 1])
             continue;
         } // if
 
-        GVA_LCS_Graph graph = gva_lcs_graph_from_variant(gva_std_allocator, reference.len, reference.str, variant);
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
         gva_uint const inserted = trie_insert(gva_std_allocator, &trie, graph.supremal.sequence.len, graph.supremal.sequence.str);
         gva_stabbing_index_add(gva_std_allocator, &index, graph.supremal.start, graph.supremal.end, inserted, graph.distance, rsid);

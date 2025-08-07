@@ -61,9 +61,9 @@ gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self);
 
 
 GVA_LCS_Graph
-gva_lcs_graph_from_variant(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    GVA_Variant const variant);
+gva_lcs_graph_from_variants(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const n, GVA_Variant const variants[static restrict n]);
 
 
 gva_uint
