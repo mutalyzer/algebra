@@ -314,6 +314,7 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         if ((graph.supremal.start > start || graph.supremal.start == 0) &&
             (graph.supremal.end   < end   || graph.supremal.end   == len_ref))
         {
+            gva_string_destroy(allocator, variant.sequence);
             return graph;
         } // if
 
@@ -322,7 +323,6 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         old_len = len;
         offset *= 2;  // OVERFLOW
     } // while
-    gva_string_destroy(allocator, variant.sequence);
 } // gva_lcs_graph_from_variants
 
 

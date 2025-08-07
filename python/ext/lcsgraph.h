@@ -15,18 +15,6 @@ typedef struct
 } LCSgraph;
 
 
-PyObject*
-LCSgraph_new(PyTypeObject* type, PyObject* args, PyObject* kwargs);
-
-
-void
-LCSgraph_dealloc(LCSgraph* self);
-
-
-PyObject*
-LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs);
-
-
 extern PyTypeObject LCSgraph_Type;
 
 

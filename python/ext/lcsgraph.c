@@ -1,54 +1,59 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>     // Py*
 
-#include <stddef.h>     // NULL
+#include <stddef.h>     // NULL, size_t
 
 #include "lcsgraph.h"   // LCSgraph, LCSgraph_*
 #include "variant.h"    // Variant, Variant_*
 
-#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
+#include "../include/string.h"      // gva_string_destroy
 #include "../include/types.h"       // GVA_NULL
+#include "../include/variant.h"     // GVA_Variant
+#include "../src/array.h"           // array_length
 
 
-PyObject*
-LCSgraph_new(PyTypeObject* type, PyObject* args, PyObject* kwargs)
+static PyObject*
+LCSgraph_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
 {
     (void) args;
     (void) kwargs;
 
-    LCSgraph* const self = (LCSgraph*) type->tp_alloc(type, 0);
+    LCSgraph* const self = (LCSgraph*) subtype->tp_alloc(subtype, 0);
     if (self == NULL)
     {
         return NULL;
     } // if
 
-    self->graph = (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL, 0};
+    PySys_FormatStderr("LCSgraph_new()  (%p)\n", (void*) self);
     return (PyObject*) self;
 } // LCSgraph_new
 
 
-inline void
+static inline void
 LCSgraph_dealloc(LCSgraph* self)
 {
+    PySys_FormatStderr("LCSgraph_dealloc()  (%p)\n", (void*) self);
+
+    gva_string_destroy(gva_std_allocator, self->graph.observed);
     gva_lcs_graph_destroy(gva_std_allocator, self->graph);
     Py_TYPE(self)->tp_free((PyObject*) self);
 } // LCSgraph_dealloc
 
 
-PyObject*
-LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
+static PyObject*
+from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 {
     char const* reference = NULL;
     Py_ssize_t len_ref = 0;
     PyObject* variant_list = NULL;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#O!|:from_variants",
-                                     (char* []) {"reference", "variants", NULL},
+                                     (char*[]) {"reference", "variants", NULL},
                                      &reference, &len_ref, &PyList_Type, &variant_list))
     {
         return NULL;
     } // if
-
 
     GVA_Variant* variants = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, PyList_GET_SIZE(variant_list) * sizeof(*variants));
     if (variants == NULL)
@@ -76,11 +81,46 @@ LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 
     self->graph = gva_lcs_graph_from_variants(gva_std_allocator, len_ref, reference, PyList_GET_SIZE(variant_list), variants);
 
-    PySys_FormatStderr("supremal: " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("reference", self->graph.supremal));
-
     variants = gva_std_allocator.allocate(gva_std_allocator.context, variants, PyList_GET_SIZE(variant_list) * sizeof(*variants), 0);
     return (PyObject*) self;
-} // LCSgraph_from_variants
+} // from_variants
+
+
+static PyObject*
+local_supremal(LCSgraph* self)
+{
+    PyObject* local = PyList_New(array_length(self->graph.local_supremal) - 1);
+    if (local == NULL)
+    {
+        return NULL;
+    } // if
+
+    for (size_t i = 0; i < array_length(self->graph.local_supremal) - 1; ++i)
+    {
+        GVA_Variant variant;
+        gva_edges(self->graph.observed.str,
+            self->graph.local_supremal[i], self->graph.local_supremal[i + 1],
+            i == 0, i == array_length(self->graph.local_supremal) - 2,
+            &variant);
+
+        PyObject* item = PyObject_CallFunction((PyObject*) &Variant_Type, "nnz", variant.start, variant.end, "test");
+        if (item == NULL)
+        {
+            Py_DECREF(local);
+            return NULL;
+        } // if
+        PyList_SET_ITEM(local, i, item);
+    } // for
+    return local;
+} // local_supremal
+
+
+static PyObject*
+supremal(LCSgraph* self)
+{
+    PySys_FormatStderr("supremal()  (%p)\n", (void*) self);
+    return PyObject_CallFunction((PyObject*) &Variant_Type, "nns#", self->graph.supremal.start, self->graph.supremal.end, self->graph.supremal.sequence.str, self->graph.supremal.sequence.len);
+} // supremal
 
 
 PyTypeObject LCSgraph_Type =
@@ -89,15 +129,27 @@ PyTypeObject LCSgraph_Type =
     .tp_name = "algebra_ext.LCSgraph",
     .tp_basicsize = sizeof(LCSgraph),
     .tp_doc = PyDoc_STR("LCS graph class for storing all minimal alignments."),
-    .tp_new = LCSgraph_new,
+    .tp_new = (newfunc) LCSgraph_new,
     .tp_dealloc = (destructor) LCSgraph_dealloc,
     .tp_methods = (PyMethodDef[])
     {
         {
             "from_variants",
-            (PyCFunction) LCSgraph_from_variants,
+            (PyCFunction) from_variants,
             METH_CLASS | METH_VARARGS | METH_KEYWORDS,
             PyDoc_STR("Iteratively find the supremal LCS graph for an allele by repeatedly widening a range of influence."),
+        },
+        {
+            "local_supremal",
+            (PyCFunction) local_supremal,
+            METH_NOARGS,
+            PyDoc_STR("The local supremal variant."),
+        },
+        {
+            "supremal",
+            (PyCFunction) supremal,
+            METH_NOARGS,
+            PyDoc_STR("The supremal variant."),
         },
         {NULL}  // sentinel
     },
