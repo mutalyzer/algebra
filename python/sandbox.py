@@ -2,8 +2,13 @@ from algebra import LCSgraph, Variant
 
 
 def main():
-    v = Variant(1, 1, "CCC")
-    print(v)
+    reference = "GTGTGTTTTTTTAACAGGGA"
+    variants = [Variant(8, 9, "")]
+
+    graph = LCSgraph.from_variants(reference, variants)
+
+    print(graph.supremal())
+    print(graph.local_supremal())
 
 
 if __name__ == "__main__":

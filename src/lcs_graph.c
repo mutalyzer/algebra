@@ -276,22 +276,14 @@ gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
 
 
 GVA_LCS_Graph
-gva_lcs_graph_from_variants(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static restrict len_ref],
-    size_t const n, GVA_Variant const variants[static restrict n])
+gva_lcs_graph_from_variant(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const variant)
 {
-    // FIXME: n == 0?
-    GVA_Variant variant = {variants[0].start, variants[0].end, {0, NULL}};
-    for (size_t i = 1; i < n; ++i)
-    {
-        variant.start = MIN(variant.start, variants[i].start);
-        variant.end = MAX(variant.end, variants[i].end);
-    } // for
-    variant.sequence = gva_patch(allocator, variant.end - variant.start, reference + variant.start, n, variants, variant.start);
-
     gva_uint offset = MAX(8, gva_variant_length(variant) / 2);
     size_t old_len = 0;
     char* observed = NULL;
+
     while (true)
     {
         gva_uint const start = MAX(0, (intmax_t) variant.start - offset);
@@ -314,7 +306,6 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         if ((graph.supremal.start > start || graph.supremal.start == 0) &&
             (graph.supremal.end   < end   || graph.supremal.end   == len_ref))
         {
-            gva_string_destroy(allocator, variant.sequence);
             return graph;
         } // if
 
@@ -323,7 +314,7 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         old_len = len;
         offset *= 2;  // OVERFLOW
     } // while
-} // gva_lcs_graph_from_variants
+} // gva_lcs_graph_from_variant
 
 
 gva_uint

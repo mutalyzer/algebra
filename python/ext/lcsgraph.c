@@ -14,6 +14,9 @@
 #include "../src/array.h"           // array_length
 
 
+// DEBUG: PySys_FormatStderr
+
+
 static PyObject*
 LCSgraph_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
 {
@@ -25,8 +28,6 @@ LCSgraph_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
     {
         return NULL;
     } // if
-
-    PySys_FormatStderr("LCSgraph_new()  (%p)\n", (void*) self);
     return (PyObject*) self;
 } // LCSgraph_new
 
@@ -34,8 +35,6 @@ LCSgraph_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
 static inline void
 LCSgraph_dealloc(LCSgraph* self)
 {
-    PySys_FormatStderr("LCSgraph_dealloc()  (%p)\n", (void*) self);
-
     gva_string_destroy(gva_std_allocator, self->graph.observed);
     gva_lcs_graph_destroy(gva_std_allocator, self->graph);
     Py_TYPE(self)->tp_free((PyObject*) self);
@@ -70,6 +69,7 @@ from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
             variants = gva_std_allocator.allocate(gva_std_allocator.context, variants, PyList_GET_SIZE(variant_list) * sizeof(*variants), 0);
             return NULL;
         } // if
+        variants[i] = (GVA_Variant) {item->start, item->end, {item->len, item->sequence}};
     } // for
 
     LCSgraph* self = (LCSgraph*) PyObject_CallNoArgs(cls);
@@ -79,7 +79,7 @@ from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
         return NULL;
     } // if
 
-    self->graph = gva_lcs_graph_from_variants(gva_std_allocator, len_ref, reference, PyList_GET_SIZE(variant_list), variants);
+    self->graph = gva_lcs_graph_from_variant(gva_std_allocator, len_ref, reference, variants[0]);
 
     variants = gva_std_allocator.allocate(gva_std_allocator.context, variants, PyList_GET_SIZE(variant_list) * sizeof(*variants), 0);
     return (PyObject*) self;
@@ -103,9 +103,16 @@ local_supremal(LCSgraph* self)
             i == 0, i == array_length(self->graph.local_supremal) - 2,
             &variant);
 
-        PyObject* item = PyObject_CallFunction((PyObject*) &Variant_Type, "nnz", variant.start, variant.end, "test");
+        PyObject* str = PyUnicode_FromFormat("%.*s", (int) variant.sequence.len, variant.sequence.str);
+        if (str == NULL)
+        {
+            Py_DECREF(local);
+            return NULL;
+        } // if
+        PyObject* item = PyObject_CallFunction((PyObject*) &Variant_Type, "nnO", variant.start, variant.end, str);
         if (item == NULL)
         {
+            Py_DECREF(str);
             Py_DECREF(local);
             return NULL;
         } // if
@@ -118,8 +125,12 @@ local_supremal(LCSgraph* self)
 static PyObject*
 supremal(LCSgraph* self)
 {
-    PySys_FormatStderr("supremal()  (%p)\n", (void*) self);
-    return PyObject_CallFunction((PyObject*) &Variant_Type, "nns#", self->graph.supremal.start, self->graph.supremal.end, self->graph.supremal.sequence.str, self->graph.supremal.sequence.len);
+    PyObject* str = PyUnicode_FromFormat("%.*s", (int) self->graph.supremal.sequence.len, self->graph.supremal.sequence.str);
+    if (str == NULL)
+    {
+        return NULL;
+    } // if
+    return PyObject_CallFunction((PyObject*) &Variant_Type, "nnO", self->graph.supremal.start, self->graph.supremal.end, str);
 } // supremal
 
 

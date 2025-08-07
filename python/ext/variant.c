@@ -11,25 +11,6 @@
 static PyObject*
 Variant_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
 {
-    (void) args;
-    (void) kwargs;
-
-    Variant* const self = (Variant*) subtype->tp_alloc(subtype, 0);
-    if (self == NULL)
-    {
-        return NULL;
-    } // if
-
-    PySys_FormatStderr("Variant_new()  (%p)\n", (void*) self);
-    return (PyObject*) self;
-} // Variant_new
-
-
-static int
-Variant_init(Variant* self, PyObject* args, PyObject* kwargs)
-{
-    PySys_FormatStderr("Variant_init()  (%p)\n", (void*) self);
-
     Py_ssize_t start = 0;
     Py_ssize_t end = 0;
     char const* sequence = NULL;
@@ -38,22 +19,26 @@ Variant_init(Variant* self, PyObject* args, PyObject* kwargs)
                                      (char*[]) {"start", "end", "sequence", NULL},
                                      &start, &end, &sequence, &len))
     {
-        Py_DECREF(self);
-        return -1;
+        return NULL;
+    } // if
+
+    Variant* const self = (Variant*) subtype->tp_alloc(subtype, 0);
+    if (self == NULL)
+    {
+        return NULL;
     } // if
 
     self->start = start;
     self->end = end;
     self->len = len;
     self->sequence = sequence;
-    return 0;
-} // Variant_init
+    return (PyObject*) self;
+} // Variant_new
 
 
 static inline void
 Variant_dealloc(Variant* self)
 {
-    PySys_FormatStderr("Variant_dealloc()  (%p)\n", (void*) self);
     Py_TYPE(self)->tp_free((PyObject*) self);
 } // Variant_dealloc
 
@@ -61,7 +46,6 @@ Variant_dealloc(Variant* self)
 static inline PyObject*
 Variant_repr(Variant* self)
 {
-    PySys_FormatStderr("Variant_repr()  (%p)\n", (void*) self);
     return PyUnicode_FromFormat("%zu:%zu/%.*s", self->start, self->end, (int) self->len, self->sequence);
 } // Variant_repr
 
@@ -73,7 +57,6 @@ PyTypeObject Variant_Type =
     .tp_basicsize = sizeof(Variant),
     .tp_doc = PyDoc_STR("Variant class for deletion/insertions."),
     .tp_new = (newfunc) Variant_new,
-    .tp_init = (initproc) Variant_init,
     .tp_dealloc = (destructor) Variant_dealloc,
     .tp_repr = (reprfunc) Variant_repr,
     .tp_members = (PyMemberDef[])
