@@ -19,4 +19,9 @@ GVA_String
 gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream);
 
 
+GVA_String
+gva_random_sequence(GVA_Allocator const allocator,
+    size_t const min_length, size_t const max_length);
+
+
 #endif // GVA_UTILS_H

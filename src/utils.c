@@ -1,5 +1,6 @@
 // NOT FREESTANDING
 #include <stddef.h>     // NULL, size_t
+#include <stdlib.h>     // rand
 #include <stdio.h>      // FILE, fgets
 #include <string.h>     // strcspn
 
@@ -45,3 +46,32 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream)
     seq.str = allocator.allocate(allocator.context, (char*) seq.str, capacity, seq.len);
     return seq;
 } // gva_fasta_sequence
+
+
+static inline void
+random_sequence(size_t const len, char sequence[static len])
+{
+    for (size_t i = 0; i < len; ++i)
+    {
+        sequence[i] = "AC"[rand() % 2];
+    } // for
+} // random_sequence
+
+
+GVA_String
+gva_random_sequence(GVA_Allocator const allocator, size_t const min_length, size_t const max_length)
+{
+    if (max_length < min_length)
+    {
+        return (GVA_String) {0, NULL};
+    } // if
+
+    size_t const len = rand() % (max_length - min_length + 1) + min_length;
+    GVA_String sequence = {len, allocator.allocate(allocator.context, NULL, 0, len)};
+    if (sequence.str == NULL)
+    {
+        return (GVA_String) {0, NULL};
+    } // if
+    random_sequence(len, (char*) sequence.str);
+    return sequence;
+} // gva_random_sequence
