@@ -6,12 +6,13 @@
 #include "lcsgraph.h"   // LCSgraph, LCSgraph_*
 #include "variant.h"    // Variant, Variant_*
 
+#include "../include/extract.h"     // gva_extract
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // gva_string_destroy
 #include "../include/types.h"       // GVA_NULL
 #include "../include/variant.h"     // GVA_Variant
-#include "../src/array.h"           // array_length
+#include "../src/array.h"           // ARRAY_DESTROY, array_length
 
 
 // DEBUG: PySys_FormatStderr
@@ -87,6 +88,43 @@ from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 
 
 static PyObject*
+canonical(LCSgraph* self)
+{
+    GVA_Variant* variants = gva_extract(gva_std_allocator, self->graph);
+
+    PyObject* result = PyList_New(array_length(variants));
+    if (result == NULL)
+    {
+        variants = ARRAY_DESTROY(gva_std_allocator, variants);
+        return NULL;
+    } // if
+
+    for (size_t i = 0; i < array_length(variants); ++i)
+    {
+        PyObject* str = PyUnicode_FromFormat("%.*s", (int) variants[i].sequence.len, variants[i].sequence.str);
+        if (str == NULL)
+        {
+            Py_DECREF(result);
+            variants = ARRAY_DESTROY(gva_std_allocator, variants);
+            return NULL;
+        } // if
+        PyObject* item = PyObject_CallFunction((PyObject*) &Variant_Type, "nnO", variants[i].start, variants[i].end, str);
+        if (item == NULL)
+        {
+            Py_DECREF(str);
+            Py_DECREF(result);
+            variants = ARRAY_DESTROY(gva_std_allocator, variants);
+            return NULL;
+        } // if
+        PyList_SET_ITEM(result, i, item);
+    } // for
+    variants = ARRAY_DESTROY(gva_std_allocator, variants);
+
+    return result;
+} // canonical
+
+
+static PyObject*
 local_supremal(LCSgraph* self)
 {
     PyObject* result = PyList_New(array_length(self->graph.local_supremal) - 1);
@@ -149,6 +187,12 @@ PyTypeObject LCSgraph_Type =
             (PyCFunction) from_variants,
             METH_CLASS | METH_VARARGS | METH_KEYWORDS,
             PyDoc_STR("Iteratively find the supremal LCS graph for an allele by repeatedly widening a range of influence."),
+        },
+        {
+            "canonical",
+            (PyCFunction) canonical,
+            METH_NOARGS,
+            PyDoc_STR("The canonical variant."),
         },
         {
             "local_supremal",
