@@ -5,8 +5,8 @@
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
-#include "../include/string.h"      // GVA_String, gva_string_destroy
-#include "../include/variant.h"     // GVA_Variant, gva_patch, gva_variant_length
+#include "../include/string.h"      // GVA_String, gva_string_*
+#include "../include/variant.h"     // GVA_Variant, gva_variant_length
 #include "align.h"      // LCS_Alignment, lcs_align
 #include "array.h"      // ARRAY_*, array_length
 #include "common.h"     // GVA_NULL, MAX, MIN, gva_uint
@@ -276,14 +276,21 @@ gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
 
 
 GVA_LCS_Graph
-gva_lcs_graph_from_variant(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    GVA_Variant const variant)
+gva_lcs_graph_from_variants(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const n, GVA_Variant const variants[static restrict n])
 {
+    GVA_Variant variant = {variants[0].start, variants[n - 1].end, {0, NULL}};
+    variant.sequence = gva_string_concat(allocator, variant.sequence, variants[0].sequence);
+    for (size_t i = 1; i < n; ++i)
+    {
+        variant.sequence = gva_string_concat(allocator, variant.sequence, (GVA_String) {variants[i].start - variants[i - 1].end, reference + variants[i - 1].end});
+        variant.sequence = gva_string_concat(allocator, variant.sequence, variants[i].sequence);
+    } // for
+
     gva_uint offset = MAX(8, gva_variant_length(variant) / 2);
     size_t old_len = 0;
     char* observed = NULL;
-
     while (true)
     {
         gva_uint const start = MAX(0, (intmax_t) variant.start - offset);
@@ -294,6 +301,7 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
         observed = allocator.allocate(allocator.context, observed, old_len, len);
         if (observed == NULL)
         {
+            gva_string_destroy(allocator, variant.sequence);
             return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL, 0};
         } // if
 
@@ -306,6 +314,8 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
         if ((graph.supremal.start > start || graph.supremal.start == 0) &&
             (graph.supremal.end   < end   || graph.supremal.end   == len_ref))
         {
+            // FIXME: observed is now owned by graph
+            gva_string_destroy(allocator, variant.sequence);
             return graph;
         } // if
 
@@ -314,7 +324,7 @@ gva_lcs_graph_from_variant(GVA_Allocator const allocator,
         old_len = len;
         offset *= 2;  // OVERFLOW
     } // while
-} // gva_lcs_graph_from_variant
+} // gva_lcs_graph_from_variants
 
 
 gva_uint

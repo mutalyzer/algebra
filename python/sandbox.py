@@ -3,7 +3,7 @@ from algebra import LCSgraph, Variant
 
 def main():
     reference = "GTGTGTTTTTTTAACAGGGA"
-    variants = [Variant(8, 9, "")]
+    variants = [Variant(4, 5, ""), Variant(12, 13, "")]
 
     graph = LCSgraph.from_variants(reference, variants)
 

@@ -79,7 +79,7 @@ from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
         return NULL;
     } // if
 
-    self->graph = gva_lcs_graph_from_variant(gva_std_allocator, len_ref, reference, variants[0]);
+    self->graph = gva_lcs_graph_from_variants(gva_std_allocator, len_ref, reference, PyList_GET_SIZE(variant_list), variants);
 
     variants = gva_std_allocator.allocate(gva_std_allocator.context, variants, PyList_GET_SIZE(variant_list) * sizeof(*variants), 0);
     return (PyObject*) self;
