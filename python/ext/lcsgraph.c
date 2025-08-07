@@ -89,8 +89,8 @@ from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 static PyObject*
 local_supremal(LCSgraph* self)
 {
-    PyObject* local = PyList_New(array_length(self->graph.local_supremal) - 1);
-    if (local == NULL)
+    PyObject* result = PyList_New(array_length(self->graph.local_supremal) - 1);
+    if (result == NULL)
     {
         return NULL;
     } // if
@@ -106,19 +106,19 @@ local_supremal(LCSgraph* self)
         PyObject* str = PyUnicode_FromFormat("%.*s", (int) variant.sequence.len, variant.sequence.str);
         if (str == NULL)
         {
-            Py_DECREF(local);
+            Py_DECREF(result);
             return NULL;
         } // if
         PyObject* item = PyObject_CallFunction((PyObject*) &Variant_Type, "nnO", variant.start, variant.end, str);
         if (item == NULL)
         {
             Py_DECREF(str);
-            Py_DECREF(local);
+            Py_DECREF(result);
             return NULL;
         } // if
-        PyList_SET_ITEM(local, i, item);
+        PyList_SET_ITEM(result, i, item);
     } // for
-    return local;
+    return result;
 } // local_supremal
 
 

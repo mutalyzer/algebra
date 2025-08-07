@@ -1,12 +1,13 @@
-from algebra import LCSgraph, Variant
+from algebra import Variant
+from algebra.extractor import extract
 
 
 def main():
     reference = "GTGTGTTTTTTTAACAGGGA"
     variants = [Variant(4, 5, ""), Variant(12, 13, "")]
 
-    graph = LCSgraph.from_variants(reference, variants)
-
+    canonical, graph = extract(reference, variants)
+    print(canonical)
     print(graph.supremal())
     print(graph.local_supremal())
 

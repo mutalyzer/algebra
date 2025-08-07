@@ -15,6 +15,7 @@ setup(
                     "ext/variant.c",
                     "../src/align.c",
                     "../src/array.c",
+                    "../src/extract.c",
                     "../src/lcs_graph.c",
                     "../src/string.c",
                     "../src/variant.c",
