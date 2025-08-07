@@ -11,5 +11,6 @@ def main():
     print(graph.local_supremal())
     print(graph.canonical())
 
+
 if __name__ == "__main__":
     main()
