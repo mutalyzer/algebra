@@ -8,7 +8,7 @@
 
 #include "../include/compare.h"     // bitset_fill
 #include "../include/edit.h"        // gva_edit_distance
-#include "../include/extract.h"     // gva_extract
+#include "../include/extractor.h"   // gva_canonical
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/stabbing.h"    // GVA_Stabbing_*, gva_stabbing_*
 #include "../include/std_alloc.h"   // gva_std_allocator
@@ -225,7 +225,7 @@ lcs_graph_json(FILE* const stream, GVA_LCS_Graph const graph)
     } // if
     fprintf(stream, "    ],\n    \"supremal\": \"" GVA_VARIANT_FMT "\",\n", GVA_VARIANT_PRINT(graph.supremal));
     fprintf(stream, "    \"canonical\": [\n");
-    GVA_Variant* canonical = gva_extract(gva_std_allocator, graph);
+    GVA_Variant* canonical = gva_canonical(gva_std_allocator, graph);
     for (size_t i = 0; i < array_length(canonical); ++i)
     {
         fprintf(stream, "        \"" GVA_VARIANT_FMT "\"%s\n", GVA_VARIANT_PRINT(canonical[i]), i < array_length(canonical) - 1 ? "," : "");
@@ -312,7 +312,7 @@ extract(int const argc, char* argv[static argc + 1])
     lcs_graph_json(stdout, graph);
     lcs_graph_svg(stderr, graph);
 
-    GVA_Variant* canonical = gva_extract(gva_std_allocator, graph);
+    GVA_Variant* canonical = gva_canonical(gva_std_allocator, graph);
     for (size_t i = 0; i < array_length(canonical); ++i)
     {
         fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(canonical[i]));

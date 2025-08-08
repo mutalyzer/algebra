@@ -7,7 +7,10 @@ setup(
                   extra_compile_args=[
                     "-Wextra",
                     "-Wpedantic",
+                    "-Wno-cast-function-type",
                     "-std=c99",
+                    "-O3",
+                    "-fanalyzer",
                   ],
                   sources=[
                     "ext/algebra_ext.c",
@@ -15,7 +18,7 @@ setup(
                     "ext/variant.c",
                     "../src/align.c",
                     "../src/array.c",
-                    "../src/extract.c",
+                    "../src/extractor.c",
                     "../src/lcs_graph.c",
                     "../src/string.c",
                     "../src/variant.c",

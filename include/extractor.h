@@ -7,7 +7,7 @@
 
 
 GVA_Variant*
-gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
+gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
 
 
 #endif // GVA_EXTRACT_H

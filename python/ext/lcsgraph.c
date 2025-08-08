@@ -6,7 +6,7 @@
 #include "lcsgraph.h"   // LCSgraph, LCSgraph_*
 #include "variant.h"    // Variant, Variant_*
 
-#include "../include/extract.h"     // gva_extract
+#include "../include/extractor.h"   // gva_canonical
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // gva_string_destroy
@@ -90,7 +90,7 @@ from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 static PyObject*
 canonical(LCSgraph* self)
 {
-    GVA_Variant* variants = gva_extract(gva_std_allocator, self->graph);
+    GVA_Variant* variants = gva_canonical(gva_std_allocator, self->graph);
 
     PyObject* result = PyList_New(array_length(variants));
     if (result == NULL)
@@ -168,7 +168,13 @@ supremal(LCSgraph* self)
     {
         return NULL;
     } // if
-    return PyObject_CallFunction((PyObject*) &Variant_Type, "nnO", self->graph.supremal.start, self->graph.supremal.end, str);
+    PyObject* result = PyObject_CallFunction((PyObject*) &Variant_Type, "nnO", self->graph.supremal.start, self->graph.supremal.end, str);
+    if (result == NULL)
+    {
+        Py_DECREF(str);
+        return NULL;
+    } // if
+    return result;
 } // supremal
 
 

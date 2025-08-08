@@ -1,5 +1,6 @@
 #include <stddef.h>     // NULL, size_t
 
+#include "../include/extractor.h"   // gva_canonical
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"      // ARRAY_APPEND, array_length
@@ -44,7 +45,7 @@ lca(gva_uint* const start,
 
 
 GVA_Variant*
-gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
+gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
 {
     gva_uint const length = array_length(graph.nodes);
     LCA_Table* visited = allocator.allocate(allocator.context, NULL, 0, sizeof(*visited) * length);
@@ -160,4 +161,4 @@ gva_extract(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
 
     visited = allocator.allocate(allocator.context, visited, sizeof(*visited) * length, 0);
     return canonical;
-} // gva_extract
+} // gva_canonical
