@@ -11,12 +11,6 @@
 #include "variant.h"    // GVA_VARIANT
 
 
-GVA_Relation
-gva_compare_supremals(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    GVA_Variant const lhs, GVA_Variant const rhs);
-
-
 // FIXME: move to lcs_graph as `uniq_atomics`.
 void
 bitset_fill(GVA_LCS_Graph const graph,
@@ -27,6 +21,18 @@ bitset_fill(GVA_LCS_Graph const graph,
     size_t cs[static restrict 1],
     size_t gs[static restrict 1],
     size_t ts[static restrict 1]);
+
+
+GVA_Relation
+gva_compare_graphs(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_LCS_Graph const lhs, GVA_LCS_Graph const rhs);
+
+
+GVA_Relation
+gva_compare_supremals(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const lhs, GVA_Variant const rhs);
 
 
 #endif // GVA_COMPARE_H

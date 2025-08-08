@@ -1,5 +1,6 @@
-#include <stdint.h>     // uint8_t
+#include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
+#include <stdint.h>     // uint8_t
 #include <string.h>     // memcpy, strncmp
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -9,7 +10,7 @@
 #include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS, GVA_DISJOINT,
                                     // GVA_EQUIVALENT GVA_IS_CONTAINED, GVA_OVERLAP
 #include "../include/types.h"       // GVA_NULL, gva_uint
-#include "../include/variant.h"     // GVA_Variant
+#include "../include/variant.h"     // GVA_Variant, gva_variant_eq
 #include "array.h"      // ARRAY_DESTROY, array_length
 #include "common.h"     // MAX, MIN
 #include "bitset.h"     // bitset_*
@@ -100,15 +101,125 @@ bitset_fill(GVA_LCS_Graph const graph,
 
 
 GVA_Relation
+gva_compare_graphs(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_LCS_Graph const lhs, GVA_LCS_Graph const rhs)
+{
+    if (gva_variant_eq(lhs.supremal, rhs.supremal))
+    {
+        return GVA_EQUIVALENT;
+    } // if
+
+    if (lhs.supremal.start > rhs.supremal.end || rhs.supremal.start > lhs.supremal.end)
+    {
+        return GVA_DISJOINT;
+    } // if
+
+    size_t const start = MIN(lhs.supremal.start, rhs.supremal.start);
+    size_t const end = MAX(lhs.supremal.end, rhs.supremal.end);
+
+    size_t const lhs_len = (lhs.supremal.start - start) + lhs.supremal.sequence.len + (end - lhs.supremal.end);
+    size_t const rhs_len = (rhs.supremal.start - start) + rhs.supremal.sequence.len + (end - rhs.supremal.end);
+
+    size_t distance = 0;
+    if (lhs_len == 0)
+    {
+        distance = rhs_len;
+    } // if
+    else if (rhs_len == 0)
+    {
+        distance = lhs_len;
+    } // if
+    else
+    {
+        char* lhs_obs = allocator.allocate(allocator.context, NULL, 0, lhs_len);
+        if (lhs_obs == NULL)
+        {
+            return GVA_DISJOINT;  // FIXME: error
+        } // if
+        memcpy(lhs_obs, reference + start, lhs.supremal.start - start);
+        memcpy(lhs_obs + lhs.supremal.start - start, lhs.supremal.sequence.str, lhs.supremal.sequence.len);
+        memcpy(lhs_obs + lhs.supremal.start - start + lhs.supremal.sequence.len, reference + lhs.supremal.end, end - lhs.supremal.end);
+
+        char* rhs_obs = allocator.allocate(allocator.context, NULL, 0, rhs_len);
+        if (rhs_obs == NULL)
+        {
+            lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
+            return GVA_DISJOINT;  // FIXME: error
+        } // if
+        memcpy(rhs_obs, reference + start, rhs.supremal.start - start);
+        memcpy(rhs_obs + rhs.supremal.start - start, rhs.supremal.sequence.str, rhs.supremal.sequence.len);
+        memcpy(rhs_obs + rhs.supremal.start - start + rhs.supremal.sequence.len, reference + rhs.supremal.end, end - rhs.supremal.end);
+
+        distance = gva_edit_distance(allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
+        rhs_obs = allocator.allocate(allocator.context, rhs_obs, rhs_len, 0);
+        lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
+    } // else
+
+    if (lhs.distance + rhs.distance == distance)
+    {
+        return GVA_DISJOINT;
+    } // if
+
+    if (lhs.distance - rhs.distance == distance)
+    {
+        return GVA_CONTAINS;
+    } // if
+
+    if (rhs.distance - lhs.distance == distance)
+    {
+        return GVA_IS_CONTAINED;
+    } // if
+
+    gva_uint const len = end - start + 1;
+    size_t* lhs_dels = bitset_init(allocator, len);  // can be one shorter
+    size_t* lhs_as = bitset_init(allocator, len);
+    size_t* lhs_cs = bitset_init(allocator, len);
+    size_t* lhs_gs = bitset_init(allocator, len);
+    size_t* lhs_ts = bitset_init(allocator, len);
+
+    size_t* rhs_dels = bitset_init(allocator, len);  // can be one shorter
+    size_t* rhs_as = bitset_init(allocator, len);
+    size_t* rhs_cs = bitset_init(allocator, len);
+    size_t* rhs_gs = bitset_init(allocator, len);
+    size_t* rhs_ts = bitset_init(allocator, len);
+
+    size_t const start_intersection = MAX(lhs.supremal.start, rhs.supremal.start);
+    size_t const end_intersection = MIN(lhs.supremal.end, rhs.supremal.end);
+
+    bitset_fill(lhs, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+    bitset_fill(rhs, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+
+    bool const overlap = bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
+        bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
+        bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
+        bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
+        bitset_intersection_cnt(lhs_ts, rhs_ts) > 0;
+
+    rhs_ts = bitset_destroy(allocator, rhs_ts);
+    rhs_gs = bitset_destroy(allocator, rhs_gs);
+    rhs_cs = bitset_destroy(allocator, rhs_cs);
+    rhs_as = bitset_destroy(allocator, rhs_as);
+    rhs_dels = bitset_destroy(allocator, rhs_dels);
+
+    lhs_ts = bitset_destroy(allocator, lhs_ts);
+    lhs_gs = bitset_destroy(allocator, lhs_gs);
+    lhs_cs = bitset_destroy(allocator, lhs_cs);
+    lhs_as = bitset_destroy(allocator, lhs_as);
+    lhs_dels = bitset_destroy(allocator, lhs_dels);
+
+    return overlap ? GVA_OVERLAP : GVA_DISJOINT;
+} // gva_compare_graphs
+
+
+GVA_Relation
 gva_compare_supremals(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const lhs, GVA_Variant const rhs)
 {
     GVA_Relation relation;
 
-    if (lhs.start == rhs.start && lhs.end == rhs.end &&
-        lhs.sequence.len == rhs.sequence.len &&
-        strncmp(lhs.sequence.str, rhs.sequence.str, MIN(lhs.sequence.len, rhs.sequence.len)) == 0)
+    if (gva_variant_eq(lhs, rhs))
     {
         return GVA_EQUIVALENT;
     } // if

@@ -108,6 +108,6 @@ PyTypeObject Variant_Type =
             Py_READONLY,
             PyDoc_STR("The inserted sequence."),
         },
-        {NULL},  // sentinel
+        {NULL}  // sentinel
     },
 };

@@ -15,15 +15,9 @@
 #include "../src/array.h"           // ARRAY_DESTROY, array_length
 
 
-// DEBUG: PySys_FormatStderr
-
-
 static PyObject*
-LCSgraph_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
+LCSgraph_new(PyTypeObject* subtype, PyObject* Py_UNUSED(args), PyObject* Py_UNUSED(kwargs))
 {
-    (void) args;
-    (void) kwargs;
-
     LCSgraph* const self = (LCSgraph*) subtype->tp_alloc(subtype, 0);
     if (self == NULL)
     {
