@@ -2,16 +2,16 @@ import pytest
 from algebra.variants import Variant
 
 
-@pytest.mark.parametrize("args, expected", [
-    ((0, 0, ""), {"start": 0, "end": 0, "sequence": ""}),
-    ((0, 0, "A"), {"start": 0, "end": 0, "sequence": "A"}),
-    ((0, 1, "A"), {"start": 0, "end": 1, "sequence": "A"}),
+@pytest.mark.parametrize("start, end, sequence", [
+    (0, 0, ""),
+    (0, 0, "A"),
+    (0, 1, "A"),
 ])
-def test_variant(args, expected):
-    variant = Variant(*args)
-    assert all((variant.start == expected["start"],
-        variant.end == expected["end"],
-        variant.sequence == expected["sequence"]))
+def test_variant(start, end, sequence):
+    variant = Variant(start, end, sequence)
+    assert all((variant.start == start,
+        variant.end == end,
+        variant.sequence == sequence))
 
 
 @pytest.mark.parametrize("args, expected", [
@@ -28,13 +28,13 @@ def test_variant_TypeError(args, expected):
     assert str(exc.value) == expected
 
 
-@pytest.mark.parametrize("args, expected", [
-    ((0, 0, ""), "0:0/"),
-    ((0, 0, "A"), "0:0/A"),
-    ((0, 1, "A"), "0:1/A"),
+@pytest.mark.parametrize("variant, expected", [
+    (Variant(0, 0, ""), "0:0/"),
+    (Variant(0, 0, "A"), "0:0/A"),
+    (Variant(0, 1, "A"), "0:1/A"),
 ])
-def test_variant_repr(args, expected):
-    assert str(Variant(*args)) == expected
+def test_variant_repr(variant, expected):
+    assert str(variant) == expected
 
 
 def test_variant_immutable():
