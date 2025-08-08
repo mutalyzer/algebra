@@ -101,7 +101,7 @@ LCSgraph_canonical(LCSgraph* self)
 
     for (size_t i = 0; i < array_length(variants); ++i)
     {
-        PyObject* str = PyUnicode_FromFormat("%.*s", (int) variants[i].sequence.len, variants[i].sequence.str);
+        PyObject* str = PyUnicode_FromStringAndSize(variants[i].sequence.str, variants[i].sequence.len);
         if (str == NULL)
         {
             Py_DECREF(result);
@@ -141,7 +141,7 @@ LCSgraph_local_supremal(LCSgraph* self)
             i == 0, i == array_length(self->graph.local_supremal) - 2,
             &variant);
 
-        PyObject* str = PyUnicode_FromFormat("%.*s", (int) variant.sequence.len, variant.sequence.str);
+        PyObject* str = PyUnicode_FromStringAndSize(variant.sequence.str, variant.sequence.len);
         if (str == NULL)
         {
             Py_DECREF(result);
@@ -163,7 +163,7 @@ LCSgraph_local_supremal(LCSgraph* self)
 static PyObject*
 LCSgraph_supremal(LCSgraph* self)
 {
-    PyObject* str = PyUnicode_FromFormat("%.*s", (int) self->graph.supremal.sequence.len, self->graph.supremal.sequence.str);
+    PyObject* str = PyUnicode_FromStringAndSize(self->graph.supremal.sequence.str, self->graph.supremal.sequence.len);
     if (str == NULL)
     {
         return NULL;
