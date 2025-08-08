@@ -1,11 +1,12 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>     // Py*
 
+#include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, offsetof
 
 #include "variant.h"    // Variant, Variant_*
 
-#include "../include/std_alloc.h"   // gva_std_allocator
+#include "../include/variant.h"     // GVA_Variant, gva_variant_*
 
 
 static PyObject*
@@ -50,6 +51,30 @@ Variant_repr(Variant* self)
 } // Variant_repr
 
 
+static PyObject*
+Variant_richcompare(Variant* self, Variant* other, int op)
+{
+    PyObject* result = Py_NotImplemented;
+    bool const equal = gva_variant_eq((GVA_Variant) {self->start, self->end, {self->len, self->sequence}},
+                                      (GVA_Variant) {other->start, other->end, {other->len, other->sequence}});
+    switch (op)
+    {
+        //case Py_LT:
+        //case Py_LE:
+        case Py_EQ:
+            result = equal ? Py_True : Py_False;
+            break;
+        case Py_NE:
+            result = equal ? Py_False : Py_True;
+            break;
+        //case Py_GT:
+        //case Py_GE:
+    } // switch
+    Py_XINCREF(result);
+    return result;
+} // Variant_richcompare
+
+
 PyTypeObject Variant_Type =
 {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -59,6 +84,7 @@ PyTypeObject Variant_Type =
     .tp_new = (newfunc) Variant_new,
     .tp_dealloc = (destructor) Variant_dealloc,
     .tp_repr = (reprfunc) Variant_repr,
+    .tp_richcompare = (richcmpfunc) Variant_richcompare,
     .tp_members = (PyMemberDef[])
     {
         {

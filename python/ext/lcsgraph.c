@@ -43,7 +43,7 @@ LCSgraph_dealloc(LCSgraph* self)
 
 
 static PyObject*
-from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
+LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 {
     char const* reference = NULL;
     Py_ssize_t len_ref = 0;
@@ -84,11 +84,11 @@ from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 
     variants = gva_std_allocator.allocate(gva_std_allocator.context, variants, PyList_GET_SIZE(variant_list) * sizeof(*variants), 0);
     return (PyObject*) self;
-} // from_variants
+} // LCSgraph_from_variants
 
 
 static PyObject*
-canonical(LCSgraph* self)
+LCSgraph_canonical(LCSgraph* self)
 {
     GVA_Variant* variants = gva_canonical(gva_std_allocator, self->graph);
 
@@ -118,14 +118,14 @@ canonical(LCSgraph* self)
         } // if
         PyList_SET_ITEM(result, i, item);
     } // for
-    variants = ARRAY_DESTROY(gva_std_allocator, variants);
 
+    variants = ARRAY_DESTROY(gva_std_allocator, variants);
     return result;
-} // canonical
+} // LCSgraph_canonical
 
 
 static PyObject*
-local_supremal(LCSgraph* self)
+LCSgraph_local_supremal(LCSgraph* self)
 {
     PyObject* result = PyList_New(array_length(self->graph.local_supremal) - 1);
     if (result == NULL)
@@ -157,11 +157,11 @@ local_supremal(LCSgraph* self)
         PyList_SET_ITEM(result, i, item);
     } // for
     return result;
-} // local_supremal
+} // LCSgraph_local_supremal
 
 
 static PyObject*
-supremal(LCSgraph* self)
+LCSgraph_supremal(LCSgraph* self)
 {
     PyObject* str = PyUnicode_FromFormat("%.*s", (int) self->graph.supremal.sequence.len, self->graph.supremal.sequence.str);
     if (str == NULL)
@@ -175,7 +175,7 @@ supremal(LCSgraph* self)
         return NULL;
     } // if
     return result;
-} // supremal
+} // LCSgraph_supremal
 
 
 PyTypeObject LCSgraph_Type =
@@ -190,25 +190,25 @@ PyTypeObject LCSgraph_Type =
     {
         {
             "from_variants",
-            (PyCFunction) from_variants,
+            (PyCFunction) LCSgraph_from_variants,
             METH_CLASS | METH_VARARGS | METH_KEYWORDS,
             PyDoc_STR("Iteratively find the supremal LCS graph for an allele by repeatedly widening a range of influence."),
         },
         {
             "canonical",
-            (PyCFunction) canonical,
+            (PyCFunction) LCSgraph_canonical,
             METH_NOARGS,
             PyDoc_STR("The canonical variant."),
         },
         {
             "local_supremal",
-            (PyCFunction) local_supremal,
+            (PyCFunction) LCSgraph_local_supremal,
             METH_NOARGS,
             PyDoc_STR("The local supremal variant."),
         },
         {
             "supremal",
-            (PyCFunction) supremal,
+            (PyCFunction) LCSgraph_supremal,
             METH_NOARGS,
             PyDoc_STR("The supremal variant."),
         },
