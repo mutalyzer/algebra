@@ -6,7 +6,7 @@
 
 #include "variant.h"    // Variant, Variant_*
 
-#include "../include/variant.h"     // GVA_Variant, gva_variant_*
+#include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_variant_*
 
 
 static PyObject*
@@ -47,7 +47,7 @@ Variant_dealloc(Variant* self)
 static inline PyObject*
 Variant_repr(Variant* self)
 {
-    return PyUnicode_FromFormat("%zu:%zu/%.*s", self->start, self->end, (int) self->len, self->sequence);
+    return PyUnicode_FromFormat(GVA_VARIANT_FMT, GVA_VARIANT_PRINT(((GVA_Variant) {self->start, self->end, {self->len, self->sequence}})));
 } // Variant_repr
 
 
@@ -70,7 +70,7 @@ Variant_richcompare(Variant* self, Variant* other, int op)
         //case Py_GT:
         //case Py_GE:
     } // switch
-    Py_XINCREF(result);
+    Py_INCREF(result);
     return result;
 } // Variant_richcompare
 
