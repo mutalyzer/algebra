@@ -6,16 +6,11 @@ setup(
         Extension("algebra_ext",
                   extra_compile_args=[
                     "-Wextra",
-                    "-Wpedantic",
                     "-Wno-cast-function-type",
                     "-std=c99",
-                    "-O3",
-                    "-fanalyzer",
                   ],
                   sources=[
-                    "ext/algebra_ext.c",
-                    "ext/lcsgraph.c",
-                    "ext/variant.c",
+                    "algebra_extmodule.c",
                     "../src/align.c",
                     "../src/array.c",
                     "../src/bitset.c",

@@ -10,10 +10,10 @@ References
 """
 
 
-from algebra_ext import Relation, compare
+from algebra_ext import Relations, compare
 
 
 __all__ = [
-    "Relation",
+    "Relations",
     "compare",
 ]

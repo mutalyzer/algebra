@@ -2,13 +2,13 @@
 
 
 from .lcs import LCSgraph
-from .relations import Relation, compare
+from .relations import Relations, compare
 from .variants import Variant
 
 
 __all__ = [
     "LCSgraph",
-    "Relation",
+    "Relations",
     "Variant",
     "compare",
 ]
