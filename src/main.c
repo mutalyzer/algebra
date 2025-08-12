@@ -25,7 +25,7 @@
 #define TIC(x) clock_t const x = clock()
 #define TOC(x) fprintf(stderr, "Elapsed time: %s (seconds): %.2f\n", (#x), (double)(clock() - (x)) / CLOCKS_PER_SEC)
 
-#define LINE_SIZE 4096
+#define LINE_SIZE 8194
 
 
 static void
@@ -433,7 +433,6 @@ entry_cmp(void const* lhs, void const* rhs)
     {
         return 1;
     } // if
-    /*  // FIXME: breaks faststabber order
     if (lhs_entry->end > rhs_entry->end)
     {
         return -1;
@@ -442,7 +441,6 @@ entry_cmp(void const* lhs, void const* rhs)
     {
         return 1;
     } // if
-    */
     if (lhs_entry->distance > rhs_entry->distance)
     {
         return -1;
@@ -500,8 +498,39 @@ all(int argc, char* argv[static argc + 1])
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        gva_uint const inserted = trie_insert(gva_std_allocator, &trie, graph.supremal.sequence.len, graph.supremal.sequence.str);
-        gva_stabbing_index_add(gva_std_allocator, &index, graph.supremal.start, graph.supremal.end, inserted, graph.distance, rsid);
+        if (array_length(graph.local_supremal) == 2)
+        {
+            // continue;
+        }
+        size_t const allele = gva_stabbing_index_add_allele(gva_std_allocator, &index, rsid, graph.distance) - 1;
+        fprintf(stderr, "%u\n", graph.distance);
+        size_t sum = 0;
+        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+        {
+            GVA_Variant variant;
+            gva_edges(graph.observed.str,
+                graph.local_supremal[i], graph.local_supremal[i + 1],
+                i == 0, i == array_length(graph.local_supremal) - 2,
+                &variant);
+            fprintf(stderr, "    (%u, %u, %u) -> (%u, %u, %u): " GVA_VARIANT_FMT " %u\n",
+                graph.local_supremal[i].row, graph.local_supremal[i].col, graph.local_supremal[i].length,
+                graph.local_supremal[i + 1].row, graph.local_supremal[i + 1].col, graph.local_supremal[i + 1].length,
+                GVA_VARIANT_PRINT(variant), graph.local_supremal[i + 1].edges);
+
+            sum += graph.local_supremal[i + 1].edges;
+
+            gva_uint const inserted = trie_insert(gva_std_allocator, &trie, variant.sequence.len, variant.sequence.str);
+            gva_stabbing_index_add_part(gva_std_allocator, &index,
+                variant.start, variant.end, inserted, graph.local_supremal[i + 1].edges, allele);
+
+        } // for
+        fprintf(stderr, "\n");
+
+        if (graph.distance != sum)
+        {
+            fprintf(stderr, "%u != %zu\n", graph.distance, sum);
+            return -1;
+        }
 
         gva_string_destroy(gva_std_allocator, graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
@@ -509,6 +538,7 @@ all(int argc, char* argv[static argc + 1])
         count += 1;
     } // while
     fprintf(stderr, "number of variants: %zu\n", array_length(index.entries) - 1);
+    fprintf(stderr, "number of alleles: %zu\n", array_length(index.alleles));
 
     TOC(perf_calculate_supremals);
 
@@ -517,137 +547,158 @@ all(int argc, char* argv[static argc + 1])
     qsort(index.entries, array_length(index.entries), sizeof(*index.entries), entry_cmp);
     gva_stabbing_index_build(gva_std_allocator, index);
 
+    for (size_t i = array_length(index.entries) - 1; i > 0; --i)
+    {
+        index.entries[i].next = index.alleles[index.entries[i].allele].head;
+        index.alleles[index.entries[i].allele].head = i;
+    }
+
+
     TOC(perf_build_index);
+
+    for (size_t i = 0; i < array_length(index.alleles); ++i)
+    {
+        fprintf(stderr, "%zu\n", index.alleles[i].data);
+        for (gva_uint j = index.alleles[i].head; j != GVA_NULL; j = index.entries[j].next)
+        {
+            GVA_String inserted = {trie.nodes[index.entries[j].inserted].end -
+                trie.nodes[index.entries[j].inserted].start,
+                trie.strings.str + trie.nodes[index.entries[j].inserted].start};
+            GVA_Variant variant = {index.entries[j].start, index.entries[j].end, inserted};
+            fprintf(stderr, GVA_VARIANT_FMT " ", GVA_VARIANT_PRINT(variant));
+        }
+        fprintf(stderr, "\n");
+    }
 
     TIC(perf_calculate_relations);
 
-    count = 0;
-    for (size_t i = 1; i < array_length(index.entries); ++i)
-    {
-        GVA_Variant const lhs = {index.entries[i].start, index.entries[i].end, {trie.nodes[index.entries[i].inserted].end - trie.nodes[index.entries[i].inserted].start, trie.strings.str + trie.nodes[index.entries[i].inserted].start}};
+   //  count = 0;
+   //  for (size_t i = 1; i < array_length(index.entries); ++i)
+   //  {
+   //      GVA_Variant const lhs = {index.entries[i].start, index.entries[i].end, {trie.nodes[index.entries[i].inserted].end - trie.nodes[index.entries[i].inserted].start, trie.strings.str + trie.nodes[index.entries[i].inserted].start}};
 
-        GVA_LCS_Graph lhs_graph = {.nodes = NULL};
-        size_t* lhs_dels = NULL;
-        size_t* lhs_as = NULL;
-        size_t* lhs_cs = NULL;
-        size_t* lhs_gs = NULL;
-        size_t* lhs_ts = NULL;
+   //      GVA_LCS_Graph lhs_graph = {.nodes = NULL};
+   //      size_t* lhs_dels = NULL;
+   //      size_t* lhs_as = NULL;
+   //      size_t* lhs_cs = NULL;
+   //      size_t* lhs_gs = NULL;
+   //      size_t* lhs_ts = NULL;
 
-        for (size_t j = i + 1; j < array_length(index.entries); ++j)
-        {
-            if (index.entries[i].end < index.entries[j].start)
-            {
-                break;
-            } // if
-            if (index.entries[j].end >= index.entries[i].start && index.entries[j].start <= index.entries[i].end)
-            {
-                count += 1;
-                GVA_Variant const rhs = {index.entries[j].start, index.entries[j].end, {trie.nodes[index.entries[j].inserted].end - trie.nodes[index.entries[j].inserted].start, trie.strings.str + trie.nodes[index.entries[j].inserted].start}};
+   //      for (size_t j = i + 1; j < array_length(index.entries); ++j)
+   //      {
+   //          if (index.entries[i].end < index.entries[j].start)
+   //          {
+   //              break;
+   //          } // if
+   //          if (index.entries[j].end >= index.entries[i].start && index.entries[j].start <= index.entries[i].end)
+   //          {
+   //              count += 1;
+   //              GVA_Variant const rhs = {index.entries[j].start, index.entries[j].end, {trie.nodes[index.entries[j].inserted].end - trie.nodes[index.entries[j].inserted].start, trie.strings.str + trie.nodes[index.entries[j].inserted].start}};
 
-                if (index.entries[i].start == index.entries[j].start && index.entries[i].end == index.entries[j].end && index.entries[i].inserted == index.entries[j].inserted)
-                {
-                    printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " equivalent\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
-                    continue;
-                } // if
+   //              if (index.entries[i].start == index.entries[j].start && index.entries[i].end == index.entries[j].end && index.entries[i].inserted == index.entries[j].inserted)
+   //              {
+   //                  printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " equivalent\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
+   //                  continue;
+   //              } // if
 
-                size_t const start = MIN(lhs.start, rhs.start);
-                size_t const end = MAX(lhs.end, rhs.end);
+   //              size_t const start = MIN(lhs.start, rhs.start);
+   //              size_t const end = MAX(lhs.end, rhs.end);
 
-                size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
-                size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
+   //              size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
+   //              size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
 
-                size_t distance = 0;
-                if (lhs_len == 0)
-                {
-                    distance = rhs_len;
-                } // if
-                else if (rhs_len == 0)
-                {
-                    distance = lhs_len;
-                } // if
-                else
-                {
-                    char* lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, lhs_len);
-                    if (lhs_obs == NULL)
-                    {
-                        continue;
-                    } // if
-                    memcpy(lhs_obs, reference.str + start, lhs.start - start);
-                    memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-                    memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
+   //              size_t distance = 0;
+   //              if (lhs_len == 0)
+   //              {
+   //                  distance = rhs_len;
+   //              } // if
+   //              else if (rhs_len == 0)
+   //              {
+   //                  distance = lhs_len;
+   //              } // if
+   //              else
+   //              {
+   //                  char* lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, lhs_len);
+   //                  if (lhs_obs == NULL)
+   //                  {
+   //                      continue;
+   //                  } // if
+   //                  memcpy(lhs_obs, reference.str + start, lhs.start - start);
+   //                  memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
+   //                  memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
 
-                    char* rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, rhs_len);
-                    if (rhs_obs == NULL)
-                    {
-                        lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
-                        continue;
-                    } // if
-                    memcpy(rhs_obs, reference.str + start, rhs.start - start);
-                    memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-                    memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
+   //                  char* rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, rhs_len);
+   //                  if (rhs_obs == NULL)
+   //                  {
+   //                      lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
+   //                      continue;
+   //                  } // if
+   //                  memcpy(rhs_obs, reference.str + start, rhs.start - start);
+   //                  memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
+   //                  memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
 
-                    distance = gva_edit_distance(gva_std_allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
-                    rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, rhs_obs, rhs_len, 0);
-                    lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
-                } // else
+   //                  distance = gva_edit_distance(gva_std_allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
+   //                  rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, rhs_obs, rhs_len, 0);
+   //                  lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
+   //              } // else
 
-                if (index.entries[i].distance + index.entries[j].distance == distance)
-                {
-                    continue;  // disjoint
-                } // if
+   //              if (index.entries[i].distance + index.entries[j].distance == distance)
+   //              {
+   //                  continue;  // disjoint
+   //              } // if
 
-                if (index.entries[i].distance - index.entries[j].distance == distance)
-                {
-                    printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " contains\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
-                    continue;
-                } // if
+   //              if (index.entries[i].distance - index.entries[j].distance == distance)
+   //              {
+   //                  printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " contains\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
+   //                  continue;
+   //              } // if
 
-                if (lhs_graph.nodes == NULL)
-                {
-                    lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
-                    size_t const len = lhs.end - lhs.start + 1;
-                    lhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
-                    lhs_as = bitset_init(gva_std_allocator, len);
-                    lhs_cs = bitset_init(gva_std_allocator, len);
-                    lhs_gs = bitset_init(gva_std_allocator, len);
-                    lhs_ts = bitset_init(gva_std_allocator, len);
-                    bitset_fill(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
-                } // if
+   //              if (lhs_graph.nodes == NULL)
+   //              {
+   //                  lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
+   //                  size_t const len = lhs.end - lhs.start + 1;
+   //                  lhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
+   //                  lhs_as = bitset_init(gva_std_allocator, len);
+   //                  lhs_cs = bitset_init(gva_std_allocator, len);
+   //                  lhs_gs = bitset_init(gva_std_allocator, len);
+   //                  lhs_ts = bitset_init(gva_std_allocator, len);
+   //                  bitset_fill(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+   //              } // if
 
-                GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
-                size_t const len = rhs.end - lhs.start + 1;
-                size_t* rhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
-                size_t* rhs_as = bitset_init(gva_std_allocator, len);
-                size_t* rhs_cs = bitset_init(gva_std_allocator, len);
-                size_t* rhs_gs = bitset_init(gva_std_allocator, len);
-                size_t* rhs_ts = bitset_init(gva_std_allocator, len);
-                bitset_fill(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+   //              GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
+   //              size_t const len = rhs.end - lhs.start + 1;
+   //              size_t* rhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
+   //              size_t* rhs_as = bitset_init(gva_std_allocator, len);
+   //              size_t* rhs_cs = bitset_init(gva_std_allocator, len);
+   //              size_t* rhs_gs = bitset_init(gva_std_allocator, len);
+   //              size_t* rhs_ts = bitset_init(gva_std_allocator, len);
+   //              bitset_fill(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
 
-                if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
-                    bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
-                    bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
-                    bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
-                    bitset_intersection_cnt(lhs_ts, rhs_ts) > 0)
-                {
-                    printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " overlap\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
-                } // if
+   //              if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
+   //                  bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
+   //                  bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
+   //                  bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
+   //                  bitset_intersection_cnt(lhs_ts, rhs_ts) > 0)
+   //              {
+   //                  printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " overlap\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
+   //              } // if
 
-                rhs_ts = bitset_destroy(gva_std_allocator, rhs_ts);
-                rhs_gs = bitset_destroy(gva_std_allocator, rhs_gs);
-                rhs_cs = bitset_destroy(gva_std_allocator, rhs_cs);
-                rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
-                rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
-                gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
-            } // if
-        } // for
-        lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
-        lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
-        lhs_cs = bitset_destroy(gva_std_allocator, lhs_cs);
-        lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
-        lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
-        gva_lcs_graph_destroy(gva_std_allocator, lhs_graph);
-    } // for
-    fprintf(stderr, "number of pairs calculated: %zu\n", count);
+   //              rhs_ts = bitset_destroy(gva_std_allocator, rhs_ts);
+   //              rhs_gs = bitset_destroy(gva_std_allocator, rhs_gs);
+   //              rhs_cs = bitset_destroy(gva_std_allocator, rhs_cs);
+   //              rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
+   //              rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
+   //              gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
+   //          } // if
+   //      } // for
+   //      lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
+   //      lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
+   //      lhs_cs = bitset_destroy(gva_std_allocator, lhs_cs);
+   //      lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
+   //      lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
+   //      gva_lcs_graph_destroy(gva_std_allocator, lhs_graph);
+   //  } // for
+   //  fprintf(stderr, "number of pairs calculated: %zu\n", count);
 
     TOC(perf_calculate_relations);
 

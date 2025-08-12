@@ -15,20 +15,22 @@ gva_stabbing_index_init(GVA_Allocator const allocator, size_t const len_ref)
     gva_uint* start_table = allocator.allocate(allocator.context, NULL, 0, len_ref * sizeof(*start_table));  // OVERFLOW
     if (start_table == NULL)
     {
-        return (GVA_Stabbing_Index) {0, NULL, NULL};
+        return (GVA_Stabbing_Index) {0, NULL, NULL, NULL};
     } // if
-
     memset(start_table, 0, len_ref * sizeof(*start_table));
-    GVA_Stabbing_Entry* entries = NULL;
-    ARRAY_APPEND(allocator, entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, 0, len_ref, 0, 0, 0}));
 
-    return (GVA_Stabbing_Index) {len_ref, start_table, entries};
+    GVA_Stabbing_Entry* entries = NULL;
+    ARRAY_APPEND(allocator, entries, ((GVA_Stabbing_Entry)
+        {GVA_NULL, GVA_NULL, GVA_NULL, 0, len_ref, 0, 0, GVA_NULL, GVA_NULL}));
+
+    return (GVA_Stabbing_Index) {len_ref, start_table, entries, NULL};
 } // gva_stabbing_index_init
 
 
 void
 gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1])
 {
+    index->alleles = ARRAY_DESTROY(allocator, index->alleles);
     index->entries = ARRAY_DESTROY(allocator, index->entries);
     index->start_table = allocator.allocate(allocator.context, index->start_table, index->len_ref * sizeof(*index->start_table), 0);
     index->len_ref = 0;
@@ -36,12 +38,22 @@ gva_stabbing_index_destroy(GVA_Allocator const allocator, GVA_Stabbing_Index ind
 
 
 inline size_t
-gva_stabbing_index_add(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1],
-    gva_uint const start, gva_uint const end, gva_uint const inserted,
-    gva_uint const distance, size_t const data)
+gva_stabbing_index_add_allele(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1],
+    size_t const data, gva_uint const distance)
 {
-    return ARRAY_APPEND(allocator, index->entries, ((GVA_Stabbing_Entry) {GVA_NULL, GVA_NULL, GVA_NULL, start, end, inserted, distance, data}));
-} // gva_stabbing_index_add
+    return ARRAY_APPEND(allocator, index->alleles, ((GVA_Stabbing_Allele)
+        {data, distance, GVA_NULL}));
+} // gva_stabbing_index_add_allele
+
+
+inline size_t
+gva_stabbing_index_add_part(GVA_Allocator const allocator, GVA_Stabbing_Index index[static 1],
+    gva_uint const start, gva_uint const end, gva_uint const inserted,
+    gva_uint const distance, gva_uint const allele)
+{
+    return ARRAY_APPEND(allocator, index->entries, ((GVA_Stabbing_Entry)
+        {GVA_NULL, GVA_NULL, GVA_NULL, start, end, inserted, distance, allele, GVA_NULL}));
+} // gva_stabbing_index_add_part
 
 
 void
