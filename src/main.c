@@ -551,8 +551,7 @@ all(int argc, char* argv[static argc + 1])
     {
         index.entries[i].next = index.alleles[index.entries[i].allele].head;
         index.alleles[index.entries[i].allele].head = i;
-    }
-
+    } // for
 
     TOC(perf_build_index);
 
@@ -561,14 +560,11 @@ all(int argc, char* argv[static argc + 1])
         fprintf(stderr, "%zu\n", index.alleles[i].data);
         for (gva_uint j = index.alleles[i].head; j != GVA_NULL; j = index.entries[j].next)
         {
-            GVA_String inserted = {trie.nodes[index.entries[j].inserted].end -
-                trie.nodes[index.entries[j].inserted].start,
-                trie.strings.str + trie.nodes[index.entries[j].inserted].start};
-            GVA_Variant variant = {index.entries[j].start, index.entries[j].end, inserted};
+            GVA_Variant const variant = {index.entries[j].start, index.entries[j].end, trie_string(trie, index.entries[j].inserted)};
             fprintf(stderr, GVA_VARIANT_FMT " ", GVA_VARIANT_PRINT(variant));
-        }
+        } // for
         fprintf(stderr, "\n");
-    }
+    } // for
 
     TIC(perf_calculate_relations);
 
