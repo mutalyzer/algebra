@@ -3,6 +3,10 @@
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memcpy
 
+
+//#include <stdio.h>      // DEBUG
+
+
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/string.h"      // GVA_String, gva_string_*
@@ -202,22 +206,29 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
     gva_uint len = 0;
     gva_uint prev = GVA_NULL;
+    gva_uint prev_distance = 0;
     for (gva_uint i = 0; i < lcs.length; ++i)
     {
         if (prev == GVA_NULL && lcs.nodes[lcs.index[i].tail].idx != source.idx)
         {
+            gva_uint const distance = graph.nodes[source.idx].row + graph.nodes[source.idx].col - 2 * i;
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-                graph.nodes[source.idx].row, graph.nodes[source.idx].col, 0, GVA_NULL, source.idx
+                graph.nodes[source.idx].row, graph.nodes[source.idx].col, 0, distance - prev_distance, source.idx
             }));
+            //fprintf(stderr, "0.APPEND %u: (%u, %u, %u) @ %u\n", i, graph.nodes[source.idx].row, graph.nodes[source.idx].col, 0, distance);
+            prev_distance = distance;
         } // if
         if (len > 0 && (lcs.index[i].count > 1 || prev != lcs.index[i].tail))
         {
             gva_uint const idx = lcs.nodes[prev].idx;
             gva_uint const offset = graph.nodes[idx].length - lcs.index[i - 1].offset - len;
+            gva_uint const distance = graph.nodes[idx].row + graph.nodes[idx].col + 2 * offset + 2 * len - 2 * i;
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-                graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
+                graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance - prev_distance, idx
             }));
+            //fprintf(stderr, "1.APPEND %u: (%u, %u, %u) @ %u\n", i, graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance);
             len = 0;
+            prev_distance = distance;
         } // if
         if (lcs.index[i].count == 1)
         {
@@ -231,16 +242,21 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     {
         gva_uint const idx = lcs.nodes[prev].idx;
         gva_uint const offset = graph.nodes[idx].length - lcs.index[lcs.length - 1].offset - len;
+        gva_uint const distance = graph.nodes[idx].row + graph.nodes[idx].col + 2 * offset + 2 * len - 2 * (lcs.length - len);
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, GVA_NULL, idx
+            graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance - prev_distance, idx
         }));
+        //fprintf(stderr, "2.APPEND %u: (%u, %u, %u) @ %u\n", lcs.length - len, graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance);
         len = 0;
+        prev_distance = distance;
     } // if
     if (graph.nodes != NULL)
     {
+        gva_uint const distance = graph.nodes[0].row + graph.nodes[0].length - len + graph.nodes[0].col + graph.nodes[0].length - len - 2 * (lcs.length - len);
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            graph.nodes[0].row + graph.nodes[0].length - len, graph.nodes[0].col + graph.nodes[0].length - len, 0, GVA_NULL, 0
+            graph.nodes[0].row + graph.nodes[0].length - len, graph.nodes[0].col + graph.nodes[0].length - len, 0, distance - prev_distance, 0
         }));
+        //fprintf(stderr, "3.APPEND %u: (%u, %u, %u) @ %u\n", lcs.length - len, graph.nodes[0].row + graph.nodes[0].length - len, graph.nodes[0].col + graph.nodes[0].length - len, 0, distance);
     } //if
 
     if (graph.local_supremal != NULL)
