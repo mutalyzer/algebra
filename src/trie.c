@@ -122,3 +122,14 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
         } // else
     } // while
 } // trie_insert
+
+
+inline GVA_String
+trie_string(Trie const self[static 1], size_t const idx)
+{
+    if (idx >= array_length(self->nodes))
+    {
+        return (GVA_String) {0, NULL};
+    } // if
+    return (GVA_String) {self->nodes[idx].end - self->nodes[idx].start, self->strings.str + self->nodes[idx].start};
+} //trie_string
