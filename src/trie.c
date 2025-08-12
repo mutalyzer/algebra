@@ -125,11 +125,11 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
 
 
 inline GVA_String
-trie_string(Trie const self[static 1], size_t const idx)
+trie_string(Trie const self, size_t const idx)
 {
-    if (idx >= array_length(self->nodes))
+    if (idx >= array_length(self.nodes))
     {
         return (GVA_String) {0, NULL};
     } // if
-    return (GVA_String) {self->nodes[idx].end - self->nodes[idx].start, self->strings.str + self->nodes[idx].start};
+    return (GVA_String) {self.nodes[idx].end - self.nodes[idx].start, self.strings.str + self.nodes[idx].start};
 } //trie_string

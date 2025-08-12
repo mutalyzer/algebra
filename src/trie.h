@@ -37,7 +37,7 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
 
 
 GVA_String
-trie_string(Trie const self[static 1], size_t const idx);
+trie_string(Trie const self, size_t const idx);
 
 
 #endif  // GVA_TRIE_H
