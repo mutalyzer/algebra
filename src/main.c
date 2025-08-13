@@ -479,6 +479,121 @@ binary_search(size_t const n, GVA_Stabbing_Entry const entries[static n],
 } // binary_search
 
 
+GVA_Relation
+compare_from_index(GVA_String const reference,
+    GVA_Variant const lhs, gva_uint const lhs_dist,
+    GVA_Variant const rhs, gva_uint const rhs_dist)
+{
+    // TODO: possibly reuse lhs_graph again
+
+    GVA_Relation relation;
+
+    if (gva_variant_eq(lhs, rhs))
+    {
+        return GVA_EQUIVALENT;
+    } // if
+
+    size_t const start = MIN(lhs.start, rhs.start);
+    size_t const end = MAX(lhs.end, rhs.end);
+
+    size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
+    size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
+
+    size_t distance = 0;
+    if (lhs_len == 0)
+    {
+        distance = rhs_len;
+    } // if
+    else if (rhs_len == 0)
+    {
+        distance = lhs_len;
+    } // if
+    else
+    {
+        char* lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, lhs_len);
+        if (lhs_obs == NULL)
+        {
+            return -1;
+        } // if
+        memcpy(lhs_obs, reference.str + start, lhs.start - start);
+        memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
+        memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
+
+        char* rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, rhs_len);
+        if (rhs_obs == NULL)
+        {
+            lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
+            return -1;
+        } // if
+        memcpy(rhs_obs, reference.str + start, rhs.start - start);
+        memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
+        memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
+
+        distance = gva_edit_distance(gva_std_allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
+        rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, rhs_obs, rhs_len, 0);
+        lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
+    } // else
+
+    if (lhs_dist + rhs_dist == distance)
+    {
+        return GVA_DISJOINT;
+    } // if
+
+    if (lhs_dist - rhs_dist == distance)
+    {
+        return GVA_CONTAINS;
+    } // if
+
+    // CHECK
+    size_t const len = end - start + 1;
+
+    GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
+    size_t* lhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
+    size_t* lhs_as = bitset_init(gva_std_allocator, len);
+    size_t* lhs_cs = bitset_init(gva_std_allocator, len);
+    size_t* lhs_gs = bitset_init(gva_std_allocator, len);
+    size_t* lhs_ts = bitset_init(gva_std_allocator, len);
+    bitset_fill(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+
+    GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
+    size_t* rhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
+    size_t* rhs_as = bitset_init(gva_std_allocator, len);
+    size_t* rhs_cs = bitset_init(gva_std_allocator, len);
+    size_t* rhs_gs = bitset_init(gva_std_allocator, len);
+    size_t* rhs_ts = bitset_init(gva_std_allocator, len);
+    bitset_fill(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+
+    if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
+        bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
+        bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
+        bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
+        bitset_intersection_cnt(lhs_ts, rhs_ts) > 0)
+    {
+        relation = GVA_OVERLAP;
+    } // if
+    else
+    {
+        relation = GVA_DISJOINT;
+    } // else
+
+    lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
+    lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
+    lhs_cs = bitset_destroy(gva_std_allocator, lhs_cs);
+    lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
+    lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
+    gva_lcs_graph_destroy(gva_std_allocator, lhs_graph);
+
+    rhs_ts = bitset_destroy(gva_std_allocator, rhs_ts);
+    rhs_gs = bitset_destroy(gva_std_allocator, rhs_gs);
+    rhs_cs = bitset_destroy(gva_std_allocator, rhs_cs);
+    rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
+    rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
+    gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
+
+    return relation;
+}
+
+
 int
 all(int argc, char* argv[static argc + 1])
 {
@@ -590,133 +705,27 @@ all(int argc, char* argv[static argc + 1])
 
     TIC(perf_calculate_relations);
 
-   //  count = 0;
-   //  for (size_t i = 1; i < array_length(index.entries); ++i)
-   //  {
-   //      GVA_Variant const lhs = {index.entries[i].start, index.entries[i].end, {trie.nodes[index.entries[i].inserted].end - trie.nodes[index.entries[i].inserted].start, trie.strings.str + trie.nodes[index.entries[i].inserted].start}};
+    count = 0;
+    for (size_t i = 1; i < array_length(index.entries); ++i)
+    {
+        GVA_Variant const lhs = {index.entries[i].start, index.entries[i].end, {trie.nodes[index.entries[i].inserted].end - trie.nodes[index.entries[i].inserted].start, trie.strings.str + trie.nodes[index.entries[i].inserted].start}};
 
-   //      GVA_LCS_Graph lhs_graph = {.nodes = NULL};
-   //      size_t* lhs_dels = NULL;
-   //      size_t* lhs_as = NULL;
-   //      size_t* lhs_cs = NULL;
-   //      size_t* lhs_gs = NULL;
-   //      size_t* lhs_ts = NULL;
-
-   //      for (size_t j = i + 1; j < array_length(index.entries); ++j)
-   //      {
-   //          if (index.entries[i].end < index.entries[j].start)
-   //          {
-   //              break;
-   //          } // if
-   //          if (index.entries[j].end >= index.entries[i].start && index.entries[j].start <= index.entries[i].end)
-   //          {
-   //              count += 1;
-   //              GVA_Variant const rhs = {index.entries[j].start, index.entries[j].end, {trie.nodes[index.entries[j].inserted].end - trie.nodes[index.entries[j].inserted].start, trie.strings.str + trie.nodes[index.entries[j].inserted].start}};
-
-   //              if (index.entries[i].start == index.entries[j].start && index.entries[i].end == index.entries[j].end && index.entries[i].inserted == index.entries[j].inserted)
-   //              {
-   //                  printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " equivalent\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
-   //                  continue;
-   //              } // if
-
-   //              size_t const start = MIN(lhs.start, rhs.start);
-   //              size_t const end = MAX(lhs.end, rhs.end);
-
-   //              size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
-   //              size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
-
-   //              size_t distance = 0;
-   //              if (lhs_len == 0)
-   //              {
-   //                  distance = rhs_len;
-   //              } // if
-   //              else if (rhs_len == 0)
-   //              {
-   //                  distance = lhs_len;
-   //              } // if
-   //              else
-   //              {
-   //                  char* lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, lhs_len);
-   //                  if (lhs_obs == NULL)
-   //                  {
-   //                      continue;
-   //                  } // if
-   //                  memcpy(lhs_obs, reference.str + start, lhs.start - start);
-   //                  memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-   //                  memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
-
-   //                  char* rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, rhs_len);
-   //                  if (rhs_obs == NULL)
-   //                  {
-   //                      lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
-   //                      continue;
-   //                  } // if
-   //                  memcpy(rhs_obs, reference.str + start, rhs.start - start);
-   //                  memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-   //                  memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
-
-   //                  distance = gva_edit_distance(gva_std_allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
-   //                  rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, rhs_obs, rhs_len, 0);
-   //                  lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
-   //              } // else
-
-   //              if (index.entries[i].distance + index.entries[j].distance == distance)
-   //              {
-   //                  continue;  // disjoint
-   //              } // if
-
-   //              if (index.entries[i].distance - index.entries[j].distance == distance)
-   //              {
-   //                  printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " contains\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
-   //                  continue;
-   //              } // if
-
-   //              if (lhs_graph.nodes == NULL)
-   //              {
-   //                  lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
-   //                  size_t const len = lhs.end - lhs.start + 1;
-   //                  lhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
-   //                  lhs_as = bitset_init(gva_std_allocator, len);
-   //                  lhs_cs = bitset_init(gva_std_allocator, len);
-   //                  lhs_gs = bitset_init(gva_std_allocator, len);
-   //                  lhs_ts = bitset_init(gva_std_allocator, len);
-   //                  bitset_fill(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
-   //              } // if
-
-   //              GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
-   //              size_t const len = rhs.end - lhs.start + 1;
-   //              size_t* rhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
-   //              size_t* rhs_as = bitset_init(gva_std_allocator, len);
-   //              size_t* rhs_cs = bitset_init(gva_std_allocator, len);
-   //              size_t* rhs_gs = bitset_init(gva_std_allocator, len);
-   //              size_t* rhs_ts = bitset_init(gva_std_allocator, len);
-   //              bitset_fill(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
-
-   //              if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
-   //                  bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
-   //                  bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
-   //                  bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
-   //                  bitset_intersection_cnt(lhs_ts, rhs_ts) > 0)
-   //              {
-   //                  printf("%zu " GVA_VARIANT_FMT_SPDI " %zu " GVA_VARIANT_FMT_SPDI " overlap\n", index.entries[i].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", lhs), index.entries[j].data, GVA_VARIANT_PRINT_SPDI("NC_000001.11", rhs));
-   //              } // if
-
-   //              rhs_ts = bitset_destroy(gva_std_allocator, rhs_ts);
-   //              rhs_gs = bitset_destroy(gva_std_allocator, rhs_gs);
-   //              rhs_cs = bitset_destroy(gva_std_allocator, rhs_cs);
-   //              rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
-   //              rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
-   //              gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
-   //          } // if
-   //      } // for
-   //      lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
-   //      lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
-   //      lhs_cs = bitset_destroy(gva_std_allocator, lhs_cs);
-   //      lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
-   //      lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
-   //      gva_lcs_graph_destroy(gva_std_allocator, lhs_graph);
-   //  } // for
-   //  fprintf(stderr, "number of pairs calculated: %zu\n", count);
+        for (size_t j = i + 1; j < array_length(index.entries); ++j)
+        {
+            if (index.entries[i].end < index.entries[j].start)
+            {
+                break;
+            } // if
+            if (index.entries[j].end >= index.entries[i].start && index.entries[j].start <= index.entries[i].end)
+            {
+                GVA_Variant const rhs = {index.entries[j].start, index.entries[j].end, {trie.nodes[index.entries[j].inserted].end - trie.nodes[index.entries[j].inserted].start, trie.strings.str + trie.nodes[index.entries[j].inserted].start}};
+                count += 1;
+                GVA_Relation const relation = compare_from_index(reference, lhs, index.entries[i].distance, rhs, index.entries[j].distance);
+                printf("%s\n", GVA_RELATION_LABELS[relation]);
+            } // if
+        } // for
+    } // for
+    fprintf(stderr, "number of pairs calculated: %zu\n", count);
 
     TOC(perf_calculate_relations);
 
