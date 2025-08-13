@@ -474,7 +474,7 @@ compare_from_index(GVA_String const reference,
     size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
     size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
 
-    size_t distance = 0;
+    gva_uint distance = 0;
     if (lhs_len == 0)
     {
         distance = rhs_len;
@@ -519,8 +519,14 @@ compare_from_index(GVA_String const reference,
         return GVA_CONTAINS;
     } // if
 
-    // CHECK
+    if (rhs_dist - lhs_dist == distance)
+    {
+        return GVA_IS_CONTAINED;
+    } // if
+
     size_t const len = end - start + 1;
+    size_t const start_intersection = MAX(lhs.start, rhs.start);
+    size_t const end_intersection = MIN(lhs.end, rhs.end);
 
     GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
     size_t* lhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
@@ -528,7 +534,7 @@ compare_from_index(GVA_String const reference,
     size_t* lhs_cs = bitset_init(gva_std_allocator, len);
     size_t* lhs_gs = bitset_init(gva_std_allocator, len);
     size_t* lhs_ts = bitset_init(gva_std_allocator, len);
-    bitset_fill(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+    bitset_fill(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
 
     GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
     size_t* rhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
@@ -536,7 +542,7 @@ compare_from_index(GVA_String const reference,
     size_t* rhs_cs = bitset_init(gva_std_allocator, len);
     size_t* rhs_gs = bitset_init(gva_std_allocator, len);
     size_t* rhs_ts = bitset_init(gva_std_allocator, len);
-    bitset_fill(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+    bitset_fill(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
 
     if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
         bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
@@ -616,13 +622,7 @@ all(int argc, char* argv[static argc + 1])
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        if (array_length(graph.local_supremal) == 2)
-        {
-            // continue;
-        }
         size_t const allele = gva_stabbing_index_add_allele(gva_std_allocator, &index, rsid, graph.distance) - 1;
-        fprintf(stderr, "%u\n", graph.distance);
-        size_t sum = 0;
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
         {
             GVA_Variant variant;
@@ -630,25 +630,13 @@ all(int argc, char* argv[static argc + 1])
                 graph.local_supremal[i], graph.local_supremal[i + 1],
                 i == 0, i == array_length(graph.local_supremal) - 2,
                 &variant);
-            fprintf(stderr, "    (%u, %u, %u) -> (%u, %u, %u): " GVA_VARIANT_FMT " %u\n",
-                graph.local_supremal[i].row, graph.local_supremal[i].col, graph.local_supremal[i].length,
-                graph.local_supremal[i + 1].row, graph.local_supremal[i + 1].col, graph.local_supremal[i + 1].length,
-                GVA_VARIANT_PRINT(variant), graph.local_supremal[i + 1].edges);
-
-            sum += graph.local_supremal[i + 1].edges;
 
             gva_uint const inserted = trie_insert(gva_std_allocator, &trie, variant.sequence.len, variant.sequence.str);
             gva_stabbing_index_add_part(gva_std_allocator, &index,
                 variant.start, variant.end, inserted, graph.local_supremal[i + 1].edges, allele);
 
         } // for
-        fprintf(stderr, "\n");
 
-        if (graph.distance != sum)
-        {
-            fprintf(stderr, "%u != %zu\n", graph.distance, sum);
-            return -1;
-        }
 
         gva_string_destroy(gva_std_allocator, graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
@@ -675,7 +663,7 @@ all(int argc, char* argv[static argc + 1])
 
     for (size_t i = 0; i < array_length(index.alleles); ++i)
     {
-        fprintf(stderr, "%zu\n", index.alleles[i].data);
+        // fprintf(stderr, "%zu\n", index.alleles[i].data);
         for (gva_uint j = index.alleles[i].head; j != GVA_NULL; j = index.entries[j].next)
         {
             GVA_Variant const variant = {index.entries[j].start, index.entries[j].end, trie_string(trie, index.entries[j].inserted)};
@@ -686,27 +674,46 @@ all(int argc, char* argv[static argc + 1])
 
     TIC(perf_calculate_relations);
 
-    count = 0;
-    for (size_t i = 1; i < array_length(index.entries); ++i)
-    {
-        GVA_Variant const lhs = {index.entries[i].start, index.entries[i].end, {trie.nodes[index.entries[i].inserted].end - trie.nodes[index.entries[i].inserted].start, trie.strings.str + trie.nodes[index.entries[i].inserted].start}};
+    // NG_008376.4:9199:5:CCCCG
+    // GVA_Variant rhs = {9199, 9203, {4, "CCCC"}};
+    GVA_Variant rhs = {9199, 9204, {5, "CCCCG"}};
+    gva_uint rhs_dist = 4;
+    gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, rhs.start, rhs.end);
 
-        for (size_t j = i + 1; j < array_length(index.entries); ++j)
+    for (size_t i = 0; i < array_length(results); ++i)
+    {
+        if (results[i] != 3858)
         {
-            if (index.entries[i].end < index.entries[j].start)
+            //continue;
+        }
+        GVA_Variant const lhs = {index.entries[results[i]].start, index.entries[results[i]].end, trie_string(trie, index.entries[results[i]].inserted)};
+        GVA_Relation relation = compare_from_index(reference, lhs, index.entries[results[i]].distance, rhs, rhs_dist);
+
+        // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs));
+        // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(rhs));
+
+        // fprintf(stderr, "%u %u\n", index.entries[results[i]].distance, rhs_dist);
+        if (relation == GVA_EQUIVALENT)
+        {
+            if (index.alleles[index.entries[results[i]].allele].distance > rhs_dist)
             {
-                break;
-            } // if
-            if (index.entries[j].end >= index.entries[i].start && index.entries[j].start <= index.entries[i].end)
+                relation = GVA_CONTAINS;
+            }
+        }
+        else if (relation == GVA_IS_CONTAINED)
+        {
+            if (index.alleles[index.entries[results[i]].allele].distance > index.entries[results[i]].distance)
             {
-                GVA_Variant const rhs = {index.entries[j].start, index.entries[j].end, {trie.nodes[index.entries[j].inserted].end - trie.nodes[index.entries[j].inserted].start, trie.strings.str + trie.nodes[index.entries[j].inserted].start}};
-                count += 1;
-                GVA_Relation const relation = compare_from_index(reference, lhs, index.entries[i].distance, rhs, index.entries[j].distance);
-                printf("%s\n", GVA_RELATION_LABELS[relation]);
-            } // if
-        } // for
-    } // for
-    fprintf(stderr, "number of pairs calculated: %zu\n", count);
+                relation = GVA_OVERLAP;
+            }
+        }
+
+        printf("%u %zu %s\n", results[i], index.alleles[index.entries[results[i]].allele].data, GVA_RELATION_LABELS[relation]);
+    }
+
+    // printf("%s\n", GVA_RELATION_LABELS[relation]);
+
+    results = ARRAY_DESTROY(gva_std_allocator, results);
 
     TOC(perf_calculate_relations);
 
