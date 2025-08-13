@@ -143,8 +143,16 @@ LCSgraph_canonical(LCSgraph_Object* self)
             variants = ARRAY_DESTROY(gva_std_allocator, variants);
             return NULL;
         } // if
-        PyObject* item = PyObject_CallFunction((PyObject*) state->Variant_Type, "nnO", variants[i].start, variants[i].end, str);
-        //  FIXME: Py_DECREF(str);
+        PyObject* args = Py_BuildValue("nnO", variants[i].start, variants[i].end, str);
+        if (args == NULL)
+        {
+            Py_DECREF(str);
+            Py_DECREF(result);
+            variants = ARRAY_DESTROY(gva_std_allocator, variants);
+            return NULL;
+        } // if
+        PyObject* item = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+        Py_DECREF(args);
         if (item == NULL)
         {
             Py_DECREF(result);
@@ -188,8 +196,15 @@ LCSgraph_local_supremal(LCSgraph_Object* self)
             Py_DECREF(result);
             return NULL;
         } // if
-        PyObject* item = PyObject_CallFunction((PyObject*) state->Variant_Type, "nnO", variant.start, variant.end, str);
-        //  FIXME: Py_DECREF(str);
+        PyObject* args = Py_BuildValue("nnO", variant.start, variant.end, str);
+        if (args == NULL)
+        {
+            Py_DECREF(str);
+            Py_DECREF(result);
+            return NULL;
+        } // if
+        PyObject* item = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+        Py_DECREF(args);
         if (item == NULL)
         {
             Py_DECREF(result);
@@ -215,8 +230,14 @@ LCSgraph_supremal(LCSgraph_Object* self)
     {
         return NULL;
     } // if
-    PyObject* result = PyObject_CallFunction((PyObject*) state->Variant_Type, "nnO", self->graph.supremal.start, self->graph.supremal.end, str);
-    //  FIXME: Py_DECREF(str);
+    PyObject* args = Py_BuildValue("nnO", self->graph.supremal.start, self->graph.supremal.end, str);
+    if (args == NULL)
+    {
+        Py_DECREF(str);
+        return NULL;
+    } // if
+    PyObject* result = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+    Py_DECREF(args);
     return result;
 } // LCSgraph_supremal
 
