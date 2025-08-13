@@ -453,11 +453,36 @@ entry_cmp(void const* lhs, void const* rhs)
 } // entry_cmp
 
 
+static size_t
+binary_search(size_t const n, GVA_Stabbing_Entry const entries[static n],
+    GVA_Stabbing_Entry const key, size_t low)
+{
+    size_t high = n;
+    while (low <= high)
+    {
+        size_t const mid = low + (high - low) / 2;
+        int const cmp = entry_cmp(&entries[mid], &key);
+        if (cmp < 0)
+        {
+            low = mid + 1;
+        } // if
+        else if (cmp > 0 && mid > 0)
+        {
+            high = mid - 1;
+        } // if
+        else
+        {
+            return mid;
+        } // else
+    } // while
+    return low;
+} // binary_search
+
+
 GVA_Relation
 compare_from_index(GVA_String const reference,
     GVA_Variant const lhs, gva_uint const lhs_dist,
-    GVA_Variant const rhs, gva_uint const rhs_dist
-)
+    GVA_Variant const rhs, gva_uint const rhs_dist)
 {
     // TODO: possibly reuse lhs_graph again
 
@@ -575,8 +600,6 @@ compare_from_index(GVA_String const reference,
 }
 
 
-
-
 int
 all(int argc, char* argv[static argc + 1])
 {
@@ -636,7 +659,6 @@ all(int argc, char* argv[static argc + 1])
                 variant.start, variant.end, inserted, graph.local_supremal[i + 1].edges, allele);
 
         } // for
-
 
         gva_string_destroy(gva_std_allocator, graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, graph);

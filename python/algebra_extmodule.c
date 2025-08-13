@@ -77,7 +77,7 @@ LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
     char const* reference = NULL;
     Py_ssize_t len_ref = 0;
     PyObject* variant_list = NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#O!|",
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#O!|from_variants",
                                      (char*[]) {"reference", "variants", NULL},
                                      &reference, &len_ref, &PyList_Type, &variant_list))
     {
@@ -144,7 +144,7 @@ LCSgraph_canonical(LCSgraph_Object* self)
             return NULL;
         } // if
         PyObject* item = PyObject_CallFunction((PyObject*) state->Variant_Type, "nnO", variants[i].start, variants[i].end, str);
-        Py_DECREF(str);
+        //  FIXME: Py_DECREF(str);
         if (item == NULL)
         {
             Py_DECREF(result);
@@ -189,7 +189,7 @@ LCSgraph_local_supremal(LCSgraph_Object* self)
             return NULL;
         } // if
         PyObject* item = PyObject_CallFunction((PyObject*) state->Variant_Type, "nnO", variant.start, variant.end, str);
-        Py_DECREF(str);
+        //  FIXME: Py_DECREF(str);
         if (item == NULL)
         {
             Py_DECREF(result);
@@ -216,7 +216,7 @@ LCSgraph_supremal(LCSgraph_Object* self)
         return NULL;
     } // if
     PyObject* result = PyObject_CallFunction((PyObject*) state->Variant_Type, "nnO", self->graph.supremal.start, self->graph.supremal.end, str);
-    Py_DECREF(str);
+    //  FIXME: Py_DECREF(str);
     return result;
 } // LCSgraph_supremal
 
