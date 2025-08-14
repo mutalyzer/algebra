@@ -307,6 +307,21 @@ gva_compare_supremals(GVA_Allocator const allocator,
             bitset_intersection_cnt(lhs_gs, rhs_gs) +
             bitset_intersection_cnt(lhs_ts, rhs_ts);
 
+        // Also calculate the union
+        // Note: bitset_fill needs to use "plain" start and end.
+        //
+        // size_t const union1 =
+        //         bitset_intersection_cnt(lhs_dels, lhs_dels) +
+        //         bitset_intersection_cnt(lhs_as, lhs_as) +
+        //         bitset_intersection_cnt(lhs_cs, lhs_cs) +
+        //         bitset_intersection_cnt(lhs_gs, lhs_gs) +
+        //         bitset_intersection_cnt(lhs_ts, lhs_ts) +
+        //         bitset_intersection_cnt(rhs_dels, rhs_dels) +
+        //         bitset_intersection_cnt(rhs_as, rhs_as) +
+        //         bitset_intersection_cnt(rhs_cs, rhs_cs) +
+        //         bitset_intersection_cnt(rhs_gs, rhs_gs) +
+        //         bitset_intersection_cnt(rhs_ts, rhs_ts) - common;
+
         if (common > 0)
         {
             relation = GVA_OVERLAP;
