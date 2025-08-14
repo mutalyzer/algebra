@@ -779,11 +779,68 @@ all(int argc, char* argv[static argc + 1])
 
 
 int
+compare(int argc, char* argv[static argc + 1])
+{
+    GVA_String reference = {0, NULL};
+    errno = 0;
+    FILE* const restrict stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+    reference = gva_fasta_sequence(gva_std_allocator, stream);
+    fclose(stream);
+
+    char lhs_hgvs[4096];
+    char lhs_spdi[4096];
+    size_t lhs_dist;
+    char rhs_hgvs[4096];
+    char rhs_spdi[4096];
+    size_t rhs_dist;
+    size_t dist;
+    char python[32];
+    size_t common_count;
+    size_t union_count;
+    size_t count = 0;
+    // NC_000001.11:6100897:2:CC 2 NC_000001.11:6100895:3:GGG 2 2 overlap 1 8
+    while (fscanf(stdin, "%4096s %zu %4096s %zu %zu %32s %zu %zu\n", lhs_spdi, &lhs_dist, rhs_spdi, &rhs_dist, &dist, python, &common_count, &union_count) == 8)
+    {
+        GVA_Variant lhs;
+        if (!gva_parse_spdi(strlen(lhs_spdi), lhs_spdi, &lhs))
+        {
+            fprintf(stderr, "PARSE ERROR: %s\n", lhs_spdi);
+            continue;
+        } // if
+        GVA_Variant rhs;
+        if (!gva_parse_spdi(strlen(rhs_spdi), rhs_spdi, &rhs))
+        {
+            fprintf(stderr, "PARSE ERROR: %s\n", rhs_spdi);
+            continue;
+        } // if
+
+        size_t const relation = gva_compare_supremals(gva_std_allocator, reference.len, reference.str, lhs, rhs);
+        if (strcmp(python, GVA_RELATION_LABELS[relation]) != 0)
+        {
+            printf("%s %s %s %s %s\n", lhs_hgvs, lhs_spdi, rhs_hgvs, rhs_spdi, GVA_RELATION_LABELS[relation]);
+        } // if
+
+        count += 1;
+    } // while
+    fprintf(stderr, "total: %zu\n", count);
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return 0;
+} // compare
+
+int
 main(int argc, char* argv[static argc + 1])
 {
-    (void) argv;
     //return extract(argc, argv);
 
     // all
     return all(argc, argv);
+
+    // compare
+    // return compare(argc, argv);
 } // main
