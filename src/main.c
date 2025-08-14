@@ -683,26 +683,20 @@ all(int argc, char* argv[static argc + 1])
 
     TOC(perf_build_index);
 
-    for (size_t i = 0; i < array_length(index.alleles); ++i)
-    {
-        // fprintf(stderr, "%zu\n", index.alleles[i].data);
-        for (gva_uint j = index.alleles[i].head; j != GVA_NULL; j = index.entries[j].next)
-        {
-            GVA_Variant const variant = {index.entries[j].start, index.entries[j].end, trie_string(trie, index.entries[j].inserted)};
-            // fprintf(stderr, GVA_VARIANT_FMT " ", GVA_VARIANT_PRINT(variant));
-        } // for
-        // fprintf(stderr, "\n");
-    } // for
-
     TIC(perf_calculate_relations);
-
-    // NG_008376.4:9199:5:CCCCG
-    // GVA_Variant rhs = {9199, 9203, {4, "CCCC"}};
-    // GVA_Variant rhs = {9199, 9204, {5, "CCCCG"}};
-    // gva_uint rhs_dist = 4;
 
     GVA_LCS_Graph rhs_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str,
                                 2, (GVA_Variant[]) {(GVA_Variant) {7869, 7870, {1, "T"}}, (GVA_Variant) {9199, 9200, {1, "C"}}});
+
+    struct {
+        gva_uint included;
+        gva_uint excluded;
+    }* result_map = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, 1024 * sizeof(*result_map));
+    if (result_map == NULL)
+    {
+        return -1;
+    }
+    memset(result_map, 0, 1024 * sizeof(*result_map));
 
     for (size_t i = 0; i < array_length(rhs_graph.local_supremal) - 1; ++i)
     {
@@ -717,42 +711,63 @@ all(int argc, char* argv[static argc + 1])
 
         gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, rhs.start, rhs.end);
 
-        for (size_t i = 0; i < array_length(results); ++i)
-        {
-            if (results[i] != 3858)
+        for (size_t i = 0; i < array_length(results); ++i) {
+            GVA_Variant const lhs = {index.entries[results[i]].start, index.entries[results[i]].end,
+                                     trie_string(trie, index.entries[results[i]].inserted)};
+            GVA_Relation relation = compare_from_index(reference, lhs, index.entries[results[i]].distance, rhs,
+                                                       rhs_dist);
+
+            if (relation == GVA_EQUIVALENT || relation == GVA_CONTAINS)
             {
-                //continue;
+                result_map[index.entries[results[i]].allele].included += rhs_dist;
             }
-            GVA_Variant const lhs = {index.entries[results[i]].start, index.entries[results[i]].end, trie_string(trie, index.entries[results[i]].inserted)};
-            GVA_Relation relation = compare_from_index(reference, lhs, index.entries[results[i]].distance, rhs, rhs_dist);
-
-            // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs));
-            // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(rhs));
-
-            // fprintf(stderr, "%u %u\n", index.entries[results[i]].distance, rhs_dist);
-            if (relation == GVA_EQUIVALENT)
+            else if (relation == GVA_IS_CONTAINED)
             {
-                if (index.alleles[index.entries[results[i]].allele].distance > rhs_dist)
+                result_map[index.entries[results[i]].allele].included += index.entries[results[i]].distance;
+                result_map[index.entries[results[i]].allele].excluded += rhs_dist - index.entries[results[i]].distance;
+            }
+            else if (relation == GVA_OVERLAP)
+            {
+                result_map[index.entries[results[i]].allele].included += 1;
+                result_map[index.entries[results[i]].allele].excluded += 1;
+            }
+        }
+
+        results = ARRAY_DESTROY(gva_std_allocator, results);
+    }
+
+    for (size_t i = 0; i < 1024; ++i)
+    {
+        if (result_map[i].included > 0 || result_map[i].excluded > 0)
+        {
+            result_map[i].excluded = rhs_graph.distance - result_map[i].included;
+
+            GVA_Relation relation = GVA_OVERLAP;
+            if (result_map[i].excluded == 0)
+            {
+                if (result_map[i].included == index.alleles[i].distance)
+                {
+                    relation = GVA_EQUIVALENT;
+                }
+                else
                 {
                     relation = GVA_CONTAINS;
                 }
             }
-            else if (relation == GVA_IS_CONTAINED)
+            else if (result_map[i].included == index.alleles[i].distance)
             {
-                if (index.alleles[index.entries[results[i]].allele].distance > index.entries[results[i]].distance)
-                {
-                    relation = GVA_OVERLAP;
-                }
+                relation = GVA_IS_CONTAINED;
             }
 
-            fprintf(stderr, "%u %zu %s\n", results[i], index.alleles[index.entries[results[i]].allele].data, GVA_RELATION_LABELS[relation]);
-
+            fprintf(stderr, "%zu(%u): %u %u -> %s\n",
+                    index.alleles[i].data, index.alleles[i].distance,
+                    result_map[i].included, result_map[i].excluded, GVA_RELATION_LABELS[relation]);
         }
-
-        // printf("%s\n", GVA_RELATION_LABELS[relation]);
-
-        results = ARRAY_DESTROY(gva_std_allocator, results);
     }
+    result_map = gva_std_allocator.allocate(gva_std_allocator.context, result_map, 1024 * sizeof(*result_map), 0);
+
+    gva_string_destroy(gva_std_allocator, rhs_graph.observed);
+    gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
 
     TOC(perf_calculate_relations);
 
