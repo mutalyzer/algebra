@@ -1,11 +1,18 @@
 #include <stdbool.h>    // true
-#include <stddef.h>     // size_t
+#include <stddef.h>     // NULL, size_t
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/string.h"      // GVA_String, gva_string_*
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"  // ARRAY_*
 #include "trie.h"   // Trie, TrieNode, trie_*
+
+
+inline Trie
+trie_init(void)
+{
+    return (Trie) {{0, NULL}, NULL, GVA_NULL};
+} // trie_init
 
 
 inline void

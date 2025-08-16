@@ -16,10 +16,11 @@
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/utils.h"       // gva_fasta_sequence
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi
-#include "array.h"      // ARRAY_DESTROY, array_length
-#include "bitset.h"     // bitset_*
-#include "common.h"     // MAX, MIN
-#include "trie.h"       // Trie, trie_*
+#include "array.h"          // ARRAY_DESTROY, array_length
+#include "bitset.h"         // bitset_*
+#include "common.h"         // MAX, MIN
+#include "interval_tree.h"  // Interval_Tree, interval_tree_*
+#include "trie.h"           // Trie, trie_*
 
 
 #define TIC(x) clock_t const x = clock()
@@ -394,6 +395,32 @@ trie_raw(FILE* const stream, Trie const self)
 } // trie_raw
 
 
+static void
+interval_tree_dot_node(FILE* const stream, Interval_Tree const self, gva_uint const idx)
+{
+    fprintf(stream, "%u[label=\"[%u, %u)  %u\"]\n", idx, self.nodes[idx].start, self.nodes[idx].end, self.nodes[idx].max);
+    if (self.nodes[idx].child[0] != GVA_NULL)
+    {
+        fprintf(stream, "%u->%u\n", idx, self.nodes[idx].child[0]);
+        interval_tree_dot_node(stream, self, self.nodes[idx].child[0]);
+    } // if
+    if (self.nodes[idx].child[1] != GVA_NULL)
+    {
+        fprintf(stream, "%u->%u\n", idx, self.nodes[idx].child[1]);
+        interval_tree_dot_node(stream, self, self.nodes[idx].child[1]);
+    } // if
+} // interval_tree_dot_node
+
+
+void
+interval_tree_dot(FILE* const stream, Interval_Tree const self)
+{
+    fprintf(stream, "strict digraph{\n");
+    interval_tree_dot_node(stream, self, self.root);
+    fprintf(stream, "}\n");
+} // interval_tree_dot
+
+
 void
 bitset_print(size_t const bitset[static 1], size_t const size)
 {
@@ -453,7 +480,7 @@ entry_cmp(void const* lhs, void const* rhs)
 } // entry_cmp
 
 
-static size_t
+size_t
 binary_search(size_t const n, GVA_Stabbing_Entry const entries[static n],
     GVA_Stabbing_Entry const key, size_t low)
 {
@@ -597,7 +624,7 @@ compare_from_index(GVA_String const reference,
     gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
 
     return relation;
-}
+} // compare_from_index
 
 
 int
@@ -657,7 +684,6 @@ all(int argc, char* argv[static argc + 1])
             gva_uint const inserted = trie_insert(gva_std_allocator, &trie, variant.sequence.len, variant.sequence.str);
             gva_stabbing_index_add_part(gva_std_allocator, &index,
                 variant.start, variant.end, inserted, graph.local_supremal[i + 1].edges, allele);
-
         } // for
 
         gva_string_destroy(gva_std_allocator, graph.observed);
@@ -695,7 +721,7 @@ all(int argc, char* argv[static argc + 1])
     if (result_map == NULL)
     {
         return -1;
-    }
+    } // if
     memset(result_map, 0, 1024 * sizeof(*result_map));
 
     for (size_t i = 0; i < array_length(rhs_graph.local_supremal) - 1; ++i)
@@ -720,21 +746,21 @@ all(int argc, char* argv[static argc + 1])
             if (relation == GVA_EQUIVALENT || relation == GVA_CONTAINS)
             {
                 result_map[index.entries[results[i]].allele].included += rhs_dist;
-            }
+            } // if
             else if (relation == GVA_IS_CONTAINED)
             {
                 result_map[index.entries[results[i]].allele].included += index.entries[results[i]].distance;
                 result_map[index.entries[results[i]].allele].excluded += rhs_dist - index.entries[results[i]].distance;
-            }
+            } // if
             else if (relation == GVA_OVERLAP)
             {
                 result_map[index.entries[results[i]].allele].included += 1;
                 result_map[index.entries[results[i]].allele].excluded += 1;
-            }
-        }
+            } // if
+        } // for
 
         results = ARRAY_DESTROY(gva_std_allocator, results);
-    }
+    } // for
 
     for (size_t i = 0; i < 1024; ++i)
     {
@@ -748,22 +774,22 @@ all(int argc, char* argv[static argc + 1])
                 if (result_map[i].included == index.alleles[i].distance)
                 {
                     relation = GVA_EQUIVALENT;
-                }
+                } // if
                 else
                 {
                     relation = GVA_CONTAINS;
-                }
+                } // else
             }
             else if (result_map[i].included == index.alleles[i].distance)
             {
                 relation = GVA_IS_CONTAINED;
-            }
+            } // if
 
             fprintf(stderr, "%zu(%u): %u %u -> %s\n",
                     index.alleles[i].data, index.alleles[i].distance,
                     result_map[i].included, result_map[i].excluded, GVA_RELATION_LABELS[relation]);
-        }
-    }
+        } // if
+    } // for
     result_map = gva_std_allocator.allocate(gva_std_allocator.context, result_map, 1024 * sizeof(*result_map), 0);
 
     gva_string_destroy(gva_std_allocator, rhs_graph.observed);
@@ -830,16 +856,85 @@ compare(int argc, char* argv[static argc + 1])
     fprintf(stderr, "total: %zu\n", count);
     gva_string_destroy(gva_std_allocator, reference);
 
-    return 0;
+    return EXIT_SUCCESS;
 } // compare
+
 
 int
 main(int argc, char* argv[static argc + 1])
 {
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0, NULL};
+    reference = gva_fasta_sequence(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    Trie trie = trie_init();
+    Interval_Tree tree = interval_tree_init();
+
+    size_t count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        size_t idx = 0;
+        size_t const id = parse_number(line, &idx);
+        idx += 1;  // skip space or tab
+        int const len = (char*) memchr(line + idx, '\n', LINE_SIZE - idx) - (line + idx);
+        GVA_Variant variant;
+        if (gva_parse_spdi(len, line + idx, &variant) == 0)
+        {
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", count + 1, line);
+            continue;
+        } // if
+
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+        {
+            GVA_Variant variant;
+            gva_edges(graph.observed.str,
+                graph.local_supremal[i], graph.local_supremal[i + 1],
+                i == 0, i == array_length(graph.local_supremal) - 2,
+                &variant);
+
+            gva_uint const inserted = trie_insert(gva_std_allocator, &trie, variant.sequence.len, variant.sequence.str);
+            gva_uint const node = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, variant.start, variant.end, variant.end, 0, inserted, id, graph.local_supremal[i + 1].edges})) - 1;
+
+            if (interval_tree_insert(&tree, node) != node)
+            {
+                fprintf(stderr, "ERROR\n");
+            } // if
+        } // for
+
+        gva_string_destroy(gva_std_allocator, graph.observed);
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
+
+        count += 1;
+    } // while
+    fprintf(stderr, "count: %zu\n", count);
+
+    fprintf(stderr, "tree nodes: %zu\n", array_length(tree.nodes));
+    fprintf(stderr, "trie nodes: %zu\n", array_length(trie.nodes));
+
+    interval_tree_dot(stdout, tree);
+
+    interval_tree_destroy(gva_std_allocator, &tree);
+    trie_destroy(gva_std_allocator, &trie);
+
+    gva_string_destroy(gva_std_allocator, reference);
+    return EXIT_SUCCESS;
+
     //return extract(argc, argv);
 
     // all
-    return all(argc, argv);
+    //return all(argc, argv);
 
     // compare
     // return compare(argc, argv);

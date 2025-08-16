@@ -27,6 +27,10 @@ typedef struct
 } Trie;
 
 
+Trie
+trie_init(void);
+
+
 void
 trie_destroy(GVA_Allocator const allocator, Trie self[static 1]);
 
