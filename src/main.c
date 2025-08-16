@@ -906,10 +906,8 @@ main(int argc, char* argv[static argc + 1])
 
             gva_uint const inserted = trie_insert(gva_std_allocator, &trie, variant.sequence.len, variant.sequence.str);
             gva_uint const node = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, variant.start, variant.end, variant.end, 0, inserted, id, graph.local_supremal[i + 1].edges})) - 1;
-
             if (interval_tree_insert(&tree, node) != node)
             {
-                fprintf(stderr, "FOUND\n");
                 array_header(tree.nodes)->length -= 1;
             } // if
         } // for
