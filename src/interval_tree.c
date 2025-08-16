@@ -88,6 +88,7 @@ interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx)
         } // if
         len += 1;
 
+        // Disallow duplicates
         if (self->nodes[tmp].start == self->nodes[idx].start &&
             self->nodes[tmp].end == self->nodes[idx].end &&
             self->nodes[tmp].inserted == self->nodes[idx].inserted)
@@ -98,7 +99,6 @@ interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx)
         tmp_par = tmp;
         tmp = self->nodes[tmp].child[dir];
     } // while
-
 
     self->nodes[tmp_par].child[dir] = idx;
 

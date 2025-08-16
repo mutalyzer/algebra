@@ -15,7 +15,7 @@ typedef struct
     // FIXME: we assume gva_uint is 32bits
     gva_uint balance   :  3;
     gva_uint inserted  : 29;
-    gva_uint allele;
+    gva_uint alleles;
     gva_uint distance;
 } Interval_Tree_Node;
 

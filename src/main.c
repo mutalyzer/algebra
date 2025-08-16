@@ -395,28 +395,22 @@ trie_raw(FILE* const stream, Trie const self)
 } // trie_raw
 
 
-static void
-interval_tree_dot_node(FILE* const stream, Interval_Tree const self, gva_uint const idx)
-{
-    fprintf(stream, "%u[label=\"{[%u, %u), %u}  %u\"]\n", idx, self.nodes[idx].start, self.nodes[idx].end, self.nodes[idx].inserted, self.nodes[idx].max);
-    if (self.nodes[idx].child[0] != GVA_NULL)
-    {
-        fprintf(stream, "%u->%u\n", idx, self.nodes[idx].child[0]);
-        interval_tree_dot_node(stream, self, self.nodes[idx].child[0]);
-    } // if
-    if (self.nodes[idx].child[1] != GVA_NULL)
-    {
-        fprintf(stream, "%u->%u\n", idx, self.nodes[idx].child[1]);
-        interval_tree_dot_node(stream, self, self.nodes[idx].child[1]);
-    } // if
-} // interval_tree_dot_node
-
-
 void
 interval_tree_dot(FILE* const stream, Interval_Tree const self)
 {
     fprintf(stream, "strict digraph{\n");
-    interval_tree_dot_node(stream, self, self.root);
+    for (size_t i = 0; i < array_length(self.nodes); ++i)
+    {
+        fprintf(stream, "%zu[label=\"{[%u, %u), %u}  %u  %d\"]\n", i, self.nodes[i].start, self.nodes[i].end, self.nodes[i].inserted, self.nodes[i].max, self.nodes[i].alleles);
+        if (self.nodes[i].child[0] != GVA_NULL)
+        {
+            fprintf(stream, "%zu->%u\n", i, self.nodes[i].child[0]);
+        } // if
+        if (self.nodes[i].child[1] != GVA_NULL)
+        {
+            fprintf(stream, "%zu->%u\n", i, self.nodes[i].child[1]);
+        } // if
+    } // if
     fprintf(stream, "}\n");
 } // interval_tree_dot
 
@@ -879,6 +873,18 @@ main(int argc, char* argv[static argc + 1])
 
     Trie trie = trie_init();
     Interval_Tree tree = interval_tree_init();
+    struct Node_Allele
+    {
+        gva_uint node;
+        gva_uint allele;
+        gva_uint next;
+    }* node_allele_join = NULL;
+    struct Allele
+    {
+        size_t   data;
+        gva_uint start;
+        gva_uint distance;
+    }* alleles = NULL;
 
     size_t count = 0;
     static char line[LINE_SIZE] = {0};
@@ -896,6 +902,7 @@ main(int argc, char* argv[static argc + 1])
         } // if
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+        gva_uint const allele = ARRAY_APPEND(gva_std_allocator, alleles, ((struct Allele) {id, array_length(node_allele_join), graph.distance})) - 1;
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
         {
             GVA_Variant variant;
@@ -905,11 +912,13 @@ main(int argc, char* argv[static argc + 1])
                 &variant);
 
             gva_uint const inserted = trie_insert(gva_std_allocator, &trie, variant.sequence.len, variant.sequence.str);
-            gva_uint const node = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, variant.start, variant.end, variant.end, 0, inserted, id, graph.local_supremal[i + 1].edges})) - 1;
-            if (interval_tree_insert(&tree, node) != node)
+            gva_uint const node = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, variant.start, variant.end, variant.end, 0, inserted, GVA_NULL, graph.local_supremal[i + 1].edges})) - 1;
+            gva_uint const here = interval_tree_insert(&tree, node);
+            if (here != node)
             {
-                array_header(tree.nodes)->length -= 1;
+                array_header(tree.nodes)->length -= 1;  // delete; already in the tree
             } // if
+            tree.nodes[here].alleles = ARRAY_APPEND(gva_std_allocator, node_allele_join, ((struct Node_Allele) {here, allele, tree.nodes[here].alleles})) - 1;
         } // for
 
         gva_string_destroy(gva_std_allocator, graph.observed);
@@ -922,8 +931,20 @@ main(int argc, char* argv[static argc + 1])
     fprintf(stderr, "tree nodes: %zu\n", array_length(tree.nodes));
     fprintf(stderr, "trie nodes: %zu\n", array_length(trie.nodes));
 
-    interval_tree_dot(stdout, tree);
+    //interval_tree_dot(stdout, tree);
+    for (size_t i = 0; i < array_length(alleles); ++i)
+    {
+        gva_uint const end = i < array_length(alleles) - 1 ? alleles[i + 1].start : array_length(node_allele_join);
+        fprintf(stderr, "Allele[%zu]: {%zu, [%u, %u), %u}\n", i, alleles[i].data, alleles[i].start, end, alleles[i].distance);
+    } // for
 
+    for (size_t i = 0; i < array_length(node_allele_join); ++i)
+    {
+        fprintf(stderr, "%zu: {%u, %u, %d}\n", i, node_allele_join[i].node, node_allele_join[i].allele, node_allele_join[i].next);
+    } // for
+
+    alleles = ARRAY_DESTROY(gva_std_allocator, alleles);
+    node_allele_join = ARRAY_DESTROY(gva_std_allocator, node_allele_join);
     interval_tree_destroy(gva_std_allocator, &tree);
     trie_destroy(gva_std_allocator, &trie);
 
