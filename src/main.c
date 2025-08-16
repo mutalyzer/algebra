@@ -398,7 +398,7 @@ trie_raw(FILE* const stream, Trie const self)
 static void
 interval_tree_dot_node(FILE* const stream, Interval_Tree const self, gva_uint const idx)
 {
-    fprintf(stream, "%u[label=\"[%u, %u)  %u\"]\n", idx, self.nodes[idx].start, self.nodes[idx].end, self.nodes[idx].max);
+    fprintf(stream, "%u[label=\"{[%u, %u), %u}  %u\"]\n", idx, self.nodes[idx].start, self.nodes[idx].end, self.nodes[idx].inserted, self.nodes[idx].max);
     if (self.nodes[idx].child[0] != GVA_NULL)
     {
         fprintf(stream, "%u->%u\n", idx, self.nodes[idx].child[0]);
@@ -909,7 +909,8 @@ main(int argc, char* argv[static argc + 1])
 
             if (interval_tree_insert(&tree, node) != node)
             {
-                fprintf(stderr, "ERROR\n");
+                fprintf(stderr, "FOUND\n");
+                array_header(tree.nodes)->length -= 1;
             } // if
         } // for
 

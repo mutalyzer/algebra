@@ -88,11 +88,17 @@ interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx)
         } // if
         len += 1;
 
+        if (self->nodes[tmp_par].start == self->nodes[idx].start &&
+            self->nodes[tmp_par].end == self->nodes[idx].end &&
+            self->nodes[tmp_par].inserted == self->nodes[idx].inserted)
+        {
+            return tmp_par;
+        } // if
+
         tmp_par = tmp;
         tmp = self->nodes[tmp].child[dir];
     } // while
 
-    // TODO: early return if found
 
     self->nodes[tmp_par].child[dir] = idx;
 
