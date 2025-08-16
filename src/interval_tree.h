@@ -39,4 +39,9 @@ gva_uint
 interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx);
 
 
+gva_uint*
+interval_tree_intersection(GVA_Allocator const allocator, Interval_Tree const self,
+    gva_uint const start, gva_uint const end);
+
+
 #endif  // GVA_INTERVAL_TREE_H

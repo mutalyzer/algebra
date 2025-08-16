@@ -221,3 +221,38 @@ interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx)
     self->nodes[unbal_par].child[unbal != self->nodes[unbal_par].child[LEFT]] = root;
     return idx;
 } // interval_tree_insert
+
+
+// FIXME: recursion!
+static gva_uint*
+intersect(GVA_Allocator const allocator, Interval_Tree_Node const nodes[static 1],
+    gva_uint const idx, gva_uint const start, gva_uint const end, gva_uint* results)
+{
+    if (idx == GVA_NULL || nodes[idx].max < start)
+    {
+        return results;
+    } // if
+
+    if (nodes[idx].start > end)
+    {
+        return intersect(allocator, nodes, nodes[idx].child[LEFT], start, end, results);
+    } // if
+
+    results = intersect(allocator, nodes, nodes[idx].child[LEFT], start, end, results);
+
+    // FIXME: endpoints?
+    if (start < nodes[idx].end && end >= nodes[idx].start)
+    {
+        ARRAY_APPEND(allocator, results, idx);
+    } // if
+
+    return intersect(allocator, nodes, nodes[idx].child[RIGHT], start, end, results);
+} // intersect
+
+
+inline gva_uint*
+interval_tree_intersection(GVA_Allocator const allocator, Interval_Tree const self,
+    gva_uint const start, gva_uint const end)
+{
+    return intersect(allocator, self.nodes, self.root, start, end, NULL);
+} // interval_tree_intersection

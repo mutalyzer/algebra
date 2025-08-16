@@ -931,7 +931,10 @@ main(int argc, char* argv[static argc + 1])
     fprintf(stderr, "tree nodes: %zu\n", array_length(tree.nodes));
     fprintf(stderr, "trie nodes: %zu\n", array_length(trie.nodes));
 
+    fprintf(stderr, "#alleles: %zu\n", array_length(alleles));
+    fprintf(stderr, "#join:    %zu\n", array_length(node_allele_join));
     //interval_tree_dot(stdout, tree);
+    /*
     for (size_t i = 0; i < array_length(alleles); ++i)
     {
         gva_uint const end = i < array_length(alleles) - 1 ? alleles[i + 1].start : array_length(node_allele_join);
@@ -942,6 +945,17 @@ main(int argc, char* argv[static argc + 1])
     {
         fprintf(stderr, "%zu: {%u, %u, %d}\n", i, node_allele_join[i].node, node_allele_join[i].allele, node_allele_join[i].next);
     } // for
+    */
+
+    gva_uint* results = interval_tree_intersection(gva_std_allocator, tree, 6000, 6250);
+
+    for (size_t i = 0; i < array_length(results); ++i)
+    {
+        fprintf(stderr, "[%u, %u)\n", tree.nodes[results[i]].start, tree.nodes[results[i]].end);
+    } // for
+    fprintf(stderr, "results: %zu\n", array_length(results));
+
+    results = ARRAY_DESTROY(gva_std_allocator, results);
 
     alleles = ARRAY_DESTROY(gva_std_allocator, alleles);
     node_allele_join = ARRAY_DESTROY(gva_std_allocator, node_allele_join);
