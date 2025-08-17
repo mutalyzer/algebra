@@ -19,6 +19,7 @@
 #include "array.h"          // ARRAY_DESTROY, array_length
 #include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
+#include "hash_table.h"     // HASH_TABLE_KEY, hash_table_*
 #include "interval_tree.h"  // Interval_Tree, interval_tree_*
 #include "trie.h"           // Trie, trie_*
 
@@ -857,6 +858,24 @@ compare(int argc, char* argv[static argc + 1])
 int
 main(int argc, char* argv[static argc + 1])
 {
+    struct IN_EX
+    {
+        HASH_TABLE_KEY;
+        gva_uint included;
+        gva_uint excluded;
+    }* table = hash_table_init(gva_std_allocator, 1024, sizeof(*table));
+
+    HASH_TABLE_SET(gva_std_allocator, table, 42, ((struct IN_EX) {42, 1, 2}));
+
+    if (table[HASH_TABLE_INDEX(table, 42)].gva_key == 42)
+    {
+        fprintf(stderr, "FOUND at %zu\n", HASH_TABLE_INDEX(table, 42));
+    } // if
+
+    table = HASH_TABLE_DESTROY(gva_std_allocator, table);
+
+    return EXIT_SUCCESS;
+
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
