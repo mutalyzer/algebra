@@ -66,10 +66,14 @@ hash_table_ensure(GVA_Allocator const allocator, void* const self, size_t const 
     } // if
     for (size_t i = 0; i < old_capacity; ++i)
     {
-        array_header(new_table)->length += 1;
-        void* const src = (void*) ((uintmax_t) self + i * item_size);
-        void* const dest = (void*) ((uintmax_t) new_table + hash_table_index(new_table, item_size, *(uint32_t*) src) * item_size);
-        memcpy(dest, src, item_size);
+        void const* const src = (void*) ((uintmax_t) self + i * item_size);
+        if (*(uint32_t*) src != (uint32_t) -1)
+        {
+            array_header(new_table)->length += 1;
+            memcpy(
+                (void*) ((uintmax_t) new_table + hash_table_index(new_table, item_size, *(uint32_t*) src) * item_size),
+                src, item_size);
+        } // if
     } // for
     ARRAY_DESTROY(allocator, (Array*) self);
     return new_table;
