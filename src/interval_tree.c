@@ -1,5 +1,5 @@
 #include <stddef.h>     // NULL
-#include <stdint.h>     // uint64_t
+#include <stdint.h>     // uint8_t
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/types.h"       // GVA_NULL
@@ -31,19 +31,51 @@ enum
 
 
 static inline gva_uint
-calculate_max(Interval_Tree_Node const nodes[static 1], gva_uint const idx)
+update_max(Interval_Tree const self[static 1], gva_uint const idx)
 {
-    gva_uint result = nodes[idx].end;
-    if (nodes[idx].child[LEFT] != GVA_NULL)
+    gva_uint result = self->nodes[idx].end;
+    if (self->nodes[idx].child[LEFT] != GVA_NULL)
     {
-        result = MAX(result, nodes[nodes[idx].child[LEFT]].max);
+        result = MAX(result, self->nodes[self->nodes[idx].child[LEFT]].max);
     } // if
-    if (nodes[idx].child[RIGHT] != GVA_NULL)
+    if (self->nodes[idx].child[RIGHT] != GVA_NULL)
     {
-        result = MAX(result, nodes[nodes[idx].child[RIGHT]].max);
+        result = MAX(result, self->nodes[self->nodes[idx].child[RIGHT]].max);
     } // if
     return result;
-} // calculate_max
+} // update_max
+
+
+static int
+interval_cmp(gva_uint const lhs_start, gva_uint const lhs_end, gva_uint const lhs_inserted,
+    gva_uint const rhs_start, gva_uint const rhs_end, gva_uint const rhs_inserted)
+{
+    if (lhs_start < rhs_start)
+    {
+        return LEFT;
+    } // if
+    if (rhs_start < lhs_start)
+    {
+        return RIGHT;
+    } // if
+    if (lhs_end < rhs_end)
+    {
+        return LEFT;
+    } // if
+    if (rhs_end < lhs_end)
+    {
+        return RIGHT;
+    } // if
+    if (lhs_inserted < rhs_inserted)
+    {
+        return LEFT;
+    } // if
+    if (rhs_inserted < lhs_inserted)
+    {
+        return RIGHT;
+    } // if
+    return -1;  // identity
+} // interval_cmp
 
 
 gva_uint
@@ -55,156 +87,144 @@ interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx)
         return idx;
     } // if
 
-    // limiting to height 64 allows for a minimum of
-    // 27,777,890,035,287 nodes
-    uint64_t path = 0;  // bit-path to first unbalanced ancestor
-    int len = 0;        // length of the path
-    int dir = LEFT;
+    gva_uint y = self->root;  // Top node to update balance factor,
+    gva_uint z = self->root;  // and parent.
 
-    gva_uint tmp = self->root;
-    gva_uint tmp_par = self->root;  // parent of tmp
+    uint8_t path[64];  // Cached comparison results.
+    int k = 0;         // Number of cached results.
+    int dir = LEFT;    // Direction to descend.
 
-    gva_uint unbal = self->root;      // first unbalanced ancestor of tmp
-    gva_uint unbal_par = self->root;  // parent of unbalanced
-
-    // Insert a new node at the BST position
-    while (tmp != GVA_NULL)
+    gva_uint p = y;  // Iterator,
+    gva_uint q = z;  // and parent.
+    while (p != GVA_NULL)
     {
-        self->nodes[tmp].max = MAX(self->nodes[tmp].max, self->nodes[idx].end);
-
-        if (self->nodes[tmp].balance != 0)
+        dir = interval_cmp(self->nodes[idx].start, self->nodes[idx].end, self->nodes[idx].inserted,
+            self->nodes[p].start, self->nodes[p].end, self->nodes[p].inserted);
+        if (dir == -1)
         {
-            // this is now the first unbalanced ancestor of tmp
-            unbal_par = tmp_par;
-            unbal = tmp;
-            path = 0;
-            len = 0;
+            return p;  // found
         } // if
 
-        dir = self->nodes[idx].start > self->nodes[tmp].start;
-        if (dir == RIGHT)
-        {
-            path |= (uint64_t) RIGHT << len;
-        } // if
-        len += 1;
+        self->nodes[p].max = MAX(self->nodes[p].max, self->nodes[idx].end);
 
-        // Disallow duplicates
-        if (self->nodes[tmp].start == self->nodes[idx].start &&
-            self->nodes[tmp].end == self->nodes[idx].end &&
-            self->nodes[tmp].inserted == self->nodes[idx].inserted)
+        if (self->nodes[p].balance != 0)
         {
-            return tmp;
+            z = q;
+            y = p;
+            k = 0;
         } // if
-
-        tmp_par = tmp;
-        tmp = self->nodes[tmp].child[dir];
+        path[k] = dir;
+        k += 1;
+        q = p;
+        p = self->nodes[p].child[dir];
     } // while
 
-    self->nodes[tmp_par].child[dir] = idx;
+    // add
+    self->nodes[q].child[dir] = idx;
 
-    // Update the balance factors along the path from the first
-    // unbalanced ancestor to the new node
-    tmp = unbal;
-    while (tmp != idx)
+    // update balance factors
+    p = y;
+    k = 0;
+    while (p != idx)
     {
-        if ((path & RIGHT) == RIGHT)
+        if (path[k] == LEFT)
         {
-            self->nodes[tmp].balance += 1;
+            self->nodes[p].balance -= 1;
         } // if
         else
         {
-            self->nodes[tmp].balance -= 1;
+            self->nodes[p].balance += 1;
         } // else
+        p = self->nodes[p].child[path[k]];
+        k += 1;
+    } // for
 
-        tmp = self->nodes[tmp].child[path & RIGHT];
-        path >>= 1;
-    } // while
-
-    // Do the rotations if necessary
-    gva_uint root = 0;
-    if (self->nodes[unbal].balance == -2)
+    // rotations
+    gva_uint w;  // New root of rebalanced subtree.
+    if (self->nodes[y].balance == -2)
     {
-        gva_uint const child = self->nodes[unbal].child[LEFT];
-        if (self->nodes[child].balance == -1)
+        gva_uint const x = self->nodes[y].child[LEFT];
+        if (self->nodes[x].balance == -1)
         {
-            root = child;
-            self->nodes[unbal].child[LEFT] = self->nodes[child].child[RIGHT];
-            self->nodes[child].child[RIGHT] = unbal;
-            self->nodes[child].balance = 0;
-            self->nodes[unbal].balance = 0;
-            self->nodes[child].max = calculate_max(self->nodes, child);
-            self->nodes[unbal].max = calculate_max(self->nodes, unbal);
+            w = x;
+            self->nodes[y].child[LEFT] = self->nodes[x].child[RIGHT];
+            self->nodes[x].child[RIGHT] = y;
+            self->nodes[x].balance = 0;
+            self->nodes[y].balance = 0;
+
+            self->nodes[x].max = update_max(self, x);
+            self->nodes[y].max = update_max(self, y);
         } // if
         else
         {
-            root = self->nodes[child].child[RIGHT];
-            self->nodes[child].child[RIGHT] = self->nodes[root].child[LEFT];
-            self->nodes[root].child[LEFT] = child;
-            self->nodes[unbal].child[LEFT] = self->nodes[root].child[RIGHT];
-            self->nodes[root].child[RIGHT] = unbal;
-            if (self->nodes[root].balance == -1)
+            w = self->nodes[x].child[RIGHT];
+            self->nodes[x].child[RIGHT] = self->nodes[w].child[LEFT];
+            self->nodes[w].child[LEFT] = x;
+            self->nodes[y].child[LEFT] = self->nodes[w].child[RIGHT];
+            self->nodes[w].child[RIGHT] = y;
+            if (self->nodes[w].balance == -1)
             {
-                self->nodes[child].balance = 0;
-                self->nodes[unbal].balance = 1;
+                self->nodes[x].balance = 0;
+                self->nodes[y].balance = +1;
             } // if
-            else if (self->nodes[root].balance == 0)
+            else if (self->nodes[w].balance == 0)
             {
-                self->nodes[child].balance = 0;
-                self->nodes[unbal].balance = 0;
+                self->nodes[x].balance = 0;
+                self->nodes[y].balance = 0;
             } // if
             else
             {
-                self->nodes[child].balance = -1;
-                self->nodes[unbal].balance = 0;
+                self->nodes[x].balance = -1;
+                self->nodes[y].balance = 0;
             } // else
-            self->nodes[root].balance = 0;
+            self->nodes[w].balance = 0;
 
-            self->nodes[root].max = calculate_max(self->nodes, root);
-            self->nodes[child].max = calculate_max(self->nodes, child);
-            self->nodes[unbal].max = calculate_max(self->nodes, unbal);
+            self->nodes[x].max = update_max(self, x);
+            self->nodes[y].max = update_max(self, y);
+            self->nodes[w].max = update_max(self, w);
         } // else
     } // if
-    else if (self->nodes[unbal].balance == 2)
+    else if (self->nodes[y].balance == +2)
     {
-        gva_uint const child = self->nodes[unbal].child[RIGHT];
-        if (self->nodes[child].balance == 1)
+        gva_uint const x = self->nodes[y].child[RIGHT];
+        if (self->nodes[x].balance == +1)
         {
-            root = child;
-            self->nodes[unbal].child[RIGHT] = self->nodes[child].child[LEFT];
-            self->nodes[child].child[LEFT] = unbal;
-            self->nodes[child].balance = 0;
-            self->nodes[unbal].balance = 0;
+            w = x;
+            self->nodes[y].child[RIGHT] = self->nodes[x].child[LEFT];
+            self->nodes[x].child[LEFT] = y;
+            self->nodes[x].balance = 0;
+            self->nodes[y].balance = 0;
 
-            self->nodes[child].max = calculate_max(self->nodes, child);
-            self->nodes[unbal].max = calculate_max(self->nodes, unbal);
+            self->nodes[x].max = update_max(self, x);
+            self->nodes[y].max = update_max(self, y);
         } // if
         else
         {
-            root = self->nodes[child].child[LEFT];
-            self->nodes[child].child[LEFT] = self->nodes[root].child[RIGHT];
-            self->nodes[root].child[RIGHT] = child;
-            self->nodes[unbal].child[RIGHT] = self->nodes[root].child[LEFT];
-            self->nodes[root].child[LEFT] = unbal;
-            if (self->nodes[root].balance == 1)
+            w = self->nodes[x].child[LEFT];
+            self->nodes[x].child[LEFT] = self->nodes[w].child[RIGHT];
+            self->nodes[w].child[RIGHT] = x;
+            self->nodes[y].child[RIGHT] = self->nodes[w].child[LEFT];
+            self->nodes[w].child[LEFT] = y;
+            if (self->nodes[w].balance == +1)
             {
-                self->nodes[child].balance = 0;
-                self->nodes[unbal].balance = -1;
+                self->nodes[x].balance = 0;
+                self->nodes[y].balance = -1;
             } // if
-            else if(self->nodes[root].balance == 0)
+            else if (self->nodes[w].balance == 0)
             {
-                self->nodes[child].balance = 0;
-                self->nodes[unbal].balance = 0;
+                self->nodes[x].balance = 0;
+                self->nodes[y].balance = 0;
             } // if
             else
             {
-                self->nodes[child].balance = 1;
-                self->nodes[unbal].balance = 0;
+                self->nodes[x].balance = +1;
+                self->nodes[y].balance = 0;
             } // else
-            self->nodes[root].balance = 0;
+            self->nodes[w].balance = 0;
 
-            self->nodes[root].max = calculate_max(self->nodes, root);
-            self->nodes[child].max = calculate_max(self->nodes, child);
-            self->nodes[unbal].max = calculate_max(self->nodes, unbal);
+            self->nodes[x].max = update_max(self, x);
+            self->nodes[y].max = update_max(self, y);
+            self->nodes[w].max = update_max(self, w);
         } // else
     } // if
     else
@@ -212,13 +232,13 @@ interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx)
         return idx;
     } // else
 
-    if (self->root == unbal)
+    if (self->root == y)
     {
-        self->root = root;
+        self->root = w;
         return idx;
     } // if
 
-    self->nodes[unbal_par].child[unbal != self->nodes[unbal_par].child[LEFT]] = root;
+    self->nodes[z].child[y != self->nodes[z].child[LEFT]] = w;
     return idx;
 } // interval_tree_insert
 

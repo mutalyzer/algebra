@@ -2,8 +2,15 @@
 #define GVA_INTERVAL_TREE_H
 
 
+#include <limits.h>     // CHAR_BIT
+#include <stdint.h>     // int8_t
+
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/types.h"       // gva_uint
+
+
+// [-4, ..., 3], we use [-2, ..., 2]
+#define BALANCE_BITS 3
 
 
 typedef struct
@@ -12,9 +19,8 @@ typedef struct
     gva_uint start;
     gva_uint end;
     gva_uint max;
-    // FIXME: we assume gva_uint is 32bits
-    gva_uint balance   :  3;
-    gva_uint inserted  : 29;
+    int8_t   balance  : BALANCE_BITS;
+    gva_uint inserted : sizeof(gva_uint) * CHAR_BIT - BALANCE_BITS;
     gva_uint alleles;
     gva_uint distance;
 } Interval_Tree_Node;
