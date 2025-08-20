@@ -248,20 +248,19 @@ static gva_uint*
 intersect(GVA_Allocator const allocator, Interval_Tree_Node const nodes[static 1],
     gva_uint const idx, gva_uint const start, gva_uint const end, gva_uint* results)
 {
-    if (idx == GVA_NULL || nodes[idx].max < start)
+    if (idx == GVA_NULL || start > nodes[idx].max)
     {
         return results;
     } // if
 
-    if (nodes[idx].start > end)
-    {
-        return intersect(allocator, nodes, nodes[idx].child[LEFT], start, end, results);
-    } // if
-
     results = intersect(allocator, nodes, nodes[idx].child[LEFT], start, end, results);
 
-    // FIXME: endpoints?
-    if (start < nodes[idx].end + 1) // && end >= nodes[idx].start)
+    if (end < nodes[idx].start)
+    {
+        return results;
+    } // if
+
+    if (start <= nodes[idx].end)  // already satisfied above: && end >= nodes[idx].start)
     {
         ARRAY_APPEND(allocator, results, idx);
     } // if
