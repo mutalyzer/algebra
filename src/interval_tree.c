@@ -261,7 +261,7 @@ intersect(GVA_Allocator const allocator, Interval_Tree_Node const nodes[static 1
     results = intersect(allocator, nodes, nodes[idx].child[LEFT], start, end, results);
 
     // FIXME: endpoints?
-    if (start < nodes[idx].end && end >= nodes[idx].start)
+    if (start < nodes[idx].end + 1) // && end >= nodes[idx].start)
     {
         ARRAY_APPEND(allocator, results, idx);
     } // if
