@@ -78,6 +78,8 @@ interval_cmp(gva_uint const lhs_start, gva_uint const lhs_end, gva_uint const lh
 } // interval_cmp
 
 
+// Adapted from:
+// http://adtinfo.org/libavl.html/Inserting-into-an-AVL-Tree.html
 gva_uint
 interval_tree_insert(Interval_Tree self[static 1], gva_uint const idx)
 {
