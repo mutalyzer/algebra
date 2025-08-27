@@ -314,7 +314,7 @@ LCSgraph_Edge_Iterator_next(LCSgraph_Edge_Iterator* self)
         if (self->node >= array_length(self->graph->graph.nodes))
         {
             Py_CLEAR(self->graph);
-            return NULL;
+            return NULL;  // raises StopIteration
         } // if
         self->edge = self->graph->graph.nodes[self->node].edges;
     } // if
@@ -346,9 +346,9 @@ LCSgraph_Edge_Iterator_next(LCSgraph_Edge_Iterator* self)
         Py_DECREF(str);
         return NULL;
     } // if
-    PyObject* const var = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+    PyObject* const object = PyObject_CallObject((PyObject*) state->Variant_Type, args);
     Py_DECREF(args);
-    if (var == NULL)
+    if (object == NULL)
     {
         Py_DECREF(str);
         return NULL;
@@ -357,7 +357,7 @@ LCSgraph_Edge_Iterator_next(LCSgraph_Edge_Iterator* self)
     return Py_BuildValue("{s: (i, i, i), s: (i, i, i), s: O, s: i}",
         "head", head.row, head.col, head.length,
         "tail", tail.row, tail.col, tail.length,
-        "variant", var,
+        "variant", object,
         "count", count
     );
 } // LCSgraph_Edge_Iterator_next
@@ -383,6 +383,8 @@ Variant_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
         return NULL;
     } // if
 
+    // FIXME: The Variant object owns a copy of the inserted sequence string
+    //        and must append a NULL character for the sequence getter.
     self->sequence = PyMem_Malloc(len + 1);
     if (self->sequence == NULL)
     {
@@ -402,6 +404,7 @@ Variant_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
 static inline void
 Variant_dealloc(Variant_Object* self)
 {
+    // FIXME: ownership of sequence
     PyMem_Free(self->sequence);
     Py_TYPE(self)->tp_free((PyObject*) self);
 } // Variant_dealloc
@@ -494,7 +497,7 @@ static PyType_Spec LCSgraph_Spec =
                     "edges",
                     (PyCFunction) LCSgraph_edges,
                     METH_NOARGS,
-                    PyDoc_STR("Edges iterator."),
+                    PyDoc_STR("An iterator over the edges in the LCS graph."),
                 },
                 {NULL, NULL, 0, NULL}  // sentinel
             },
@@ -511,7 +514,7 @@ static PyType_Spec LCSgraph_Edge_Iterator_Spec =
     .flags = Py_TPFLAGS_DEFAULT,
     .slots = (PyType_Slot[])
     {
-        {Py_tp_doc, PyDoc_STR("LCS graph edge iterator.")},
+        {Py_tp_doc, PyDoc_STR("Iterator over edges in an LCS graph.")},
         {Py_tp_new, LCSgraph_Edge_Iterator_new},
         {Py_tp_dealloc, LCSgraph_Edge_Iterator_dealloc},
         {Py_tp_iter, PyObject_SelfIter},
