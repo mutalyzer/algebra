@@ -266,6 +266,7 @@ Variant_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
     self->sequence = PyMem_Malloc(len + 1);
     if (self->sequence == NULL)
     {
+        Py_DECREF(self);
         return PyErr_NoMemory();
     } // if
 
