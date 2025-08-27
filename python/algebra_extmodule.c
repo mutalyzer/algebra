@@ -7,9 +7,10 @@
 
 #include "../include/compare.h"     // gva_compare_graphs
 #include "../include/extractor.h"   // gva_canonical
-#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Node, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // gva_string_destroy
+#include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_variant_*
 #include "../src/array.h"           // ARRAY_DESTROY, array_length
 
@@ -17,14 +18,23 @@
 // DEBUG: PySys_FormatStderr
 
 
-typedef struct LCSgraph_Object
+typedef struct
 {
     PyObject_VAR_HEAD
     GVA_LCS_Graph graph;
 } LCSgraph_Object;
 
 
-typedef struct Variant_Object
+typedef struct
+{
+    PyObject_VAR_HEAD
+    size_t           node;
+    gva_uint         edge;
+    LCSgraph_Object* graph;
+} LCSgraph_Edge_Iterator;
+
+
+typedef struct
 {
     PyObject_VAR_HEAD
     Py_ssize_t start;
@@ -37,8 +47,9 @@ typedef struct Variant_Object
 typedef struct
 {
     PyTypeObject* LCSgraph_Type;
+    PyTypeObject* LCSgraph_Edge_Iterator_Type;
     PyTypeObject* Variant_Type;
-    PyObject* Relations;
+    PyObject*     Relations;
 } algebra_ext_state;
 
 
@@ -69,7 +80,7 @@ LCSgraph_dealloc(LCSgraph_Object* self)
 static PyObject*
 LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 {
-    algebra_ext_state* state = get_algebra_ext_state(PyType_GetModule((PyTypeObject*) cls));
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule((PyTypeObject*) cls));
     if (state == NULL)
     {
         return NULL;
@@ -103,7 +114,7 @@ LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
         variants[i] = (GVA_Variant) {item->start, item->end, {item->len, item->sequence}};
     } // for
 
-    LCSgraph_Object* self = (LCSgraph_Object*) PyObject_CallNoArgs(cls);
+    LCSgraph_Object* const self = (LCSgraph_Object*) PyObject_CallNoArgs(cls);
     if (self == NULL)
     {
         variants = gva_std_allocator.allocate(gva_std_allocator.context, variants, n * sizeof(*variants), 0);
@@ -120,7 +131,7 @@ LCSgraph_from_variants(PyObject* cls, PyObject* args, PyObject* kwargs)
 static PyObject*
 LCSgraph_canonical(LCSgraph_Object* self)
 {
-    algebra_ext_state* state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
     if (state == NULL)
     {
         return NULL;
@@ -128,7 +139,7 @@ LCSgraph_canonical(LCSgraph_Object* self)
 
     GVA_Variant* variants = gva_canonical(gva_std_allocator, self->graph);
 
-    PyObject* result = PyList_New(array_length(variants));
+    PyObject* const result = PyList_New(array_length(variants));
     if (result == NULL)
     {
         variants = ARRAY_DESTROY(gva_std_allocator, variants);
@@ -137,14 +148,14 @@ LCSgraph_canonical(LCSgraph_Object* self)
 
     for (size_t i = 0; i < array_length(variants); ++i)
     {
-        PyObject* str = PyUnicode_FromStringAndSize(variants[i].sequence.str, variants[i].sequence.len);
+        PyObject* const str = PyUnicode_FromStringAndSize(variants[i].sequence.str, variants[i].sequence.len);
         if (str == NULL)
         {
             Py_DECREF(result);
             variants = ARRAY_DESTROY(gva_std_allocator, variants);
             return NULL;
         } // if
-        PyObject* args = Py_BuildValue("nnO", variants[i].start, variants[i].end, str);
+        PyObject* const args = Py_BuildValue("nnO", variants[i].start, variants[i].end, str);
         if (args == NULL)
         {
             Py_DECREF(str);
@@ -152,7 +163,7 @@ LCSgraph_canonical(LCSgraph_Object* self)
             variants = ARRAY_DESTROY(gva_std_allocator, variants);
             return NULL;
         } // if
-        PyObject* item = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+        PyObject* const item = PyObject_CallObject((PyObject*) state->Variant_Type, args);
         Py_DECREF(args);
         if (item == NULL)
         {
@@ -171,13 +182,13 @@ LCSgraph_canonical(LCSgraph_Object* self)
 static PyObject*
 LCSgraph_local_supremal(LCSgraph_Object* self)
 {
-    algebra_ext_state* state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
     if (state == NULL)
     {
         return NULL;
     } // if
 
-    PyObject* result = PyList_New(array_length(self->graph.local_supremal) - 1);
+    PyObject* const result = PyList_New(array_length(self->graph.local_supremal) - 1);
     if (result == NULL)
     {
         return NULL;
@@ -191,20 +202,20 @@ LCSgraph_local_supremal(LCSgraph_Object* self)
             i == 0, i == array_length(self->graph.local_supremal) - 2,
             &variant);
 
-        PyObject* str = PyUnicode_FromStringAndSize(variant.sequence.str, variant.sequence.len);
+        PyObject* const str = PyUnicode_FromStringAndSize(variant.sequence.str, variant.sequence.len);
         if (str == NULL)
         {
             Py_DECREF(result);
             return NULL;
         } // if
-        PyObject* args = Py_BuildValue("nnO", variant.start, variant.end, str);
+        PyObject* const args = Py_BuildValue("nnO", variant.start, variant.end, str);
         if (args == NULL)
         {
             Py_DECREF(str);
             Py_DECREF(result);
             return NULL;
         } // if
-        PyObject* item = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+        PyObject* const item = PyObject_CallObject((PyObject*) state->Variant_Type, args);
         Py_DECREF(args);
         if (item == NULL)
         {
@@ -220,27 +231,136 @@ LCSgraph_local_supremal(LCSgraph_Object* self)
 static PyObject*
 LCSgraph_supremal(LCSgraph_Object* self)
 {
-    algebra_ext_state* state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
     if (state == NULL)
     {
         return NULL;
     } // if
 
-    PyObject* str = PyUnicode_FromStringAndSize(self->graph.supremal.sequence.str, self->graph.supremal.sequence.len);
+    PyObject* const str = PyUnicode_FromStringAndSize(self->graph.supremal.sequence.str, self->graph.supremal.sequence.len);
     if (str == NULL)
     {
         return NULL;
     } // if
-    PyObject* args = Py_BuildValue("nnO", self->graph.supremal.start, self->graph.supremal.end, str);
+    PyObject* const args = Py_BuildValue("nnO", self->graph.supremal.start, self->graph.supremal.end, str);
     if (args == NULL)
     {
         Py_DECREF(str);
         return NULL;
     } // if
-    PyObject* result = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+    PyObject* const result = PyObject_CallObject((PyObject*) state->Variant_Type, args);
     Py_DECREF(args);
     return result;
 } // LCSgraph_supremal
+
+
+static PyObject*
+LCSgraph_edges(LCSgraph_Object* self)
+{
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
+    if (state == NULL)
+    {
+        return NULL;
+    } // if
+    return PyObject_CallOneArg((PyObject*) state->LCSgraph_Edge_Iterator_Type, (PyObject*) self);
+} // LCSgraph_edges
+
+
+static PyObject*
+LCSgraph_Edge_Iterator_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
+{
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule(subtype));
+    if (state == NULL)
+    {
+        return NULL;
+    } // if
+
+    LCSgraph_Object* graph = NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!|:LCSgraph_Edge_Iterator",
+                                     (char*[]) {"LCSgraph", NULL},
+                                     state->LCSgraph_Type, &graph))
+    {
+        return NULL;
+    } // if
+
+    LCSgraph_Edge_Iterator* const self = (LCSgraph_Edge_Iterator*) subtype->tp_alloc(subtype, 0);
+    if (self == NULL)
+    {
+        return NULL;
+    } // if
+
+    Py_INCREF(graph);
+    self->graph = graph;
+    self->node = 0;
+    self->edge = graph->graph.nodes[self->node].edges;
+    return (PyObject*) self;
+} // LCSgraph_Edge_Iterator_new
+
+
+inline static void
+LCSgraph_Edge_Iterator_dealloc(LCSgraph_Edge_Iterator* self)
+{
+    Py_XDECREF(self->graph);
+    Py_TYPE(self)->tp_free((PyObject*) self);
+} // LCSgraph_Edge_Iterator_dealloc
+
+
+static PyObject*
+LCSgraph_Edge_Iterator_next(LCSgraph_Edge_Iterator* self)
+{
+    if (self->edge == GVA_NULL)
+    {
+        self->node += 1;
+        if (self->node >= array_length(self->graph->graph.nodes))
+        {
+            Py_CLEAR(self->graph);
+            return NULL;
+        } // if
+        self->edge = self->graph->graph.nodes[self->node].edges;
+    } // if
+
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
+    if (state == NULL)
+    {
+        return NULL;
+    } // if
+
+    GVA_Node const head = self->graph->graph.nodes[self->node];
+    GVA_Node const tail = self->graph->graph.nodes[self->graph->graph.edges[self->edge].tail];
+    GVA_Variant variant;
+    gva_uint const count = gva_edges(self->graph->graph.observed.str,
+        head, tail,
+        self->node == self->graph->graph.source, self->graph->graph.nodes[self->graph->graph.edges[self->edge].tail].edges == GVA_NULL,
+        &variant);
+
+    self->edge = self->graph->graph.edges[self->edge].next;
+
+    PyObject* const str = PyUnicode_FromStringAndSize(variant.sequence.str, variant.sequence.len);
+    if (str == NULL)
+    {
+        return NULL;
+    } // if
+    PyObject* const args = Py_BuildValue("nnO", variant.start, variant.end, str);
+    if (args == NULL)
+    {
+        Py_DECREF(str);
+        return NULL;
+    } // if
+    PyObject* const var = PyObject_CallObject((PyObject*) state->Variant_Type, args);
+    Py_DECREF(args);
+    if (var == NULL)
+    {
+        Py_DECREF(str);
+        return NULL;
+    } // if
+
+    return Py_BuildValue("{s: (i, i, i), s: (i, i, i), s: O, s: i}",
+        "head", head.row, head.col, head.length,
+        "tail", tail.row, tail.col, tail.length,
+        "variant", var,
+        "count", count
+    );
+} // LCSgraph_Edge_Iterator_next
 
 
 static PyObject*
@@ -297,7 +417,7 @@ Variant_repr(Variant_Object* self)
 static PyObject*
 Variant_richcompare(Variant_Object* self, Variant_Object* other, int op)
 {
-    algebra_ext_state* state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
+    algebra_ext_state* const state = get_algebra_ext_state(PyType_GetModule(Py_TYPE(self)));
     if (state == NULL)
     {
         return NULL;
@@ -370,9 +490,32 @@ static PyType_Spec LCSgraph_Spec =
                     METH_NOARGS,
                     PyDoc_STR("The supremal variant."),
                 },
+                {
+                    "edges",
+                    (PyCFunction) LCSgraph_edges,
+                    METH_NOARGS,
+                    PyDoc_STR("Edges iterator."),
+                },
                 {NULL, NULL, 0, NULL}  // sentinel
             },
         },
+        {0, NULL}  // sentinel
+    },
+};
+
+
+static PyType_Spec LCSgraph_Edge_Iterator_Spec =
+{
+    .name = "algebra_ext.LCSgraphEdgeIterator",
+    .basicsize = sizeof(LCSgraph_Edge_Iterator),
+    .flags = Py_TPFLAGS_DEFAULT,
+    .slots = (PyType_Slot[])
+    {
+        {Py_tp_doc, PyDoc_STR("LCS graph edge iterator.")},
+        {Py_tp_new, LCSgraph_Edge_Iterator_new},
+        {Py_tp_dealloc, LCSgraph_Edge_Iterator_dealloc},
+        {Py_tp_iter, PyObject_SelfIter},
+        {Py_tp_iternext, LCSgraph_Edge_Iterator_next},
         {0, NULL}  // sentinel
     },
 };
@@ -406,8 +549,9 @@ static PyType_Spec Variant_Spec =
 static int
 algebra_ext_clear(PyObject* module)
 {
-    algebra_ext_state* state = get_algebra_ext_state(module);
+    algebra_ext_state* const state = get_algebra_ext_state(module);
     Py_CLEAR(state->LCSgraph_Type);
+    Py_CLEAR(state->LCSgraph_Edge_Iterator_Type);
     Py_CLEAR(state->Variant_Type);
     Py_CLEAR(state->Relations);
     return 0;
@@ -424,10 +568,17 @@ algebra_ext_free(void* module)
 static int
 algebra_ext_mod_exec(PyObject* module)
 {
-    algebra_ext_state* state = get_algebra_ext_state(module);
+    algebra_ext_state* const state = get_algebra_ext_state(module);
 
     state->LCSgraph_Type = (PyTypeObject*) PyType_FromModuleAndSpec(module, &LCSgraph_Spec, NULL);
     if (state->LCSgraph_Type == NULL)
+    {
+        Py_DECREF(module);
+        return -1;
+    } // if
+
+    state->LCSgraph_Edge_Iterator_Type = (PyTypeObject*) PyType_FromModuleAndSpec(module, &LCSgraph_Edge_Iterator_Spec, NULL);
+    if (state->LCSgraph_Edge_Iterator_Type == NULL)
     {
         Py_DECREF(module);
         return -1;
@@ -446,13 +597,19 @@ algebra_ext_mod_exec(PyObject* module)
         return -1;
     } // if
 
+    if (PyModule_AddObjectRef(module, "LCSgraphEdgeIterator", (PyObject*) state->LCSgraph_Edge_Iterator_Type) < 0)
+    {
+        Py_DECREF(module);
+        return -1;
+    } // if
+
     if (PyModule_AddObjectRef(module, "Variant", (PyObject*) state->Variant_Type) < 0)
     {
         Py_DECREF(module);
         return -1;
     } // if
 
-    PyObject* dict_relations = PyDict_New();
+    PyObject* const dict_relations = PyDict_New();
     if (dict_relations == NULL)
     {
         Py_DECREF(module);
@@ -461,7 +618,7 @@ algebra_ext_mod_exec(PyObject* module)
 
     for (size_t i = 0; i < sizeof(GVA_RELATION_LABELS) / sizeof(*GVA_RELATION_LABELS); ++i)
     {
-        PyObject* value = PyUnicode_InternFromString(GVA_RELATION_LABELS[i]);
+        PyObject* const value = PyUnicode_InternFromString(GVA_RELATION_LABELS[i]);
         if (value == NULL)
         {
             Py_DECREF(dict_relations);
@@ -479,7 +636,7 @@ algebra_ext_mod_exec(PyObject* module)
         Py_DECREF(value);
     } // for
 
-    PyObject* module_enum = PyImport_ImportModule("enum");
+    PyObject* const module_enum = PyImport_ImportModule("enum");
     if (module_enum == NULL)
     {
         Py_DECREF(dict_relations);
@@ -510,7 +667,7 @@ algebra_ext_mod_exec(PyObject* module)
 static PyObject*
 algebra_ext_compare(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    algebra_ext_state* state = get_algebra_ext_state(self);
+    algebra_ext_state* const state = get_algebra_ext_state(self);
     if (state == NULL)
     {
         return NULL;
