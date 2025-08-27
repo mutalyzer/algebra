@@ -59,3 +59,10 @@ def test_variant_compare():
     assert Variant(0, 0, "") != Variant(0, 1, "")
     assert Variant(0, 0, "") != Variant(1, 0, "")
     assert Variant(0, 0, "") != Variant(0, 0, "A")
+
+
+def test_variant_from_slice():
+    reference = "GTTCGCGGGGAAAGGAAAAAAGCCGCCGGGCAGGAAA"
+    variants = [Variant(1, 5, reference[7:34])]
+    del reference
+    assert variants == [Variant(1, 5, "GGGAAAGGAAAAAAGCCGCCGGGCAGG")]

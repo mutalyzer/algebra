@@ -3,6 +3,7 @@
 
 #include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, offsetof, size_t
+#include <string.h>     // memcpy
 
 #include "../include/compare.h"     // gva_compare_graphs
 #include "../include/extractor.h"   // gva_canonical
@@ -26,10 +27,10 @@ typedef struct LCSgraph_Object
 typedef struct Variant_Object
 {
     PyObject_VAR_HEAD
-    Py_ssize_t  start;
-    Py_ssize_t  end;
-    Py_ssize_t  len;
-    char const* sequence;
+    Py_ssize_t start;
+    Py_ssize_t end;
+    Py_ssize_t len;
+    char*      sequence;
 } Variant_Object;
 
 
@@ -262,10 +263,17 @@ Variant_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
         return NULL;
     } // if
 
+    self->sequence = PyMem_Malloc(len + 1);
+    if (self->sequence == NULL)
+    {
+        return PyErr_NoMemory();
+    } // if
+
     self->start = start;
     self->end = end;
     self->len = len;
-    self->sequence = sequence;
+    memcpy(self->sequence, sequence, len);
+    self->sequence[len] = '\0';
     return (PyObject*) self;
 } // Variant_new
 
@@ -273,6 +281,7 @@ Variant_new(PyTypeObject* subtype, PyObject* args, PyObject* kwargs)
 static inline void
 Variant_dealloc(Variant_Object* self)
 {
+    PyMem_Free(self->sequence);
     Py_TYPE(self)->tp_free((PyObject*) self);
 } // Variant_dealloc
 
