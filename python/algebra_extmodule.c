@@ -334,6 +334,7 @@ LCSgraph_Edge_Iterator_next(LCSgraph_Edge_Iterator* self)
     {
         GVA_Node const tail = self->graph->graph.nodes[self->graph->graph.nodes[self->node].lambda];
         self->lambda = true;
+        Py_INCREF(Py_None);
         return Py_BuildValue("{s: (i, i, i), s: (i, i, i), s: O, s: i}",
             "head", head.row, head.col, head.length,
             "tail", tail.row, tail.col, tail.length,
