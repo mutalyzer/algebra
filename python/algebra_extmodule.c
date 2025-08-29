@@ -1,7 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>     // Py*
 
-#include <stdbool.h>    // bool
+#include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, offsetof, size_t
 #include <string.h>     // memcpy
 
@@ -28,6 +28,7 @@ typedef struct
 typedef struct
 {
     PyObject_VAR_HEAD
+    bool             lambda;
     size_t           node;
     gva_uint         edge;
     LCSgraph_Object* graph;
@@ -291,6 +292,7 @@ LCSgraph_Edge_Iterator_new(PyTypeObject* subtype, PyObject* args, PyObject* kwar
 
     Py_INCREF(graph);
     self->graph = graph;
+    self->lambda = false;
     self->node = 0;
     self->edge = graph->graph.nodes[self->node].edges;
     return (PyObject*) self;
@@ -316,6 +318,7 @@ LCSgraph_Edge_Iterator_next(LCSgraph_Edge_Iterator* self)
             Py_CLEAR(self->graph);
             return NULL;  // raises StopIteration
         } // if
+        self->lambda = false;
         self->edge = self->graph->graph.nodes[self->node].edges;
     } // if
 
@@ -326,6 +329,19 @@ LCSgraph_Edge_Iterator_next(LCSgraph_Edge_Iterator* self)
     } // if
 
     GVA_Node const head = self->graph->graph.nodes[self->node];
+
+    if (!self->lambda && self->graph->graph.nodes[self->node].lambda != GVA_NULL)
+    {
+        GVA_Node const tail = self->graph->graph.nodes[self->graph->graph.nodes[self->node].lambda];
+        self->lambda = true;
+        return Py_BuildValue("{s: (i, i, i), s: (i, i, i), s: O, s: i}",
+            "head", head.row, head.col, head.length,
+            "tail", tail.row, tail.col, tail.length,
+            "variant", Py_None,
+            "count", 0
+        );
+    } // if
+
     GVA_Node const tail = self->graph->graph.nodes[self->graph->graph.edges[self->edge].tail];
     GVA_Variant variant;
     gva_uint const count = gva_edges(self->graph->graph.observed.str,

@@ -23,6 +23,7 @@ def test_LCSgraph_edges():
         {"head": (3, 4, 1), "tail": (5, 5, 3), "variant": Variant(4, 5, ""), "count": 1},
         {"head": (1, 2, 1), "tail": (3, 4, 1), "variant": Variant(2, 3, "T"), "count": 1},
         {"head": (1, 2, 1), "tail": (3, 3, 1), "variant": Variant(2, 3, ""), "count": 1},
+        {"head": (2, 2, 1), "tail": (3, 3, 1), "variant": None, "count": 0},
         {"head": (2, 2, 1), "tail": (3, 4, 1), "variant": Variant(3, 3, "T"), "count": 1},
         {"head": (1, 1, 0), "tail": (2, 2, 1), "variant": Variant(1, 2, "T"), "count": 1},
         {"head": (1, 1, 0), "tail": (1, 2, 1), "variant": Variant(1, 1, "T"), "count": 1}
