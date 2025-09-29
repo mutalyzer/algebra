@@ -4,7 +4,7 @@
 
 typedef enum
 {
-    GVA_DISJOINT,
+    GVA_DISJOINT = 0,
     GVA_OVERLAP,
     GVA_CONTAINS,
     GVA_IS_CONTAINED,
