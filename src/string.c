@@ -27,3 +27,10 @@ gva_string_concat(GVA_Allocator const allocator, GVA_String lhs, GVA_String cons
     lhs.len = len;
     return lhs;
 } // gva_string_concat
+
+
+inline GVA_String
+gva_string_dup(GVA_Allocator const allocator, GVA_String const self)
+{
+    return gva_string_concat(allocator, (GVA_String) {0, NULL}, self);
+} // gva_string_dup
