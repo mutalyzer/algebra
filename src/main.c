@@ -967,7 +967,6 @@ main(int argc, char* argv[static argc + 1])
     gva_string_destroy(gva_std_allocator, reference);
     return EXIT_SUCCESS;
 
-
     struct IN_EX
     {
         HASH_TABLE_KEY;
@@ -985,6 +984,7 @@ main(int argc, char* argv[static argc + 1])
     table = HASH_TABLE_DESTROY(gva_std_allocator, table);
 
     return EXIT_SUCCESS;
+*/
 
 
     errno = 0;
@@ -1090,15 +1090,12 @@ main(int argc, char* argv[static argc + 1])
             continue;
         } // if
 
-        struct {
+        struct IN_EX
+        {
+            HASH_TABLE_KEY;
             gva_uint included;
             gva_uint excluded;
-        }* result_map = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, 1024 * sizeof(*result_map));
-        if (result_map == NULL)
-        {
-            return -1;
-        } // if
-        memset(result_map, 0, 1024 * sizeof(*result_map));
+        }* table = hash_table_init(gva_std_allocator, 1024, sizeof(*table));
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &sup);
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
@@ -1121,23 +1118,67 @@ main(int argc, char* argv[static argc + 1])
                 {
                     for (gva_uint j = tree.nodes[results[i]].alleles; j != GVA_NULL; j = node_allele_join[j].next)
                     {
-                        result_map[node_allele_join[j].allele].included += dist;
+                        size_t allele = node_allele_join[j].allele;
+                        size_t hash_idx = HASH_TABLE_INDEX(table, allele);
+                        fprintf(stderr, "equiv/contains allele_idx: %zu pv_id: %zu\n", allele, alleles[allele].data);
+                        if (table[hash_idx].gva_key != allele)
+                        {
+                            fprintf(stderr, "NOT FOUND YET\n");
+                            HASH_TABLE_SET(gva_std_allocator, table, allele, ((struct IN_EX) {allele, 0, 0}));
+                            hash_idx = HASH_TABLE_INDEX(table, allele);
+                        } // if
+                        else
+                        {
+                            fprintf(stderr, "FOUND %zu @ %zu\n", allele, hash_idx);
+                        } // else
+                        fprintf(stderr, "MODIFYING allele_idx: %zu @ hash_idx: %zu\n", allele, hash_idx);
+                        table[hash_idx].included += dist;
                     } // for
                 } // if
                 else if (relation == GVA_IS_CONTAINED)
                 {
                     for (gva_uint j = tree.nodes[results[i]].alleles; j != GVA_NULL; j = node_allele_join[j].next)
                     {
-                        result_map[node_allele_join[j].allele].included += tree.nodes[results[i]].distance;
-                        result_map[node_allele_join[j].allele].excluded += dist - tree.nodes[results[i]].distance;
+                        size_t allele = node_allele_join[j].allele;
+                        size_t hash_idx = HASH_TABLE_INDEX(table, allele);
+                        fprintf(stderr, "is_contained allele_idx: %zu pv_id: %zu\n", allele, alleles[allele].data);
+                        if (table[hash_idx].gva_key != allele)
+                        {
+                            fprintf(stderr, "NOT FOUND YET\n");
+                            HASH_TABLE_SET(gva_std_allocator, table, allele, ((struct IN_EX) {allele, 0, 0}));
+                            hash_idx = HASH_TABLE_INDEX(table, allele);
+                        } // if
+                        else
+                        {
+                            fprintf(stderr, "FOUND %zu @ %zu\n", allele, hash_idx);
+
+                        } // else
+                        fprintf(stderr, "MODIFYING allele_idx: %zu @ hash_idx: %zu\n", allele, hash_idx);
+                        table[hash_idx].included += tree.nodes[results[i]].distance;
+                        table[hash_idx].excluded += dist - tree.nodes[results[i]].distance;
                     } // for
                 } // if
                 else if (relation == GVA_OVERLAP)
                 {
                     for (gva_uint j = tree.nodes[results[i]].alleles; j != GVA_NULL; j = node_allele_join[j].next)
                     {
-                        result_map[node_allele_join[j].allele].included += 1;
-                        result_map[node_allele_join[j].allele].excluded += 1;
+                        size_t allele = node_allele_join[j].allele;
+                        size_t hash_idx = HASH_TABLE_INDEX(table, allele);
+                        fprintf(stderr, "is_contained allele_idx: %zu pv_id: %zu\n", allele, alleles[allele].data);
+                        if (table[hash_idx].gva_key != allele)
+                        {
+                            fprintf(stderr, "NOT FOUND YET\n");
+                            HASH_TABLE_SET(gva_std_allocator, table, allele, ((struct IN_EX) {allele, 0, 0}));
+                            hash_idx = HASH_TABLE_INDEX(table, allele);
+                        } // if
+                        else
+                        {
+                            fprintf(stderr, "FOUND %zu @ %zu\n", allele, hash_idx);
+
+                        } // else
+                        fprintf(stderr, "MODIFYING allele_idx: %zu @ hash_idx: %zu\n", allele, hash_idx);
+                        table[hash_idx].included += 1;
+                        table[hash_idx].excluded += 1;
                     } // for
                 } // if
             } // for
@@ -1150,14 +1191,19 @@ main(int argc, char* argv[static argc + 1])
 
         for (size_t i = 0; i < 1024; ++i)
         {
-            if (result_map[i].included > 0 || result_map[i].excluded > 0)
+            if (table[i].gva_key == (uint32_t) -1)
             {
-                result_map[i].excluded = graph.distance - result_map[i].included;
+                continue;
+            }
+            size_t allele = table[i].gva_key;
+            if (table[i].included > 0 || table[i].excluded > 0)
+            {
+                table[i].excluded = graph.distance - table[i].included;
 
                 GVA_Relation relation = GVA_OVERLAP;
-                if (result_map[i].excluded == 0)
+                if (table[i].excluded == 0)
                 {
-                    if (result_map[i].included == alleles[i].distance)
+                    if (table[i].included == alleles[allele].distance)
                     {
                         relation = GVA_EQUIVALENT;
                     } // if
@@ -1166,18 +1212,18 @@ main(int argc, char* argv[static argc + 1])
                         relation = GVA_CONTAINS;
                     } // else
                 } // if
-                else if (result_map[i].included == alleles[i].distance)
+                else if (table[i].included == alleles[allele].distance)
                 {
                     relation = GVA_IS_CONTAINED;
                 } // if
 
-                if (alleles[i].data < id)
+                if (alleles[allele].data < id)
                 {
-                    fprintf(stdout, "%zu %zu %s\n", alleles[i].data, id, GVA_RELATION_LABELS[relation]);
+                    fprintf(stdout, "%zu %zu %s\n", alleles[allele].data, id, GVA_RELATION_LABELS[relation]);
                 } // if
             } // if
         } // for
-        result_map = gva_std_allocator.allocate(gva_std_allocator.context, result_map, 1024 * sizeof(*result_map), 0);
+        table = HASH_TABLE_DESTROY(gva_std_allocator, table);
 
     } // while
     fclose(stream);
