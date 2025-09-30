@@ -1235,7 +1235,7 @@ main(int argc, char* argv[static argc + 1])
 
     gva_string_destroy(gva_std_allocator, reference);
     return EXIT_SUCCESS;
-*/
+
     return extract(argc, argv);
 
     // all
