@@ -1292,13 +1292,46 @@ main(int argc, char* argv[static argc + 1])
         // }
         // fprintf(stderr, "\n");
 
-        // build result vector for every query
-        // fprintf(stderr, "Loop over all alleles for every query:\n");
-        for (size_t allele_idx = 0; allele_idx < array_length(db_alleles); ++allele_idx)
+        struct RESULT_ALLELES
         {
+            HASH_TABLE_KEY;
+        }* results_table = hash_table_init(gva_std_allocator, 1024, sizeof(*results_table));
+
+        // fprintf(stderr, "Loop over all node parts for every query:\n");
+        for (size_t npt_index = 0; npt_index < array_header(node_parts_table)->capacity; ++npt_index)
+        {
+            size_t const node_idx = node_parts_table[npt_index].gva_key;
+            if (node_idx == (uint32_t) - 1)
+            {
+                continue;
+            } // if
+
+            for (size_t naj_table_idx = tree.nodes[node_idx].alleles;
+                 naj_table_idx != GVA_NULL;
+                 naj_table_idx = node_allele_join[naj_table_idx].next)
+            {
+                size_t const allele_idx = node_allele_join[naj_table_idx].allele;
+                size_t hash_idx = HASH_TABLE_INDEX(results_table, allele_idx);
+                if (results_table[hash_idx].gva_key != allele_idx)
+                {
+                    HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx}));
+                } // if
+
+            } // for alleles
+        } // for node_parts_table
+
+        // build result vector for every query
+        for (size_t results_index = 0; results_index < array_header(results_table)->capacity; ++results_index)
+        {
+            size_t allele_idx = results_table[results_index].gva_key;
+            if (allele_idx == (uint32_t) - 1)
+            {
+                continue;
+            } // if
+            // fprintf(stderr, "allele_idx: %zu\n", allele_idx);
+
             GVA_Relation relation = GVA_DISJOINT;
             size_t included = 0;
-            // fprintf(stderr, "allele_idx: %zu\n", allele_idx);
 
             gva_uint* is_contained_nodes = NULL;
             gva_uint is_contained_part_idx = -1;
@@ -1318,7 +1351,6 @@ main(int argc, char* argv[static argc + 1])
                     continue;
                 } // if
                 // fprintf(stderr, "node_idx: %zu\n", node_idx);
-                // continue;
 
                 size_t part_idx = node_parts_table[hash_idx].part_idx;
                 // size_t part_idx = 0;
@@ -1464,6 +1496,7 @@ main(int argc, char* argv[static argc + 1])
         // fprintf(stderr, "\n");
 
         node_parts_table = HASH_TABLE_DESTROY(gva_std_allocator, node_parts_table);
+        results_table = HASH_TABLE_DESTROY(gva_std_allocator, results_table);
 
         gva_string_destroy(gva_std_allocator, query_graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, query_graph);
