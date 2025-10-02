@@ -1271,7 +1271,12 @@ main(int argc, char* argv[static argc + 1])
 
             gva_uint* is_contained_nodes = NULL;
             gva_uint is_contained_part_idx = -1;
-            for (size_t join_idx = db_alleles[allele_idx].join_start; node_allele_join[join_idx].allele == allele_idx; ++join_idx)
+
+            // loop over all nodes for this allele
+            // fprintf(stderr, "Loop over nodes for this allele:\n");
+            for (size_t join_idx = db_alleles[allele_idx].join_start;
+                node_allele_join[join_idx].allele == allele_idx && join_idx < array_length(node_allele_join);
+                ++join_idx)
             {
                 size_t hash_idx = HASH_TABLE_INDEX(node_parts_table, node_allele_join[join_idx].node);
                 if (node_allele_join[join_idx].node != node_parts_table[hash_idx].gva_key)
