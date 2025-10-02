@@ -1262,8 +1262,31 @@ main(int argc, char* argv[static argc + 1])
             } // if
         } // for node_parts_table
 
-        // build result vector
-        fprintf(stderr, "Loop over all alleles:\n");
+        // fprintf(stderr, "db_allele table:\n");
+        // for (size_t i = 0; i < array_length(db_alleles); ++i)
+        // {
+        //     fprintf(stderr, "entry: %zu %s %zu %zu\n",
+        //             db_alleles[i].data,
+        //             db_alleles[i].spdi,
+        //             db_alleles[i].join_start,
+        //             db_alleles[i].distance
+        //     );
+        // }
+        // fprintf(stderr, "\n");
+        //
+        // fprintf(stderr, "node_allele_join table:\n");
+        // for (size_t i = 0; i < array_length(node_allele_join); ++i)
+        // {
+        //     fprintf(stderr, "entry: %zu %zu %d\n",
+        //             node_allele_join[i].node,
+        //             node_allele_join[i].allele,
+        //             node_allele_join[i].next
+        //     );
+        // }
+        // fprintf(stderr, "\n");
+
+        // build result vector for every query
+        // fprintf(stderr, "Loop over all alleles for every query:\n");
         for (size_t allele_idx = 0; allele_idx < array_length(db_alleles); ++allele_idx)
         {
             GVA_Relation relation = GVA_DISJOINT;
