@@ -869,23 +869,29 @@ variants_distance(GVA_Allocator const allocator, size_t const len_ref, char cons
     size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
 
     char* lhs_obs = allocator.allocate(allocator.context, NULL, 0, lhs_len);
-    if (lhs_obs == NULL)
+    if (lhs_len > 0)
     {
-        return -1;
-    } // if
-    memcpy(lhs_obs, reference + start, lhs.start - start);
-    memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-    memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
+        if (lhs_obs == NULL)
+        {
+            return -1;
+        } // if
+        memcpy(lhs_obs, reference + start, lhs.start - start);
+        memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
+        memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
+    }
 
     char* rhs_obs = allocator.allocate(allocator.context, NULL, 0, rhs_len);
-    if (rhs_obs == NULL)
+    if (rhs_len > 0)
     {
-        lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
-        return -1;
-    } // if
-    memcpy(rhs_obs, reference + start, rhs.start - start);
-    memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-    memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
+        if (rhs_obs == NULL && rhs_len > 0)
+        {
+            lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
+            return -1;
+        } // if
+        memcpy(rhs_obs, reference + start, rhs.start - start);
+        memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
+        memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
+    }
 
     size_t const distance = gva_edit_distance(allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
     rhs_obs = allocator.allocate(allocator.context, rhs_obs, rhs_len, 0);
