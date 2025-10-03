@@ -1345,7 +1345,7 @@ main(int argc, char* argv[static argc + 1])
             // loop over all nodes for this allele
             // fprintf(stderr, "Loop over nodes for this allele:\n");
             for (size_t join_idx = db_alleles[allele_idx].join_start;
-                node_allele_join[join_idx].allele == allele_idx && join_idx < array_length(node_allele_join);
+                join_idx < array_length(node_allele_join) && node_allele_join[join_idx].allele == allele_idx;
                 ++join_idx)
             {
                 // fprintf(stderr, "join_idx: %zu\n", join_idx);
