@@ -1359,8 +1359,7 @@ main(int argc, char* argv[static argc + 1])
                     // included += tree.nodes[node_idx].distance;
                     included += node_parts_table[hash_idx].included;
 
-                    // TODO: need this guard?
-                    // if (relation == GVA_EQUIVALENT || relation == GVA_DISJOINT)
+                    if (relation == GVA_EQUIVALENT || relation == GVA_DISJOINT)
                     {
                         relation = GVA_EQUIVALENT;
                     }
