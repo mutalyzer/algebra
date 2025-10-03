@@ -1477,6 +1477,10 @@ main(int argc, char* argv[static argc + 1])
                 {
                     relation = GVA_IS_CONTAINED;
                 }
+                else if (allele_excluded == 0 && query_excluded == 0)
+                {
+                    relation = GVA_EQUIVALENT;
+                }
                 // fprintf(stderr, "allele_idx: %zu relation: %s in: %zu\n", allele_idx, GVA_RELATION_LABELS[relation], included);
 
                 if (relation != GVA_EQUIVALENT)
