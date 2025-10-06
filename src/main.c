@@ -1362,7 +1362,6 @@ main(int argc, char* argv[static argc + 1])
 
                 if (node_parts_table[hash_idx].relation == GVA_EQUIVALENT)
                 {
-                    // included += tree.nodes[node_idx].distance;
                     included += node_parts_table[hash_idx].included;
 
                     if (relation == GVA_EQUIVALENT || relation == GVA_DISJOINT)
@@ -1373,7 +1372,6 @@ main(int argc, char* argv[static argc + 1])
                 else if (node_parts_table[hash_idx].relation == GVA_CONTAINS)
                 {
                     // fprintf(stderr, "here D\n");
-                    // included += query_graph.local_supremal[part_idx + 1].edges;
                     included += node_parts_table[hash_idx].included;
 
                     if (relation == GVA_IS_CONTAINED)
@@ -1391,9 +1389,7 @@ main(int argc, char* argv[static argc + 1])
                     // fprintf(stderr, "if containment current: %s\n", GVA_RELATION_LABELS[relation]);
                     if (relation == GVA_CONTAINS)
                     {
-                        // included += tree.nodes[node_idx].distance;
-                        included += node_parts_table[hash_idx].included;
-                        // included = 1; ???
+                        included += node_parts_table[hash_idx].included;  // TODO: included = 1; ???
                         relation = GVA_OVERLAP;
                         break;
                     } // if
