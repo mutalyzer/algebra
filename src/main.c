@@ -768,9 +768,8 @@ suffix_trimmed(size_t const len_ref, char const reference[static len_ref],
 
 
 int
-main(int argc, char* argv[static argc + 1])
+vcfallele(int argc, char* argv[static argc + 1])
 {
-/*
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
@@ -848,9 +847,12 @@ main(int argc, char* argv[static argc + 1])
     table = HASH_TABLE_DESTROY(gva_std_allocator, table);
 
     return EXIT_SUCCESS;
-*/
+}
 
 
+int
+main(int argc, char* argv[static argc + 1])
+{
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
