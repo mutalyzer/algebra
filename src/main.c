@@ -1340,7 +1340,7 @@ main(int argc, char* argv[static argc + 1])
             // fprintf(stderr, "allele_idx: %zu\n", allele_idx);
 
             GVA_Relation relation = GVA_DISJOINT;
-            size_t included = 0;
+            gva_uint included = 0;
 
             gva_uint* is_contained_nodes = NULL;
             gva_uint is_contained_part_idx = -1;
@@ -1474,8 +1474,8 @@ main(int argc, char* argv[static argc + 1])
                 // fprintf(stderr, "allele dist: %u query dist: %u\n", db_alleles[allele_idx].distance, query_graph.distance);
                 // fprintf(stderr, "relation: %s\n", GVA_RELATION_LABELS[relation]);
 
-                size_t const allele_excluded = db_alleles[allele_idx].distance - included;
-                size_t const query_excluded = query_graph.distance - included;
+                gva_uint const allele_excluded = db_alleles[allele_idx].distance - included;
+                gva_uint const query_excluded = query_graph.distance - included;
 
                 // fprintf(stderr, "included: %zu, allele_excluded: %d query_excluded: %zu\n",
                 //         included, allele_excluded, query_excluded);
