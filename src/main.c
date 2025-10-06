@@ -1176,6 +1176,8 @@ main(int argc, char* argv[static argc + 1])
                 } // if
                 else if (relation == GVA_CONTAINS)
                 {
+                    // fprintf(stderr, "yo\n");
+                    // TODO: extend conditional with EQUIVALENT?!
                     if (node_parts_table[hash_idx].relation == GVA_DISJOINT)
                     {
                         node_parts_table[hash_idx].relation = GVA_CONTAINS;
