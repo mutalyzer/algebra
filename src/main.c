@@ -1412,6 +1412,11 @@ main(int argc, char* argv[static argc + 1])
                             } // if
                             included += slice_dist;
                         } // if
+                        else if (array_length(is_contained_nodes) == 1)
+                        {
+                            // fprintf(stderr, "Now should add previous node\n");
+                            included += tree.nodes[is_contained_nodes[0]].distance;
+                        }
 
                         // open new window
                         // fprintf(stderr, "open new window\n");
