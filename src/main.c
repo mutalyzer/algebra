@@ -1197,8 +1197,8 @@ main(int argc, char* argv[static argc + 1])
         // fix containment for multiple parts in single node for every query
         for (size_t npt_index = 0; npt_index < array_header(node_parts_table)->capacity; ++npt_index)
         {
-            size_t node_idx = node_parts_table[npt_index].gva_key;
-            if (node_idx == (uint32_t) - 1)
+            size_t const node_idx = node_parts_table[npt_index].gva_key;
+            if (node_idx == (uint32_t) -1)
             {
                 continue;
             } // if
