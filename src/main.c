@@ -1300,6 +1300,7 @@ main(int argc, char* argv[static argc + 1])
         // }
         // fprintf(stderr, "\n");
 
+        // TODO: best datastructure if there is only a key?!
         struct RESULT_ALLELES
         {
             HASH_TABLE_KEY;
