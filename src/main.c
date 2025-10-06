@@ -560,14 +560,6 @@ main(int argc, char* argv[static argc + 1])
         GVA_LCS_Graph const query_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &query_var);
         // fprintf(stderr, "query allele %zu: " GVA_VARIANT_FMT " (dist: %u)\n", query_id, GVA_VARIANT_PRINT(query_var), query_graph.distance);
 
-        size_t const spdi_len = snprintf(NULL, 0, GVA_VARIANT_FMT_SPDI, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, query_graph.supremal)) + 1;
-        char* const query_spdi = malloc(spdi_len);
-        if (NULL == query_spdi) {
-            (void) fprintf(stderr, "spdi malloc() failed\n");
-            return EXIT_FAILURE;
-        }
-        snprintf(query_spdi, spdi_len, GVA_VARIANT_FMT_SPDI, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, query_graph.supremal));
-
         for (size_t part_idx = 0; part_idx < array_length(query_graph.local_supremal) - 1; ++part_idx)
         {
             // query local supremal part
@@ -949,11 +941,11 @@ main(int argc, char* argv[static argc + 1])
                 // only for testing
                 if (relation != GVA_EQUIVALENT || db_alleles[allele_idx].data < query_id)
                 {
-                    printf("%zu %s %zu %s %s\n",
+                    printf("%zu %s %zu " GVA_VARIANT_FMT_SPDI " %s\n",
                             db_alleles[allele_idx].data,
                             db_alleles[allele_idx].spdi,
                             query_id,
-                            query_spdi,
+                            GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, query_graph.supremal),
                             GVA_RELATION_LABELS[relation]);
                 }
             } // if
