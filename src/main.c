@@ -313,17 +313,19 @@ extract(int const argc, char* argv[static argc + 1])
 
     GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref, reference, len_obs, observed, 0);
 
-    lcs_graph_raw(stderr, graph);
+    //lcs_graph_raw(stderr, graph);
     lcs_graph_dot(stderr, graph);
-    lcs_graph_json(stdout, graph);
-    lcs_graph_svg(stderr, graph);
+    //lcs_graph_json(stdout, graph);
+    //lcs_graph_svg(stderr, graph);
 
+    /*
     GVA_Variant* canonical = gva_canonical(gva_std_allocator, graph);
     for (size_t i = 0; i < array_length(canonical); ++i)
     {
         fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(canonical[i]));
     } // for
     canonical = ARRAY_DESTROY(gva_std_allocator, canonical);
+    */
 
     gva_lcs_graph_destroy(gva_std_allocator, graph);
 
@@ -732,7 +734,7 @@ all(int argc, char* argv[static argc + 1])
                   &rhs);
 
         gva_uint rhs_dist = rhs_graph.local_supremal[i + 1].edges;
-        fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(rhs), rhs_graph.local_supremal[i + 1].edges);
+        fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(rhs), rhs_dist);
 
         gva_uint* results = gva_stabbing_index_intersect(gva_std_allocator, index, rhs.start, rhs.end);
 
@@ -973,9 +975,136 @@ multiple_is_contained(GVA_Allocator const allocator, size_t const len_ref, char 
 }
 
 
+static inline size_t
+prefix_length(size_t const len_lhs, char const lhs[static restrict len_lhs],
+    size_t const len_rhs, char const rhs[static restrict len_rhs])
+{
+    size_t idx = 0;
+    while (idx < len_lhs && idx < len_rhs && lhs[idx] == rhs[idx])
+    {
+        idx += 1;
+    } // while
+    return idx;
+} // prefix_length
+
+
+static inline size_t
+suffix_length(size_t const len_lhs, char const lhs[static restrict len_lhs],
+    size_t const len_rhs, char const rhs[static restrict len_rhs])
+{
+    size_t idx_lhs = len_lhs;
+    size_t idx_rhs = len_rhs;
+    while (idx_lhs > 0 && idx_rhs > 0 && lhs[idx_lhs - 1] == rhs[idx_rhs - 1])
+    {
+        idx_lhs -= 1;
+        idx_rhs -= 1;
+    } // while
+    return len_lhs - idx_lhs;
+} // suffix_length
+
+
+static inline GVA_Variant
+prefix_trimmed(size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const variant)
+{
+    size_t const len = prefix_length((variant.end - variant.start), reference + variant.start, variant.sequence.len, variant.sequence.str);
+    return (GVA_Variant) {variant.start + len, variant.end, {variant.sequence.len - len, variant.sequence.str + len}};
+} // prefix_trimmed
+
+
+static inline GVA_Variant
+suffix_trimmed(size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const variant)
+{
+    size_t const len = suffix_length((variant.end - variant.start), reference + variant.start, variant.sequence.len, variant.sequence.str);
+    return (GVA_Variant) {variant.start, variant.end - len, {variant.sequence.len - len, variant.sequence.str}};
+} // suffix_trimmed
+
+
 int
 main(int argc, char* argv[static argc + 1])
 {
+/*
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0, NULL};
+    reference = gva_fasta_sequence(gva_std_allocator, stream);
+    fclose(stream);
+
+    GVA_Variant variants[2];
+    size_t count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        int const len = (char*) memchr(line, '\n', LINE_SIZE) - line;
+        if (gva_parse_spdi(len, line, &variants[count > 0]) == 0)
+        {
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", count + 1, line);
+            continue;
+        } // if
+
+        variants[count > 0] = prefix_trimmed(reference.len, reference.str, variants[count > 0]);
+
+        for (size_t i = 0; i <= (count > 0); ++i)
+        {
+            fprintf(stderr, GVA_VARIANT_FMT " ", GVA_VARIANT_PRINT(variants[i]));
+        } // for
+        fprintf(stderr, "\n");
+
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1 + (count > 0), variants);
+        GVA_Variant local;
+        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+        {
+            gva_edges(graph.observed.str,
+                graph.local_supremal[i], graph.local_supremal[i + 1],
+                i == 0, i == array_length(graph.local_supremal) - 2,
+                &local);
+            if (i < array_length(graph.local_supremal) - 2)
+            {
+                fprintf(stderr, "OUT: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(local));
+            } // if
+        } // for
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
+
+        if (count > 0)
+        {
+            gva_string_destroy(gva_std_allocator, variants[0].sequence);
+        } // if
+        variants[0] = (GVA_Variant) {local.start, local.end, gva_string_dup(gva_std_allocator, local.sequence)};
+        variants[0] = suffix_trimmed(reference.len, reference.str, variants[0]);
+
+        count += 1;
+    } // while
+
+    gva_string_destroy(gva_std_allocator, reference);
+    return EXIT_SUCCESS;
+
+    struct IN_EX
+    {
+        HASH_TABLE_KEY;
+        gva_uint included;
+        gva_uint excluded;
+    }* table = hash_table_init(gva_std_allocator, 1024, sizeof(*table));
+
+    HASH_TABLE_SET(gva_std_allocator, table, 42, ((struct IN_EX) {42, 1, 2}));
+
+    if (table[HASH_TABLE_INDEX(table, 42)].gva_key == 42)
+    {
+        fprintf(stderr, "FOUND at %zu\n", HASH_TABLE_INDEX(table, 42));
+    } // if
+
+    table = HASH_TABLE_DESTROY(gva_std_allocator, table);
+
+    return EXIT_SUCCESS;
+*/
+
+
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
@@ -1535,11 +1664,12 @@ main(int argc, char* argv[static argc + 1])
     gva_string_destroy(gva_std_allocator, reference);
     return EXIT_SUCCESS;
 
-    //return extract(argc, argv);
+    // return extract(argc, argv);
 
     // all
     //return all(argc, argv);
 
     // compare
     // return compare(argc, argv);
+
 } // main

@@ -27,4 +27,8 @@ gva_string_concat(GVA_Allocator const allocator,
     GVA_String lhs, GVA_String const rhs);
 
 
+GVA_String
+gva_string_dup(GVA_Allocator const allocator, GVA_String const self);
+
+
 #endif
