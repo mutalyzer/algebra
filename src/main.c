@@ -1021,7 +1021,7 @@ main(int argc, char* argv[static argc + 1])
             continue;
         } // if
 
-        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+        GVA_LCS_Graph const graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
         size_t const spdi_len = snprintf(NULL, 0, GVA_VARIANT_FMT_SPDI, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal)) + 1;
         char* const spdi = malloc(spdi_len);
         if (NULL == spdi) {
@@ -1110,7 +1110,7 @@ main(int argc, char* argv[static argc + 1])
         }* node_parts_table = hash_table_init(gva_std_allocator, 1024, sizeof(*node_parts_table));
 
         // query graph
-        GVA_LCS_Graph query_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &query_var);
+        GVA_LCS_Graph const query_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &query_var);
         // fprintf(stderr, "query allele %zu: " GVA_VARIANT_FMT " (dist: %u)\n", query_id, GVA_VARIANT_PRINT(query_var), query_graph.distance);
 
         size_t const spdi_len = snprintf(NULL, 0, GVA_VARIANT_FMT_SPDI, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, query_graph.supremal)) + 1;
@@ -1130,16 +1130,16 @@ main(int argc, char* argv[static argc + 1])
                       part_idx == 0, part_idx == array_length(query_graph.local_supremal) - 2,
                       &query_part);
 
-            gva_uint query_dist = query_graph.local_supremal[part_idx + 1].edges;
+            gva_uint const query_dist = query_graph.local_supremal[part_idx + 1].edges;
             // fprintf(stderr, "    query part %zu (dist: %d): " GVA_VARIANT_FMT "\n", part_idx, query_dist, GVA_VARIANT_PRINT(query_part));
 
             // find candidates for this local supremal part
             gva_uint* candidates = interval_tree_intersection(gva_std_allocator, tree, query_part.start, query_part.end);
             for (size_t can_idx = 0; can_idx < array_length(candidates); ++can_idx) {
-                gva_uint node_idx = candidates[can_idx];
+                gva_uint const node_idx = candidates[can_idx];
                 GVA_Variant const db_var = {tree.nodes[node_idx].start, tree.nodes[node_idx].end,
                                             trie_string(trie, tree.nodes[node_idx].inserted)};
-                GVA_Relation relation = compare_from_index(reference, db_var, tree.nodes[node_idx].distance, query_part, query_dist);
+                GVA_Relation const relation = compare_from_index(reference, db_var, tree.nodes[node_idx].distance, query_part, query_dist);
                 // fprintf(stderr, "        db candidate node_idx: %d (dist: %d): " GVA_VARIANT_FMT " %s\n", node_idx, tree.nodes[node_idx].distance, GVA_VARIANT_PRINT(db_var), GVA_RELATION_LABELS[relation]);
 
                 if (relation == GVA_DISJOINT)
