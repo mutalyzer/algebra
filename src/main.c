@@ -1097,7 +1097,6 @@ main(int argc, char* argv[static argc + 1])
             fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
             continue;
         } // if
-        // fprintf(stderr, "query allele %zu: " GVA_VARIANT_FMT "\n", query_id, GVA_VARIANT_PRINT(query_var));
 
         // Join nodes in the index to parts in the query
         struct NODE_PARTS
@@ -1112,6 +1111,7 @@ main(int argc, char* argv[static argc + 1])
 
         // query graph
         GVA_LCS_Graph query_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &query_var);
+        // fprintf(stderr, "query allele %zu: " GVA_VARIANT_FMT " (dist: %u)\n", query_id, GVA_VARIANT_PRINT(query_var), query_graph.distance);
 
         size_t const spdi_len = snprintf(NULL, 0, GVA_VARIANT_FMT_SPDI, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, query_graph.supremal)) + 1;
         char* const query_spdi = malloc(spdi_len);
@@ -1252,7 +1252,7 @@ main(int argc, char* argv[static argc + 1])
                                          trie_string(trie, tree.nodes[node_idx].inserted)};
 
                 size_t const op_distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
-                // fprintf(stderr, "op_distance: %zu\n", op_distance);
+                // fprintf(stderr, "op_distance: %d\n", op_distance);
 
                 node_parts_table[npt_index].included = slice_dist;
 
@@ -1396,8 +1396,8 @@ main(int argc, char* argv[static argc + 1])
 
                     if (part_idx != is_contained_part_idx)
                     {
-                        // fprintf(stderr, "here2 %s\n", GVA_RELATION_LABELS[relation]);
-
+                        // fprintf(stderr, "close window upper %s\n", GVA_RELATION_LABELS[relation]);
+                        // fprintf(stderr, "#is_contained_nodes: %zu\n", array_length(is_contained_nodes));
                         // close old window
                         if (array_length(is_contained_nodes) > 1)
                         {
@@ -1407,7 +1407,6 @@ main(int argc, char* argv[static argc + 1])
                                        query_graph, part_idx, tree, trie, is_contained_nodes, &slice_dist);
                             if (relation == GVA_OVERLAP)
                             {
-                                // fprintf(stderr, "overlap shortcut in loop\n");
                                 included = 1;
                                 break;
                             } // if
@@ -1415,6 +1414,7 @@ main(int argc, char* argv[static argc + 1])
                         } // if
 
                         // open new window
+                        // fprintf(stderr, "open new window\n");
                         is_contained_part_idx = part_idx;
                         is_contained_nodes = ARRAY_DESTROY(gva_std_allocator, is_contained_nodes);
                     } // if
@@ -1435,12 +1435,15 @@ main(int argc, char* argv[static argc + 1])
 
             // fprintf(stderr, "here G\n");
 
+            // fprintf(stderr, "included: %zu\n", included);
+
             // close old window
             size_t const n = array_length(is_contained_nodes);
             if (relation == GVA_IS_CONTAINED && n == 1)
             {
                 // fprintf(stderr, "found single is_contained\n");
                 included += tree.nodes[is_contained_nodes[0]].distance;
+                // fprintf(stderr, "increase included with %u to %zu\n", tree.nodes[is_contained_nodes[0]].distance, included);
             }
             else if (relation == GVA_IS_CONTAINED && n > 1)
             {
@@ -1455,6 +1458,7 @@ main(int argc, char* argv[static argc + 1])
                 else
                 {
                     included += slice_dist;
+                    // fprintf(stderr, "increase included with %zu to %zu\n", slice_dist, included);
                 } // else
 
             } // if is_contained repair
@@ -1463,11 +1467,12 @@ main(int argc, char* argv[static argc + 1])
             if (included > 0)
             {
                 // fprintf(stderr, "allele dist: %u query dist: %u\n", db_alleles[allele_idx].distance, query_graph.distance);
+                // fprintf(stderr, "relation: %s\n", GVA_RELATION_LABELS[relation]);
 
                 size_t const allele_excluded = db_alleles[allele_idx].distance - included;
                 size_t const query_excluded = query_graph.distance - included;
 
-                // fprintf(stderr, "included: %zu, allele_excluded: %zu query_excluded: %zu\n",
+                // fprintf(stderr, "included: %zu, allele_excluded: %d query_excluded: %zu\n",
                 //         included, allele_excluded, query_excluded);
                 if (allele_excluded > 0 && query_excluded > 0)
                 {
