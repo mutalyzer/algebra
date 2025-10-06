@@ -1358,8 +1358,6 @@ main(int argc, char* argv[static argc + 1])
                 } // if
                 // fprintf(stderr, "node_idx: %zu\n", node_idx);
 
-                size_t part_idx = node_parts_table[hash_idx].part_idx;
-                // size_t part_idx = 0;
                 if (node_parts_table[hash_idx].relation == GVA_EQUIVALENT)
                 {
                     // included += tree.nodes[node_idx].distance;
@@ -1386,7 +1384,9 @@ main(int argc, char* argv[static argc + 1])
                 }
                 else if (node_parts_table[hash_idx].relation == GVA_IS_CONTAINED)
                 {
-                    // fprintf(stderr, "here %s\n", GVA_RELATION_LABELS[relation]);
+                    size_t part_idx = node_parts_table[hash_idx].part_idx;
+                    // fprintf(stderr, "part_idx: %zu\n", part_idx);
+                    // fprintf(stderr, "if containment current: %s\n", GVA_RELATION_LABELS[relation]);
                     if (relation == GVA_CONTAINS)
                     {
                         // included += tree.nodes[node_idx].distance;
