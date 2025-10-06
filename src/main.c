@@ -1065,7 +1065,7 @@ main(int argc, char* argv[static argc + 1])
     fprintf(stderr, "line count: %zu\n", line_count);
 
     fprintf(stderr, "tree nodes: %zu\n", array_length(tree.nodes));
-    fprintf(stderr, "trie nodes: %zu\n", array_length(trie.nodes));
+    fprintf(stderr, "trie nodes: %zu (%zu)\n", array_length(trie.nodes), trie.strings.len);
 
     fprintf(stderr, "#db_alleles: %zu\n", array_length(db_alleles));
     fprintf(stderr, "#join:    %zu\n", array_length(node_allele_join));
