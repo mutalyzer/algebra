@@ -1417,11 +1417,10 @@ main(int argc, char* argv[static argc + 1])
                         // fprintf(stderr, "open new window\n");
                         is_contained_part_idx = part_idx;
                         is_contained_nodes = ARRAY_DESTROY(gva_std_allocator, is_contained_nodes);
-                    } // if
-
+                    } // if part_idx != is_contained_part_idx
                     ARRAY_APPEND(gva_std_allocator, is_contained_nodes, node_idx);
                     relation = GVA_IS_CONTAINED;
-                } // if
+                } // if relation == GVA_IS_CONTAINED
                 else if (node_parts_table[hash_idx].relation == GVA_OVERLAP)
                 {
                     // fprintf(stderr, "this overlap is reached\n");
@@ -1431,7 +1430,7 @@ main(int argc, char* argv[static argc + 1])
                 } // if
                 // fprintf(stderr, "here F\n");
 
-            } // for allele nodes
+            } // for all nodes for this allele
 
             // fprintf(stderr, "here G\n");
 
