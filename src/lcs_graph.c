@@ -3,10 +3,6 @@
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memcpy
 
-
-//#include <stdio.h>      // DEBUG
-
-
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/string.h"      // GVA_String, gva_string_*
@@ -215,7 +211,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
                 graph.nodes[source.idx].row, graph.nodes[source.idx].col, 0, distance - prev_distance, source.idx
             }));
-            //fprintf(stderr, "0.APPEND %u: (%u, %u, %u) @ %u\n", i, graph.nodes[source.idx].row, graph.nodes[source.idx].col, 0, distance);
             prev_distance = distance;
         } // if
         if (len > 0 && (lcs.index[i].count > 1 || prev != lcs.index[i].tail))
@@ -226,7 +221,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
                 graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance - prev_distance, idx
             }));
-            //fprintf(stderr, "1.APPEND %u: (%u, %u, %u) @ %u\n", i, graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance);
             len = 0;
             prev_distance = distance;
         } // if
@@ -246,7 +240,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance - prev_distance, idx
         }));
-        //fprintf(stderr, "2.APPEND %u: (%u, %u, %u) @ %u\n", lcs.length - len, graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, distance);
         len = 0;
         prev_distance = distance;
     } // if
@@ -256,7 +249,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[0].row + graph.nodes[0].length - len, graph.nodes[0].col + graph.nodes[0].length - len, 0, distance - prev_distance, 0
         }));
-        //fprintf(stderr, "3.APPEND %u: (%u, %u, %u) @ %u\n", lcs.length - len, graph.nodes[0].row + graph.nodes[0].length - len, graph.nodes[0].col + graph.nodes[0].length - len, 0, distance);
     } //if
 
     if (graph.local_supremal != NULL)
