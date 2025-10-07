@@ -230,23 +230,23 @@ construct_variant(GVA_Allocator const allocator,
         };
     } // for
 
-    GVA_Variant lhs = {
+    GVA_Variant variant = {
             tree.nodes[nodes[0]].start,
             tree.nodes[nodes[n - 1]].end,
             {0, NULL}
     };
-    lhs.sequence = gva_string_concat(allocator, lhs.sequence, variants[0].sequence);
+    variant.sequence = gva_string_concat(allocator, variant.sequence, variants[0].sequence);
     for (size_t i = 1; i < n; ++i)
     {
-        lhs.sequence = gva_string_concat(allocator, lhs.sequence, (GVA_String) {variants[i].start - variants[i - 1].end, reference + variants[i - 1].end});
-        lhs.sequence = gva_string_concat(allocator, lhs.sequence, variants[i].sequence);
+        variant.sequence = gva_string_concat(allocator, variant.sequence, (GVA_String) {variants[i].start - variants[i - 1].end, reference + variants[i - 1].end});
+        variant.sequence = gva_string_concat(allocator, variant.sequence, variants[i].sequence);
     } // for
-    // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs));
+    // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
 
     // deallocate
     variants = allocator.allocate(allocator.context, variants, n * sizeof(*variants), 0);
 
-    return lhs;
+    return variant;
 } // construct_variant
 
 
