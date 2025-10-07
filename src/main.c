@@ -263,7 +263,7 @@ multiple_is_contained_distance(GVA_Allocator const allocator,
         lhs_distance += tree.nodes[nodes[i]].distance;
     } // for
 
-    size_t const rhs_distance = graph.local_supremal[part_idx + 1].edges;
+    size_t const rhs_distance = graph.local_supremal[part_idx + 1].distance;
     if (lhs_distance >= rhs_distance)
     {
         return 1;  // overlap
@@ -493,7 +493,7 @@ main(int argc, char* argv[static argc + 1])
                 &part);
 
             gva_uint const inserted_idx = trie_insert(gva_std_allocator, &trie, part.sequence.len, part.sequence.str);
-            gva_uint const tmp_idx = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, part.start, part.end, part.end, 0, inserted_idx, GVA_NULL, graph.local_supremal[i + 1].edges})) - 1;
+            gva_uint const tmp_idx = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, part.start, part.end, part.end, 0, inserted_idx, GVA_NULL, graph.local_supremal[i + 1].distance})) - 1;
             gva_uint const node_idx = interval_tree_insert(&tree, tmp_idx);
             if (node_idx != tmp_idx)
             {
@@ -568,7 +568,7 @@ main(int argc, char* argv[static argc + 1])
                       part_idx == 0, part_idx == array_length(query_graph.local_supremal) - 2,
                       &query_part);
 
-            gva_uint const query_dist = query_graph.local_supremal[part_idx + 1].edges;
+            gva_uint const query_dist = query_graph.local_supremal[part_idx + 1].distance;
             // fprintf(stderr, "    query part %zu (dist: %d): " GVA_VARIANT_FMT "\n", part_idx, query_dist, GVA_VARIANT_PRINT(query_part));
 
             // find candidates for this local supremal part
@@ -638,7 +638,7 @@ main(int argc, char* argv[static argc + 1])
                 size_t slice_dist = 0;
                 for (size_t i = node_parts_table[npt_index].start; i < node_parts_table[npt_index].end; ++i)
                 {
-                    slice_dist += query_graph.local_supremal[i + 1].edges;
+                    sum_distance += query_graph.local_supremal[i + 1].distance;
                 } // for
                 // fprintf(stderr, "    slice dist: %zu node dist: %u\n", slice_dist, tree.nodes[node_idx].distance);
                 if (slice_dist >= tree.nodes[node_idx].distance)

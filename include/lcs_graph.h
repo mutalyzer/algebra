@@ -30,7 +30,11 @@ typedef struct
     gva_uint row;
     gva_uint col;
     gva_uint length;
-    gva_uint edges;
+    union
+    {
+        gva_uint edges;
+        gva_uint distance;
+    };
     gva_uint lambda;
 } GVA_Node;
 
