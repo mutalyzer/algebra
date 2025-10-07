@@ -692,10 +692,10 @@ main(int argc, char* argv[static argc + 1])
             gva_uint distance;
         }* results_table = hash_table_init(gva_std_allocator, 1024, sizeof(*results_table));
 
-        // fprintf(stderr, "Loop over all node parts for every query:\n");
-        for (size_t npt_index = 0; npt_index < array_header(node_parts_table)->capacity; ++npt_index)
+        // find all alleles that were part of a non-disjoint relation
+        for (size_t npt_idx = 0; npt_idx < array_header(node_parts_table)->capacity; ++npt_idx)
         {
-            size_t const node_idx = node_parts_table[npt_index].gva_key;
+            size_t const node_idx = node_parts_table[npt_idx].gva_key;
             if (node_idx == (uint32_t) - 1)
             {
                 continue;
