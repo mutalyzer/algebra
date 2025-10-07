@@ -626,15 +626,16 @@ main(int argc, char* argv[static argc + 1])
                 node_parts_table[npt_index].end - node_parts_table[npt_index].start > 1)
             {
                 // fprintf(stderr, "    Perform extra comparison\n");
-                size_t slice_dist = 0;
+                size_t const lhs_distance = tree.nodes[node_idx].distance;
+
+                size_t rhs_distance = 0;
                 for (size_t i = node_parts_table[npt_index].start; i < node_parts_table[npt_index].end; ++i)
                 {
-                    sum_distance += query_graph.local_supremal[i + 1].distance;
+                    rhs_distance += query_graph.local_supremal[i + 1].distance;
                 } // for
-                // fprintf(stderr, "    slice dist: %zu node dist: %u\n", slice_dist, tree.nodes[node_idx].distance);
-                if (slice_dist >= tree.nodes[node_idx].distance)
+                // fprintf(stderr, "    slice dist: %zu node dist: %u\n", rhs_distance, lhs_distance);
+                if (rhs_distance >= lhs_distance)
                 {
-                    // fprintf(stderr, "here A\n");
                     node_parts_table[npt_index].relation = GVA_OVERLAP;
                     node_parts_table[npt_index].included = 1;
                     continue;
@@ -653,12 +654,12 @@ main(int argc, char* argv[static argc + 1])
                           &rhs);
                 // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(rhs));
 
-                size_t const op_distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
-                // fprintf(stderr, "op_distance: %d\n", op_distance);
+                size_t const distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
+                // fprintf(stderr, "distance: %d\n", distance);
 
-                node_parts_table[npt_index].included = slice_dist;
+                node_parts_table[npt_index].included = rhs_distance;
 
-                if (tree.nodes[node_idx].distance - op_distance != slice_dist)
+                if (lhs_distance - distance != rhs_distance)
                 {
                     // fprintf(stderr, "here B\n");
                     node_parts_table[npt_index].relation = GVA_OVERLAP;
