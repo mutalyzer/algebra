@@ -621,15 +621,6 @@ main(int argc, char* argv[static argc + 1])
             {
                 continue;
             } // if
-            // fprintf(stderr, "    node_idx: %zu " GVA_VARIANT_FMT " %s (%d, %d) in:%d\n",
-            //         node_idx,
-            //         GVA_VARIANT_PRINT(((GVA_Variant) {
-            //             tree.nodes[node_idx].start, tree.nodes[node_idx].end,
-            //             trie_string(trie, tree.nodes[node_idx].inserted)
-            //         })),
-            //         GVA_RELATION_LABELS[node_parts_table[npt_index].relation],
-            //         node_parts_table[npt_index].start, node_parts_table[npt_index].end,
-            //         node_parts_table[npt_index].included);
 
             if (node_parts_table[npt_index].relation == GVA_CONTAINS &&
                 node_parts_table[npt_index].end - node_parts_table[npt_index].start > 1)
@@ -646,14 +637,6 @@ main(int argc, char* argv[static argc + 1])
                     // fprintf(stderr, "here A\n");
                     node_parts_table[npt_index].relation = GVA_OVERLAP;
                     node_parts_table[npt_index].included = 1;
-                    // fprintf(stderr, "    REPAIRED DISTANCE node_idx: %zu " GVA_VARIANT_FMT " %s (%d, %d, %d) in:%d\n", node_idx,
-                    // GVA_VARIANT_PRINT(((GVA_Variant) {
-                    //         tree.nodes[node_idx].start, tree.nodes[node_idx].end,
-                    //         trie_string(trie, tree.nodes[node_idx].inserted)
-                    //         })),
-                    //         GVA_RELATION_LABELS[node_parts_table[i].relation],
-                    //         node_parts_table[npt_index].start, node_parts_table[npt_index].end, node_parts_table[npt_index].part_idx,
-                    //         node_parts_table[npt_index].included);
                     continue;
                 } // if
 
@@ -682,17 +665,6 @@ main(int argc, char* argv[static argc + 1])
                     node_parts_table[npt_index].included = 1;
                     // fprintf(stderr, "OVERLAP!!\n");
                 } // if
-                // fprintf(stderr, "here C\n");
-
-                // fprintf(stderr, "    REPAIRED node_idx: %zu " GVA_VARIANT_FMT " %s (%d, %d, %d) in:%d\n", node_idx,
-                // GVA_VARIANT_PRINT(((GVA_Variant) {
-                //         tree.nodes[node_idx].start, tree.nodes[node_idx].end,
-                //         trie_string(trie, tree.nodes[node_idx].inserted)
-                //         })),
-                //         GVA_RELATION_LABELS[node_parts_table[npt_index].relation],
-                //         node_parts_table[npt_index].start, node_parts_table[npt_index].end, node_parts_table[npt_index].part_idx,
-                //         node_parts_table[npt_index].included);
-
             } // if
         } // for node_parts_table
 
