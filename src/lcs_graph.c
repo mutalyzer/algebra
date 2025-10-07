@@ -49,10 +49,10 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         })) - 1;
 
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            shift, 0, 0, GVA_NULL, GVA_NULL
+            shift, 0, 0, {0}, GVA_NULL
         }));
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            len_ref + shift, len_obs, 0, GVA_NULL, GVA_NULL
+            len_ref + shift, len_obs, 0, {0}, GVA_NULL
         }));
         graph.supremal = (GVA_Variant) {shift, len_ref + shift, {len_obs, observed}};
         return graph;
