@@ -52,9 +52,7 @@ compare_from_index(GVA_String const reference,
     GVA_Variant const lhs, gva_uint const lhs_dist,
     GVA_Variant const rhs, gva_uint const rhs_dist)
 {
-    // TODO: possibly reuse lhs_graph again
-
-    GVA_Relation relation;
+    // TODO: possibly reuse rhs_graph
 
     if (gva_variant_eq(lhs, rhs))
     {
@@ -137,6 +135,7 @@ compare_from_index(GVA_String const reference,
     size_t* rhs_ts = bitset_init(gva_std_allocator, len);
     bitset_fill(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
 
+    GVA_Relation relation = GVA_DISJOINT;
     if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
         bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
         bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
@@ -145,10 +144,6 @@ compare_from_index(GVA_String const reference,
     {
         relation = GVA_OVERLAP;
     } // if
-    else
-    {
-        relation = GVA_DISJOINT;
-    } // else
 
     lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
     lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
