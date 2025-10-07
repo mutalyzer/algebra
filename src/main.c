@@ -730,7 +730,6 @@ main(int argc, char* argv[static argc + 1])
         // }
         // fprintf(stderr, "\n");
 
-        // TODO: best datastructure if there is only a key?!
         struct RESULT_ALLELES
         {
             HASH_TABLE_KEY;
@@ -756,7 +755,7 @@ main(int argc, char* argv[static argc + 1])
                 {
                     HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx}));
                 } // if
-
+                // TODO: construct allele distance here?!
             } // for alleles
         } // for node_parts_table
 
