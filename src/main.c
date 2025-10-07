@@ -717,9 +717,9 @@ main(int argc, char* argv[static argc + 1])
         } // for node_parts_table
 
         // build result vector for every query
-        for (size_t results_index = 0; results_index < array_header(results_table)->capacity; ++results_index)
+        for (size_t results_idx = 0; results_idx < array_header(results_table)->capacity; ++results_idx)
         {
-            size_t allele_idx = results_table[results_index].gva_key;
+            size_t allele_idx = results_table[results_idx].gva_key;
             if (allele_idx == (uint32_t) - 1)
             {
                 continue;
