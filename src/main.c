@@ -552,7 +552,6 @@ main(int argc, char* argv[static argc + 1])
             GVA_Relation relation;
             gva_uint start;
             gva_uint end;
-            gva_uint part_idx;
             gva_uint included;
         }* node_parts_table = hash_table_init(gva_std_allocator, 1024, sizeof(*node_parts_table));
 
@@ -592,31 +591,21 @@ main(int argc, char* argv[static argc + 1])
                 if (node_parts_table[hash_idx].gva_key != node_idx)
                 {
                     HASH_TABLE_SET(gva_std_allocator, node_parts_table, node_idx,
-                                   ((struct NODE_PARTS) {node_idx, relation, -1, -1, -1, 0}));
+                                   ((struct NODE_PARTS) {node_idx, relation, part_idx, part_idx + 1, query_dist}));
                     hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
                 } // if
 
-                if (relation == GVA_EQUIVALENT)
+                if (relation == GVA_EQUIVALENT || relation == GVA_IS_CONTAINED)
                 {
                     node_parts_table[hash_idx].included = tree.nodes[node_idx].distance;
                 } // if
-                else if (relation == GVA_OVERLAP)
+                else if (relation == GVA_CONTAINS)
+                {
+                    node_parts_table[hash_idx].end = part_idx + 1;
+                } // if
+                else // GVA_OVERLAP
                 {
                     node_parts_table[hash_idx].included = 1;
-                } // if
-                else if (relation == GVA_IS_CONTAINED)
-                {
-                    node_parts_table[hash_idx].part_idx = part_idx;
-                    node_parts_table[hash_idx].included = tree.nodes[node_idx].distance;
-                } // if
-                else
-                {
-                    if (node_parts_table[hash_idx].included == 0)
-                    {
-                        node_parts_table[hash_idx].start = part_idx;
-                        node_parts_table[hash_idx].included = query_dist;
-                    } // if
-                    node_parts_table[hash_idx].end = part_idx + 1;
                 } // else
             } // for every candidate
             candidates = ARRAY_DESTROY(gva_std_allocator, candidates);
@@ -815,7 +804,7 @@ main(int argc, char* argv[static argc + 1])
                 }
                 else if (node_parts_table[hash_idx].relation == GVA_IS_CONTAINED)
                 {
-                    size_t const part_idx = node_parts_table[hash_idx].part_idx;
+                    size_t const part_idx = node_parts_table[hash_idx].start;
                     // fprintf(stderr, "part_idx: %zu\n", part_idx);
                     // fprintf(stderr, "if containment current: %s\n", GVA_RELATION_LABELS[relation]);
                     if (relation == GVA_CONTAINS)
