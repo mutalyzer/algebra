@@ -668,6 +668,10 @@ main(int argc, char* argv[static argc + 1])
                     continue;
                 } // if
 
+                GVA_Variant const lhs = {tree.nodes[node_idx].start,
+                                         tree.nodes[node_idx].end,
+                                         trie_string(trie, tree.nodes[node_idx].inserted)};
+
                 GVA_Variant rhs;
                 gva_edges(query_graph.observed.str,
                           query_graph.local_supremal[node_parts_table[npt_index].start],
@@ -676,10 +680,6 @@ main(int argc, char* argv[static argc + 1])
                           node_parts_table[npt_index].end == array_length(query_graph.local_supremal) - 1,
                           &rhs);
                 // fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(rhs));
-
-                GVA_Variant const lhs = {tree.nodes[node_idx].start,
-                                         tree.nodes[node_idx].end,
-                                         trie_string(trie, tree.nodes[node_idx].inserted)};
 
                 size_t const op_distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
                 // fprintf(stderr, "op_distance: %d\n", op_distance);
