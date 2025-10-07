@@ -442,7 +442,6 @@ main(int argc, char* argv[static argc + 1])
         size_t   data;
         char*    spdi;  // FIXME
         gva_uint join_start;  // offset into node_allele_join
-        gva_uint distance;
     }* db_alleles = NULL;
 
     size_t line_count = 0;
@@ -475,7 +474,7 @@ main(int argc, char* argv[static argc + 1])
 
         gva_uint const allele_idx = ARRAY_APPEND(
             gva_std_allocator, db_alleles,
-            ((struct Allele) {rsid, spdi, array_length(node_allele_join), graph.distance})
+            ((struct Allele) {rsid, spdi, array_length(node_allele_join)})
         ) - 1;
         // fprintf(stderr, "input allele %zu: " GVA_VARIANT_FMT " (dist: %d) stored at: %d\n", rsid, GVA_VARIANT_PRINT(variant), graph.distance, allele_idx);
 
@@ -690,6 +689,7 @@ main(int argc, char* argv[static argc + 1])
         struct RESULT_ALLELES
         {
             HASH_TABLE_KEY;
+            gva_uint distance;
         }* results_table = hash_table_init(gva_std_allocator, 1024, sizeof(*results_table));
 
         // fprintf(stderr, "Loop over all node parts for every query:\n");
@@ -710,9 +710,8 @@ main(int argc, char* argv[static argc + 1])
                 size_t hash_idx = HASH_TABLE_INDEX(results_table, allele_idx);
                 if (results_table[hash_idx].gva_key != allele_idx)
                 {
-                    HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx}));
+                    HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx, 0}));
                 } // if
-                // TODO: construct allele distance here?!
             } // for alleles
         } // for node_parts_table
 
@@ -740,6 +739,10 @@ main(int argc, char* argv[static argc + 1])
             {
                 // fprintf(stderr, "join_idx: %zu\n", join_idx);
                 size_t const node_idx = node_allele_join[join_idx].node;
+
+                // (re)calculate allele distance from nodes
+                results_table[results_idx].distance += tree.nodes[node_idx].distance;
+
                 size_t const hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
                 if (node_idx != node_parts_table[hash_idx].gva_key)
                 {
@@ -861,7 +864,7 @@ main(int argc, char* argv[static argc + 1])
                 // fprintf(stderr, "allele dist: %u query dist: %u\n", db_alleles[allele_idx].distance, rhs_graph.distance);
                 // fprintf(stderr, "relation: %s\n", GVA_RELATION_LABELS[relation]);
 
-                gva_uint const lhs_excluded = db_alleles[allele_idx].distance - included;
+                gva_uint const lhs_excluded = results_table[results_idx].distance - included;
                 gva_uint const rhs_excluded = rhs_graph.distance - included;
 
                 // fprintf(stderr, "included: %zu, lhs_excluded: %d rhs_excluded: %zu\n",
