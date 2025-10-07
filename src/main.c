@@ -586,50 +586,40 @@ main(int argc, char* argv[static argc + 1])
                 {
                     continue;
                 }
-                // link nodes to parts
+
+                // link nodes to query parts
                 size_t hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
-                // fprintf(stderr, "initial hash_idx: %zu\n", hash_idx);
                 if (node_parts_table[hash_idx].gva_key != node_idx)
                 {
-                    // TODO: set correct initial relation
                     HASH_TABLE_SET(gva_std_allocator, node_parts_table, node_idx,
-                                   ((struct NODE_PARTS) {node_idx, GVA_DISJOINT, -1, -1, -1, 0}));
+                                   ((struct NODE_PARTS) {node_idx, relation, -1, -1, -1, 0}));
                     hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
-                    // fprintf(stderr, "inside if hash_idx: %zu\n", hash_idx);
                 } // if
 
                 if (relation == GVA_EQUIVALENT)
                 {
-                    node_parts_table[hash_idx].relation = GVA_EQUIVALENT;
                     node_parts_table[hash_idx].included = tree.nodes[node_idx].distance;
                 } // if
                 else if (relation == GVA_OVERLAP)
                 {
-                    node_parts_table[hash_idx].relation = GVA_OVERLAP;
                     node_parts_table[hash_idx].included = 1;
                 } // if
                 else if (relation == GVA_IS_CONTAINED)
                 {
                     node_parts_table[hash_idx].part_idx = part_idx;
-                    node_parts_table[hash_idx].relation = GVA_IS_CONTAINED;
                     node_parts_table[hash_idx].included = tree.nodes[node_idx].distance;
                 } // if
-                else // if (relation == GVA_CONTAINS)
+                else
                 {
-                    // fprintf(stderr, "yo\n");
-                    // TODO: extend conditional with EQUIVALENT?!
-                    if (node_parts_table[hash_idx].relation == GVA_DISJOINT)
+                    if (node_parts_table[hash_idx].included == 0)
                     {
-                        node_parts_table[hash_idx].relation = GVA_CONTAINS;
                         node_parts_table[hash_idx].start = part_idx;
                         node_parts_table[hash_idx].included = query_dist;
-                    }
+                    } // if
                     node_parts_table[hash_idx].end = part_idx + 1;
-                } // if
+                } // else
             } // for every candidate
-
             candidates = ARRAY_DESTROY(gva_std_allocator, candidates);
-            // fprintf(stderr, "\n");
         } // for query allele parts
 
         // We have now compared all query parts to the index
