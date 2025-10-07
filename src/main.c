@@ -706,12 +706,7 @@ main(int argc, char* argv[static argc + 1])
                  naj_table_idx = node_allele_join[naj_table_idx].next)
             {
                 size_t const allele_idx = node_allele_join[naj_table_idx].allele;
-                // TODO: direct SET
-                size_t hash_idx = HASH_TABLE_INDEX(results_table, allele_idx);
-                if (results_table[hash_idx].gva_key != allele_idx)
-                {
-                    HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx, 0}));
-                } // if
+                HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx, 0}));
             } // for alleles
         } // for node_parts_table
 
