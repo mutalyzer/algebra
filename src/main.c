@@ -544,7 +544,10 @@ main(int argc, char* argv[static argc + 1])
         {
             HASH_TABLE_KEY;
             GVA_Relation relation;
-            gva_uint start;
+            union {
+                gva_uint start;
+                gva_uint part_idx;
+            };
             gva_uint end;
             gva_uint included;
         }* node_parts_table = hash_table_init(gva_std_allocator, 1024, sizeof(*node_parts_table));
@@ -585,7 +588,7 @@ main(int argc, char* argv[static argc + 1])
                 if (node_parts_table[hash_idx].gva_key != node_idx)
                 {
                     HASH_TABLE_SET(gva_std_allocator, node_parts_table, node_idx,
-                                   ((struct NODE_PARTS) {node_idx, relation, part_idx, part_idx + 1, rhs_distance}));
+                                   ((struct NODE_PARTS) { node_idx, relation, {part_idx}, part_idx + 1, rhs_distance}));
                     hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
                 } // if
 
@@ -706,7 +709,7 @@ main(int argc, char* argv[static argc + 1])
                  naj_table_idx = node_allele_join[naj_table_idx].next)
             {
                 size_t const allele_idx = node_allele_join[naj_table_idx].allele;
-                HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx, 0}));
+                HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) { allele_idx, 0}));
             } // for alleles
         } // for node_parts_table
 
@@ -770,7 +773,7 @@ main(int argc, char* argv[static argc + 1])
                 }
                 else if (node_parts_table[hash_idx].relation == GVA_IS_CONTAINED)
                 {
-                    size_t const part_idx = node_parts_table[hash_idx].start;
+                    size_t const part_idx = node_parts_table[hash_idx].part_idx;
                     // fprintf(stderr, "part_idx: %zu\n", part_idx);
                     // fprintf(stderr, "if containment current: %s\n", GVA_RELATION_LABELS[relation]);
                     if (relation == GVA_CONTAINS)
