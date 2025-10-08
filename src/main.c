@@ -632,11 +632,11 @@ main(int argc, char* argv[static argc + 1])
                           &rhs);
 
                 size_t const distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
-                // fprintf(stderr, "distance: %d\n", distance);
-
-                node_parts_table[npt_index].included = rhs_distance;
-
-                if (lhs_distance - distance != rhs_distance)
+                if (lhs_distance - distance == rhs_distance)
+                {
+                    node_parts_table[npt_index].included = rhs_distance;
+                } // if
+                else
                 {
                     node_parts_table[npt_index].relation = GVA_OVERLAP;
                     node_parts_table[npt_index].included = 1;
