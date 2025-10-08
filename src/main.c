@@ -439,8 +439,7 @@ main(int argc, char* argv[static argc + 1])
     }* node_allele_join = NULL;
     struct Allele
     {
-        size_t   data;
-        char*    spdi;  // FIXME
+        gva_uint line;
         gva_uint join_start;  // offset into node_allele_join
     }* db_alleles = NULL;
 
@@ -449,7 +448,7 @@ main(int argc, char* argv[static argc + 1])
     while (fgets(line, sizeof(line), stdin) != NULL)
     {
         size_t idx = 0;
-        size_t const rsid = parse_number(line, &idx);
+        parse_number(line, &idx);
         idx += 1;  // skip space or tab
         int const len = (char*) memchr(line + idx, '\n', LINE_SIZE - idx) - (line + idx);
         GVA_Variant variant;
@@ -461,20 +460,9 @@ main(int argc, char* argv[static argc + 1])
 
         GVA_LCS_Graph const graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        // FIXME
-        size_t const spdi_len = snprintf(NULL, 0, GVA_VARIANT_FMT_SPDI, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal)) + 1;
-        char* const spdi = malloc(spdi_len);
-        if (spdi == NULL)
-        {
-            fprintf(stderr, "spdi malloc() failed\n");
-            return EXIT_FAILURE;
-        }
-        snprintf(spdi, spdi_len, GVA_VARIANT_FMT_SPDI, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal));
-        // end FIXME
-
         gva_uint const allele_idx = ARRAY_APPEND(
             gva_std_allocator, db_alleles,
-            ((struct Allele) {rsid, spdi, array_length(node_allele_join)})
+            ((struct Allele) {line_count, array_length(node_allele_join)})
         ) - 1;
         // fprintf(stderr, "input allele %zu: " GVA_VARIANT_FMT " (dist: %d) stored at: %d\n", rsid, GVA_VARIANT_PRINT(variant), graph.distance, allele_idx);
 
@@ -529,7 +517,7 @@ main(int argc, char* argv[static argc + 1])
     while (fgets(line, sizeof(line), stream) != NULL)
     {
         size_t idx = 0;
-        size_t const query_id = parse_number(line, &idx);
+        parse_number(line, &idx);
         idx += 1;  // skip space or tab
         int const len = (char*) memchr(line + idx, '\n', LINE_SIZE - idx) - (line + idx);
         GVA_Variant rhs_var;
@@ -883,14 +871,9 @@ main(int argc, char* argv[static argc + 1])
                 // fprintf(stderr, "allele_idx: %zu relation: %s in: %zu\n", allele_idx, GVA_RELATION_LABELS[relation], included);
 
                 // only for testing
-                if (relation != GVA_EQUIVALENT || db_alleles[allele_idx].data < query_id)
+                if (relation != GVA_EQUIVALENT || db_alleles[allele_idx].line != line_count)
                 {
-                    printf("%zu %s %zu " GVA_VARIANT_FMT_SPDI " %s\n",
-                            db_alleles[allele_idx].data,
-                            db_alleles[allele_idx].spdi,
-                            query_id,
-                            GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_graph.supremal),
-                            GVA_RELATION_LABELS[relation]);
+                    printf("%u %zu %s\n", db_alleles[allele_idx].line, line_count, GVA_RELATION_LABELS[relation]);
                 }
             } // if
         } // for all alleles
@@ -909,15 +892,10 @@ main(int argc, char* argv[static argc + 1])
     } // while fgets
     fclose(stream);
 
-    for (size_t allele_idx = 0; allele_idx < array_length(db_alleles); ++allele_idx)
-    {
-        free(db_alleles[allele_idx].spdi);
-    }
     db_alleles = ARRAY_DESTROY(gva_std_allocator, db_alleles);
     node_allele_join = ARRAY_DESTROY(gva_std_allocator, node_allele_join);
     interval_tree_destroy(gva_std_allocator, &tree);
     trie_destroy(gva_std_allocator, &trie);
-
     gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
