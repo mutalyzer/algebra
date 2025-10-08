@@ -3,13 +3,16 @@
 
 
 #include <stddef.h>     // size_t
-#include <stdint.h>     // uint32_t
+#include <stdint.h>     // UINT32_MAX, uint32_t
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "array.h"      // ARRAY_DESTROY, array_header
 
 
 #define HASH_TABLE_KEY uint32_t gva_key
+
+
+static uint32_t const GVA_NOT_FOUND = UINT32_MAX;
 
 
 void*
