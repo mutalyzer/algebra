@@ -346,6 +346,8 @@ vcf_main(int argc, char* argv[static argc + 1])
 
     GVA_Variant variants[2];
     size_t count = 0;
+    size_t out_count = 0;
+    size_t drop_count = 0;
     static char line[LINE_SIZE] = {0};
     while (fgets(line, sizeof(line), stdin) != NULL)
     {
@@ -358,11 +360,12 @@ vcf_main(int argc, char* argv[static argc + 1])
 
         variants[count > 0] = prefix_trimmed(reference.len, reference.str, variants[count > 0]);
 
-        for (size_t i = 0; i <= (count > 0); ++i)
+        if (count > 0 && variants[0].end > variants[1].start)
         {
-            fprintf(stderr, GVA_VARIANT_FMT " ", GVA_VARIANT_PRINT(variants[i]));
-        } // for
-        fprintf(stderr, "\n");
+            fprintf(stderr, "drop: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variants[1]));
+            drop_count += 1;
+            continue;
+        } // if
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1 + (count > 0), variants);
         GVA_Variant local;
@@ -374,11 +377,10 @@ vcf_main(int argc, char* argv[static argc + 1])
                 &local);
             if (i < array_length(graph.local_supremal) - 2)
             {
-                fprintf(stderr, "OUT: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(local));
+                //fprintf(stderr, "OUT: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(local));
+                out_count += 1;
             } // if
         } // for
-        gva_lcs_graph_destroy(gva_std_allocator, graph);
-
         if (count > 0)
         {
             gva_string_destroy(gva_std_allocator, variants[0].sequence);
@@ -386,35 +388,42 @@ vcf_main(int argc, char* argv[static argc + 1])
         variants[0] = (GVA_Variant) {local.start, local.end, gva_string_dup(gva_std_allocator, local.sequence)};
         variants[0] = suffix_trimmed(reference.len, reference.str, variants[0]);
 
+        gva_string_destroy(gva_std_allocator, graph.observed);
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
+
         count += 1;
     } // while
+    GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, variants);
+    GVA_Variant local;
+    for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+    {
+        gva_edges(graph.observed.str,
+            graph.local_supremal[i], graph.local_supremal[i + 1],
+            i == 0, i == array_length(graph.local_supremal) - 2,
+            &local);
+        //fprintf(stderr, "OUT: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(local));
+        out_count += 1;
+    } // for
+    if (count > 0)
+    {
+        gva_string_destroy(gva_std_allocator, variants[0].sequence);
+    } // if
+    gva_string_destroy(gva_std_allocator, graph.observed);
+    gva_lcs_graph_destroy(gva_std_allocator, graph);
+
+    printf("#local supremal parts: %zu\n", out_count);
+    printf("#dropped variants: %zu\n", drop_count);
 
     gva_string_destroy(gva_std_allocator, reference);
     return EXIT_SUCCESS;
-
-    struct IN_EX
-    {
-        HASH_TABLE_KEY;
-        gva_uint included;
-        gva_uint excluded;
-    }* table = hash_table_init(gva_std_allocator, 1024, sizeof(*table));
-
-    HASH_TABLE_SET(gva_std_allocator, table, 42, ((struct IN_EX) {42, 1, 2}));
-
-    if (table[HASH_TABLE_INDEX(table, 42)].gva_key == 42)
-    {
-        fprintf(stderr, "FOUND at %zu\n", HASH_TABLE_INDEX(table, 42));
-    } // if
-
-    table = HASH_TABLE_DESTROY(gva_std_allocator, table);
-
-    return EXIT_SUCCESS;
-}
+} // vcf_main
 
 
 int
 main(int argc, char* argv[static argc + 1])
 {
+    // return vcf_main(argc, argv);
+
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
