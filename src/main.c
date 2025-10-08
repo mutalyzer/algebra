@@ -450,6 +450,7 @@ main(int argc, char* argv[static argc + 1])
     {
         gva_uint line;
         gva_uint join_start;  // offset into node_allele_join
+        gva_uint distance;
     }* db_alleles = NULL;
 
     size_t line_count = 0;
@@ -471,7 +472,7 @@ main(int argc, char* argv[static argc + 1])
 
         gva_uint const allele_idx = ARRAY_APPEND(
             gva_std_allocator, db_alleles,
-            ((struct Allele) {line_count, array_length(node_allele_join)})
+            ((struct Allele) {line_count, array_length(node_allele_join), graph.distance})
         ) - 1;
 
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
@@ -647,7 +648,6 @@ main(int argc, char* argv[static argc + 1])
         struct RESULT_ALLELES
         {
             HASH_TABLE_KEY;
-            gva_uint distance;
         }* results_table = hash_table_init(gva_std_allocator, 1024, sizeof(*results_table));
 
         // find all alleles that were part of a non-disjoint relation
@@ -664,7 +664,7 @@ main(int argc, char* argv[static argc + 1])
                  naj_table_idx = node_allele_join[naj_table_idx].next)
             {
                 size_t const allele_idx = node_allele_join[naj_table_idx].allele;
-                HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx, 0}));
+                HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx}));
             } // for alleles
         } // for node_parts_table
 
@@ -689,9 +689,6 @@ main(int argc, char* argv[static argc + 1])
                 ++join_idx)
             {
                 size_t const node_idx = node_allele_join[join_idx].node;
-
-                // (re)calculate allele distance from nodes
-                results_table[results_idx].distance += tree.nodes[node_idx].distance;
 
                 size_t const hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
                 if (node_idx != node_parts_table[hash_idx].gva_key)
@@ -788,7 +785,7 @@ main(int argc, char* argv[static argc + 1])
 
             if (included > 0)
             {
-                gva_uint const lhs_excluded = results_table[results_idx].distance - included;
+                gva_uint const lhs_excluded = db_alleles[allele_idx].distance - included;
                 gva_uint const rhs_excluded = rhs_graph.distance - included;
 
                 if (lhs_excluded > 0 && rhs_excluded > 0)
