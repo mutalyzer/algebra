@@ -31,7 +31,7 @@ hash_table_ensure(GVA_Allocator const allocator, void* const self, size_t const 
 
 
 #define HASH_TABLE_SET(allocator, self, key, value)                     \
-    (self) = hash_table_ensure(allocator, self, (sizeof(*(self)))),     \
+    (self) = hash_table_ensure(allocator, self, sizeof(*(self))),       \
     array_header(self)->length += 1,                                    \
     self[hash_table_index(self, sizeof(*(self)), key)] = (value)
 
