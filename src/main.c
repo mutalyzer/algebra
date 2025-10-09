@@ -615,8 +615,8 @@ main(int argc, char* argv[static argc + 1])
                 } // for
                 if (rhs_distance >= lhs_distance)
                 {
-                    node_parts_table[npt_index].relation = GVA_OVERLAP;
                     node_parts_table[npt_index].included = 1;
+                    node_parts_table[npt_index].relation = GVA_OVERLAP;
                     continue;
                 } // if
 
@@ -639,8 +639,8 @@ main(int argc, char* argv[static argc + 1])
                 } // if
                 else
                 {
-                    node_parts_table[npt_index].relation = GVA_OVERLAP;
                     node_parts_table[npt_index].included = 1;
+                    node_parts_table[npt_index].relation = GVA_OVERLAP;
                 } // if
             } // if
         } // for node_parts_table
@@ -677,8 +677,8 @@ main(int argc, char* argv[static argc + 1])
                 continue;
             } // if
 
-            GVA_Relation relation = GVA_DISJOINT;
             gva_uint included = 0;
+            GVA_Relation relation = GVA_DISJOINT;
 
             gva_uint* is_contained_nodes = NULL;
             gva_uint is_contained_part_idx = -1;
