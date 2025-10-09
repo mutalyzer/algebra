@@ -20,7 +20,7 @@
 #include "array.h"          // ARRAY_DESTROY, array_length
 #include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
-#include "hash_table.h"     // HASH_TABLE_KEY, hash_table_*
+#include "hash_table.h"     // GVA_NOT_FOUND, HASH_TABLE_KEY, hash_table_*
 #include "interval_tree.h"  // Interval_Tree, interval_tree_*
 #include "trie.h"           // Trie, trie_*
 
@@ -599,7 +599,7 @@ main(int argc, char* argv[static argc + 1])
         for (size_t npt_index = 0; npt_index < array_header(node_parts_table)->capacity; ++npt_index)
         {
             size_t const node_idx = node_parts_table[npt_index].gva_key;
-            if (node_idx == (uint32_t) -1)
+            if (node_idx == GVA_NOT_FOUND)
             {
                 continue;
             } // if
