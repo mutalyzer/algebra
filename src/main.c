@@ -806,7 +806,7 @@ main(int argc, char* argv[static argc + 1])
                 } // else
 
                 // only for testing
-                if (relation != GVA_EQUIVALENT || db_alleles[allele_idx].line != line_count)
+                if (relation != GVA_EQUIVALENT || db_alleles[allele_idx].line < line_count)
                 {
                     printf("%u %zu %s\n", db_alleles[allele_idx].line, line_count, GVA_RELATION_LABELS[relation]);
                 } // if
