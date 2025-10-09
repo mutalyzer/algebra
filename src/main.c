@@ -680,7 +680,7 @@ main(int argc, char* argv[static argc + 1])
         for (size_t npt_idx = 0; npt_idx < array_header(node_parts_table)->capacity; ++npt_idx)
         {
             size_t const node_idx = node_parts_table[npt_idx].gva_key;
-            if (node_idx == (uint32_t) - 1)
+            if (node_idx == GVA_NOT_FOUND)
             {
                 continue;
             } // if
@@ -698,7 +698,7 @@ main(int argc, char* argv[static argc + 1])
         for (size_t results_idx = 0; results_idx < array_header(results_table)->capacity; ++results_idx)
         {
             size_t allele_idx = results_table[results_idx].gva_key;
-            if (allele_idx == (uint32_t) - 1)
+            if (allele_idx == GVA_NOT_FOUND)
             {
                 continue;
             } // if
