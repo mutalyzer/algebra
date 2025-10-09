@@ -419,6 +419,32 @@ vcf_main(int argc, char* argv[static argc + 1])
 } // vcf_main
 
 
+void
+repair_is_contained(GVA_Allocator const allocator, GVA_String const reference, GVA_LCS_Graph const graph, Interval_Tree const tree, Trie const trie,
+      gva_uint** nodes, gva_uint const part_idx, gva_uint* const included, GVA_Relation* const relation)
+{
+    size_t const nodes_len = array_length(*nodes);
+    if (*relation == GVA_IS_CONTAINED && nodes_len == 1)
+    {
+        *included += tree.nodes[*nodes[0]].distance;
+    } // if
+    else if (*relation == GVA_IS_CONTAINED && nodes_len > 1)
+    {
+        size_t const slice_dist = multiple_is_contained_distance(allocator, reference.len, reference.str,
+                                                                 graph, part_idx, tree, trie, *nodes);
+        if (slice_dist == 1)
+        {
+            *included = 1;
+            *relation = GVA_OVERLAP;
+        } // if
+        else
+        {
+            *included += slice_dist;
+        } // else
+    } // if
+    *nodes = ARRAY_DESTROY(gva_std_allocator, *nodes);
+}
+
 int
 main(int argc, char* argv[static argc + 1])
 {
@@ -726,62 +752,22 @@ main(int argc, char* argv[static argc + 1])
 
                     if (part_idx != is_contained_part_idx)
                     {
-                        // close old window
-                        if (array_length(is_contained_nodes) > 1)
-                        {
-                            size_t const slice_dist = multiple_is_contained_distance(gva_std_allocator, reference.len, reference.str,
-                                                                                     rhs_graph, part_idx, tree, trie, is_contained_nodes);
-                            if (slice_dist == 1)
-                            {
-                                included = 1;
-                                relation = GVA_OVERLAP;
-                                break;
-                            } // if
-                            included += slice_dist;
-                        } // if
-                        else if (array_length(is_contained_nodes) == 1)
-                        {
-                            included += tree.nodes[is_contained_nodes[0]].distance;
-                        } // if
-
-                        // open new window
+                        repair_is_contained(gva_std_allocator, reference, rhs_graph, tree, trie,
+                                            &is_contained_nodes, is_contained_part_idx, &included, &relation);
                         is_contained_part_idx = part_idx;
-                        is_contained_nodes = ARRAY_DESTROY(gva_std_allocator, is_contained_nodes);
-                    } // if part_idx != is_contained_part_idx
+                    } // if
                     ARRAY_APPEND(gva_std_allocator, is_contained_nodes, node_idx);
                     relation = GVA_IS_CONTAINED;
-                } // if relation == GVA_IS_CONTAINED
+                } // if
                 else if (node_parts_table[hash_idx].relation == GVA_OVERLAP)
                 {
                     included = 1;
                     relation = GVA_OVERLAP;
                     break;
                 } // if
-
             } // for all nodes for this allele
-
-            // close old window
-            size_t const n = array_length(is_contained_nodes);
-            if (relation == GVA_IS_CONTAINED && n == 1)
-            {
-                included += tree.nodes[is_contained_nodes[0]].distance;
-            }
-            else if (relation == GVA_IS_CONTAINED && n > 1)
-            {
-                size_t const slice_dist = multiple_is_contained_distance(gva_std_allocator, reference.len, reference.str,
-                                                                         rhs_graph, is_contained_part_idx, tree, trie, is_contained_nodes);
-                if (slice_dist == 1)
-                {
-                    included = 1;
-                    relation = GVA_OVERLAP;
-                } // if
-                else
-                {
-                    included += slice_dist;
-                } // else
-
-            } // if is_contained repair
-            is_contained_nodes = ARRAY_DESTROY(gva_std_allocator, is_contained_nodes);
+            repair_is_contained(gva_std_allocator, reference, rhs_graph, tree, trie,
+                                &is_contained_nodes, is_contained_part_idx, &included, &relation);
 
             if (included > 0)
             {
