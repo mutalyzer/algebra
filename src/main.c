@@ -445,11 +445,10 @@ repair_is_contained(GVA_Allocator const allocator, GVA_String const reference, G
     *nodes = ARRAY_DESTROY(gva_std_allocator, *nodes);
 }
 
-int
-main(int argc, char* argv[static argc + 1])
-{
-    // return vcf_main(argc, argv);
 
+int
+dbsnp_main(int argc, char* argv[static argc + 1])
+{
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
@@ -816,4 +815,12 @@ main(int argc, char* argv[static argc + 1])
     gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
-} // main
+} // dbsnp_main
+
+
+int
+main(int argc, char* argv[static argc + 1])
+{
+// return vcf_main(argc, argv);
+    return dbsnp_main(argc, argv);
+}
