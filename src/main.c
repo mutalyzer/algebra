@@ -214,6 +214,7 @@ construct_variant(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     Interval_Tree const tree, Trie const trie, gva_uint* const nodes)
 {
+    // FIXME: in 1 loop
     size_t const n = array_length(nodes);
     GVA_Variant* variants = allocator.allocate(allocator.context, NULL, 0, n * sizeof(*variants));
     for (size_t i = 0; i < n; ++i)
@@ -377,7 +378,7 @@ vcf_main(int argc, char* argv[static argc + 1])
                 &local);
             if (i < array_length(graph.local_supremal) - 2)
             {
-                //fprintf(stderr, "OUT: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(local));
+                printf(GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, local));
                 out_count += 1;
             } // if
         } // for
@@ -394,14 +395,14 @@ vcf_main(int argc, char* argv[static argc + 1])
         count += 1;
     } // while
     GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, variants);
-    GVA_Variant local;
     for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
     {
+        GVA_Variant local;
         gva_edges(graph.observed.str,
             graph.local_supremal[i], graph.local_supremal[i + 1],
             i == 0, i == array_length(graph.local_supremal) - 2,
             &local);
-        //fprintf(stderr, "OUT: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(local));
+        printf(GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, local));
         out_count += 1;
     } // for
     if (count > 0)
@@ -411,8 +412,8 @@ vcf_main(int argc, char* argv[static argc + 1])
     gva_string_destroy(gva_std_allocator, graph.observed);
     gva_lcs_graph_destroy(gva_std_allocator, graph);
 
-    printf("#local supremal parts: %zu\n", out_count);
-    printf("#dropped variants: %zu\n", drop_count);
+    fprintf(stderr, "#local supremal parts: %zu\n", out_count);
+    fprintf(stderr, "#dropped variants: %zu\n", drop_count);
 
     gva_string_destroy(gva_std_allocator, reference);
     return EXIT_SUCCESS;
@@ -702,7 +703,7 @@ main(int argc, char* argv[static argc + 1])
                     if (relation == GVA_EQUIVALENT || relation == GVA_DISJOINT)
                     {
                         relation = GVA_EQUIVALENT;
-                    }
+                    } // if
                 } // if
                 else if (node_parts_table[hash_idx].relation == GVA_CONTAINS)
                 {
