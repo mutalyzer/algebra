@@ -378,7 +378,7 @@ vcf_main(int argc, char* argv[static argc + 1])
                 &local);
             if (i < array_length(graph.local_supremal) - 2)
             {
-                printf(GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, local));
+                printf("%u " GVA_VARIANT_FMT_SPDI "\n", graph.local_supremal[i + 1].distance, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, local));
                 out_count += 1;
             } // if
         } // for
@@ -402,7 +402,7 @@ vcf_main(int argc, char* argv[static argc + 1])
             graph.local_supremal[i], graph.local_supremal[i + 1],
             i == 0, i == array_length(graph.local_supremal) - 2,
             &local);
-        printf(GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, local));
+        printf("%u " GVA_VARIANT_FMT_SPDI "\n", graph.local_supremal[i + 1].distance, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, local));
         out_count += 1;
     } // for
     if (count > 0)
