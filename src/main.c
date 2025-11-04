@@ -413,6 +413,66 @@ suffix_trimmed(size_t const len_ref, char const reference[static len_ref],
 
 
 int
+vcf_main2(int argc, char* argv[static argc + 1]) {
+    errno = 0;
+    FILE *stream = fopen(argv[1], "r");
+    if (stream == NULL) {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    GVA_Variant* variants = NULL;
+    size_t count = 0;
+    static char line[LINE_SIZE] = {0};
+
+    size_t start = 0;
+
+    // read line
+    while (fgets(line, sizeof(line), stdin) != NULL) {
+        GVA_Variant variant;
+        int const len = (char*) memchr(line, '\n', LINE_SIZE) - line;
+        if (gva_parse_spdi(len, line, &variant) == 0)
+        {
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", count + 1, line);
+            continue;
+        } // if
+        fprintf(stderr, "variant: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
+
+        ARRAY_APPEND(gva_std_allocator, variants, prefix_trimmed(reference.len, reference.str, variant));
+
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str,
+                                                          array_length(variants) - start, variants + start);
+        size_t const extra = array_length(graph.local_supremal) == 0 ? 0 : array_length(graph.local_supremal) - 2;
+        variants = array_ensure(gva_std_allocator, variants, sizeof(*variants), extra);
+
+        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+        {
+            fprintf(stderr, "loop\n");
+            GVA_Variant variant;
+            gva_edges(graph.observed.str,
+                      graph.local_supremal[i], graph.local_supremal[i + 1],
+                      i == 0, i == array_length(graph.local_supremal) - 2,
+                      &variant);
+
+            fprintf(stderr, "part: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
+
+            variants[start] = (GVA_Variant) {variant.start, variant.end, gva_string_dup(gva_std_allocator, variant.sequence)};
+            start += 1;
+            fprintf(stderr, "end loop\n");
+
+        } // for
+
+        count += 1;
+    }
+    return EXIT_SUCCESS;
+}
+
+
+int
 vcf_main(int argc, char* argv[static argc + 1])
 {
     errno = 0;
@@ -1185,7 +1245,8 @@ main(int argc, char* argv[static argc + 1])
 {
     // return fasta_blob_read(argc, argv);
     // return fasta_blob_write(argc, argv);
-    return vcf_main(argc, argv);
+    return vcf_main2(argc, argv);
+    // return vcf_main(argc, argv);
     // return dbsnp_main(argc, argv);
     // return locals_main(argc, argv);
 } // main
