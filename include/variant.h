@@ -34,6 +34,10 @@ bool
 gva_variant_eq(GVA_Variant const lhs, GVA_Variant const rhs);
 
 
+GVA_Variant
+gva_variant_dup(GVA_Allocator const allocator, GVA_Variant const variant);
+
+
 size_t
 gva_variant_length(GVA_Variant const variant);
 

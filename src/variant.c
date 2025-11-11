@@ -4,7 +4,7 @@
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/types.h"       // gva_uint
-#include "../include/string.h"      // GVA_String, gva_string_concat
+#include "../include/string.h"      // GVA_String, gva_string_*
 #include "../include/variant.h"     // gva_parse_spdi, gva_patch
 #include "common.h"     // MIN
 
@@ -118,6 +118,13 @@ gva_variant_eq(GVA_Variant const lhs, GVA_Variant const rhs)
         lhs.sequence.len == rhs.sequence.len &&
         memcmp(lhs.sequence.str, rhs.sequence.str, MIN(lhs.sequence.len, rhs.sequence.len)) == 0;
 } // gva_variant_eq
+
+
+inline GVA_Variant
+gva_variant_dup(GVA_Allocator const allocator, GVA_Variant const variant)
+{
+    return (GVA_Variant) {variant.start, variant.end, gva_string_dup(allocator, variant.sequence)};
+} // gva_variant_dup
 
 
 inline size_t

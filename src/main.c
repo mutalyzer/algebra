@@ -427,118 +427,83 @@ vcf_main2(int argc, char* argv[static argc + 1])
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
     GVA_Variant* variants = NULL;
-    size_t start = 0;
 
     size_t count = 0;
     static char line[LINE_SIZE] = {0};
     while (fgets(line, sizeof(line), stdin) != NULL)
     {
-        count += 1;
         GVA_Variant variant;
-        int const len = (char*) memchr(line, '\n', LINE_SIZE) - line;
-        if (gva_parse_spdi(len, line, &variant) == 0)
+        if (gva_parse_spdi(strlen(line) - 1, line, &variant) == 0)
         {
-            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", count, line);
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", count + 1, line);
             continue;
         } // if
+        count += 1;
 
         fprintf(stderr, "input:   " GVA_VARIANT_FMT " at line %zu\n", GVA_VARIANT_PRINT(variant), count);
+        variant = prefix_trimmed(reference.len, reference.str, variant);
+        size_t const idx = ARRAY_APPEND(gva_std_allocator, variants, variant) - 1;
+        fprintf(stderr, "trimmed: " GVA_VARIANT_FMT " @ %zu\n", GVA_VARIANT_PRINT(variant), idx);
 
-        size_t const idx = ARRAY_APPEND(gva_std_allocator, variants, prefix_trimmed(reference.len, reference.str, variant)) - 1;
+        size_t start = 0;
+        if (array_length(variants) > 1)
+        {
+            start = array_length(variants) - 2;
+            variant = variants[start];
+            variants[start] = suffix_trimmed(reference.len, reference.str, variants[start]);
+            fprintf(stderr, "last part:      " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
+            fprintf(stderr, "suffix trimmed: " GVA_VARIANT_FMT " @ %zu\n", GVA_VARIANT_PRINT(variants[start]), start);
+        } // if
 
-        fprintf(stderr, "trimmed: " GVA_VARIANT_FMT " @ %zu\n", GVA_VARIANT_PRINT(variants[idx]), idx);
+        fprintf(stderr, "[%zu, %zu)\n", start, array_length(variants));
 
-        fprintf(stderr, "from: [%zu, %zu)\n", start, array_length(variants));
-
-        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str,
-                                                          array_length(variants) - start, variants + start);
-        size_t const length = array_length(graph.local_supremal);
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, array_length(variants) - start, variants + start);
+        size_t const length = array_length(graph.local_supremal) - 1;
+        fprintf(stderr, "#local supremal parts: %zu\n", length);
 
         if (length == 0)
         {
-            fprintf(stderr, "Cancelling variants\n");
-            array_header(variants)->length = start;
-            if (start > 0)
-            {
-                start -= 1;
-            } // if
+            fprintf(stderr, "Cancelling and NIL-variants\n");
+            array_header(variants)->length -= 1;
             gva_string_destroy(gva_std_allocator, graph.observed);
             gva_lcs_graph_destroy(gva_std_allocator, graph);
             continue;
         } // if
 
-        if (array_length(variants) - start == 1)
+        variants[start] = variant;
+        fprintf(stderr, "restore: " GVA_VARIANT_FMT " @ %zu\n", GVA_VARIANT_PRINT(variants[start]), start);
+
+        gva_edges(graph.observed.str,
+            graph.local_supremal[0], graph.local_supremal[1],
+            true, 1 == length - 1, &variant);
+
+        if (array_length(variants) == 1)
         {
             fprintf(stderr, "First variant\n");
-            for (size_t i = 0; i < length - 1; ++i)
+            variants[0] = gva_variant_dup(gva_std_allocator, variant);
+            fprintf(stderr, "store: " GVA_VARIANT_FMT " @ %zu\n", GVA_VARIANT_PRINT(variants[0]), 0UL);
+            for (size_t i = 1; i < length; ++i)
             {
-                gva_edges(graph.observed.str, graph.local_supremal[i], graph.local_supremal[i + 1], i == 0, i == length - 2, &variant);
-                if (i == 0)
-                {
-                    variants[start] = (GVA_Variant) {variant.start, variant.end, gva_string_dup(gva_std_allocator, variant.sequence)};
-                } // if
-                else
-                {
-                    ARRAY_APPEND(gva_std_allocator, variants, ((GVA_Variant) {variant.start, variant.end, gva_string_dup(gva_std_allocator, variant.sequence)}));
-                } // else
+                gva_edges(graph.observed.str,
+                    graph.local_supremal[i], graph.local_supremal[i + 1],
+                    false, i == length - 1, &variant);
+                size_t const idx = ARRAY_APPEND(gva_std_allocator, variants, gva_variant_dup(gva_std_allocator, variant)) - 1;
+                fprintf(stderr, "add: " GVA_VARIANT_FMT " @ %zu\n", GVA_VARIANT_PRINT(variant), idx);
             } // for
-            start += length - 2;
-            gva_string_destroy(gva_std_allocator, graph.observed);
-            gva_lcs_graph_destroy(gva_std_allocator, graph);
-            continue;
         } // if
 
-        gva_edges(graph.observed.str, graph.local_supremal[0], graph.local_supremal[1], true, 1 == length - 2, &variant);
         if (gva_variant_eq(variants[start], variant))
         {
             fprintf(stderr, "Nicely separated\n");
-            for (size_t i = 1; i < length - 1; ++i)
-            {
-                gva_edges(graph.observed.str, graph.local_supremal[i], graph.local_supremal[i + 1], false, i == length - 2, &variant);
-                if (i == 1)
-                {
-                    variants[start + 1] = (GVA_Variant) {variant.start, variant.end, gva_string_dup(gva_std_allocator, variant.sequence)};
-                } // if
-                else
-                {
-                    ARRAY_APPEND(gva_std_allocator, variants, ((GVA_Variant) {variant.start, variant.end, gva_string_dup(gva_std_allocator, variant.sequence)}));
-                } // else
-            } // for
-            start += length - 2;
-            gva_string_destroy(gva_std_allocator, graph.observed);
-            gva_lcs_graph_destroy(gva_std_allocator, graph);
-            continue;
         } // if
 
-        fprintf(stderr, "Difficult\n");
-        fprintf(stderr, "  " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
-        while (start > 0)
-        {
-            gva_string_destroy(gva_std_allocator, variants[start].sequence);
-            variants[start] = (GVA_Variant) {variant.start, variant.end, gva_string_dup(gva_std_allocator, variant.sequence)};
-            start -= 1;
-            array_header(variants)->length -= 1;
-
-            gva_string_destroy(gva_std_allocator, graph.observed);
-            gva_lcs_graph_destroy(gva_std_allocator, graph);
-
-            fprintf(stderr, "from: [%zu, %zu)\n", start, array_length(variants));
-            graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, array_length(variants) - start, variants + start);
-
-            gva_edges(graph.observed.str, graph.local_supremal[0], graph.local_supremal[1], true, 1 == length - 2, &variant);
-            if (gva_variant_eq(variants[start], variant))
-            {
-                gva_string_destroy(gva_std_allocator, graph.observed);
-                gva_lcs_graph_destroy(gva_std_allocator, graph);
-                break;
-            } // if
-        } // while
-        start += 1;
+        gva_string_destroy(gva_std_allocator, graph.observed);
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
     } // while
 
     if (variants != NULL)
     {
-        fprintf(stderr, "======\nlength: %zu\n", array_length(variants));
+        fprintf(stderr, "=======\n");
         for (size_t i = 0; i < array_length(variants); ++i)
         {
             fprintf(stderr, "%3zu: " GVA_VARIANT_FMT "\n", i, GVA_VARIANT_PRINT(variants[i]));
