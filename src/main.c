@@ -468,7 +468,7 @@ vcf_main2(int argc, char* argv[static argc + 1])
                 gva_edges(graph.observed.str,
                       graph.local_supremal[i], graph.local_supremal[i + 1],
                       i == 0, i == array_length(graph.local_supremal) - 2, &variant);
-                fprintf(stdout, GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
+                fprintf(stdout, GVA_VARIANT_FMT_SPDI "\t%u\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), graph.local_supremal[i + 1].distance);
                 created += 1;
             } // for
 
@@ -497,7 +497,7 @@ vcf_main2(int argc, char* argv[static argc + 1])
             gva_edges(graph.observed.str,
                   graph.local_supremal[i], graph.local_supremal[i + 1],
                   i == 0, i == array_length(graph.local_supremal) - 2, &variant);
-            fprintf(stdout, GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
+            fprintf(stdout, GVA_VARIANT_FMT_SPDI "\t%u\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), graph.local_supremal[i + 1].distance);
         } // for
 
         for (size_t i = 0; i < array_length(variants); ++i)
