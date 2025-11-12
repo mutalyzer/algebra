@@ -440,6 +440,8 @@ vcf_main2(int argc, char* argv[static argc + 1])
     GVA_Variant last = {0, 0, {0, NULL}};
 
     size_t count = 0;
+    size_t dropped = 0;
+    size_t created = 0;
     static char line[LINE_SIZE] = {0};
     while (fgets(line, sizeof(line), stdin) != NULL) {
         GVA_Variant variant;
@@ -451,7 +453,8 @@ vcf_main2(int argc, char* argv[static argc + 1])
 
         if (prefix_trimmed(reference.len, reference.str, variant).start < last.end)
         {
-            fprintf(stderr, "dropped: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
+            fprintf(stderr, "dropped: " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
+            dropped += 1;
             continue;
         } // if
 
@@ -461,11 +464,12 @@ vcf_main2(int argc, char* argv[static argc + 1])
 
             for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
             {
-                GVA_Variant part;
+                GVA_Variant variant;
                 gva_edges(graph.observed.str,
                       graph.local_supremal[i], graph.local_supremal[i + 1],
-                      i == 0, i == array_length(graph.local_supremal) - 2, &part);
-                fprintf(stdout, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(part));
+                      i == 0, i == array_length(graph.local_supremal) - 2, &variant);
+                fprintf(stdout, GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
+                created += 1;
             } // for
 
             for (size_t i = 0; i < array_length(variants); ++i)
@@ -489,11 +493,11 @@ vcf_main2(int argc, char* argv[static argc + 1])
 
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
         {
-            GVA_Variant part;
+            GVA_Variant variant;
             gva_edges(graph.observed.str,
                   graph.local_supremal[i], graph.local_supremal[i + 1],
-                  i == 0, i == array_length(graph.local_supremal) - 2, &part);
-            fprintf(stdout, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(part));
+                  i == 0, i == array_length(graph.local_supremal) - 2, &variant);
+            fprintf(stdout, GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
         } // for
 
         for (size_t i = 0; i < array_length(variants); ++i)
@@ -506,6 +510,10 @@ vcf_main2(int argc, char* argv[static argc + 1])
         gva_string_destroy(gva_std_allocator, graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
     } // if
+
+    fprintf(stderr, "count:   %zu\n", count);
+    fprintf(stderr, "dropped: %zu\n", dropped);
+    fprintf(stderr, "created: %zu\n", created);
 
     gva_string_destroy(gva_std_allocator, reference);
 
