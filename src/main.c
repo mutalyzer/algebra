@@ -412,6 +412,62 @@ suffix_trimmed(size_t const len_ref, char const reference[static len_ref],
 } // suffix_trimmed
 
 
+int wu_main(int argc, char* argv[static argc + 1])
+{
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage: %s reference.blob\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE *stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    GVA_Variant* variants = NULL;
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        //size_t idx = 0;
+        //size_t const distance = parse_number(line, &idx);
+        //idx += 1;  // skip space or tab
+        //int const len = (char*) memchr(line + idx, '\n', LINE_SIZE - idx) - (line + idx);
+        size_t const len = strlen(line) - 1;
+        GVA_Variant variant;
+        if (gva_parse_spdi(len, line, &variant) == 0)
+        {
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
+            continue;
+        } // if
+
+        ARRAY_APPEND(gva_std_allocator, variants, gva_variant_dup(gva_std_allocator, prefix_trimmed(reference.len, reference.str, variant)));
+        line_count += 1;
+    } // while
+
+    fprintf(stderr, "#parts:   %zu\n", array_length(variants));
+
+    GVA_String observed = gva_patch(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
+
+    fprintf(stderr, "observed length: %zu\n", observed.len);
+
+    size_t const distance = gva_edit_distance(gva_std_allocator, reference.len, reference.str, observed.len, observed.str);
+
+    fprintf(stderr, "distance: %zu\n", distance);
+
+    return EXIT_SUCCESS;
+} // wu_main
+
+
 int
 vcf_main2(int argc, char* argv[static argc + 1])
 {
@@ -451,7 +507,7 @@ vcf_main2(int argc, char* argv[static argc + 1])
         } // if
         count += 1;
 
-        if (prefix_trimmed(reference.len, reference.str, variant).start < last.end)
+        if (variant.start < last.end)
         {
             fprintf(stderr, "dropped: " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
             dropped += 1;
@@ -1294,7 +1350,8 @@ main(int argc, char* argv[static argc + 1])
 {
     // return fasta_blob_read(argc, argv);
     // return fasta_blob_write(argc, argv);
-    return vcf_main2(argc, argv);
+    // return vcf_main2(argc, argv);
+    return wu_main(argc, argv);
     // return vcf_main(argc, argv);
     // return dbsnp_main(argc, argv);
     // return locals_main(argc, argv);
