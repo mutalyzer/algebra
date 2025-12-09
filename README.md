@@ -13,7 +13,7 @@ The concept of binary relations between variants is introduced in:
 The process of selecting a proper variant description (variant extraction) is presented in:
 
 [Mark A. Santcroos, Walter A. Kosters, Mihai Lefter, Jeroen F.J. Laros, Jonathan K. Vis.
-"A Graph-based Approach to Variant Extraction." *arXiv* (2025).](https://arxiv.org/abs/2503.18472)
+"A Graph-based Approach to Variant Extraction from Sequences." *NAR Genomics and Bioinformatics* 7.4 (2025).](https://doi.org/10.1093/nargab/lqaf173)
 
 Installation
 ------------
