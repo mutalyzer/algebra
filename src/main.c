@@ -604,14 +604,14 @@ dbsnp_main(int argc, char* argv[static argc + 1])
     Interval_Tree tree = interval_tree_init();
     struct Node_Allele
     {
-        gva_uint node;
-        gva_uint allele;
+        gva_uint link;
         gva_uint next;
     }* node_allele_join = NULL;
     struct Allele
     {
         gva_uint line;
         gva_uint join_start;  // offset into node_allele_join
+        gva_uint join_end;  // end of offset into node_allele_join
         gva_uint distance;
     }* db_alleles = NULL;
 
@@ -634,7 +634,9 @@ dbsnp_main(int argc, char* argv[static argc + 1])
 
         gva_uint const allele_idx = ARRAY_APPEND(
             gva_std_allocator, db_alleles,
-            ((struct Allele) {line_count, array_length(node_allele_join), graph.distance})
+            ((struct Allele) {line_count, array_length(node_allele_join),
+                              array_length(node_allele_join) + array_length(graph.local_supremal) - 1,
+                    graph.distance})
         ) - 1;
 
         for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
@@ -652,7 +654,7 @@ dbsnp_main(int argc, char* argv[static argc + 1])
             {
                 array_header(tree.nodes)->length -= 1;  // reverse; node already in the tree
             } // if
-            tree.nodes[node_idx].alleles = ARRAY_APPEND(gva_std_allocator, node_allele_join, ((struct Node_Allele) {node_idx, allele_idx, tree.nodes[node_idx].alleles})) - 1;
+            tree.nodes[node_idx].alleles = ARRAY_APPEND(gva_std_allocator, node_allele_join, ((struct Node_Allele) {node_idx ^ allele_idx, tree.nodes[node_idx].alleles})) - 1;
         } // for
 
         gva_string_destroy(gva_std_allocator, graph.observed);
@@ -825,7 +827,7 @@ dbsnp_main(int argc, char* argv[static argc + 1])
                  naj_table_idx != GVA_NULL;
                  naj_table_idx = node_allele_join[naj_table_idx].next)
             {
-                size_t const allele_idx = node_allele_join[naj_table_idx].allele;
+                size_t const allele_idx = node_allele_join[naj_table_idx].link ^ node_idx;
                 HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx}));
             } // for alleles
         } // for node_parts_table
@@ -846,12 +848,9 @@ dbsnp_main(int argc, char* argv[static argc + 1])
             gva_uint is_contained_part_idx = -1;
 
             // loop over all nodes for this allele
-            for (size_t join_idx = db_alleles[allele_idx].join_start;
-                join_idx < array_length(node_allele_join) && node_allele_join[join_idx].allele == allele_idx;
-                ++join_idx)
+            for (size_t join_idx = db_alleles[allele_idx].join_start; join_idx < db_alleles[allele_idx].join_end; ++join_idx)
             {
-                size_t const node_idx = node_allele_join[join_idx].node;
-
+                size_t node_idx = node_allele_join[join_idx].link ^ allele_idx;
                 size_t const hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
                 if (node_idx != node_parts_table[hash_idx].gva_key)
                 {
@@ -1210,7 +1209,7 @@ main(int argc, char* argv[static argc + 1])
 {
     // return fasta_blob_read(argc, argv);
     // return fasta_blob_write(argc, argv);
-    return vcf_main(argc, argv);
-    // return dbsnp_main(argc, argv);
+    // return vcf_main(argc, argv);
+    return dbsnp_main(argc, argv);
     // return locals_main(argc, argv);
 } // main
