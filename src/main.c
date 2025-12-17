@@ -595,7 +595,7 @@ dbsnp_main(int argc, char* argv[static argc + 1])
     } // if
 
     GVA_String reference = {0, NULL};
-    reference = gva_fasta_sequence(gva_std_allocator, stream);
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
     fclose(stream);
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
