@@ -2,6 +2,7 @@
 #define GVA_ALIGN_H
 
 
+#include <limits.h>     // CHAR_BIT
 #include <stddef.h>     // size_t
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -12,8 +13,8 @@ typedef struct
 {
     gva_uint row;
     gva_uint col;
-    gva_uint length : 31;
-    gva_uint moved  :  1;
+    gva_uint length : sizeof(gva_uint) * CHAR_BIT - 1;
+    gva_uint moved  : 1;
     gva_uint incoming;
     gva_uint idx;
     gva_uint next;
