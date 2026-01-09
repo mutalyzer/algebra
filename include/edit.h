@@ -5,6 +5,19 @@
 #include <stddef.h>     // size_t
 
 #include "allocator.h"  // GVA_Allocator
+#include "types.h"      // gva_uint
+
+
+typedef struct
+{
+    gva_uint row;
+    gva_uint col;
+} MNode;
+
+
+extern size_t max_lcs_pos;
+extern MNode* matches;
+extern char* uniq;
 
 
 size_t
