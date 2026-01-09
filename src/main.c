@@ -1063,6 +1063,8 @@ locals_main(int argc, char* argv[static argc + 1])
     fprintf(stderr, "#db_alleles: %zu\n", array_length(db_alleles));
     fprintf(stderr, "#join:    %zu\n", array_length(node_allele_join));
 
+
+
     db_alleles = ARRAY_DESTROY(gva_std_allocator, db_alleles);
     node_allele_join = ARRAY_DESTROY(gva_std_allocator, node_allele_join);
     interval_tree_destroy(gva_std_allocator, &tree);
@@ -1337,6 +1339,42 @@ slice_blob_main(int argc, char* argv[static argc + 1])
 
 
 int
+extract_main(int argc, char* argv[static argc + 1]) {
+    errno = 0;
+    FILE *stream = fopen(argv[1], "r");
+    if (stream == NULL) {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0, NULL};
+    reference = gva_fasta_sequence(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL) {
+        size_t const len = strlen(line) - 1;
+        GVA_Variant variant;
+        if (gva_parse_spdi(len, line, &variant) == 0) {
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
+            continue;
+        } // if
+
+        GVA_LCS_Graph const graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+
+        gva_string_destroy(gva_std_allocator, graph.observed);
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
+        gva_canonical(gva_std_allocator, graph);
+    } // while
+
+    return EXIT_SUCCESS;
+} // extract_main
+
+
+int
 main(int argc, char* argv[static argc + 1])
 {
     return wu_main(argc, argv);
@@ -1344,5 +1382,7 @@ main(int argc, char* argv[static argc + 1])
     // return dbsnp_main(argc, argv);
     // return fasta_blob_write(argc, argv);
     // return vcf_main(argc, argv);
+    // return dbsnp_main(argc, argv);
     // return locals_main(argc, argv);
+    // return extract_main(argc, argv);
 } // main
