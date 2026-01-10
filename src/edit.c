@@ -37,7 +37,7 @@ onp_snake(size_t const m, char const a[static restrict m],
         row += 1;
         col += 1;
         size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2;
-        fprintf(stderr, "%zu: (%zu, %zu)\n", lcs_pos - 1, row - 1, col - 1);
+        //fprintf(stderr, "%zu: (%zu, %zu)\n", lcs_pos - 1, row - 1, col - 1);
         uniq[lcs_pos - 1] = 0;
         //matches[lcs_pos - 1] = (MNode) {-1, -1};
         if (lcs_pos > max_lcs_pos)
@@ -109,7 +109,7 @@ gva_edit_distance(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs])
 {
-    fprintf(stderr, "ALIGN\n");
+    //fprintf(stderr, "ALIGN\n");
     return len_ref > len_obs ?
            onp_compare(allocator, len_obs, observed, len_ref, reference, true) :
            onp_compare(allocator, len_ref, reference, len_obs, observed, false);
