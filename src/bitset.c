@@ -1,6 +1,5 @@
 // FIXME: __builtin_popcountll
 #include <limits.h>     // CHAR_BIT
-#include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
 #include <string.h>     // memset
 
@@ -8,20 +7,6 @@
 #include "array.h"      // ARRAY_*, array_*
 #include "bitset.h"     // bitset_*
 #include "common.h"     // MIN
-
-
-static inline size_t
-mask(size_t const value)
-{
-    return 1ULL << (value % (sizeof(size_t) * CHAR_BIT));
-} // mask
-
-
-static inline size_t
-slot(size_t const value)
-{
-    return value / (sizeof(size_t) * CHAR_BIT);
-} // slot
 
 
 inline size_t*
@@ -70,27 +55,6 @@ bitset_intersection_cnt(size_t const lhs[static 1], size_t const rhs[static 1])
     } // for
     return count;
 } // bitset_intersection_cnt
-
-
-inline void
-bitset_set(size_t self[static 1], size_t const value)
-{
-    self[slot(value)] |= mask(value);
-} // bitset_set
-
-
-inline void
-bitset_clear(size_t self[static 1], size_t const value)
-{
-    self[slot(value)] &= ~mask(value);
-} // bitset_clear
-
-
-inline bool
-bitset_test(size_t const self[static 1], size_t const value)
-{
-    return self[slot(value)] & mask(value);
-} // bitset_test
 
 
 inline size_t*
