@@ -33,7 +33,7 @@
 #define REFERENCE_ID "NC_000001.11"
 
 
-static void
+void
 lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph)
 {
     fprintf(stream, "strict digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->%u\n", graph.source);
@@ -1092,7 +1092,7 @@ strrev(size_t const n, char str[static n])
 } // strrev
 
 
-#define SMALL
+//#define SMALL
 
 
 void
@@ -1103,7 +1103,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     //fprintf(stderr, "LOCAL %zu %zu :: %zu\n", len_ref, len_obs, offset);
     if (len_ref == 0 || len_obs == 0)
     {
-        printf("T " GVA_VARIANT_FMT_SPDI " %zu\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, ((GVA_Variant) {offset, offset + len_ref, {len_obs, observed}})), len_ref + len_obs);
+        printf(GVA_VARIANT_FMT_SPDI " %zu\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, ((GVA_Variant) {offset, offset + len_ref, {len_obs, observed}})), len_ref + len_obs);
         return;
     } // if
     size_t distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
@@ -1129,7 +1129,6 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     size_t prev_lcs_pos = 0;
     size_t prev_row = -1;
     size_t prev_col = -1;
-    bool graaf_maken = false;
     for (size_t i = 0; i < max_lcs_pos_local; ++i)
     {
         size_t const j = max_lcs_pos_local - i - 1;
@@ -1140,56 +1139,50 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
             forward[i].col == len_obs - backward[j].col - 1)
 */
         if (forward[i].row == len_ref - backward[j].row - 1 &&
-            forward[i].col == len_obs - backward[j].col - 1)
+            forward[i].col == len_obs - backward[j].col - 1 &&
+            (f_uniq[i] == 1 || b_uniq[j] == 1))
         {
-            if (f_uniq[i] == 1 || b_uniq[j] == 1)
+            #ifdef SMALL
+            fprintf(stderr, "common: %zu: (%u, %u)\n", i, forward[i].row, forward[i].col);
+            #endif
+            if (i > prev_lcs_pos + 1 ||
+                forward[i].row > prev_row + 1 ||
+                forward[i].col > prev_col + 1)
             {
-                #ifdef SMALL
-                fprintf(stderr, "common: %zu: (%u, %u)\n", i, forward[i].row, forward[i].col);
-                #endif
-                if (i > prev_lcs_pos + 1 ||
-                    forward[i].row > prev_row + 1 ||
-                    forward[i].col > prev_col + 1)
+                size_t const distance = forward[i].row + forward[i].col - 2 * i - sum;
+                if (distance > 0)
                 {
-                    size_t const distance = forward[i].row + forward[i].col - 2 * i - sum;
                     sum += distance;
+                    //printf("R gap %zu: (%zu, %zu)--(%u, %u)  %zu\n", i, prev_row + 1, prev_col + 1, forward[i].row, forward[i].col, distance);
                     local_supremal(forward[i].row - prev_row - 1, reference + prev_row + 1, forward[i].col - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
                     //printf(GVA_STRING_FMT "\n", (int) (forward[i].row - prev_row - 1), reference + prev_row + 1);
                     //printf(GVA_STRING_FMT "\n", (int) (forward[i].col - prev_col - 1), observed + prev_col + 1);
                 } // if
-                prev_lcs_pos = i;
-                prev_row = forward[i].row;
-                prev_col = forward[i].col;
             } // if
-            else
-            {
-                graaf_maken = true;
-            } // else
+            prev_lcs_pos = i;
+            prev_row = forward[i].row;
+            prev_col = forward[i].col;
         } // if
     } // for
     if (len_ref > prev_row + 1 || len_obs > prev_col + 1)
     {
         size_t const distance = len_ref + len_obs - 2 * max_lcs_pos_local - sum;
         sum += distance;
-        if (graaf_maken)
+        //printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
+        //printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
+        GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
+        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
         {
-            GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
-            for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
-            {
-                GVA_Variant part;
-                gva_edges(graph.observed.str,
-                    graph.local_supremal[i], graph.local_supremal[i + 1],
-                    i == 0, i == array_length(graph.local_supremal) - 2,
-                    &part);
-                printf("G " GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, part), graph.local_supremal[i + 1].distance);
-            } // for
-            gva_lcs_graph_destroy(gva_std_allocator, graph);
-        } // if
-        else
-        {
-            printf("L " GVA_VARIANT_FMT " %zu  %zu+[(%zu, %zu)--(%zu, %zu)]\n", GVA_VARIANT_PRINT(((GVA_Variant) {offset + prev_row + 1, offset + len_ref, {len_obs - prev_col - 1, observed + prev_col + 1}})), distance, offset, prev_row + 1, prev_col + 1, len_ref, len_obs);
-        } // else
-        //printf("gap %zu: (%zu, %zu)--(%zu, %zu)  %zu\n", max_lcs_pos_local, prev_row + 1, prev_col + 1, len_ref, len_obs, distance);
+            GVA_Variant variant;
+            gva_edges(graph.observed.str,
+                graph.local_supremal[i], graph.local_supremal[i + 1],
+                i == 0, i == array_length(graph.local_supremal) - 2,
+                &variant);
+            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.local_supremal[i + 1].distance);
+        } // for
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
+        //printf("L " GVA_VARIANT_FMT " %zu  %zu+[(%zu, %zu)--(%zu, %zu)]\n", GVA_VARIANT_PRINT(((GVA_Variant) {offset + prev_row + 1, offset + len_ref, {len_obs - prev_col - 1, observed + prev_col + 1}})), distance, offset, prev_row + 1, prev_col + 1, len_ref, len_obs);
+        //printf("L gap %zu: (%zu, %zu)--(%zu, %zu)  %zu\n", max_lcs_pos_local, prev_row + 1, prev_col + 1, len_ref, len_obs, distance);
         //printf(GVA_STRING_FMT "\n", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
         //printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
     } // if
@@ -1315,11 +1308,6 @@ slice_blob_main(int argc, char* argv[static argc + 1])
         gva_string_destroy(gva_std_allocator, observed);
         return EXIT_FAILURE;
     } // if
-
-    fprintf(stderr, GVA_STRING_FMT "\n", (int) 839585 - 839404, reference.str + 839404);
-
-
-    return EXIT_SUCCESS;
 
     MNode const start = {2750171, 2750160};
     MNode const end = {12954448, 12953797};

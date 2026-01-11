@@ -8,7 +8,7 @@
 #include "common.h"     // ABS, MAX
 
 
-#include <stdio.h>  // DEBUG
+//#include <stdio.h>  // DEBUG
 
 
 size_t max_lcs_pos = 0;

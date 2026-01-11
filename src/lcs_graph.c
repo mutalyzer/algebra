@@ -52,7 +52,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             shift, 0, 0, {0}, GVA_NULL
         }));
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
-            len_ref + shift, len_obs, 0, {0}, GVA_NULL
+            len_ref + shift, len_obs, 0, {graph.distance}, GVA_NULL
         }));
         graph.supremal = (GVA_Variant) {shift, len_ref + shift, {len_obs, observed}};
         return graph;
@@ -236,7 +236,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     {
         gva_uint const idx = lcs.nodes[prev].idx;
         gva_uint const offset = graph.nodes[idx].length - lcs.index[lcs.length - 1].offset - len;
-        gva_uint const distance = graph.nodes[idx].row + graph.nodes[idx].col + 2 * offset + 2 * len - 2 * (lcs.length - len);
+        gva_uint const distance = graph.nodes[idx].row + graph.nodes[idx].col + 2 * offset + 2 * len - 2 * lcs.length;
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[idx].row + offset, graph.nodes[idx].col + offset, len, {distance - prev_distance}, idx
         }));
@@ -245,7 +245,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     } // if
     if (graph.nodes != NULL)
     {
-        gva_uint const distance = graph.nodes[0].row + graph.nodes[0].length - len + graph.nodes[0].col + graph.nodes[0].length - len - 2 * (lcs.length - len);
+        gva_uint const distance = graph.nodes[0].row + graph.nodes[0].length - len + graph.nodes[0].col + graph.nodes[0].length - len - 2 * lcs.length;
         ARRAY_APPEND(allocator, graph.local_supremal, ((GVA_Node) {
             graph.nodes[0].row + graph.nodes[0].length - len, graph.nodes[0].col + graph.nodes[0].length - len, 0, {distance - prev_distance}, 0
         }));
