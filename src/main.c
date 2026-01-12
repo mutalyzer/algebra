@@ -1092,7 +1092,7 @@ strrev(size_t const n, char str[static n])
 } // strrev
 
 
-GVA_String vcf2obs(GVA_String reference, FILE *stream)
+GVA_String vcf2obs(GVA_Allocator const allocator, GVA_String reference, FILE *stream)
 {
     GVA_Variant * variants = NULL;
 
@@ -1115,7 +1115,7 @@ GVA_String vcf2obs(GVA_String reference, FILE *stream)
             continue;
         } // if
 
-        ARRAY_APPEND(gva_std_allocator, variants, gva_variant_dup(gva_std_allocator, trimmed));
+        ARRAY_APPEND(allocator, variants, gva_variant_dup(allocator, trimmed));
         line_count += 1;
     } // while
 
@@ -1123,7 +1123,7 @@ GVA_String vcf2obs(GVA_String reference, FILE *stream)
     fprintf(stderr, "#variants: %zu\n", array_length(variants));
     fprintf(stderr, "#dropped:  %zu\n", dropped);
 
-    return gva_patch(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
+    return gva_patch(allocator, reference.len, reference.str, array_length(variants), variants);
 } // vcf2obs
 
 
@@ -1280,7 +1280,8 @@ wu_main(int argc, char* argv[static argc + 1])
         return EXIT_FAILURE;
     } // if
 
-    GVA_String observed = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    // GVA_String observed = gva_fasta_sequence_blob(gva_std_allocator, stream);  // blob
+    GVA_String observed = vcf2obs(gva_std_allocator, reference, stream);  // vcf
     fclose(stream);
     fprintf(stderr, "observed length: %zu\n", observed.len);
 
@@ -1437,7 +1438,7 @@ int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
     fclose(stream);
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
-    GVA_String observed = vcf2obs(reference, stdin);
+    GVA_String observed = vcf2obs(gva_std_allocator, reference, stdin);
     fasta_blob_write(stdout, observed);
 
     return EXIT_SUCCESS;
