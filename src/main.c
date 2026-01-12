@@ -1092,6 +1092,41 @@ strrev(size_t const n, char str[static n])
 } // strrev
 
 
+GVA_String vcf2obs(GVA_String reference, FILE *stream)
+{
+    GVA_Variant * variants = NULL;
+
+    size_t line_count = 0;
+    size_t dropped = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stream) != NULL) {
+        size_t const len = strlen(line) - 1;
+        GVA_Variant variant;
+        if (gva_parse_spdi(len, line, &variant) == 0) {
+            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
+            continue;
+        } // if
+
+        GVA_Variant trimmed = prefix_trimmed(reference.len, reference.str, variant);
+
+        if (array_length(variants) > 0 && trimmed.start < variants[array_length(variants) - 1].end) {
+            //fprintf(stderr, "dropped: at line %zu: %s", line_count + 1, line);
+            dropped += 1;
+            continue;
+        } // if
+
+        ARRAY_APPEND(gva_std_allocator, variants, gva_variant_dup(gva_std_allocator, trimmed));
+        line_count += 1;
+    } // while
+
+    fprintf(stderr, "===INPUT===\n");
+    fprintf(stderr, "#variants: %zu\n", array_length(variants));
+    fprintf(stderr, "#dropped:  %zu\n", dropped);
+
+    return gva_patch(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
+} // vcf2obs
+
+
 //#define SMALL
 
 
@@ -1383,41 +1418,6 @@ int make_ref_blob_main(int argc, char* argv[static argc + 1]) {
 
     return EXIT_SUCCESS;
 } // make_ref_blob_main
-
-
-GVA_String vcf2obs(GVA_String reference, FILE *stream)
-{
-    GVA_Variant * variants = NULL;
-
-    size_t line_count = 0;
-    size_t dropped = 0;
-    static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stream) != NULL) {
-        size_t const len = strlen(line) - 1;
-        GVA_Variant variant;
-        if (gva_parse_spdi(len, line, &variant) == 0) {
-            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
-            continue;
-        } // if
-
-        GVA_Variant trimmed = prefix_trimmed(reference.len, reference.str, variant);
-
-        if (array_length(variants) > 0 && trimmed.start < variants[array_length(variants) - 1].end) {
-            //fprintf(stderr, "dropped: at line %zu: %s", line_count + 1, line);
-            dropped += 1;
-            continue;
-        } // if
-
-        ARRAY_APPEND(gva_std_allocator, variants, gva_variant_dup(gva_std_allocator, trimmed));
-        line_count += 1;
-    } // while
-
-    fprintf(stderr, "===INPUT===\n");
-    fprintf(stderr, "#variants: %zu\n", array_length(variants));
-    fprintf(stderr, "#dropped:  %zu\n", dropped);
-
-    return gva_patch(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
-} // vcf2obs
 
 
 int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
