@@ -1385,32 +1385,14 @@ int make_ref_blob_main(int argc, char* argv[static argc + 1]) {
 } // make_ref_blob_main
 
 
-int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
-    if (argc < 2) {
-        fprintf(stderr, "usage: %s reference.blob\n", argv[0]);
-        return EXIT_FAILURE;
-    } // if
-
-    errno = 0;
-    FILE *stream = fopen(argv[1], "r");
-    if (stream == NULL) {
-        fprintf(stderr, "error: %s\n", strerror(errno));
-        return EXIT_FAILURE;
-    } // if
-
-    GVA_String reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
-    fclose(stream);
-    fprintf(stderr, "reference length: %zu\n", reference.len);
-
+GVA_String vcf2obs(GVA_String reference, FILE *stream)
+{
     GVA_Variant * variants = NULL;
-    GVA_Variant * lss = NULL;
 
-    size_t last = 0;
     size_t line_count = 0;
     size_t dropped = 0;
-    size_t distance = 0;
     static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stdin) != NULL) {
+    while (fgets(line, sizeof(line), stream) != NULL) {
         size_t const len = strlen(line) - 1;
         GVA_Variant variant;
         if (gva_parse_spdi(len, line, &variant) == 0) {
@@ -1434,9 +1416,28 @@ int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
     fprintf(stderr, "#variants: %zu\n", array_length(variants));
     fprintf(stderr, "#dropped:  %zu\n", dropped);
 
-    GVA_String observed = gva_patch(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
-    GVA_String lss_observed = gva_patch(gva_std_allocator, reference.len, reference.str, array_length(lss), lss);
+    return gva_patch(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
+} // vcf2obs
 
+
+int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s reference.blob\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE *stream = fopen(argv[1], "r");
+    if (stream == NULL) {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    GVA_String observed = vcf2obs(reference, stdin);
     fasta_blob_write(stdout, observed);
 
     return EXIT_SUCCESS;
