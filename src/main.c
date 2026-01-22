@@ -1448,13 +1448,12 @@ int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
 int
 main(int argc, char* argv[static argc + 1])
 {
-    return wu_main(argc, argv);
+    // return wu_main(argc, argv);
     // return slice_blob_main(argc, argv);
-    // return dbsnp_main(argc, argv);
     // return fasta_blob_write(argc, argv);
     // return vcf_main(argc, argv);
     // return dbsnp_main(argc, argv);
-    // return locals_main(argc, argv);
+    return locals_main(argc, argv);
     // return extract_main(argc, argv);
     // return make_ref_blob_main(argc, argv);
     // return make_obs_blob_main(argc, argv);
