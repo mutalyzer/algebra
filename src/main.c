@@ -1029,16 +1029,16 @@ locals_main(int argc, char* argv[static argc + 1])
         {
             fgets(line, sizeof(line), stream);
             idx = 0;
-            size_t const distance = parse_number(line, &idx);
-            allele_distance += distance;
-            idx += 1;
-            int const len = (char*) memchr(line + idx, '\n', LINE_SIZE - idx) - (line + idx);
+            int const len = (char*) memchr(line + idx, ' ', LINE_SIZE - idx) - (line + idx);
             GVA_Variant variant;
             if (gva_parse_spdi(len, line + idx, &variant) == 0) {
                 fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
                 continue;
             } //
+            idx += len + 1;
+            size_t const distance = parse_number(line, &idx);
             // fprintf(stderr, GVA_VARIANT_FMT " %zu\n", GVA_VARIANT_PRINT(variant), distance);
+            allele_distance += distance;
 
             gva_uint const inserted_idx = trie_insert(gva_std_allocator, &trie, variant.sequence.len, variant.sequence.str);
             gva_uint const tmp_idx = ARRAY_APPEND(gva_std_allocator, tree.nodes,
