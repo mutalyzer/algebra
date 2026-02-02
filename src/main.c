@@ -30,7 +30,8 @@
 
 #define LINE_SIZE 8194
 
-#define REFERENCE_ID "NC_000006.12"
+// #define REFERENCE_ID "NC_000006.12"
+#define REFERENCE_ID "NC_000001.11"
 
 
 void
@@ -61,9 +62,9 @@ lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph)
             } // else
         } // for
     } // for
-    for (size_t i = 0; i < array_length(graph.local_supremal); ++i)
+    for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
     {
-        fprintf(stream, "%u[penwidth=2]\n", graph.local_supremal[i].lambda);
+        fprintf(stream, "%u[penwidth=2]\n", graph.dom_nodes[i].link);
     } // for
     fprintf(stream, "}\n");
 } // lcs_graph_dot
@@ -140,6 +141,10 @@ compare_from_index(GVA_String const reference,
 {
     // TODO: possibly reuse rhs_graph
 
+    fprintf(stderr, GVA_VARIANT_FMT_SPDI " " GVA_VARIANT_FMT_SPDI "\n",
+        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, lhs),
+        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs));
+
     if (gva_variant_eq(lhs, rhs))
     {
         return GVA_EQUIVALENT;
@@ -147,9 +152,11 @@ compare_from_index(GVA_String const reference,
 
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
+    fprintf(stderr, "start: %zu end: %zu\n", start, end);
 
     size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
     size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
+    fprintf(stderr, "lhs_len: %zu rhs_len: %zu\n", lhs_len, rhs_len);
 
     gva_uint distance = 0;
     if (lhs_len == 0)
@@ -186,6 +193,8 @@ compare_from_index(GVA_String const reference,
         lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
     } // else
 
+    fprintf(stderr, "distance: %u lhs_distance: %u rhs_distance: %u\n", distance, lhs_distance, rhs_distance);
+
     if (lhs_distance + rhs_distance == distance)
     {
         return GVA_DISJOINT;
@@ -193,6 +202,7 @@ compare_from_index(GVA_String const reference,
 
     if (lhs_distance - rhs_distance == distance)
     {
+        fprintf(stderr, "this return?!\n");
         return GVA_CONTAINS;
     } // if
 
@@ -345,7 +355,7 @@ multiple_is_contained_distance(GVA_Allocator const allocator,
         lhs_distance += tree.nodes[nodes[i]].distance;
     } // for
 
-    size_t const rhs_distance = graph.local_supremal[part_idx + 1].distance;
+    size_t const rhs_distance = graph.dom_nodes[part_idx + 1].distance;
     if (lhs_distance >= rhs_distance)
     {
         return 1;  // overlap
@@ -355,8 +365,8 @@ multiple_is_contained_distance(GVA_Allocator const allocator,
 
     GVA_Variant rhs;
     gva_edges(graph.observed.str,
-              graph.local_supremal[part_idx], graph.local_supremal[part_idx + 1],
-              part_idx == 0, part_idx == array_length(graph.local_supremal) - 2,
+              graph.dom_nodes[part_idx], graph.dom_nodes[part_idx + 1],
+              part_idx == 0, part_idx == array_length(graph.dom_nodes) - 2,
               &rhs);
 
     size_t const distance = variants_distance(allocator, len_ref, reference, rhs, lhs);
@@ -470,14 +480,14 @@ int vcf_main(int argc, char* argv[static argc + 1])
         {
             GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, array_length(variants) - last, variants + last);
 
-            for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+            for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
             {
                 GVA_Variant variant;
                 gva_edges(graph.observed.str,
-                      graph.local_supremal[i], graph.local_supremal[i + 1],
-                      i == 0, i == array_length(graph.local_supremal) - 2, &variant);
-                //fprintf(stdout, "%u " GVA_VARIANT_FMT_SPDI "\n", graph.local_supremal[i + 1].distance, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
-                distance += graph.local_supremal[i + 1].distance;
+                      graph.dom_nodes[i], graph.dom_nodes[i + 1],
+                      i == 0, i == array_length(graph.dom_nodes) - 2, &variant);
+                //fprintf(stdout, "%u " GVA_VARIANT_FMT_SPDI "\n", graph.dom_nodes[i + 1].distance, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
+                distance += graph.dom_nodes[i + 1].distance;
                 ARRAY_APPEND(gva_std_allocator, lss, gva_variant_dup(gva_std_allocator, variant));
             } // for
 
@@ -494,14 +504,14 @@ int vcf_main(int argc, char* argv[static argc + 1])
     {
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, array_length(variants) - last, variants + last);
 
-        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
             GVA_Variant variant;
             gva_edges(graph.observed.str,
-                  graph.local_supremal[i], graph.local_supremal[i + 1],
-                  i == 0, i == array_length(graph.local_supremal) - 2, &variant);
-            //fprintf(stdout, "%u " GVA_VARIANT_FMT_SPDI "\n", graph.local_supremal[i + 1].distance, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
-            distance += graph.local_supremal[i + 1].distance;
+                  graph.dom_nodes[i], graph.dom_nodes[i + 1],
+                  i == 0, i == array_length(graph.dom_nodes) - 2, &variant);
+            //fprintf(stdout, "%u " GVA_VARIANT_FMT_SPDI "\n", graph.dom_nodes[i + 1].distance, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
+            distance += graph.dom_nodes[i + 1].distance;
             ARRAY_APPEND(gva_std_allocator, lss, gva_variant_dup(gva_std_allocator, variant));
         } // for
 
@@ -649,20 +659,20 @@ dbsnp_main(int argc, char* argv[static argc + 1])
         gva_uint const allele_idx = ARRAY_APPEND(
             gva_std_allocator, db_alleles,
             ((struct Allele) {line_count, array_length(node_allele_join),
-                              array_length(node_allele_join) + array_length(graph.local_supremal) - 1,
+                              array_length(node_allele_join) + array_length(graph.dom_nodes) - 1,
                     graph.distance})
         ) - 1;
 
-        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
             GVA_Variant part;
             gva_edges(graph.observed.str,
-                graph.local_supremal[i], graph.local_supremal[i + 1],
-                i == 0, i == array_length(graph.local_supremal) - 2,
+                graph.dom_nodes[i], graph.dom_nodes[i + 1],
+                i == 0, i == array_length(graph.dom_nodes) - 2,
                 &part);
 
             gva_uint const inserted_idx = trie_insert(gva_std_allocator, &trie, part.sequence.len, part.sequence.str);
-            gva_uint const tmp_idx = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, part.start, part.end, part.end, 0, inserted_idx, GVA_NULL, graph.local_supremal[i + 1].distance})) - 1;
+            gva_uint const tmp_idx = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, part.start, part.end, part.end, 0, inserted_idx, GVA_NULL, graph.dom_nodes[i + 1].distance})) - 1;
             gva_uint const node_idx = interval_tree_insert(&tree, tmp_idx);
             if (node_idx != tmp_idx)
             {
@@ -724,15 +734,15 @@ dbsnp_main(int argc, char* argv[static argc + 1])
 
         GVA_LCS_Graph const rhs_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_var);
 
-        for (size_t part_idx = 0; part_idx < array_length(rhs_graph.local_supremal) - 1; ++part_idx)
+        for (size_t part_idx = 0; part_idx < array_length(rhs_graph.dom_nodes) - 1; ++part_idx)
         {
             GVA_Variant rhs_part;
             gva_edges(rhs_graph.observed.str,
-                      rhs_graph.local_supremal[part_idx], rhs_graph.local_supremal[part_idx + 1],
-                      part_idx == 0, part_idx == array_length(rhs_graph.local_supremal) - 2,
+                      rhs_graph.dom_nodes[part_idx], rhs_graph.dom_nodes[part_idx + 1],
+                      part_idx == 0, part_idx == array_length(rhs_graph.dom_nodes) - 2,
                       &rhs_part);
 
-            gva_uint const rhs_distance = rhs_graph.local_supremal[part_idx + 1].distance;
+            gva_uint const rhs_distance = rhs_graph.dom_nodes[part_idx + 1].distance;
 
             gva_uint* candidates = interval_tree_intersection(gva_std_allocator, tree, rhs_part.start, rhs_part.end);
             for (size_t can_idx = 0; can_idx < array_length(candidates); ++can_idx)
@@ -789,7 +799,7 @@ dbsnp_main(int argc, char* argv[static argc + 1])
                 size_t rhs_distance = 0;
                 for (size_t i = node_parts_table[npt_index].start; i < node_parts_table[npt_index].end; ++i)
                 {
-                    rhs_distance += rhs_graph.local_supremal[i + 1].distance;
+                    rhs_distance += rhs_graph.dom_nodes[i + 1].distance;
                 } // for
                 if (rhs_distance >= lhs_distance)
                 {
@@ -804,10 +814,10 @@ dbsnp_main(int argc, char* argv[static argc + 1])
 
                 GVA_Variant rhs;
                 gva_edges(rhs_graph.observed.str,
-                          rhs_graph.local_supremal[node_parts_table[npt_index].start],
-                          rhs_graph.local_supremal[node_parts_table[npt_index].end],
+                          rhs_graph.dom_nodes[node_parts_table[npt_index].start],
+                          rhs_graph.dom_nodes[node_parts_table[npt_index].end],
                           node_parts_table[npt_index].start == 0,
-                          node_parts_table[npt_index].end == array_length(rhs_graph.local_supremal) - 1,
+                          node_parts_table[npt_index].end == array_length(rhs_graph.dom_nodes) - 1,
                           &rhs);
 
                 size_t const distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
@@ -1123,7 +1133,7 @@ locals_main(int argc, char* argv[static argc + 1])
         } //
 
         GVA_LCS_Graph const rhs_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_var);
-        // fprintf(stderr, GVA_VARIANT_FMT " (%u) \n", GVA_VARIANT_PRINT(rhs_var), rhs_graph.distance);
+        fprintf(stderr, GVA_VARIANT_FMT_SPDI " (%u) \n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_var), rhs_graph.distance);
 
         // Join nodes in the index to parts in the query
         struct NODE_PARTS
@@ -1135,15 +1145,17 @@ locals_main(int argc, char* argv[static argc + 1])
             gva_uint included;
         }* node_parts_table = hash_table_init(gva_std_allocator, 1024, sizeof(*node_parts_table));
 
-        for (size_t part_idx = 0; part_idx < array_length(rhs_graph.local_supremal) - 1; ++part_idx)
+        for (size_t part_idx = 0; part_idx < array_length(rhs_graph.dom_nodes) - 1; ++part_idx)
         {
+            fprintf(stderr, "part_idx: %zu\n", part_idx);
+            gva_uint const rhs_distance = rhs_graph.dom_nodes[part_idx + 1].distance;
+            fprintf(stderr, "rhs_distance from local: %u\n", rhs_distance);
+
             GVA_Variant rhs_part;
             gva_edges(rhs_graph.observed.str,
-                      rhs_graph.local_supremal[part_idx], rhs_graph.local_supremal[part_idx + 1],
-                      part_idx == 0, part_idx == array_length(rhs_graph.local_supremal) - 2,
+                      rhs_graph.dom_nodes[part_idx], rhs_graph.dom_nodes[part_idx + 1],
+                      part_idx == 0, part_idx == array_length(rhs_graph.dom_nodes) - 2,
                       &rhs_part);
-
-            gva_uint const rhs_distance = rhs_graph.local_supremal[part_idx + 1].distance;
 
             gva_uint* candidates = interval_tree_intersection(gva_std_allocator, tree, rhs_part.start, rhs_part.end);
             for (size_t can_idx = 0; can_idx < array_length(candidates); ++can_idx)
@@ -1204,7 +1216,7 @@ locals_main(int argc, char* argv[static argc + 1])
                 size_t rhs_distance = 0;
                 for (size_t i = node_parts_table[npt_index].start; i < node_parts_table[npt_index].end; ++i)
                 {
-                    rhs_distance += rhs_graph.local_supremal[i + 1].distance;
+                    rhs_distance += rhs_graph.dom_nodes[i + 1].distance;
                 } // for
                 if (rhs_distance >= lhs_distance)
                 {
@@ -1219,10 +1231,10 @@ locals_main(int argc, char* argv[static argc + 1])
 
                 GVA_Variant rhs;
                 gva_edges(rhs_graph.observed.str,
-                          rhs_graph.local_supremal[node_parts_table[npt_index].start],
-                          rhs_graph.local_supremal[node_parts_table[npt_index].end],
+                          rhs_graph.dom_nodes[node_parts_table[npt_index].start],
+                          rhs_graph.dom_nodes[node_parts_table[npt_index].end],
                           node_parts_table[npt_index].start == 0,
-                          node_parts_table[npt_index].end == array_length(rhs_graph.local_supremal) - 1,
+                          node_parts_table[npt_index].end == array_length(rhs_graph.dom_nodes) - 1,
                           &rhs);
 
                 size_t const distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
@@ -1468,7 +1480,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
     MNode* backward = matches;
     char* b_uniq = uniq;
-    //fprintf(stderr, "distance: %zu\n", distance);
+    fprintf(stderr, "distance: %zu\n", distance);
     //fprintf(stderr, "max_lcs_pos: %zu\n", max_lcs_pos);
     size_t const max_lcs_pos_local = max_lcs_pos;
 
@@ -1518,17 +1530,18 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     {
         size_t const distance = len_ref + len_obs - 2 * max_lcs_pos_local - sum;
         sum += distance;
-        //printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
-        //printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
+        fprintf(stderr, "dist: %zu\n", distance);
+        printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
+        printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
         GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
-        for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
             GVA_Variant variant;
             gva_edges(graph.observed.str,
-                graph.local_supremal[i], graph.local_supremal[i + 1],
-                i == 0, i == array_length(graph.local_supremal) - 2,
+                graph.dom_nodes[i], graph.dom_nodes[i + 1],
+                i == 0, i == array_length(graph.dom_nodes) - 2,
                 &variant);
-            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.local_supremal[i + 1].distance);
+            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance);
         } // for
         gva_lcs_graph_destroy(gva_std_allocator, graph);
         //printf("L " GVA_VARIANT_FMT " %zu  %zu+[(%zu, %zu)--(%zu, %zu)]\n", GVA_VARIANT_PRINT(((GVA_Variant) {offset + prev_row + 1, offset + len_ref, {len_obs - prev_col - 1, observed + prev_col + 1}})), distance, offset, prev_row + 1, prev_col + 1, len_ref, len_obs);
@@ -1561,14 +1574,14 @@ wu_main(int argc, char* argv[static argc + 1])
 
     GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, reference.len, reference.str, observed.len, observed.str, 0);
     lcs_graph_dot(stderr, graph);
-    for (size_t i = 0; i < array_length(graph.local_supremal) - 1; ++i)
+    for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
         GVA_Variant part;
         gva_edges(graph.observed.str,
-            graph.local_supremal[i], graph.local_supremal[i + 1],
-            i == 0, i == array_length(graph.local_supremal) - 2,
+            graph.dom_nodes[i], graph.dom_nodes[i + 1],
+            i == 0, i == array_length(graph.dom_nodes) - 2,
             &part);
-        fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(part), graph.local_supremal[i + 1].distance);
+        fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(part), graph.dom_nodes[i + 1].distance);
     } // for
 
     gva_lcs_graph_destroy(gva_std_allocator, graph);
@@ -1692,22 +1705,11 @@ extract_main(int argc, char* argv[static argc + 1]) {
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
-    size_t line_count = 0;
-    static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stdin) != NULL) {
-        size_t const len = strlen(line) - 1;
-        GVA_Variant variant;
-        if (gva_parse_spdi(len, line, &variant) == 0) {
-            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
-            continue;
-        } // if
+    GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, 31, "CAGATGACAGGGTTGGGCTCAGAGTCAGAGT", 25, "CTCTCATACACACTCTCATCAGATT", 0);
+    fprintf(stderr, "graph distance: %zu\n", graph.distance);
 
-        GVA_LCS_Graph const graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+    lcs_graph_dot(stderr, graph);
 
-        gva_string_destroy(gva_std_allocator, graph.observed);
-        gva_lcs_graph_destroy(gva_std_allocator, graph);
-        gva_canonical(gva_std_allocator, graph);
-    } // while
 
     return EXIT_SUCCESS;
 } // extract_main
@@ -1763,12 +1765,12 @@ int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
 int
 main(int argc, char* argv[static argc + 1])
 {
-    // return wu_main(argc, argv);
+    return wu_main(argc, argv);
     // return slice_blob_main(argc, argv);
     // return fasta_blob_write(argc, argv);
     // return vcf_main(argc, argv);
     // return dbsnp_main(argc, argv);
-    return locals_main(argc, argv);
+    // return locals_main(argc, argv);
     // return extract_main(argc, argv);
     // return make_ref_blob_main(argc, argv);
     // return make_obs_blob_main(argc, argv);

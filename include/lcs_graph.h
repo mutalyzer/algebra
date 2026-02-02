@@ -35,7 +35,11 @@ typedef struct
         gva_uint edges;
         gva_uint distance;
     };
-    gva_uint lambda;
+    union
+    {
+        gva_uint lambda;
+        gva_uint link;
+    };
 } GVA_Node;
 
 
@@ -45,7 +49,7 @@ typedef struct
 {
     GVA_Node*   nodes;
     GVA_Edge*   edges;
-    GVA_Node*   local_supremal;
+    GVA_Node*   dom_nodes;
     GVA_Variant supremal;
     GVA_String  observed;  // FIXME: ownership and destroy
     gva_uint    source;
