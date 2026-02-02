@@ -1465,7 +1465,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     //fprintf(stderr, "LOCAL %zu %zu :: %zu\n", len_ref, len_obs, offset);
     if (len_ref == 0 || len_obs == 0)
     {
-        fprintf(stderr, "triv distance: %zu\n", len_ref + len_obs);
+        // fprintf(stderr, "triv distance: %zu\n", len_ref + len_obs);
         printf(GVA_VARIANT_FMT_SPDI " %zu\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, ((GVA_Variant) {offset, offset + len_ref, {len_obs, observed}})), len_ref + len_obs);
         return;
     } // if
@@ -1481,7 +1481,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     size_t b_distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
     MNode* backward = matches;
     char* b_uniq = uniq;
-    fprintf(stderr, "wu distance: %zu\n", b_distance);
+    // fprintf(stderr, "wu distance: %zu\n", b_distance);
     //fprintf(stderr, "max_lcs_pos: %zu\n", max_lcs_pos);
     size_t const max_lcs_pos_local = max_lcs_pos;
 
@@ -1537,9 +1537,9 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     {
         size_t const distance = len_ref + len_obs - 2 * max_lcs_pos_local - sum;
         sum += distance;
-        fprintf(stderr, "sum dist: %zu\n", distance);
-        printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
-        printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
+        // fprintf(stderr, "sum dist: %zu\n", distance);
+        // printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
+        // printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
         GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
         for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
