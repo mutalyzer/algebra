@@ -1465,10 +1465,11 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     //fprintf(stderr, "LOCAL %zu %zu :: %zu\n", len_ref, len_obs, offset);
     if (len_ref == 0 || len_obs == 0)
     {
+        fprintf(stderr, "triv distance: %zu\n", len_ref + len_obs);
         printf(GVA_VARIANT_FMT_SPDI " %zu\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, ((GVA_Variant) {offset, offset + len_ref, {len_obs, observed}})), len_ref + len_obs);
         return;
     } // if
-    size_t distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
+    size_t f_distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
     MNode* forward = matches;
     char* f_uniq = uniq;
     //fprintf(stderr, "distance: %zu\n", distance);
@@ -1477,12 +1478,18 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     reference = strrev(len_ref, (char*) reference);
     observed = strrev(len_obs, (char*) observed);
 
-    distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
+    size_t b_distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
     MNode* backward = matches;
     char* b_uniq = uniq;
-    fprintf(stderr, "distance: %zu\n", distance);
+    fprintf(stderr, "wu distance: %zu\n", b_distance);
     //fprintf(stderr, "max_lcs_pos: %zu\n", max_lcs_pos);
     size_t const max_lcs_pos_local = max_lcs_pos;
+
+    if (f_distance != b_distance)
+    {
+         fprintf(stderr, "distance mismatch between f and b\n");
+         exit(EXIT_FAILURE);
+    }
 
     reference = strrev(len_ref, (char*) reference);
     observed = strrev(len_obs, (char*) observed);
@@ -1530,7 +1537,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     {
         size_t const distance = len_ref + len_obs - 2 * max_lcs_pos_local - sum;
         sum += distance;
-        fprintf(stderr, "dist: %zu\n", distance);
+        fprintf(stderr, "sum dist: %zu\n", distance);
         printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
         printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
         GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
@@ -1551,6 +1558,12 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     } // if
 
     //fprintf(stderr, "distance: %zu\n", sum);
+
+    if (f_distance != sum)
+    {
+         fprintf(stderr, "distance mismatch between f and sum\n");
+         exit(EXIT_FAILURE);
+    }
 
     forward = gva_std_allocator.allocate(gva_std_allocator.context, forward, MIN(len_ref, len_obs), 0);
     f_uniq = gva_std_allocator.allocate(gva_std_allocator.context, f_uniq, MIN(len_ref, len_obs), 0);
@@ -1573,7 +1586,7 @@ wu_main(int argc, char* argv[static argc + 1])
     GVA_String observed = {strlen(argv[2]), argv[2]};
 
     GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, reference.len, reference.str, observed.len, observed.str, 0);
-    lcs_graph_dot(stderr, graph);
+    // lcs_graph_dot(stderr, graph);
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
         GVA_Variant part;
@@ -1583,8 +1596,11 @@ wu_main(int argc, char* argv[static argc + 1])
             &part);
         fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(part), graph.dom_nodes[i + 1].distance);
     } // for
+    fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(graph.supremal), graph.distance);
 
     gva_lcs_graph_destroy(gva_std_allocator, graph);
+
+    return 0;
 
 #else
     errno = 0;
@@ -1706,7 +1722,7 @@ extract_main(int argc, char* argv[static argc + 1]) {
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
     GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, 31, "CAGATGACAGGGTTGGGCTCAGAGTCAGAGT", 25, "CTCTCATACACACTCTCATCAGATT", 0);
-    fprintf(stderr, "graph distance: %zu\n", graph.distance);
+    fprintf(stderr, "graph distance: %u\n", graph.distance);
 
     lcs_graph_dot(stderr, graph);
 
