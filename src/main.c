@@ -1156,25 +1156,20 @@ locals_main(int argc, char* argv[static argc + 1])
                 db_alleles[i].join_end);
     }
 
-    Trie query_trie = trie_init();
-
     // for every query
     line_count = 0;
     while (fgets(line, sizeof(line), stdin) != NULL) {
         // label
-        size_t len = strcspn(line, "\t ");
-        if (len == 0)
+        size_t query_len = strcspn(line, "\t ");
+        if (query_len == 0)
         {
             fprintf(stderr, "error: parsing failed at line %zu: %s", line_count + 1, line);
             continue;
         }
-        size_t const query_id = trie_insert(gva_std_allocator, &query_trie, len, line);
 
         // variant
-        size_t idx = len + 1;
-        len = strcspn(line + idx, "\n");
         GVA_Variant rhs_var;
-        if (gva_parse_spdi(len, line + idx, &rhs_var) == 0)
+        if (gva_parse_spdi(strcspn(line + query_len + 1, "\n"), line + query_len + 1, &rhs_var) == 0)
         {
             fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
             continue;
@@ -1422,7 +1417,7 @@ locals_main(int argc, char* argv[static argc + 1])
                     fprintf(stderr, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %u\n",
                             GVA_STRING_PRINT(trie_string(sample_trie, db_alleles[allele_idx].sample_id)),
                             GVA_RELATION_LABELS[relation],
-                            GVA_STRING_PRINT(trie_string(query_trie, query_id)),
+                            GVA_STRING_PRINT(((GVA_String) {query_len, line})),
                             included, lhs_excluded, rhs_excluded
                             );
                 } // if
@@ -1441,7 +1436,6 @@ locals_main(int argc, char* argv[static argc + 1])
     db_alleles = ARRAY_DESTROY(gva_std_allocator, db_alleles);
     node_allele_join = ARRAY_DESTROY(gva_std_allocator, node_allele_join);
     interval_tree_destroy(gva_std_allocator, &tree);
-    trie_destroy(gva_std_allocator, &query_trie);
     trie_destroy(gva_std_allocator, &sample_trie);
     trie_destroy(gva_std_allocator, &trie);
     gva_string_destroy(gva_std_allocator, reference);
