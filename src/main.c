@@ -189,9 +189,9 @@ compare_from_index(GVA_String const reference,
 {
     // TODO: possibly reuse rhs_graph
 
-    fprintf(stderr, GVA_VARIANT_FMT_SPDI " " GVA_VARIANT_FMT_SPDI "\n",
-        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, lhs),
-        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs));
+    // fprintf(stderr, GVA_VARIANT_FMT_SPDI " " GVA_VARIANT_FMT_SPDI "\n",
+    //     GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, lhs),
+    //     GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs));
 
     if (gva_variant_eq(lhs, rhs))
     {
@@ -200,11 +200,11 @@ compare_from_index(GVA_String const reference,
 
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
-    fprintf(stderr, "start: %zu end: %zu\n", start, end);
+    // fprintf(stderr, "start: %zu end: %zu\n", start, end);
 
     size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
     size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
-    fprintf(stderr, "lhs_len: %zu rhs_len: %zu\n", lhs_len, rhs_len);
+    // fprintf(stderr, "lhs_len: %zu rhs_len: %zu\n", lhs_len, rhs_len);
 
     gva_uint distance = 0;
     if (lhs_len == 0)
@@ -241,7 +241,7 @@ compare_from_index(GVA_String const reference,
         lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
     } // else
 
-    fprintf(stderr, "distance: %u lhs_distance: %u rhs_distance: %u\n", distance, lhs_distance, rhs_distance);
+    // fprintf(stderr, "distance: %u lhs_distance: %u rhs_distance: %u\n", distance, lhs_distance, rhs_distance);
 
     if (lhs_distance + rhs_distance == distance)
     {
@@ -250,7 +250,7 @@ compare_from_index(GVA_String const reference,
 
     if (lhs_distance - rhs_distance == distance)
     {
-        fprintf(stderr, "this return?!\n");
+        // fprintf(stderr, "this return?!\n");
         return GVA_CONTAINS;
     } // if
 
@@ -1176,7 +1176,7 @@ locals_main(int argc, char* argv[static argc + 1])
         } //
 
         GVA_LCS_Graph const rhs_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_var);
-        fprintf(stderr, GVA_VARIANT_FMT_SPDI " (%u) \n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_var), rhs_graph.distance);
+        // fprintf(stderr, GVA_VARIANT_FMT_SPDI " (%u) \n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_var), rhs_graph.distance);
 
         // Join nodes in the index to parts in the query
         struct NODE_PARTS
@@ -1190,9 +1190,9 @@ locals_main(int argc, char* argv[static argc + 1])
 
         for (size_t part_idx = 0; part_idx < array_length(rhs_graph.dom_nodes) - 1; ++part_idx)
         {
-            fprintf(stderr, "part_idx: %zu\n", part_idx);
+            // fprintf(stderr, "part_idx: %zu\n", part_idx);
             gva_uint const rhs_distance = rhs_graph.dom_nodes[part_idx + 1].distance;
-            fprintf(stderr, "rhs_distance from local: %u\n", rhs_distance);
+            // fprintf(stderr, "rhs_distance from local: %u\n", rhs_distance);
 
             GVA_Variant rhs_part;
             gva_edges(rhs_graph.observed.str,
@@ -1211,10 +1211,10 @@ locals_main(int argc, char* argv[static argc + 1])
                 {
                     continue;
                 } // if
-                fprintf(stderr, "%zu " GVA_VARIANT_FMT_SPDI " %s " GVA_VARIANT_FMT_SPDI "\n", line_count,
-                        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, db_var),
-                        GVA_RELATION_LABELS[relation],
-                        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_part));
+                // fprintf(stderr, "%zu " GVA_VARIANT_FMT_SPDI " %s " GVA_VARIANT_FMT_SPDI "\n", line_count,
+                //         GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, db_var),
+                //         GVA_RELATION_LABELS[relation],
+                //         GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_part));
 
                 // link nodes to query parts
                 size_t hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
@@ -1227,6 +1227,7 @@ locals_main(int argc, char* argv[static argc + 1])
 
                 if (relation == GVA_EQUIVALENT || relation == GVA_IS_CONTAINED)
                 {
+                    // TODO: default value is already set for equivalence?
                     node_parts_table[hash_idx].included = tree.nodes[node_idx].distance;
                 } // if
                 else if (relation == GVA_CONTAINS)
@@ -1235,6 +1236,8 @@ locals_main(int argc, char* argv[static argc + 1])
                 } // if
                 else // GVA_OVERLAP
                 {
+                    // TODO: Set relation to OVERLAP?
+                    // TODO: +=1 ?
                     node_parts_table[hash_idx].included = 1;
                 } // else
             } // for every candidate
@@ -1293,6 +1296,9 @@ locals_main(int argc, char* argv[static argc + 1])
             } // if
         } // for node_parts_table
 
+        // TODO: get rid of struct
+        //   or
+        //       store relation
         struct RESULT_ALLELES
         {
             HASH_TABLE_KEY;
@@ -1388,6 +1394,7 @@ locals_main(int argc, char* argv[static argc + 1])
             repair_is_contained(gva_std_allocator, reference, rhs_graph, tree, trie,
                                 &is_contained_nodes, is_contained_part_idx, &included, &relation);
 
+            // TODO: always true?!
             if (included > 0)
             {
                 gva_uint const lhs_excluded = db_alleles[allele_idx].distance - included;
@@ -1414,7 +1421,7 @@ locals_main(int argc, char* argv[static argc + 1])
                 // if (relation != GVA_EQUIVALENT || db_alleles[allele_idx].line < line_count)
                 // if (relation != GVA_OVERLAP)
                 {
-                    fprintf(stderr, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %u\n",
+                    fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %u\n",
                             GVA_STRING_PRINT(trie_string(sample_trie, db_alleles[allele_idx].sample_id)),
                             GVA_RELATION_LABELS[relation],
                             GVA_STRING_PRINT(((GVA_String) {query_len, line})),
@@ -1590,7 +1597,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
                 graph.dom_nodes[i], graph.dom_nodes[i + 1],
                 i == 0, i == array_length(graph.dom_nodes) - 2,
                 &variant);
-            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance);
+            // printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance);
         } // for
         gva_lcs_graph_destroy(gva_std_allocator, graph);
         //printf("L " GVA_VARIANT_FMT " %zu  %zu+[(%zu, %zu)--(%zu, %zu)]\n", GVA_VARIANT_PRINT(((GVA_Variant) {offset + prev_row + 1, offset + len_ref, {len_obs - prev_col - 1, observed + prev_col + 1}})), distance, offset, prev_row + 1, prev_col + 1, len_ref, len_obs);
@@ -1823,12 +1830,12 @@ int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
 int
 main(int argc, char* argv[static argc + 1])
 {
-    return wu_main(argc, argv);
+    // return wu_main(argc, argv);
     // return slice_blob_main(argc, argv);
     // return fasta_blob_write(argc, argv);
     // return vcf_main(argc, argv);
     // return dbsnp_main(argc, argv);
-    // return locals_main(argc, argv);
+    return locals_main(argc, argv);
     // return extract_main(argc, argv);
     // return make_ref_blob_main(argc, argv);
     // return make_obs_blob_main(argc, argv);
