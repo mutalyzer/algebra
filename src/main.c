@@ -33,6 +33,54 @@
 #define REFERENCE_ID "NC_000001.11"
 
 
+inline void
+serialize_array(FILE* restrict const stream,
+    void* restrict const self, size_t const item_size)
+{
+    size_t const length = array_length(self);
+    if (fwrite(&length, sizeof(length), 1, stream) != 1 ||
+        fwrite(self, item_size, length, stream) != length)
+    {
+        fprintf(stderr, "error: fwrite()\n");
+        return;
+    } // if
+} // serialize_array
+
+
+inline void*
+deserialize_array(GVA_Allocator const allocator, FILE* const stream,
+    size_t const item_size)
+{
+    size_t length = 0;
+    if (fread(&length, sizeof(length), 1, stream) != 1)
+    {
+        fprintf(stderr, "error: fread()\n");
+        return NULL;
+    } // if
+
+    if (length == 0)
+    {
+        return NULL;
+    } // if
+
+    void* const restrict array = array_init(allocator, length, item_size);
+    if (array == NULL)
+    {
+        fprintf(stderr, "error: OOM\n");
+        return NULL;
+    } // if
+
+    if (fread(array, item_size, length, stream) != length)
+    {
+        fprintf(stderr, "error: fread()\n");
+        return allocator.allocate(allocator.context, array_header(array), length * item_size, 0);
+    } // if
+
+    array_header(array)->length = length;
+    return array;
+} // deserialize_array
+
+
 void
 lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph)
 {

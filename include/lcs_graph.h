@@ -21,6 +21,10 @@ typedef struct
 } GVA_Edge;
 
 
+// FIXME: refactor: typedef struct { row; col; lenght; } GVA_Match;
+// see also: src/align.h
+
+
 // Internal: The triple (`row`, `col`, `length`) uniquely defines each
 // node in the graph. Its outgoing edges are found in the edges array of
 // graph as a singly linked list with `edges` as entry point.

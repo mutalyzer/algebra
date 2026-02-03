@@ -13,9 +13,9 @@ typedef struct
 {
     gva_uint row;
     gva_uint col;
-    gva_uint length : sizeof(gva_uint) * CHAR_BIT - 1;
-    gva_uint moved  : 1;
-    gva_uint incoming;
+    gva_uint length;
+    gva_uint incoming : sizeof(gva_uint) * CHAR_BIT - 1;
+    gva_uint moved    : 1;
     gva_uint idx;
     gva_uint next;
 } LCS_Node;

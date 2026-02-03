@@ -75,18 +75,18 @@ expand(Context const context,
             intmax_t const d_col = context.len_obs - col;
             size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2 - 1;
             size_t const length = row - match_row;
-            gva_uint const len = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
-                match_row + context.shift, match_col, length, false, 0, GVA_NULL, GVA_NULL
+            gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
+                match_row + context.shift, match_col, length, 0, false, GVA_NULL, GVA_NULL
             })) - 1;
             if (lcs->index[lcs_pos].head != GVA_NULL)
             {
-                lcs->nodes[lcs->index[lcs_pos].tail].next = len;
+                lcs->nodes[lcs->index[lcs_pos].tail].next = idx;
             } // if
             else
             {
-                lcs->index[lcs_pos].head = len;
+                lcs->index[lcs_pos].head = idx;
             } // else
-            lcs->index[lcs_pos].tail = len;
+            lcs->index[lcs_pos].tail = idx;
 
             if (lcs_pos + 1 > lcs->length)
             {
@@ -116,18 +116,18 @@ expand(Context const context,
         intmax_t const d_col = context.len_obs - col;
         size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2 - 1;
         size_t const length = row - match_row;
-        gva_uint const len = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
-            match_row + context.shift, match_col, length, false, 0, GVA_NULL, GVA_NULL
+        gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
+            match_row + context.shift, match_col, length, 0, false, GVA_NULL, GVA_NULL
         })) - 1;
         if (lcs->index[lcs_pos].head != GVA_NULL)
         {
-            lcs->nodes[lcs->index[lcs_pos].tail].next = len;
+            lcs->nodes[lcs->index[lcs_pos].tail].next = idx;
         } // if
         else
         {
-            lcs->index[lcs_pos].head = len;
+            lcs->index[lcs_pos].head = idx;
         } // else
-        lcs->index[lcs_pos].tail = len;
+        lcs->index[lcs_pos].tail = idx;
 
         if (lcs_pos + 1 > lcs->length)
         {
