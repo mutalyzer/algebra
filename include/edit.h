@@ -15,6 +15,7 @@ typedef struct
 } MNode;
 
 
+// FIXME: globals
 extern size_t max_lcs_pos;
 extern MNode* matches;
 extern char* uniq;

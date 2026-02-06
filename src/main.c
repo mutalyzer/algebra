@@ -11,6 +11,7 @@
 #include "../include/compare.h"     // bitset_fill
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/extractor.h"   // gva_canonical
+#include "../include/index.h"       // GVA_Index, gva_index_*
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // GVA_String, gva_string_destroy
@@ -182,131 +183,6 @@ fasta_blob_write(FILE* stream, GVA_String const sequence)
 } // fasta_blob_write
 
 
-GVA_Relation
-compare_from_index(GVA_String const reference,
-    GVA_Variant const lhs, gva_uint const lhs_distance,
-    GVA_Variant const rhs, gva_uint const rhs_distance)
-{
-    // TODO: possibly reuse rhs_graph
-
-    // fprintf(stderr, GVA_VARIANT_FMT_SPDI " " GVA_VARIANT_FMT_SPDI "\n",
-    //     GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, lhs),
-    //     GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs));
-
-    if (gva_variant_eq(lhs, rhs))
-    {
-        return GVA_EQUIVALENT;
-    } // if
-
-    size_t const start = MIN(lhs.start, rhs.start);
-    size_t const end = MAX(lhs.end, rhs.end);
-    // fprintf(stderr, "start: %zu end: %zu\n", start, end);
-
-    size_t const lhs_len = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
-    size_t const rhs_len = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
-    // fprintf(stderr, "lhs_len: %zu rhs_len: %zu\n", lhs_len, rhs_len);
-
-    gva_uint distance = 0;
-    if (lhs_len == 0)
-    {
-        distance = rhs_len;
-    } // if
-    else if (rhs_len == 0)
-    {
-        distance = lhs_len;
-    } // if
-    else
-    {
-        char* lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, lhs_len);
-        if (lhs_obs == NULL)
-        {
-            return -1;
-        } // if
-        memcpy(lhs_obs, reference.str + start, lhs.start - start);
-        memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-        memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
-
-        char* rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, NULL, 0, rhs_len);
-        if (rhs_obs == NULL)
-        {
-            lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
-            return -1;
-        } // if
-        memcpy(rhs_obs, reference.str + start, rhs.start - start);
-        memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-        memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
-
-        distance = gva_edit_distance(gva_std_allocator, lhs_len, lhs_obs, rhs_len, rhs_obs);
-        rhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, rhs_obs, rhs_len, 0);
-        lhs_obs = gva_std_allocator.allocate(gva_std_allocator.context, lhs_obs, lhs_len, 0);
-    } // else
-
-    // fprintf(stderr, "distance: %u lhs_distance: %u rhs_distance: %u\n", distance, lhs_distance, rhs_distance);
-
-    if (lhs_distance + rhs_distance == distance)
-    {
-        return GVA_DISJOINT;
-    } // if
-
-    if (lhs_distance - rhs_distance == distance)
-    {
-        // fprintf(stderr, "this return?!\n");
-        return GVA_CONTAINS;
-    } // if
-
-    if (rhs_distance - lhs_distance == distance)
-    {
-        return GVA_IS_CONTAINED;
-    } // if
-
-    size_t const len = end - start + 1;
-    size_t const start_intersection = MAX(lhs.start, rhs.start);
-    size_t const end_intersection = MIN(lhs.end, rhs.end);
-
-    GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
-    size_t* lhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
-    size_t* lhs_as = bitset_init(gva_std_allocator, len);
-    size_t* lhs_cs = bitset_init(gva_std_allocator, len);
-    size_t* lhs_gs = bitset_init(gva_std_allocator, len);
-    size_t* lhs_ts = bitset_init(gva_std_allocator, len);
-    bitset_fill(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
-
-    GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
-    size_t* rhs_dels = bitset_init(gva_std_allocator, len);  // can be one shorter
-    size_t* rhs_as = bitset_init(gva_std_allocator, len);
-    size_t* rhs_cs = bitset_init(gva_std_allocator, len);
-    size_t* rhs_gs = bitset_init(gva_std_allocator, len);
-    size_t* rhs_ts = bitset_init(gva_std_allocator, len);
-    bitset_fill(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
-
-    GVA_Relation relation = GVA_DISJOINT;
-    if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
-        bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
-        bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
-        bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
-        bitset_intersection_cnt(lhs_ts, rhs_ts) > 0)
-    {
-        relation = GVA_OVERLAP;
-    } // if
-
-    lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
-    lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
-    lhs_cs = bitset_destroy(gva_std_allocator, lhs_cs);
-    lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
-    lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
-    gva_lcs_graph_destroy(gva_std_allocator, lhs_graph);
-
-    rhs_ts = bitset_destroy(gva_std_allocator, rhs_ts);
-    rhs_gs = bitset_destroy(gva_std_allocator, rhs_gs);
-    rhs_cs = bitset_destroy(gva_std_allocator, rhs_cs);
-    rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
-    rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
-    gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
-
-    return relation;
-} // compare_from_index
-
-
 static size_t
 variants_distance(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
@@ -331,8 +207,8 @@ variants_distance(GVA_Allocator const allocator,
     char* rhs_obs = allocator.allocate(allocator.context, NULL, 0, rhs_len);
     if (lhs_obs == NULL || rhs_obs == NULL)
     {
-        lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
         rhs_obs = allocator.allocate(allocator.context, rhs_obs, rhs_len, 0);
+        lhs_obs = allocator.allocate(allocator.context, lhs_obs, lhs_len, 0);
         return -1;
     } // if
 
@@ -474,7 +350,7 @@ suffix_trimmed(size_t const len_ref, char const reference[static len_ref],
 } // suffix_trimmed
 
 
-int vcf_main(int argc, char* argv[static argc + 1])
+int vcf_main(int argc, char* argv[static argc])
 {
     if (argc < 3)
     {
@@ -651,13 +527,45 @@ repair_is_contained(GVA_Allocator const allocator, GVA_String const reference, G
             *included += slice_dist;
         } // else
     } // if
-    *nodes = ARRAY_DESTROY(gva_std_allocator, *nodes);
+    *nodes = ARRAY_DESTROY(gva_std_allocator, *nodes);  //  FIXME
 } // repair_is_contained
 
 
-int
-dbsnp_main(int argc, char* argv[static argc + 1])
+static bool
+parse_line(char const line[static LINE_SIZE],
+    size_t* id_len, GVA_Variant* variant, size_t* distance)
 {
+    *id_len = strcspn(line, "\t ");
+    if (*id_len == 0)
+    {
+        return false;
+    } // if
+
+    size_t const spdi_len = strcspn(line + *id_len + 1, "\t ");
+    if (gva_parse_spdi(spdi_len, line + *id_len + 1, variant) == 0)
+    {
+        return false;
+    } // if
+
+    *distance = parse_number(line, &(size_t) {*id_len + spdi_len + 2});
+    if (*distance == 0)
+    {
+        return false;
+    } // if
+
+    return true;
+} // parse_line
+
+
+int
+index_main(int argc, char* argv[static argc])
+{
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage %s reference.blob data\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
@@ -672,79 +580,11 @@ dbsnp_main(int argc, char* argv[static argc + 1])
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
-    Trie trie = trie_init();
-    Interval_Tree tree = interval_tree_init();
-    struct Node_Allele
+    GVA_Index* index = gva_index_init(gva_std_allocator, reference.len, reference.str);
+    if (index == NULL)
     {
-        gva_uint link;
-        gva_uint next;
-    }* node_allele_join = NULL;
-    struct Allele
-    {
-        gva_uint line;
-        gva_uint join_start;  // offset into node_allele_join
-        gva_uint join_end;  // end of offset into node_allele_join
-        gva_uint distance;
-    }* db_alleles = NULL;
-
-    size_t line_count = 0;
-    static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stdin) != NULL)
-    {
-        size_t idx = 0;
-        parse_number(line, &idx);
-        idx += 1;  // skip space or tab
-        int const len = (char*) memchr(line + idx, '\n', LINE_SIZE - idx) - (line + idx);
-        GVA_Variant variant;
-        if (gva_parse_spdi(len, line + idx, &variant) == 0)
-        {
-            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
-            continue;
-        } // if
-
-        GVA_LCS_Graph const graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
-
-        gva_uint const allele_idx = ARRAY_APPEND(
-            gva_std_allocator, db_alleles,
-            ((struct Allele) {line_count, array_length(node_allele_join),
-                              array_length(node_allele_join) + array_length(graph.dom_nodes) - 1,
-                    graph.distance})
-        ) - 1;
-
-        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
-        {
-            GVA_Variant part;
-            gva_edges(graph.observed.str,
-                graph.dom_nodes[i], graph.dom_nodes[i + 1],
-                i == 0, i == array_length(graph.dom_nodes) - 2,
-                &part);
-
-            gva_uint const inserted_idx = trie_insert(gva_std_allocator, &trie, part.sequence.len, part.sequence.str);
-            gva_uint const tmp_idx = ARRAY_APPEND(gva_std_allocator, tree.nodes, ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL}, part.start, part.end, part.end, 0, inserted_idx, GVA_NULL, graph.dom_nodes[i + 1].distance})) - 1;
-            gva_uint const node_idx = interval_tree_insert(&tree, tmp_idx);
-            if (node_idx != tmp_idx)
-            {
-                array_header(tree.nodes)->length -= 1;  // reverse; node already in the tree
-            } // if
-            tree.nodes[node_idx].alleles = ARRAY_APPEND(gva_std_allocator, node_allele_join, ((struct Node_Allele) {node_idx ^ allele_idx, tree.nodes[node_idx].alleles})) - 1;
-        } // for
-
-        gva_string_destroy(gva_std_allocator, graph.observed);
-        gva_lcs_graph_destroy(gva_std_allocator, graph);
-
-        line_count += 1;
-    } // while
-    fprintf(stderr, "line count: %zu\n", line_count);
-
-    fprintf(stderr, "tree nodes: %zu\n", array_length(tree.nodes));
-    fprintf(stderr, "trie nodes: %zu (%zu)\n", array_length(trie.nodes), trie.strings.len);
-
-    fprintf(stderr, "#db_alleles: %zu\n", array_length(db_alleles));
-    fprintf(stderr, "#join:    %zu\n", array_length(node_allele_join));
-
-    if (db_alleles == NULL || node_allele_join == NULL)
-    {
-        return -1;
+        fprintf(stderr, "OOM\n");
+        return EXIT_FAILURE;
     } // if
 
     errno = 0;
@@ -752,282 +592,60 @@ dbsnp_main(int argc, char* argv[static argc + 1])
     if (stream == NULL)
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
+        gva_string_destroy(gva_std_allocator, reference);
         return EXIT_FAILURE;
     } // if
 
-    // for every query
-    line_count = 0;
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
     while (fgets(line, sizeof(line), stream) != NULL)
     {
-        size_t idx = 0;
-        parse_number(line, &idx);
-        idx += 1;  // skip space or tab
-        int const len = (char*) memchr(line + idx, '\n', LINE_SIZE - idx) - (line + idx);
-        GVA_Variant rhs_var;
-        if (gva_parse_spdi(len, line + idx, &rhs_var) == 0)
+        line_count += 1;
+        size_t id_len = 0;
+        GVA_Variant variant;
+        size_t distance = 0;
+        if (!parse_line(line, &id_len, &variant, &distance))
         {
-            fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
+            fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
+            continue;
+        } // if
+        gva_index_insert(index, id_len, line, variant, distance);
+    } // while
+
+    fclose(stream);
+
+    line_count = 0;
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        line_count += 1;
+        size_t id_len = 0;
+        GVA_Variant variant;
+        size_t distance = 0;
+        if (!parse_line(line, &id_len, &variant, &distance))
+        {
+            fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
             continue;
         } // if
 
-        // Join nodes in the index to parts in the query
-        struct NODE_PARTS
-        {
-            HASH_TABLE_KEY;
-            GVA_Relation relation;
-            gva_uint start;
-            gva_uint end;
-            gva_uint included;
-        }* node_parts_table = hash_table_init(gva_std_allocator, 1024, sizeof(*node_parts_table));
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        GVA_LCS_Graph const rhs_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_var);
+        fprintf(stderr, "Query: " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("chr1", graph.supremal), graph.distance);
 
-        for (size_t part_idx = 0; part_idx < array_length(rhs_graph.dom_nodes) - 1; ++part_idx)
-        {
-            GVA_Variant rhs_part;
-            gva_edges(rhs_graph.observed.str,
-                      rhs_graph.dom_nodes[part_idx], rhs_graph.dom_nodes[part_idx + 1],
-                      part_idx == 0, part_idx == array_length(rhs_graph.dom_nodes) - 2,
-                      &rhs_part);
+        gva_index_query(gva_std_allocator, index, graph);
 
-            gva_uint const rhs_distance = rhs_graph.dom_nodes[part_idx + 1].distance;
+        gva_string_destroy(gva_std_allocator, graph.observed);
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
+    } // while
 
-            gva_uint* candidates = interval_tree_intersection(gva_std_allocator, tree, rhs_part.start, rhs_part.end);
-            for (size_t can_idx = 0; can_idx < array_length(candidates); ++can_idx)
-            {
-                gva_uint const node_idx = candidates[can_idx];
-                GVA_Variant const db_var = {tree.nodes[node_idx].start, tree.nodes[node_idx].end,
-                                            trie_string(trie, tree.nodes[node_idx].inserted)};
-                GVA_Relation const relation = compare_from_index(reference, db_var, tree.nodes[node_idx].distance, rhs_part, rhs_distance);
-                if (relation == GVA_DISJOINT)
-                {
-                    continue;
-                } // if
-
-                // link nodes to query parts
-                size_t hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
-                if (node_parts_table[hash_idx].gva_key != node_idx)
-                {
-                    HASH_TABLE_SET(gva_std_allocator, node_parts_table, node_idx,
-                                   ((struct NODE_PARTS) {node_idx, relation, part_idx, part_idx + 1, rhs_distance}));
-                    hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
-                } // if
-
-                if (relation == GVA_EQUIVALENT || relation == GVA_IS_CONTAINED)
-                {
-                    node_parts_table[hash_idx].included = tree.nodes[node_idx].distance;
-                } // if
-                else if (relation == GVA_CONTAINS)
-                {
-                    node_parts_table[hash_idx].end = part_idx + 1;
-                } // if
-                else // GVA_OVERLAP
-                {
-                    node_parts_table[hash_idx].included = 1;
-                } // else
-            } // for every candidate
-            candidates = ARRAY_DESTROY(gva_std_allocator, candidates);
-        } // for query allele parts
-
-        // We have now compared all query parts to the index
-
-        // fix containment for multiple parts in single node for every query
-        for (size_t npt_index = 0; npt_index < array_header(node_parts_table)->capacity; ++npt_index)
-        {
-            size_t const node_idx = node_parts_table[npt_index].gva_key;
-            if (node_idx == GVA_NOT_FOUND)
-            {
-                continue;
-            } // if
-
-            if (node_parts_table[npt_index].relation == GVA_CONTAINS &&
-                node_parts_table[npt_index].end - node_parts_table[npt_index].start > 1)
-            {
-                size_t const lhs_distance = tree.nodes[node_idx].distance;
-                size_t rhs_distance = 0;
-                for (size_t i = node_parts_table[npt_index].start; i < node_parts_table[npt_index].end; ++i)
-                {
-                    rhs_distance += rhs_graph.dom_nodes[i + 1].distance;
-                } // for
-                if (rhs_distance >= lhs_distance)
-                {
-                    node_parts_table[npt_index].included = 1;
-                    node_parts_table[npt_index].relation = GVA_OVERLAP;
-                    continue;
-                } // if
-
-                GVA_Variant const lhs = {tree.nodes[node_idx].start,
-                                         tree.nodes[node_idx].end,
-                                         trie_string(trie, tree.nodes[node_idx].inserted)};
-
-                GVA_Variant rhs;
-                gva_edges(rhs_graph.observed.str,
-                          rhs_graph.dom_nodes[node_parts_table[npt_index].start],
-                          rhs_graph.dom_nodes[node_parts_table[npt_index].end],
-                          node_parts_table[npt_index].start == 0,
-                          node_parts_table[npt_index].end == array_length(rhs_graph.dom_nodes) - 1,
-                          &rhs);
-
-                size_t const distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
-                if (lhs_distance - distance == rhs_distance)
-                {
-                    node_parts_table[npt_index].included = rhs_distance;
-                } // if
-                else
-                {
-                    node_parts_table[npt_index].included = 1;
-                    node_parts_table[npt_index].relation = GVA_OVERLAP;
-                } // if
-            } // if
-        } // for node_parts_table
-
-        struct RESULT_ALLELES
-        {
-            HASH_TABLE_KEY;
-        }* results_table = hash_table_init(gva_std_allocator, 1024, sizeof(*results_table));
-
-        // find all alleles that were part of a non-disjoint relation
-        for (size_t npt_idx = 0; npt_idx < array_header(node_parts_table)->capacity; ++npt_idx)
-        {
-            size_t const node_idx = node_parts_table[npt_idx].gva_key;
-            if (node_idx == GVA_NOT_FOUND)
-            {
-                continue;
-            } // if
-
-            for (size_t naj_table_idx = tree.nodes[node_idx].alleles;
-                 naj_table_idx != GVA_NULL;
-                 naj_table_idx = node_allele_join[naj_table_idx].next)
-            {
-                size_t const allele_idx = node_allele_join[naj_table_idx].link ^ node_idx;
-                HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx}));
-            } // for alleles
-        } // for node_parts_table
-
-        // build result vector for every query
-        for (size_t results_idx = 0; results_idx < array_header(results_table)->capacity; ++results_idx)
-        {
-            size_t allele_idx = results_table[results_idx].gva_key;
-            if (allele_idx == GVA_NOT_FOUND)
-            {
-                continue;
-            } // if
-
-            gva_uint included = 0;
-            GVA_Relation relation = GVA_DISJOINT;
-
-            gva_uint* is_contained_nodes = NULL;
-            gva_uint is_contained_part_idx = -1;
-
-            // loop over all nodes for this allele
-            for (size_t join_idx = db_alleles[allele_idx].join_start; join_idx < db_alleles[allele_idx].join_end; ++join_idx)
-            {
-                size_t node_idx = node_allele_join[join_idx].link ^ allele_idx;
-                size_t const hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
-                if (node_idx != node_parts_table[hash_idx].gva_key)
-                {
-                    continue;
-                } // if
-
-                if (node_parts_table[hash_idx].relation == GVA_EQUIVALENT)
-                {
-                    included += node_parts_table[hash_idx].included;
-                    if (relation == GVA_EQUIVALENT || relation == GVA_DISJOINT)
-                    {
-                        relation = GVA_EQUIVALENT;
-                    } // if
-                } // if
-                else if (node_parts_table[hash_idx].relation == GVA_CONTAINS)
-                {
-                    included += node_parts_table[hash_idx].included;
-                    if (relation == GVA_IS_CONTAINED)
-                    {
-                        relation = GVA_OVERLAP;  // TODO: included = 1; ???
-                        break;
-                    } // if
-                    relation = GVA_CONTAINS;
-                } // if
-                else if (node_parts_table[hash_idx].relation == GVA_IS_CONTAINED)
-                {
-                    size_t const part_idx = node_parts_table[hash_idx].start;
-                    if (relation == GVA_CONTAINS)
-                    {
-                        included += node_parts_table[hash_idx].included;  // TODO: included = 1; ???
-                        relation = GVA_OVERLAP;
-                        break;
-                    } // if
-
-                    if (part_idx != is_contained_part_idx)
-                    {
-                        repair_is_contained(gva_std_allocator, reference, rhs_graph, tree, trie,
-                                            &is_contained_nodes, is_contained_part_idx, &included, &relation);
-                        is_contained_part_idx = part_idx;
-                    } // if
-                    ARRAY_APPEND(gva_std_allocator, is_contained_nodes, node_idx);
-                    relation = GVA_IS_CONTAINED;
-                } // if
-                else if (node_parts_table[hash_idx].relation == GVA_OVERLAP)
-                {
-                    included = 1;
-                    relation = GVA_OVERLAP;
-                    break;
-                } // if
-            } // for all nodes for this allele
-            repair_is_contained(gva_std_allocator, reference, rhs_graph, tree, trie,
-                                &is_contained_nodes, is_contained_part_idx, &included, &relation);
-
-            if (included > 0)
-            {
-                gva_uint const lhs_excluded = db_alleles[allele_idx].distance - included;
-                gva_uint const rhs_excluded = rhs_graph.distance - included;
-
-                if (lhs_excluded > 0 && rhs_excluded > 0)
-                {
-                    relation = GVA_OVERLAP;
-                } // if
-                else if (lhs_excluded > 0)
-                {
-                    relation = GVA_CONTAINS;
-                } // if
-                else if (rhs_excluded > 0)
-                {
-                    relation = GVA_IS_CONTAINED;
-                } // if
-                else // if (lhs_excluded == 0 && rhs_excluded == 0)
-                {
-                    relation = GVA_EQUIVALENT;
-                } // else
-
-                // only for testing
-                if (relation != GVA_EQUIVALENT || db_alleles[allele_idx].line < line_count)
-                {
-                    printf("%u %zu %s\n", db_alleles[allele_idx].line, line_count, GVA_RELATION_LABELS[relation]);
-                } // if
-            } // if
-        } // for all alleles
-
-        results_table = HASH_TABLE_DESTROY(gva_std_allocator, results_table);
-        node_parts_table = HASH_TABLE_DESTROY(gva_std_allocator, node_parts_table);
-
-        gva_string_destroy(gva_std_allocator, rhs_graph.observed);
-        gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
-
-        line_count += 1;
-    } // while fgets
-    fclose(stream);
-
-    db_alleles = ARRAY_DESTROY(gva_std_allocator, db_alleles);
-    node_allele_join = ARRAY_DESTROY(gva_std_allocator, node_allele_join);
-    interval_tree_destroy(gva_std_allocator, &tree);
-    trie_destroy(gva_std_allocator, &trie);
+    index = gva_index_destroy(index);
     gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
-} // dbsnp_main
+} // index_main
 
 
 int
-locals_main(int argc, char* argv[static argc + 1])
+locals_main(int argc, char* argv[static argc])
 {
     errno = 0;
     FILE* stream = fopen(argv[1], "r");
@@ -1082,7 +700,7 @@ locals_main(int argc, char* argv[static argc + 1])
         {
             fprintf(stderr, "error: parsing failed at line %zu: %s", line_count + 1, line);
             continue;
-        }
+        } // if
         size_t const sample_id = trie_insert(gva_std_allocator, &sample_trie, len, line);
 
         // variant
@@ -1093,7 +711,7 @@ locals_main(int argc, char* argv[static argc + 1])
         {
             fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
             continue;
-        } //
+        } // if
 
         // distance
         idx += len + 1;
@@ -1102,7 +720,7 @@ locals_main(int argc, char* argv[static argc + 1])
         {
             fprintf(stderr, "error: parsing failed at line %zu: %s", line_count + 1, line);
             continue;
-        }
+        } // if
 
         // new sample
         if (sample_id != prev_sample_id)
@@ -1111,11 +729,11 @@ locals_main(int argc, char* argv[static argc + 1])
             if (allele_idx > 0)
             {
                 db_alleles[allele_idx - 1].join_end = array_length(node_allele_join);
-            }
+            } // if
 
             fprintf(stderr, "allele: %zu (" GVA_STRING_FMT ") (%zu)\n", sample_id, GVA_STRING_PRINT(trie_string(sample_trie, sample_id)), allele_idx);
             prev_sample_id = sample_id;
-        }
+        } // if
         // fprintf(stderr, "%zu " GVA_VARIANT_FMT " %zu\n", sample_id, GVA_VARIANT_PRINT(variant), distance);
         db_alleles[allele_idx].distance += distance;
 
@@ -1126,7 +744,7 @@ locals_main(int argc, char* argv[static argc + 1])
         gva_uint const node_idx = interval_tree_insert(&tree, tmp_idx);
         if (node_idx != tmp_idx)
         {
-            array_header(tree.nodes)->length -= 1;  // reverse; node already in the tree
+            array_header(tree.nodes)->length -= 1;  // undo; node already in the tree
         } // if
         tree.nodes[node_idx].alleles = ARRAY_APPEND(gva_std_allocator, node_allele_join, ((struct Node_Allele) {node_idx ^ allele_idx, tree.nodes[node_idx].alleles})) - 1;
 
@@ -1135,7 +753,7 @@ locals_main(int argc, char* argv[static argc + 1])
     if (array_length(db_alleles) > 0)
     {
         db_alleles[array_length(db_alleles) - 1].join_end = array_length(node_allele_join);
-    }
+    } // if
     fclose(stream);
     fprintf(stderr, "line count: %zu\n", line_count);
     fprintf(stderr, "tree nodes: %zu\n", array_length(tree.nodes));
@@ -1154,7 +772,7 @@ locals_main(int argc, char* argv[static argc + 1])
                 db_alleles[i].distance,
                 db_alleles[i].join_start,
                 db_alleles[i].join_end);
-    }
+    } // for
 
     // for every query
     line_count = 0;
@@ -1165,7 +783,7 @@ locals_main(int argc, char* argv[static argc + 1])
         {
             fprintf(stderr, "error: parsing failed at line %zu: %s", line_count + 1, line);
             continue;
-        }
+        } // if
 
         // variant
         GVA_Variant rhs_var;
@@ -1173,20 +791,20 @@ locals_main(int argc, char* argv[static argc + 1])
         {
             fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
             continue;
-        } //
+        } // if
 
         GVA_LCS_Graph const rhs_graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_var);
         // fprintf(stderr, GVA_VARIANT_FMT_SPDI " (%u) \n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_var), rhs_graph.distance);
 
         // Join nodes in the index to parts in the query
-        struct NODE_PARTS
+        struct Node_Parts
         {
             HASH_TABLE_KEY;
             GVA_Relation relation;
             gva_uint start;
             gva_uint end;
             gva_uint included;
-        }* node_parts_table = hash_table_init(gva_std_allocator, 1024, sizeof(*node_parts_table));
+        }* node_parts = hash_table_init(gva_std_allocator, 1024, sizeof(*node_parts));
 
         for (size_t part_idx = 0; part_idx < array_length(rhs_graph.dom_nodes) - 1; ++part_idx)
         {
@@ -1206,7 +824,7 @@ locals_main(int argc, char* argv[static argc + 1])
                 gva_uint const node_idx = candidates[can_idx];
                 GVA_Variant const db_var = {tree.nodes[node_idx].start, tree.nodes[node_idx].end,
                                             trie_string(trie, tree.nodes[node_idx].inserted)};
-                GVA_Relation const relation = compare_from_index(reference, db_var, tree.nodes[node_idx].distance, rhs_part, rhs_distance);
+                GVA_Relation const relation = gva_compare_with_distance(gva_std_allocator, reference.len, reference.str, db_var, tree.nodes[node_idx].distance, rhs_part, rhs_distance);
                 if (relation == GVA_DISJOINT)
                 {
                     continue;
@@ -1217,28 +835,28 @@ locals_main(int argc, char* argv[static argc + 1])
                 //         GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, rhs_part));
 
                 // link nodes to query parts
-                size_t hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
-                if (node_parts_table[hash_idx].gva_key != node_idx)
+                size_t hash_idx = HASH_TABLE_INDEX(node_parts, node_idx);
+                if (node_parts[hash_idx].gva_key != node_idx)
                 {
-                    HASH_TABLE_SET(gva_std_allocator, node_parts_table, node_idx,
-                                   ((struct NODE_PARTS) {node_idx, relation, part_idx, part_idx + 1, rhs_distance}));
-                    hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
+                    HASH_TABLE_SET(gva_std_allocator, node_parts, node_idx,
+                                   ((struct Node_Parts) {node_idx, relation, part_idx, part_idx + 1, rhs_distance}));
+                    hash_idx = HASH_TABLE_INDEX(node_parts, node_idx);
                 } // if
 
                 if (relation == GVA_EQUIVALENT || relation == GVA_IS_CONTAINED)
                 {
                     // TODO: default value is already set for equivalence?
-                    node_parts_table[hash_idx].included = tree.nodes[node_idx].distance;
+                    node_parts[hash_idx].included = tree.nodes[node_idx].distance;
                 } // if
                 else if (relation == GVA_CONTAINS)
                 {
-                    node_parts_table[hash_idx].end = part_idx + 1;
+                    node_parts[hash_idx].end = part_idx + 1;
                 } // if
                 else // GVA_OVERLAP
                 {
                     // TODO: Set relation to OVERLAP?
                     // TODO: +=1 ?
-                    node_parts_table[hash_idx].included = 1;
+                    node_parts[hash_idx].included = 1;
                 } // else
             } // for every candidate
             candidates = ARRAY_DESTROY(gva_std_allocator, candidates);
@@ -1247,27 +865,27 @@ locals_main(int argc, char* argv[static argc + 1])
         // We have now compared all query parts to the index
 
         // fix containment for multiple parts in single node for every query
-        for (size_t npt_index = 0; npt_index < array_header(node_parts_table)->capacity; ++npt_index)
+        for (size_t npt_index = 0; npt_index < array_header(node_parts)->capacity; ++npt_index)
         {
-            size_t const node_idx = node_parts_table[npt_index].gva_key;
-            if (node_idx == GVA_NOT_FOUND)
+            size_t const node_idx = node_parts[npt_index].gva_key;
+            if (node_idx == NOT_FOUND)
             {
                 continue;
             } // if
 
-            if (node_parts_table[npt_index].relation == GVA_CONTAINS &&
-                node_parts_table[npt_index].end - node_parts_table[npt_index].start > 1)
+            if (node_parts[npt_index].relation == GVA_CONTAINS &&
+                node_parts[npt_index].end - node_parts[npt_index].start > 1)
             {
                 size_t const lhs_distance = tree.nodes[node_idx].distance;
                 size_t rhs_distance = 0;
-                for (size_t i = node_parts_table[npt_index].start; i < node_parts_table[npt_index].end; ++i)
+                for (size_t i = node_parts[npt_index].start; i < node_parts[npt_index].end; ++i)
                 {
                     rhs_distance += rhs_graph.dom_nodes[i + 1].distance;
                 } // for
                 if (rhs_distance >= lhs_distance)
                 {
-                    node_parts_table[npt_index].included = 1;
-                    node_parts_table[npt_index].relation = GVA_OVERLAP;
+                    node_parts[npt_index].included = 1;
+                    node_parts[npt_index].relation = GVA_OVERLAP;
                     continue;
                 } // if
 
@@ -1277,21 +895,21 @@ locals_main(int argc, char* argv[static argc + 1])
 
                 GVA_Variant rhs;
                 gva_edges(rhs_graph.observed.str,
-                          rhs_graph.dom_nodes[node_parts_table[npt_index].start],
-                          rhs_graph.dom_nodes[node_parts_table[npt_index].end],
-                          node_parts_table[npt_index].start == 0,
-                          node_parts_table[npt_index].end == array_length(rhs_graph.dom_nodes) - 1,
+                          rhs_graph.dom_nodes[node_parts[npt_index].start],
+                          rhs_graph.dom_nodes[node_parts[npt_index].end],
+                          node_parts[npt_index].start == 0,
+                          node_parts[npt_index].end == array_length(rhs_graph.dom_nodes) - 1,
                           &rhs);
 
                 size_t const distance = variants_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
                 if (lhs_distance - distance == rhs_distance)
                 {
-                    node_parts_table[npt_index].included = rhs_distance;
+                    node_parts[npt_index].included = rhs_distance;
                 } // if
                 else
                 {
-                    node_parts_table[npt_index].included = 1;
-                    node_parts_table[npt_index].relation = GVA_OVERLAP;
+                    node_parts[npt_index].included = 1;
+                    node_parts[npt_index].relation = GVA_OVERLAP;
                 } // if
             } // if
         } // for node_parts_table
@@ -1299,16 +917,16 @@ locals_main(int argc, char* argv[static argc + 1])
         // TODO: get rid of struct
         //   or
         //       store relation
-        struct RESULT_ALLELES
+        struct Result
         {
             HASH_TABLE_KEY;
-        }* results_table = hash_table_init(gva_std_allocator, 1024, sizeof(*results_table));
+        }* results = hash_table_init(gva_std_allocator, 1024, sizeof(*results));
 
         // find all alleles that were part of a non-disjoint relation
-        for (size_t npt_idx = 0; npt_idx < array_header(node_parts_table)->capacity; ++npt_idx)
+        for (size_t npt_idx = 0; npt_idx < array_header(node_parts)->capacity; ++npt_idx)
         {
-            size_t const node_idx = node_parts_table[npt_idx].gva_key;
-            if (node_idx == GVA_NOT_FOUND)
+            size_t const node_idx = node_parts[npt_idx].gva_key;
+            if (node_idx == NOT_FOUND)
             {
                 continue;
             } // if
@@ -1318,15 +936,15 @@ locals_main(int argc, char* argv[static argc + 1])
                  naj_table_idx = node_allele_join[naj_table_idx].next)
             {
                 size_t const allele_idx = node_allele_join[naj_table_idx].link ^ node_idx;
-                HASH_TABLE_SET(gva_std_allocator, results_table, allele_idx, ((struct RESULT_ALLELES) {allele_idx}));
+                HASH_TABLE_SET(gva_std_allocator, results, allele_idx, ((struct Result) {allele_idx}));
             } // for alleles
         } // for node_parts_table
 
         // build result vector for every query
-        for (size_t results_idx = 0; results_idx < array_header(results_table)->capacity; ++results_idx)
+        for (size_t results_idx = 0; results_idx < array_header(results)->capacity; ++results_idx)
         {
-            size_t allele_idx = results_table[results_idx].gva_key;
-            if (allele_idx == GVA_NOT_FOUND)
+            size_t allele_idx = results[results_idx].gva_key;
+            if (allele_idx == NOT_FOUND)
             {
                 continue;
             } // if
@@ -1341,23 +959,23 @@ locals_main(int argc, char* argv[static argc + 1])
             for (size_t join_idx = db_alleles[allele_idx].join_start; join_idx < db_alleles[allele_idx].join_end; ++join_idx)
             {
                 size_t node_idx = node_allele_join[join_idx].link ^ allele_idx;
-                size_t const hash_idx = HASH_TABLE_INDEX(node_parts_table, node_idx);
-                if (node_idx != node_parts_table[hash_idx].gva_key)
+                size_t const hash_idx = HASH_TABLE_INDEX(node_parts, node_idx);
+                if (node_idx != node_parts[hash_idx].gva_key)
                 {
                     continue;
                 } // if
 
-                if (node_parts_table[hash_idx].relation == GVA_EQUIVALENT)
+                if (node_parts[hash_idx].relation == GVA_EQUIVALENT)
                 {
-                    included += node_parts_table[hash_idx].included;
+                    included += node_parts[hash_idx].included;
                     if (relation == GVA_EQUIVALENT || relation == GVA_DISJOINT)
                     {
                         relation = GVA_EQUIVALENT;
                     } // if
                 } // if
-                else if (node_parts_table[hash_idx].relation == GVA_CONTAINS)
+                else if (node_parts[hash_idx].relation == GVA_CONTAINS)
                 {
-                    included += node_parts_table[hash_idx].included;
+                    included += node_parts[hash_idx].included;
                     if (relation == GVA_IS_CONTAINED)
                     {
                         relation = GVA_OVERLAP;  // TODO: included = 1; ???
@@ -1365,12 +983,12 @@ locals_main(int argc, char* argv[static argc + 1])
                     } // if
                     relation = GVA_CONTAINS;
                 } // if
-                else if (node_parts_table[hash_idx].relation == GVA_IS_CONTAINED)
+                else if (node_parts[hash_idx].relation == GVA_IS_CONTAINED)
                 {
-                    size_t const part_idx = node_parts_table[hash_idx].start;
+                    size_t const part_idx = node_parts[hash_idx].start;
                     if (relation == GVA_CONTAINS)
                     {
-                        included += node_parts_table[hash_idx].included;  // TODO: included = 1; ???
+                        included += node_parts[hash_idx].included;  // TODO: included = 1; ???
                         relation = GVA_OVERLAP;
                         break;
                     } // if
@@ -1384,7 +1002,7 @@ locals_main(int argc, char* argv[static argc + 1])
                     ARRAY_APPEND(gva_std_allocator, is_contained_nodes, node_idx);
                     relation = GVA_IS_CONTAINED;
                 } // if
-                else if (node_parts_table[hash_idx].relation == GVA_OVERLAP)
+                else if (node_parts[hash_idx].relation == GVA_OVERLAP)
                 {
                     included = 1;
                     relation = GVA_OVERLAP;
@@ -1412,7 +1030,7 @@ locals_main(int argc, char* argv[static argc + 1])
                 {
                     relation = GVA_IS_CONTAINED;
                 } // if
-                else // if (lhs_excluded == 0 && rhs_excluded == 0)
+                else  // lhs_excluded == 0 && rhs_excluded == 0
                 {
                     relation = GVA_EQUIVALENT;
                 } // else
@@ -1431,9 +1049,9 @@ locals_main(int argc, char* argv[static argc + 1])
             } // if
         } // for all alleles
 
-        results_table = HASH_TABLE_DESTROY(gva_std_allocator, results_table);
+        results = HASH_TABLE_DESTROY(gva_std_allocator, results);
 
-        node_parts_table = HASH_TABLE_DESTROY(gva_std_allocator, node_parts_table);
+        node_parts = HASH_TABLE_DESTROY(gva_std_allocator, node_parts);
 
         gva_string_destroy(gva_std_allocator, rhs_graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, rhs_graph);
@@ -1451,6 +1069,7 @@ locals_main(int argc, char* argv[static argc + 1])
 } // locals_main
 
 
+// FIXME: to string module?
 static char*
 strrev(size_t const n, char str[static n])
 {
@@ -1468,24 +1087,28 @@ strrev(size_t const n, char str[static n])
 } // strrev
 
 
-GVA_String vcf2obs(GVA_Allocator const allocator, GVA_String reference, FILE *stream)
+GVA_String
+vcf2obs(GVA_Allocator const allocator, GVA_String const reference, FILE* stream)
 {
-    GVA_Variant * variants = NULL;
+    GVA_Variant* variants = NULL;
 
     size_t line_count = 0;
     size_t dropped = 0;
     static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stream) != NULL) {
+    while (fgets(line, sizeof(line), stream) != NULL)
+    {
         size_t const len = strlen(line) - 1;
         GVA_Variant variant;
-        if (gva_parse_spdi(len, line, &variant) == 0) {
+        if (gva_parse_spdi(len, line, &variant) == 0)
+        {
             fprintf(stderr, "error: SPDI parsing failed at line %zu: %s", line_count + 1, line);
             continue;
         } // if
 
         GVA_Variant trimmed = prefix_trimmed(reference.len, reference.str, variant);
 
-        if (array_length(variants) > 0 && trimmed.start < variants[array_length(variants) - 1].end) {
+        if (array_length(variants) > 0 && trimmed.start < variants[array_length(variants) - 1].end)
+        {
             //fprintf(stderr, "dropped: at line %zu: %s", line_count + 1, line);
             dropped += 1;
             continue;
@@ -1538,7 +1161,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     {
          fprintf(stderr, "distance mismatch between f and b\n");
          exit(EXIT_FAILURE);
-    }
+    } // if
 
     reference = strrev(len_ref, (char*) reference);
     observed = strrev(len_obs, (char*) observed);
@@ -1612,7 +1235,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     {
          fprintf(stderr, "distance mismatch between f and sum\n");
          exit(EXIT_FAILURE);
-    }
+    } // if
 
     forward = gva_std_allocator.allocate(gva_std_allocator.context, forward, MIN(len_ref, len_obs), 0);
     f_uniq = gva_std_allocator.allocate(gva_std_allocator.context, f_uniq, MIN(len_ref, len_obs), 0);
@@ -1622,7 +1245,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
 
 
 int
-wu_main(int argc, char* argv[static argc + 1])
+wu_main(int argc, char* argv[static argc])
 {
     if (argc < 3)
     {
@@ -1698,7 +1321,7 @@ wu_main(int argc, char* argv[static argc + 1])
 
 
 int
-slice_blob_main(int argc, char* argv[static argc + 1])
+slice_blob_main(int argc, char* argv[static argc])
 {
     if (argc < 3)
     {
@@ -1756,10 +1379,12 @@ slice_blob_main(int argc, char* argv[static argc + 1])
 
 
 int
-extract_main(int argc, char* argv[static argc + 1]) {
+extract_main(int argc, char* argv[static argc])
+{
     errno = 0;
     FILE *stream = fopen(argv[1], "r");
-    if (stream == NULL) {
+    if (stream == NULL)
+    {
         fprintf(stderr, "error: %s\n", strerror(errno));
         return EXIT_FAILURE;
     } // if
@@ -1775,20 +1400,23 @@ extract_main(int argc, char* argv[static argc + 1]) {
 
     lcs_graph_dot(stderr, graph);
 
-
     return EXIT_SUCCESS;
 } // extract_main
 
 
-int make_ref_blob_main(int argc, char* argv[static argc + 1]) {
-    if (argc < 2) {
+int
+make_ref_blob_main(int argc, char* argv[static argc])
+{
+    if (argc < 2)
+    {
         fprintf(stderr, "usage: %s reference\n", argv[0]);
         return EXIT_FAILURE;
     } // if
 
     errno = 0;
     FILE *stream = fopen(argv[1], "r");
-    if (stream == NULL) {
+    if (stream == NULL)
+    {
         fprintf(stderr, "error: %s\n", strerror(errno));
         return EXIT_FAILURE;
     } // if
@@ -1803,15 +1431,19 @@ int make_ref_blob_main(int argc, char* argv[static argc + 1]) {
 } // make_ref_blob_main
 
 
-int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
-    if (argc < 2) {
+int
+make_obs_blob_main(int argc, char* argv[static argc])
+{
+    if (argc < 2)
+    {
         fprintf(stderr, "usage: %s reference.blob\n", argv[0]);
         return EXIT_FAILURE;
     } // if
 
     errno = 0;
     FILE *stream = fopen(argv[1], "r");
-    if (stream == NULL) {
+    if (stream == NULL)
+    {
         fprintf(stderr, "error: %s\n", strerror(errno));
         return EXIT_FAILURE;
     } // if
@@ -1828,15 +1460,16 @@ int make_obs_blob_main(int argc, char* argv[static argc + 1]) {
 
 
 int
-main(int argc, char* argv[static argc + 1])
+main(int argc, char* argv[static argc])
 {
     // return wu_main(argc, argv);
     // return slice_blob_main(argc, argv);
     // return fasta_blob_write(argc, argv);
     // return vcf_main(argc, argv);
     // return dbsnp_main(argc, argv);
-    return locals_main(argc, argv);
+    // return locals_main(argc, argv);
     // return extract_main(argc, argv);
     // return make_ref_blob_main(argc, argv);
     // return make_obs_blob_main(argc, argv);
+    return index_main(argc, argv);
 } // main

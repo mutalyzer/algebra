@@ -8,7 +8,7 @@
 #include "lcs_graph.h"  // GVA_LCS_Graph
 #include "relations.h"  // GVA_Relation
 #include "types.h"      // gva_uint
-#include "variant.h"    // GVA_VARIANT
+#include "variant.h"    // GVA_Variant
 
 
 // FIXME: move to lcs_graph as `uniq_atomics`.
@@ -23,6 +23,7 @@ bitset_fill(GVA_LCS_Graph const graph,
     size_t ts[static restrict 1]);
 
 
+// FIXME: too many similar functions
 GVA_Relation
 gva_compare_graphs(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
@@ -33,6 +34,13 @@ GVA_Relation
 gva_compare_supremals(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const lhs, GVA_Variant const rhs);
+
+
+GVA_Relation
+gva_compare_with_distance(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const lhs, size_t const lhs_distance,
+    GVA_Variant const rhs, size_t const rhs_distance);
 
 
 #endif // GVA_COMPARE_H

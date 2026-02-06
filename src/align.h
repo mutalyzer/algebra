@@ -35,6 +35,7 @@ typedef struct
 } LCS_Alignment;
 
 
+// FIXME: shift -> offset
 LCS_Alignment
 lcs_align(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],

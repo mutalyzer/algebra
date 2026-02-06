@@ -349,3 +349,115 @@ gva_compare_supremals(GVA_Allocator const allocator,
 
     return relation;
 } // gva_compare_supremals
+
+
+GVA_Relation
+gva_compare_with_distance(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const lhs, size_t const lhs_distance,
+    GVA_Variant const rhs, size_t const rhs_distance)
+{
+    if (gva_variant_eq(lhs, rhs))
+    {
+        return GVA_EQUIVALENT;
+    } // if
+
+    size_t const start = MIN(lhs.start, rhs.start);
+    size_t const end = MAX(lhs.end, rhs.end);
+
+    size_t const len_lhs = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
+    size_t const len_rhs = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
+
+    size_t distance = 0;
+    if (len_lhs == 0)
+    {
+        distance = len_rhs;
+    } // if
+    else if (len_rhs == 0)
+    {
+        distance = len_rhs;
+    } // if
+    else
+    {
+        char* lhs_obs = allocator.allocate(allocator.context, NULL, 0, len_lhs);
+        char* rhs_obs = allocator.allocate(allocator.context, NULL, 0, len_rhs);
+        if (lhs_obs == NULL || rhs_obs == NULL)
+        {
+            rhs_obs = allocator.allocate(allocator.context, rhs_obs, len_rhs, 0);
+            lhs_obs = allocator.allocate(allocator.context, lhs_obs, len_lhs, 0);
+            return -1;  // FIXME
+        } // if
+
+        memcpy(lhs_obs, reference + start, lhs.start - start);
+        memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
+        memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
+        memcpy(rhs_obs, reference + start, rhs.start - start);
+        memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
+        memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
+
+        distance = gva_edit_distance(allocator, len_lhs, lhs_obs, len_rhs, rhs_obs);
+        rhs_obs = allocator.allocate(allocator.context, rhs_obs, len_rhs, 0);
+        lhs_obs = allocator.allocate(allocator.context, lhs_obs, len_lhs, 0);
+    } // else
+
+    if (lhs_distance + rhs_distance == distance)
+    {
+        return GVA_DISJOINT;
+    } // if
+
+    if (lhs_distance - rhs_distance == distance)
+    {
+        return GVA_CONTAINS;
+    } // if
+
+    if (rhs_distance - lhs_distance == distance)
+    {
+        return GVA_IS_CONTAINED;
+    } // if
+
+    size_t const len = end - start + 1;
+    size_t const start_intersection = MAX(lhs.start, rhs.start);
+    size_t const end_intersection = MIN(lhs.end, rhs.end);
+
+    GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, lhs.end - lhs.start, reference + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
+    size_t* lhs_dels = bitset_init(allocator, len);  // can be one shorter
+    size_t* lhs_as = bitset_init(allocator, len);
+    size_t* lhs_cs = bitset_init(allocator, len);
+    size_t* lhs_gs = bitset_init(allocator, len);
+    size_t* lhs_ts = bitset_init(allocator, len);
+    bitset_fill(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+
+    GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(allocator, rhs.end - rhs.start, reference + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
+    size_t* rhs_dels = bitset_init(allocator, len);  // can be one shorter
+    size_t* rhs_as = bitset_init(allocator, len);
+    size_t* rhs_cs = bitset_init(allocator, len);
+    size_t* rhs_gs = bitset_init(allocator, len);
+    size_t* rhs_ts = bitset_init(allocator, len);
+    bitset_fill(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+
+    GVA_Relation relation = GVA_DISJOINT;
+    if (bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
+        bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
+        bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
+        bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
+        bitset_intersection_cnt(lhs_ts, rhs_ts) > 0)
+    {
+        relation = GVA_OVERLAP;
+    } // if
+
+    rhs_ts = bitset_destroy(allocator, rhs_ts);
+    rhs_gs = bitset_destroy(allocator, rhs_gs);
+    rhs_cs = bitset_destroy(allocator, rhs_cs);
+    rhs_as = bitset_destroy(allocator, rhs_as);
+    rhs_dels = bitset_destroy(allocator, rhs_dels);
+    gva_lcs_graph_destroy(allocator, rhs_graph);
+
+    lhs_ts = bitset_destroy(allocator, lhs_ts);
+    lhs_gs = bitset_destroy(allocator, lhs_gs);
+    lhs_cs = bitset_destroy(allocator, lhs_cs);
+    lhs_as = bitset_destroy(allocator, lhs_as);
+    lhs_dels = bitset_destroy(allocator, lhs_dels);
+    gva_lcs_graph_destroy(allocator, lhs_graph);
+
+    return relation;
+} // gva_compare_with_distance

@@ -52,11 +52,11 @@ array_ensure(GVA_Allocator const allocator, void* const self,
 // Returns `NULL`.
 // Usage:
 //     a = ARRAY_DESTROY(gva_std_allocator, a);
-// Warning: `self` is evaluated multiple times.
+// Warning: `allocator and ``self` are evaluated multiple times.
 #define ARRAY_DESTROY(allocator, self) (                                \
     (self) == NULL ? NULL :                                             \
-        allocator.allocate(                                             \
-            allocator.context,                                          \
+        (allocator).allocate(                                           \
+            (allocator).context,                                        \
             array_header(self),                                         \
             array_header(self)->capacity * sizeof(*(self)),             \
             0                                                           \
@@ -68,7 +68,7 @@ array_ensure(GVA_Allocator const allocator, void* const self,
 // array. 0 if (re)allocation failed.
 // Warning: `self` is evaluated multiple times.
 #define ARRAY_APPEND(allocator, self, value) (                          \
-    (self) = array_ensure(allocator, (self), sizeof(*(self)), 1),       \
+    (self) = array_ensure((allocator), (self), sizeof(*(self)), 1),     \
     (self) == NULL ? 0 : (                                              \
         (self)[array_header(self)->length] = (value),                   \
         array_header(self)->length += 1                                 \

@@ -54,13 +54,14 @@ typedef struct
     GVA_Node*   nodes;
     GVA_Edge*   edges;
     GVA_Node*   dom_nodes;
-    GVA_Variant supremal;
+    GVA_Variant supremal;  // FIXME: remove
     GVA_String  observed;  // FIXME: ownership and destroy
     gva_uint    source;
     gva_uint    distance;
 } GVA_LCS_Graph;
 
 
+// FIXME: shift -> offset
 GVA_LCS_Graph
 gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],

@@ -264,7 +264,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         } // if
     } // for
 
-
     // start constructing the local supremal
     ARRAY_APPEND(allocator, graph.dom_nodes,
         ((GVA_Node)
@@ -321,7 +320,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             graph.dom_nodes[array_length(graph.dom_nodes) - 1].length += 1;
         } // if
     } // for
-
 
     // add empty match sink if not already handled because of unique matches
     if (graph.dom_nodes[array_length(graph.dom_nodes) - 1].link != sink.idx)
