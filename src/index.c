@@ -205,12 +205,12 @@ gva_index_query(GVA_Allocator const allocator,
                   i == 0, i == array_length(graph.dom_nodes) - 2,
                   &variant);
 
-        fprintf(stderr, "    " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("", variant));
+        fprintf(stderr, "    " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
 
         gva_uint* intervals = interval_tree_intersection(allocator, self->intervals, variant.start, variant.end);
         for (size_t j = 0; j < array_length(intervals); ++j)
         {
-            fprintf(stderr, "        check: " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("", variant_from_index(self, intervals[j])));
+            fprintf(stderr, "        check: " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant_from_index(self, intervals[j])));
             size_t const distance = variants_distance(allocator, self->reference.len, self->reference.str, variant_from_index(self, intervals[j]), variant);
             if (distance >= self->intervals.nodes[intervals[j]].distance + graph.dom_nodes[i + 1].distance)
             {
@@ -239,7 +239,7 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
-        fprintf(stderr, "%u %u %u %u\n", parts[i].gva_key, parts[i].start, parts[i].end, parts[i].distance);
+        fprintf(stderr, GVA_VARIANT_FMT_SPDI " %u %u %u\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant_from_index(self, parts[i].gva_key)), parts[i].start, parts[i].end, parts[i].distance);
 
         size_t included = 0;
         if (parts[i].end - parts[i].start == 1)
