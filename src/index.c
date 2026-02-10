@@ -158,7 +158,6 @@ gva_index_insert(GVA_Index* restrict const self,
     GVA_Variant const variant, size_t const distance)
 {
     size_t const id_idx = trie_insert(self->allocator, &self->ids, len, allele_id);
-    fprintf(stderr, "%zu " GVA_STRING_FMT " == " GVA_STRING_FMT "\n", id_idx, GVA_STRING_PRINT(((GVA_String) {len, allele_id})), GVA_STRING_PRINT(trie_string(self->ids, id_idx)));
     size_t allele_idx = array_length(self->alleles) - 1;
 
     // new allele
@@ -166,6 +165,8 @@ gva_index_insert(GVA_Index* restrict const self,
     {
         allele_idx = ARRAY_APPEND(self->allocator, self->alleles, ((Allele) {id_idx, array_length(self->join), 0, 0})) - 1;
     } // if
+
+    fprintf(stderr, "%zu: " GVA_STRING_FMT "\n", allele_idx, GVA_STRING_PRINT(trie_string(self->ids, id_idx)));
 
     // add variant
     gva_uint const inserted_idx = trie_insert(self->allocator, &self->inserted, variant.sequence.len, variant.sequence.str);
@@ -197,7 +198,6 @@ gva_index_query(GVA_Allocator const allocator,
         gva_uint end;
         gva_uint distance;
     }* parts = hash_table_init(allocator, 1024, sizeof(*parts));
-
 
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
@@ -240,9 +240,8 @@ gva_index_query(GVA_Allocator const allocator,
 
             for (gva_uint k = self->intervals.nodes[intervals[j]].alleles; k != GVA_NULL; k = self->join[k].next)
             {
-                gva_uint allele_idx = self->join[k].link ^ intervals[j];
+                gva_uint const allele_idx = self->join[k].link ^ intervals[j];
                 fprintf(stderr, "allele idx: %u - " GVA_STRING_FMT "\n", allele_idx, GVA_STRING_PRINT(trie_string(self->ids, self->alleles[allele_idx].id_idx)));
-                fprintf(stderr, "allele start: %u\n", self->alleles[allele_idx].start);
 
                 size_t const idx = HASH_TABLE_INDEX(x, allele_idx);
                 if (x[idx].gva_key == allele_idx)
@@ -256,7 +255,6 @@ gva_index_query(GVA_Allocator const allocator,
                     fprintf(stderr, "        add new. k: %u\n", k);
                 } // else
             } // for
-
         } // for
 
         for (size_t j = 0; j < array_header(x)->capacity; ++j)
@@ -266,29 +264,27 @@ gva_index_query(GVA_Allocator const allocator,
                 continue;
             } // if
 
-            fprintf(stderr, "key: %u - " GVA_STRING_FMT "(%u, %u)\n",
-                    x[j].gva_key, GVA_STRING_PRINT(trie_string(self->ids, self->alleles[x[j].gva_key].id_idx)),
+            fprintf(stderr, GVA_STRING_FMT "[%u, %u)\n",
+                    GVA_STRING_PRINT(trie_string(self->ids, self->alleles[x[j].gva_key].id_idx)),
                     x[j].start, x[j].end);
 
-            size_t len = x[j].end - x[j].start;
+            size_t const len = x[j].end - x[j].start;
             if (len > 1)
             {
                 GVA_Variant* variants = allocator.allocate(allocator.context, NULL, 0, len * sizeof(*variants));
                 size_t distance = 0;
-
                 for (size_t k = 0; k < len; ++k)
                 {
                     variants[k] = variant_from_index(self, self->join[x[j].start + k].link ^ x[j].gva_key);
                     distance += self->intervals.nodes[self->join[x[j].start + k].link ^ x[j].gva_key].distance;
-                }
+                } // for
 
                 GVA_LCS_Graph lhs_graph = gva_lcs_graph_from_variants(allocator, self->reference.len, self->reference.str, len, variants);
                 GVA_LCS_Graph rhs_graph = gva_lcs_graph_from_variants(allocator, self->reference.len, self->reference.str, 1, &variant);
 
-                GVA_Relation rel = gva_compare_graphs(allocator, self->reference.len, self->reference.str, lhs_graph, rhs_graph);
+                GVA_Relation const relation = gva_compare_graphs(allocator, self->reference.len, self->reference.str, lhs_graph, rhs_graph);
 
-                fprintf(stderr, "rel: %s\n", GVA_RELATION_LABELS[rel]);
-
+                fprintf(stderr, "relation: %s\n", GVA_RELATION_LABELS[relation]);
 
                 gva_string_destroy(allocator, rhs_graph.observed);
                 gva_lcs_graph_destroy(allocator, rhs_graph);
@@ -296,7 +292,7 @@ gva_index_query(GVA_Allocator const allocator,
                 gva_lcs_graph_destroy(allocator, lhs_graph);
 
                 variants = allocator.allocate(allocator.context, variants, len * sizeof(*variants), 0);
-            }
+            } // if
         } // for
 
         intervals = ARRAY_DESTROY(allocator, intervals);
@@ -341,24 +337,20 @@ gva_index_query(GVA_Allocator const allocator,
                 distance += graph.dom_nodes[j + 1].distance;
             } // for
 
-            included = gva_compare_with_distance(allocator, self->reference.len, self->reference.str,
+            fprintf(stderr, "Calculate relation\n");
+
+            GVA_Relation const relation = gva_compare_with_distance(allocator, self->reference.len, self->reference.str,
                 variant_from_index(self, parts[i].gva_key), self->intervals.nodes[parts[i].gva_key].distance,
                 variant, distance);
 
-            if (included == 0)  // disjoint
+            if (relation == GVA_DISJOINT)
             {
                 continue;
             } // if
+
+            fprintf(stderr, "relation: %s\n", GVA_RELATION_LABELS[relation]);
         } // if
-
-        for (gva_uint j = self->intervals.nodes[parts[i].gva_key].alleles; j != GVA_NULL; j = self->join[j].next)
-        {
-            gva_uint const idx = j ^ parts[i].gva_key;
-        } // for
-
     } // for
-
-
 
     parts = HASH_TABLE_DESTROY(allocator, parts);
 } // gva_index_query
