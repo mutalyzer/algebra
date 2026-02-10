@@ -450,57 +450,10 @@ int vcf_main(int argc, char* argv[static argc])
     fprintf(stderr, "#dropped:  %zu\n", dropped);
 
     GVA_String observed = gva_patch(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
-    GVA_String lss_observed = gva_patch(gva_std_allocator, reference.len, reference.str, array_length(lss), lss);
 
     fasta_blob_write(stdout, observed);
 
     return EXIT_SUCCESS;
-
-    size_t const in_distance = gva_edit_distance(gva_std_allocator, reference.len, reference.str, observed.len, observed.str);
-
-    for (size_t i = 0; i < MIN(reference.len, observed.len); ++i)
-    {
-        if (matches[i].row != (gva_uint) -1)
-        {
-            printf("%zu: (%u, %u)\n", i, matches[i].row, matches[i].col);
-        } // if
-    } // for
-
-    matches = gva_std_allocator.allocate(gva_std_allocator.context, matches, MIN(reference.len, observed.len), 0);
-
-    fprintf(stderr, "distance:  %zu\n", in_distance);
-    fprintf(stderr, "===OUTPUT===\n");
-    fprintf(stderr, "#parts:    %zu\n", array_length(lss));
-    fprintf(stderr, "distance:  %zu\n", distance);
-
-    //printf("%zu\n", in_distance);
-
-    for (size_t i = 0; i < array_length(variants); ++i)
-    {
-        gva_string_destroy(gva_std_allocator, variants[i].sequence);
-    } // for
-    variants = ARRAY_DESTROY(gva_std_allocator, variants);
-
-    for (size_t i = 0; i < array_length(lss); ++i)
-    {
-        gva_string_destroy(gva_std_allocator, lss[i].sequence);
-    } // for
-    lss = ARRAY_DESTROY(gva_std_allocator, lss);
-
-    bool const eq = observed.len == lss_observed.len && strncmp(observed.str, lss_observed.str, observed.len) == 0;
-
-    gva_string_destroy(gva_std_allocator, lss_observed);
-    gva_string_destroy(gva_std_allocator, observed);
-    gva_string_destroy(gva_std_allocator, reference);
-
-    if (eq)
-    {
-        return EXIT_SUCCESS;
-    } // if
-
-//    fprintf(stderr, "ERROR\n");
-
-    return EXIT_FAILURE;
 } // vcf_main
 
 
@@ -584,6 +537,7 @@ index_main(int argc, char* argv[static argc])
     if (index == NULL)
     {
         fprintf(stderr, "OOM\n");
+        gva_string_destroy(gva_std_allocator, reference);
         return EXIT_FAILURE;
     } // if
 
@@ -629,7 +583,7 @@ index_main(int argc, char* argv[static argc])
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        fprintf(stderr, "Query: " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("chr1", graph.supremal), graph.distance);
+        fprintf(stderr, "Query: " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", graph.supremal), graph.distance);
 
         gva_index_query(gva_std_allocator, index, graph);
 
@@ -1141,26 +1095,18 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
         printf(GVA_VARIANT_FMT_SPDI " %zu\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, ((GVA_Variant) {offset, offset + len_ref, {len_obs, observed}})), len_ref + len_obs);
         return;
     } // if
-    size_t f_distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
-    MNode* forward = matches;
-    char* f_uniq = uniq;
-    //fprintf(stderr, "distance: %zu\n", distance);
-    //fprintf(stderr, "max_lcs_pos: %zu\n", max_lcs_pos);
+    
+    GVA_Matches forward = gva_edit_distance_matches(gva_std_allocator, len_ref, reference, len_obs, observed);
 
     reference = strrev(len_ref, (char*) reference);
     observed = strrev(len_obs, (char*) observed);
 
-    size_t b_distance = gva_edit_distance(gva_std_allocator, len_ref, reference, len_obs, observed);
-    MNode* backward = matches;
-    char* b_uniq = uniq;
-    // fprintf(stderr, "wu distance: %zu\n", b_distance);
-    //fprintf(stderr, "max_lcs_pos: %zu\n", max_lcs_pos);
-    size_t const max_lcs_pos_local = max_lcs_pos;
+    GVA_Matches backward = gva_edit_distance_matches(gva_std_allocator, len_ref, reference, len_obs, observed);
 
-    if (f_distance != b_distance)
+    if (forward.distance != backward.distance)
     {
          fprintf(stderr, "distance mismatch between f and b\n");
-         exit(EXIT_FAILURE);
+         exit(EXIT_FAILURE);  // FIXME
     } // if
 
     reference = strrev(len_ref, (char*) reference);
@@ -1170,48 +1116,36 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     size_t prev_lcs_pos = 0;
     size_t prev_row = -1;
     size_t prev_col = -1;
-    for (size_t i = 0; i < max_lcs_pos_local; ++i)
+    for (size_t i = 0; i < forward.max_lcs_pos; ++i)
     {
-        size_t const j = max_lcs_pos_local - i - 1;
-/*
-        if (forward[i].row != (gva_uint) -1 &&
-            backward[j].row != (gva_uint) -1 &&
-            forward[i].row == len_ref - backward[j].row - 1 &&
-            forward[i].col == len_obs - backward[j].col - 1)
-*/
-        if (forward[i].row == len_ref - backward[j].row - 1 &&
-            forward[i].col == len_obs - backward[j].col - 1 &&
-            (f_uniq[i] == 1 || b_uniq[j] == 1))
+        size_t const j = forward.max_lcs_pos - i - 1;
+        if (forward.matches[i].row == len_ref - backward.matches[j].row - 1 &&
+            forward.matches[i].col == len_obs - backward.matches[j].col - 1 &&
+            (forward.uniq[i] == 1 || backward.uniq[j] == 1))
         {
             #ifdef SMALL
-            fprintf(stderr, "common: %zu: (%u, %u)\n", i, forward[i].row, forward[i].col);
+            fprintf(stderr, "common: %zu: (%u, %u)\n", i, forward.matches[i].row, forward.matches[i].col);
             #endif
             if (i > prev_lcs_pos + 1 ||
-                forward[i].row > prev_row + 1 ||
-                forward[i].col > prev_col + 1)
+                forward.matches[i].row > prev_row + 1 ||
+                forward.matches[i].col > prev_col + 1)
             {
-                size_t const distance = forward[i].row + forward[i].col - 2 * i - sum;
+                size_t const distance = forward.matches[i].row + forward.matches[i].col - 2 * i - sum;
                 if (distance > 0)
                 {
                     sum += distance;
-                    //printf("R gap %zu: (%zu, %zu)--(%u, %u)  %zu\n", i, prev_row + 1, prev_col + 1, forward[i].row, forward[i].col, distance);
-                    local_supremal(forward[i].row - prev_row - 1, reference + prev_row + 1, forward[i].col - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
-                    //printf(GVA_STRING_FMT "\n", (int) (forward[i].row - prev_row - 1), reference + prev_row + 1);
-                    //printf(GVA_STRING_FMT "\n", (int) (forward[i].col - prev_col - 1), observed + prev_col + 1);
+                    local_supremal(forward.matches[i].row - prev_row - 1, reference + prev_row + 1, forward.matches[i].col - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
                 } // if
             } // if
             prev_lcs_pos = i;
-            prev_row = forward[i].row;
-            prev_col = forward[i].col;
+            prev_row = forward.matches[i].row;
+            prev_col = forward.matches[i].col;
         } // if
     } // for
     if (len_ref > prev_row + 1 || len_obs > prev_col + 1)
     {
-        size_t const distance = len_ref + len_obs - 2 * max_lcs_pos_local - sum;
+        size_t const distance = len_ref + len_obs - 2 * forward.max_lcs_pos - sum;
         sum += distance;
-        // fprintf(stderr, "sum dist: %zu\n", distance);
-        // printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
-        // printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
         GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
         for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
@@ -1220,27 +1154,21 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
                 graph.dom_nodes[i], graph.dom_nodes[i + 1],
                 i == 0, i == array_length(graph.dom_nodes) - 2,
                 &variant);
-            // printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance);
+            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance);
         } // for
         gva_lcs_graph_destroy(gva_std_allocator, graph);
-        //printf("L " GVA_VARIANT_FMT " %zu  %zu+[(%zu, %zu)--(%zu, %zu)]\n", GVA_VARIANT_PRINT(((GVA_Variant) {offset + prev_row + 1, offset + len_ref, {len_obs - prev_col - 1, observed + prev_col + 1}})), distance, offset, prev_row + 1, prev_col + 1, len_ref, len_obs);
-        //printf("L gap %zu: (%zu, %zu)--(%zu, %zu)  %zu\n", max_lcs_pos_local, prev_row + 1, prev_col + 1, len_ref, len_obs, distance);
-        //printf(GVA_STRING_FMT "\n", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
-        //printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
     } // if
 
-    //fprintf(stderr, "distance: %zu\n", sum);
-
-    if (f_distance != sum)
+    if (forward.distance != sum)
     {
          fprintf(stderr, "distance mismatch between f and sum\n");
-         exit(EXIT_FAILURE);
+         exit(EXIT_FAILURE);  // FIXME
     } // if
 
-    forward = gva_std_allocator.allocate(gva_std_allocator.context, forward, MIN(len_ref, len_obs), 0);
-    f_uniq = gva_std_allocator.allocate(gva_std_allocator.context, f_uniq, MIN(len_ref, len_obs), 0);
-    backward = gva_std_allocator.allocate(gva_std_allocator.context, backward, MIN(len_ref, len_obs), 0);
-    b_uniq = gva_std_allocator.allocate(gva_std_allocator.context, b_uniq, MIN(len_ref, len_obs), 0);
+    backward.uniq = gva_std_allocator.allocate(gva_std_allocator.context, backward.uniq, MIN(len_ref, len_obs), 0);
+    backward.matches = gva_std_allocator.allocate(gva_std_allocator.context, backward.matches, MIN(len_ref, len_obs) * sizeof(*backward.matches), 0);
+    forward.uniq = gva_std_allocator.allocate(gva_std_allocator.context, forward.uniq, MIN(len_ref, len_obs), 0);
+    forward.matches = gva_std_allocator.allocate(gva_std_allocator.context, forward.matches, MIN(len_ref, len_obs) * sizeof(*forward.matches), 0);
 } // local_supremal
 
 
@@ -1318,64 +1246,6 @@ wu_main(int argc, char* argv[static argc])
 
     return EXIT_SUCCESS;
 } // wu_main
-
-
-int
-slice_blob_main(int argc, char* argv[static argc])
-{
-    if (argc < 3)
-    {
-        fprintf(stderr, "usage: %s reference observed\n", argv[0]);
-        return EXIT_FAILURE;
-    } // if
-
-    errno = 0;
-    FILE* stream = fopen(argv[1], "r");
-    if (stream == NULL)
-    {
-        fprintf(stderr, "error: %s\n", strerror(errno));
-        return EXIT_FAILURE;
-    } // if
-
-    GVA_String reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
-    fclose(stream);
-    fprintf(stderr, "reference length: %zu\n", reference.len);
-
-    errno = 0;
-    stream = fopen(argv[2], "r");
-    if (stream == NULL)
-    {
-        gva_string_destroy(gva_std_allocator, reference);
-        fprintf(stderr, "error: %s\n", strerror(errno));
-        return EXIT_FAILURE;
-    } // if
-
-    GVA_String observed = gva_fasta_sequence_blob(gva_std_allocator, stream);
-    fclose(stream);
-    fprintf(stderr, "observed length: %zu\n", observed.len);
-
-    if (reference.str == NULL || observed.str == NULL)
-    {
-        gva_string_destroy(gva_std_allocator, reference);
-        gva_string_destroy(gva_std_allocator, observed);
-        return EXIT_FAILURE;
-    } // if
-
-    MNode const start = {2750171, 2750160};
-    MNode const end = {12954448, 12953797};
-
-    stream = fopen("ref_p1.blob", "w");
-    fasta_blob_write(stream, (GVA_String) {end.row - start.row, reference.str + start.row});
-    fclose(stream);
-
-    stream = fopen("obs_p1.blob", "w");
-    fasta_blob_write(stream, (GVA_String) {end.col - start.col, observed.str + start.col});
-    fclose(stream);
-
-    gva_string_destroy(gva_std_allocator, reference);
-    gva_string_destroy(gva_std_allocator, observed);
-    return EXIT_SUCCESS;
-} // slice_blob_main
 
 
 int
