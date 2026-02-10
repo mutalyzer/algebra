@@ -158,6 +158,7 @@ gva_index_insert(GVA_Index* restrict const self,
     GVA_Variant const variant, size_t const distance)
 {
     size_t const id_idx = trie_insert(self->allocator, &self->ids, len, allele_id);
+    fprintf(stderr, "%zu " GVA_STRING_FMT " == " GVA_STRING_FMT "\n", id_idx, GVA_STRING_PRINT(((GVA_String) {len, allele_id})), GVA_STRING_PRINT(trie_string(self->ids, id_idx)));
     size_t allele_idx = array_length(self->alleles) - 1;
 
     // new allele
@@ -197,8 +198,16 @@ gva_index_query(GVA_Allocator const allocator,
         gva_uint distance;
     }* parts = hash_table_init(allocator, 1024, sizeof(*parts));
 
+
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
+        struct X
+        {
+            HASH_TABLE_KEY;
+            gva_uint start;
+            gva_uint end;
+        }* x = hash_table_init(allocator, 1024, sizeof(*x));
+
         GVA_Variant variant;
         gva_edges(graph.observed.str,
                   graph.dom_nodes[i], graph.dom_nodes[i + 1],
@@ -228,8 +237,70 @@ gva_index_query(GVA_Allocator const allocator,
                 HASH_TABLE_SET(allocator, parts, intervals[j], ((struct Parts) {intervals[j], i, i + 1, distance}));
                 fprintf(stderr, "        add new\n");
             } // else
+
+            for (gva_uint k = self->intervals.nodes[intervals[j]].alleles; k != GVA_NULL; k = self->join[k].next)
+            {
+                gva_uint allele_idx = self->join[k].link ^ intervals[j];
+                fprintf(stderr, "allele idx: %u - " GVA_STRING_FMT "\n", allele_idx, GVA_STRING_PRINT(trie_string(self->ids, self->alleles[allele_idx].id_idx)));
+                fprintf(stderr, "allele start: %u\n", self->alleles[allele_idx].start);
+
+                size_t const idx = HASH_TABLE_INDEX(x, allele_idx);
+                if (x[idx].gva_key == allele_idx)
+                {
+                    x[idx].end = k + 1;
+                    fprintf(stderr, "        update. k: %u\n", k);
+                } // if
+                else
+                {
+                    HASH_TABLE_SET(allocator, x, allele_idx, ((struct X) {allele_idx, k, k + 1}));
+                    fprintf(stderr, "        add new. k: %u\n", k);
+                } // else
+            } // for
+
         } // for
+
+        for (size_t j = 0; j < array_header(x)->capacity; ++j)
+        {
+            if (x[j].gva_key == NOT_FOUND)
+            {
+                continue;
+            } // if
+
+            fprintf(stderr, "key: %u - " GVA_STRING_FMT "(%u, %u)\n",
+                    x[j].gva_key, GVA_STRING_PRINT(trie_string(self->ids, self->alleles[x[j].gva_key].id_idx)),
+                    x[j].start, x[j].end);
+
+            size_t len = x[j].end - x[j].start;
+            if (len > 1)
+            {
+                GVA_Variant* variants = allocator.allocate(allocator.context, NULL, 0, len * sizeof(*variants));
+                size_t distance = 0;
+
+                for (size_t k = 0; k < len; ++k)
+                {
+                    variants[k] = variant_from_index(self, self->join[x[j].start + k].link ^ x[j].gva_key);
+                    distance += self->intervals.nodes[self->join[x[j].start + k].link ^ x[j].gva_key].distance;
+                }
+
+                GVA_LCS_Graph lhs_graph = gva_lcs_graph_from_variants(allocator, self->reference.len, self->reference.str, len, variants);
+                GVA_LCS_Graph rhs_graph = gva_lcs_graph_from_variants(allocator, self->reference.len, self->reference.str, 1, &variant);
+
+                GVA_Relation rel = gva_compare_graphs(allocator, self->reference.len, self->reference.str, lhs_graph, rhs_graph);
+
+                fprintf(stderr, "rel: %s\n", GVA_RELATION_LABELS[rel]);
+
+
+                gva_string_destroy(allocator, rhs_graph.observed);
+                gva_lcs_graph_destroy(allocator, rhs_graph);
+                gva_string_destroy(allocator, lhs_graph.observed);
+                gva_lcs_graph_destroy(allocator, lhs_graph);
+
+                variants = allocator.allocate(allocator.context, variants, len * sizeof(*variants), 0);
+            }
+        } // for
+
         intervals = ARRAY_DESTROY(allocator, intervals);
+        x = HASH_TABLE_DESTROY(allocator, x);
     } // for
 
     for (size_t i = 0; i < array_header(parts)->capacity; ++i)

@@ -583,8 +583,7 @@ index_main(int argc, char* argv[static argc])
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        fprintf(stderr, "Query: " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", graph.supremal), graph.distance);
-
+        fprintf(stderr, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_STRING_PRINT(((GVA_String) {id_len, line})), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal), graph.distance);
         gva_index_query(gva_std_allocator, index, graph);
 
         gva_string_destroy(gva_std_allocator, graph.observed);
