@@ -163,10 +163,8 @@ gva_index_insert(GVA_Index* restrict const self,
     // new allele
     if (array_length(self->alleles) == 0 || id_idx != self->alleles[allele_idx].id_idx)
     {
-        allele_idx = ARRAY_APPEND(self->allocator, self->alleles, ((Allele) {id_idx, array_length(self->join), 0, 0})) - 1;
+        allele_idx = ARRAY_APPEND(self->allocator, self->alleles, ((Allele) {id_idx, 0, array_length(self->join), 0})) - 1;
     } // if
-
-    fprintf(stderr, "%zu: " GVA_STRING_FMT "\n", allele_idx, GVA_STRING_PRINT(trie_string(self->ids, id_idx)));
 
     // add variant
     gva_uint const inserted_idx = trie_insert(self->allocator, &self->inserted, variant.sequence.len, variant.sequence.str);
@@ -191,6 +189,12 @@ void
 gva_index_query(GVA_Allocator const allocator,
     GVA_Index* const self, GVA_LCS_Graph const graph)
 {
+    struct Y
+    {
+        HASH_TABLE_KEY;
+        gva_uint included;
+    }* y = hash_table_init(allocator, 1024, sizeof(*y));
+
     struct Parts
     {
         HASH_TABLE_KEY;
@@ -241,18 +245,18 @@ gva_index_query(GVA_Allocator const allocator,
             for (gva_uint k = self->intervals.nodes[intervals[j]].alleles; k != GVA_NULL; k = self->join[k].next)
             {
                 gva_uint const allele_idx = self->join[k].link ^ intervals[j];
-                fprintf(stderr, "allele idx: %u - " GVA_STRING_FMT "\n", allele_idx, GVA_STRING_PRINT(trie_string(self->ids, self->alleles[allele_idx].id_idx)));
+                fprintf(stderr, "        allele idx: %u - " GVA_STRING_FMT "\n", allele_idx, GVA_STRING_PRINT(trie_string(self->ids, self->alleles[allele_idx].id_idx)));
 
                 size_t const idx = HASH_TABLE_INDEX(x, allele_idx);
                 if (x[idx].gva_key == allele_idx)
                 {
                     x[idx].end = k + 1;
-                    fprintf(stderr, "        update. k: %u\n", k);
+                    fprintf(stderr, "            update. k: %u\n", k);
                 } // if
                 else
                 {
                     HASH_TABLE_SET(allocator, x, allele_idx, ((struct X) {allele_idx, k, k + 1}));
-                    fprintf(stderr, "        add new. k: %u\n", k);
+                    fprintf(stderr, "            add new. k: %u\n", k);
                 } // else
             } // for
         } // for
@@ -264,7 +268,7 @@ gva_index_query(GVA_Allocator const allocator,
                 continue;
             } // if
 
-            fprintf(stderr, GVA_STRING_FMT "[%u, %u)\n",
+            fprintf(stderr, "    " GVA_STRING_FMT "[%u, %u)\n",
                     GVA_STRING_PRINT(trie_string(self->ids, self->alleles[x[j].gva_key].id_idx)),
                     x[j].start, x[j].end);
 
@@ -316,11 +320,13 @@ gva_index_query(GVA_Allocator const allocator,
             {
                 // equivalent and contains
                 included = graph.dom_nodes[parts[i].start + 1].distance;
+                fprintf(stderr, "relation: equivalent/contains\n");
             } // if
             else if (graph.dom_nodes[parts[i].start + 1].distance - self->intervals.nodes[parts[i].gva_key].distance == parts[i].distance)
             {
                 // is_contained
                 included = self->intervals.nodes[parts[i].gva_key].distance;
+                fprintf(stderr, "relation: is_contained\n");
             } // if
         } // if
 
@@ -348,9 +354,66 @@ gva_index_query(GVA_Allocator const allocator,
                 continue;
             } // if
 
+            if (relation == GVA_EQUIVALENT || relation == GVA_CONTAINS)
+            {
+                included = distance;
+            } // if
+            else if (relation == GVA_IS_CONTAINED)
+            {
+                included = self->intervals.nodes[parts[i].gva_key].distance;
+            } // if
+            else  // GVA_OVERLAP
+            {
+                included = 1;
+            } // else
+
             fprintf(stderr, "relation: %s\n", GVA_RELATION_LABELS[relation]);
         } // if
+
+        for (gva_uint j = self->intervals.nodes[parts[i].gva_key].alleles; j != GVA_NULL; j = self->join[j].next)
+        {
+            size_t const idx = HASH_TABLE_INDEX(y, j);
+            if (y[idx].gva_key != j)
+            {
+                fprintf(stderr, "new allele %u\n", j);
+                HASH_TABLE_SET(allocator, y, j, ((struct Y) {j, included}));
+                continue;
+            } // if
+            fprintf(stderr, "update allele %u\n", j);
+            y[idx].included += included;
+        } // for
+    } // for
+
+    fprintf(stderr, "Query distance %u\n", graph.distance);
+    for (size_t i = 0; i < array_header(y)->capacity; ++i)
+    {
+        if (y[i].gva_key == NOT_FOUND)
+        {
+            continue;
+        } // if
+
+        fprintf(stderr, GVA_STRING_FMT " %u %u: ", GVA_STRING_PRINT(trie_string(self->ids, self->alleles[y[i].gva_key].id_idx)), self->alleles[y[i].gva_key].distance, y[i].included);
+        if (y[i].included == self->alleles[y[i].gva_key].distance)
+        {
+            if (y[i].included == graph.distance)
+            {
+                fprintf(stderr, "%s\n", GVA_RELATION_LABELS[GVA_EQUIVALENT]);
+            } // if
+            else
+            {
+                fprintf(stderr, "%s\n", GVA_RELATION_LABELS[GVA_IS_CONTAINED]);
+            } // else
+        } // if
+        else if (y[i].included == graph.distance)
+        {
+            fprintf(stderr, "%s\n", GVA_RELATION_LABELS[GVA_CONTAINS]);
+        } // if
+        else
+        {
+            fprintf(stderr, "%s\n", GVA_RELATION_LABELS[GVA_OVERLAP]);
+        } // else
     } // for
 
     parts = HASH_TABLE_DESTROY(allocator, parts);
+    y = HASH_TABLE_DESTROY(allocator, y);
 } // gva_index_query
