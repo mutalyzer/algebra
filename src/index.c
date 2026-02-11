@@ -343,8 +343,6 @@ gva_index_query(GVA_Allocator const allocator,
                 distance += graph.dom_nodes[j + 1].distance;
             } // for
 
-            fprintf(stderr, "Calculate relation\n");
-
             GVA_Relation const relation = gva_compare_with_distance(allocator, self->reference.len, self->reference.str,
                 variant_from_index(self, parts[i].gva_key), self->intervals.nodes[parts[i].gva_key].distance,
                 variant, distance);
@@ -372,14 +370,16 @@ gva_index_query(GVA_Allocator const allocator,
 
         for (gva_uint j = self->intervals.nodes[parts[i].gva_key].alleles; j != GVA_NULL; j = self->join[j].next)
         {
-            size_t const idx = HASH_TABLE_INDEX(y, j);
-            if (y[idx].gva_key != j)
+            gva_uint const allele_idx = self->join[j].link ^ parts[i].gva_key;
+
+            size_t const idx = HASH_TABLE_INDEX(y, allele_idx);
+            if (y[idx].gva_key != allele_idx)
             {
-                fprintf(stderr, "new allele %u\n", j);
-                HASH_TABLE_SET(allocator, y, j, ((struct Y) {j, included}));
+                fprintf(stderr, "new allele %u\n", allele_idx);
+                HASH_TABLE_SET(allocator, y, allele_idx, ((struct Y) {allele_idx, included}));
                 continue;
             } // if
-            fprintf(stderr, "update allele %u\n", j);
+            fprintf(stderr, "update allele %u\n", allele_idx);
             y[idx].included += included;
         } // for
     } // for
