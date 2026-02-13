@@ -18,6 +18,10 @@ typedef struct
 } GVA_String;
 
 
+GVA_String
+gva_string_init(GVA_Allocator const allocator, size_t const len);
+
+
 void
 gva_string_destroy(GVA_Allocator const allocator, GVA_String self);
 

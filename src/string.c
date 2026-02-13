@@ -5,6 +5,18 @@
 #include "../include/string.h"      // GVA_String, gva_string_*
 
 
+inline GVA_String
+gva_string_init(GVA_Allocator const allocator, size_t const len)
+{
+    GVA_String string = {len, allocator.allocate(allocator.context, NULL, 0, len)};
+    if (string.str == NULL)
+    {
+        return (GVA_String) {0, NULL};
+    } // if
+    return string;
+} // gva_string_init
+
+
 inline void
 gva_string_destroy(GVA_Allocator const allocator, GVA_String self)
 {
