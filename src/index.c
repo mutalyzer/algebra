@@ -4,7 +4,6 @@
 
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/compare.h"     // gva_compare_with_distance
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, gva_index_*
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
@@ -15,6 +14,7 @@
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/variant.h"     // GVA_Variant, gva_variant_*
 #include "array.h"              // ARRAY_*, array_*
+#include "bitset.h"             // bitset_*
 #include "common.h"             // ABS, MAX, MIN
 #include "hash_table.h"         // NOT_FOUND, HASH_TABLE_*, hash_table_*
 #include "interval_tree.h"      // Interval_Tree, interval_tree_*
@@ -86,30 +86,118 @@ variants_distance(GVA_Allocator const allocator,
         return len_lhs;
     } // if
 
-    char* lhs_obs = allocator.allocate(allocator.context, NULL, 0, len_lhs);
-    char* rhs_obs = allocator.allocate(allocator.context, NULL, 0, len_rhs);
-    if (lhs_obs == NULL || rhs_obs == NULL)
+    GVA_String observed_lhs = gva_string_init(allocator, len_lhs);
+    GVA_String observed_rhs = gva_string_init(allocator, len_rhs);
+    if (observed_lhs.str == NULL || observed_rhs.str == NULL)
     {
-        rhs_obs = allocator.allocate(allocator.context, rhs_obs, len_rhs, 0);
-        lhs_obs = allocator.allocate(allocator.context, lhs_obs, len_lhs, 0);
+        gva_string_destroy(allocator, observed_rhs);
+        gva_string_destroy(allocator, observed_lhs);
         return -1;  // FIXME: OOM
     } // if
 
-    memcpy(lhs_obs, reference + start, lhs.start - start);
-    memcpy(lhs_obs + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-    memcpy(lhs_obs + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
+    memcpy((char*) observed_lhs.str, reference + start, lhs.start - start);
+    memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
+    memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
 
-    memcpy(rhs_obs, reference + start, rhs.start - start);
-    memcpy(rhs_obs + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-    memcpy(rhs_obs + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
+    memcpy((char*) observed_rhs.str, reference + start, rhs.start - start);
+    memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
+    memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
 
-    size_t const distance = gva_edit_distance(allocator, len_lhs, lhs_obs, len_rhs, rhs_obs);
+    size_t const distance = gva_edit_distance(allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
 
-    rhs_obs = allocator.allocate(allocator.context, rhs_obs, len_rhs, 0);
-    lhs_obs = allocator.allocate(allocator.context, lhs_obs, len_lhs, 0);
+    gva_string_destroy(allocator, observed_rhs);
+    gva_string_destroy(allocator, observed_lhs);
 
     return distance;
 } // variants_distance
+
+
+// FIXME: taken from compare_supremals
+// FIXME: overlap with variants_distance
+static size_t
+variants_common(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const lhs, GVA_Variant const rhs)
+{
+    size_t const start = MIN(lhs.start, rhs.start);
+    size_t const end = MAX(lhs.end, rhs.end);
+
+    GVA_String observed_lhs = gva_string_init(allocator, (lhs.start - start) + lhs.sequence.len + (end - lhs.end));
+    GVA_String observed_rhs = gva_string_init(allocator, (rhs.start - start) + rhs.sequence.len + (end - rhs.end));
+
+    memcpy((char*) observed_lhs.str, reference + start, lhs.start - start);
+    memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
+    memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
+
+    memcpy((char*) observed_rhs.str, reference + start, rhs.start - start);
+    memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
+    memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
+
+    GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_lhs.len, observed_lhs.str, start);
+    GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_rhs.len, observed_rhs.str, start);
+
+    gva_uint const len = end - start + 1;
+    size_t* lhs_dels = bitset_init(allocator, len);
+    size_t* lhs_as = bitset_init(allocator, len);
+    size_t* lhs_cs = bitset_init(allocator, len);
+    size_t* lhs_gs = bitset_init(allocator, len);
+    size_t* lhs_ts = bitset_init(allocator, len);
+
+    size_t* rhs_dels = bitset_init(allocator, len);
+    size_t* rhs_as = bitset_init(allocator, len);
+    size_t* rhs_cs = bitset_init(allocator, len);
+    size_t* rhs_gs = bitset_init(allocator, len);
+    size_t* rhs_ts = bitset_init(allocator, len);
+
+    size_t const start_intersection = MAX(lhs.start, rhs.start);
+    size_t const end_intersection = MIN(lhs.end, rhs.end);
+
+    // could be done on intersection instead of union
+    bitset_fill(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+    gva_lcs_graph_destroy(allocator, rhs_graph);
+
+    bitset_fill(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+    gva_lcs_graph_destroy(allocator, lhs_graph);
+
+    size_t const common =
+        bitset_intersection_cnt(lhs_dels, rhs_dels) +
+        bitset_intersection_cnt(lhs_as, rhs_as) +
+        bitset_intersection_cnt(lhs_cs, rhs_cs) +
+        bitset_intersection_cnt(lhs_gs, rhs_gs) +
+        bitset_intersection_cnt(lhs_ts, rhs_ts);
+
+    // Also calculate the union
+    // Note: bitset_fill needs to use "plain" start and end.
+    //
+    // size_t const union1 =
+    //         bitset_intersection_cnt(lhs_dels, lhs_dels) +
+    //         bitset_intersection_cnt(lhs_as, lhs_as) +
+    //         bitset_intersection_cnt(lhs_cs, lhs_cs) +
+    //         bitset_intersection_cnt(lhs_gs, lhs_gs) +
+    //         bitset_intersection_cnt(lhs_ts, lhs_ts) +
+    //         bitset_intersection_cnt(rhs_dels, rhs_dels) +
+    //         bitset_intersection_cnt(rhs_as, rhs_as) +
+    //         bitset_intersection_cnt(rhs_cs, rhs_cs) +
+    //         bitset_intersection_cnt(rhs_gs, rhs_gs) +
+    //         bitset_intersection_cnt(rhs_ts, rhs_ts) - common;
+
+    rhs_ts = bitset_destroy(allocator, rhs_ts);
+    rhs_gs = bitset_destroy(allocator, rhs_gs);
+    rhs_cs = bitset_destroy(allocator, rhs_cs);
+    rhs_as = bitset_destroy(allocator, rhs_as);
+    rhs_dels = bitset_destroy(allocator, rhs_dels);
+
+    lhs_ts = bitset_destroy(allocator, lhs_ts);
+    lhs_gs = bitset_destroy(allocator, lhs_gs);
+    lhs_cs = bitset_destroy(allocator, lhs_cs);
+    lhs_as = bitset_destroy(allocator, lhs_as);
+    lhs_dels = bitset_destroy(allocator, lhs_dels);
+
+    gva_string_destroy(allocator, observed_rhs);
+    gva_string_destroy(allocator, observed_lhs);
+
+    return common > 0 ? 1 : 0;
+} // variants_common
 
 
 inline GVA_Index*
@@ -193,6 +281,7 @@ gva_index_query(GVA_Allocator const allocator,
     struct Result_Allele
     {
         HASH_TABLE_KEY;
+        gva_uint included;
         gva_uint head;
         gva_uint tail;
     }* alleles = hash_table_init(allocator, 1024, sizeof(*alleles));
@@ -214,7 +303,7 @@ gva_index_query(GVA_Allocator const allocator,
                   i == 0, i == array_length(graph.dom_nodes) - 2,
                   &variant);
 
-        fprintf(stderr, "    " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant));
+        fprintf(stderr, "    %2zu " GVA_VARIANT_FMT_SPDI " (%u)\n", i, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), graph.dom_nodes[i + 1].distance);
 
         gva_uint* intervals = interval_tree_intersection(allocator, self->intervals, variant.start, variant.end);
         for (size_t j = 0; j < array_length(intervals); ++j)
@@ -225,7 +314,7 @@ gva_index_query(GVA_Allocator const allocator,
                 continue;  // disjoint
             } // if
 
-            fprintf(stderr, "        vs " GVA_VARIANT_FMT_SPDI "\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant_from_index(self, intervals[j])));
+            fprintf(stderr, "        vs " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant_from_index(self, intervals[j])), self->intervals.nodes[intervals[j]].distance);
 
             for (gva_uint k = self->intervals.nodes[intervals[j]].alleles; k != GVA_NULL; k = self->join[k].next)
             {
@@ -235,7 +324,7 @@ gva_index_query(GVA_Allocator const allocator,
                 if (alleles[idx].gva_key != allele_idx)
                 {
                     gva_uint const tail = ARRAY_APPEND(allocator, parts, ((struct Result_Part) {k, distance, i, i + 1, GVA_NULL})) - 1;
-                    HASH_TABLE_SET(allocator, alleles, allele_idx, ((struct Result_Allele) {allele_idx, tail, tail}));
+                    HASH_TABLE_SET(allocator, alleles, allele_idx, ((struct Result_Allele) {allele_idx, 0, tail, tail}));
                     continue;
                 } // if
 
@@ -273,12 +362,14 @@ gva_index_query(GVA_Allocator const allocator,
             {
                 if (variants == NULL)
                 {
-                    ARRAY_APPEND(allocator, variants, variant_from_index(self, self->join[parts[i].part].link ^ alleles[idx].gva_key));
-                    distance += parts[i].distance;
+                    gva_uint const node_idx = self->join[parts[i].part].link ^ alleles[idx].gva_key;
+                    ARRAY_APPEND(allocator, variants, variant_from_index(self, node_idx));
+                    distance += self->intervals.nodes[node_idx].distance;
                 } // if
                 i = parts[i].next;
-                ARRAY_APPEND(allocator, variants, variant_from_index(self, self->join[parts[i].part].link ^ alleles[idx].gva_key));
-                distance += parts[i].distance;
+                gva_uint const node_idx = self->join[parts[i].part].link ^ alleles[idx].gva_key;
+                ARRAY_APPEND(allocator, variants, variant_from_index(self, node_idx));
+                distance += self->intervals.nodes[node_idx].distance;
                 fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].distance, parts[i].start, parts[i].end);
             } // while
             if (variants != NULL)
@@ -289,13 +380,23 @@ gva_index_query(GVA_Allocator const allocator,
             } // if
             else if (parts[i].end - parts[i].start > 1)
             {
+                size_t distance = 0;
+                for (gva_uint j = parts[i].start; j < parts[i].end; ++j)
+                {
+                    distance += graph.dom_nodes[j + 1].distance;
+                } // for
                 // TODO: multiple query hits with one DB hit
-                fprintf(stderr, "        Query multi hit: %u\n", parts[i].end - parts[i].start);
+                fprintf(stderr, "        Query multi hit: %u (%zu)\n", parts[i].end - parts[i].start, distance);
             } // if
             else if (ABS((intmax_t) self->intervals.nodes[self->join[parts[i].part].link ^ alleles[idx].gva_key].distance - graph.dom_nodes[parts[i].start + 1].distance) != parts[i].distance)
             {
-                // TODO: calculate not fully calculated relations
-                fprintf(stderr, "        Fully calculate\n");
+                GVA_Variant variant;
+                gva_edges(graph.observed.str,
+                          graph.dom_nodes[parts[i].start], graph.dom_nodes[parts[i].end],
+                          parts[i].start == 0, parts[i].end == array_length(graph.dom_nodes) - 2,
+                          &variant);
+                gva_uint const included = variants_common(allocator, self->reference.len, self->reference.str, variant_from_index(self, self->join[parts[i].part].link ^ alleles[idx].gva_key), variant);
+                fprintf(stderr, "        Fully calculate: %u\n", included);
             } // if
             // TODO: aggregate independent results
         } // for
