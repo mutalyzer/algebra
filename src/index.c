@@ -1,4 +1,5 @@
 #include <stddef.h>     // NULL, size_t
+#include <stdint.h>     // intmax_t
 #include <string.h>     // memcpy
 
 
@@ -14,7 +15,7 @@
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/variant.h"     // GVA_Variant, gva_variant_*
 #include "array.h"              // ARRAY_*, array_*
-#include "common.h"             // MAX, MIN
+#include "common.h"             // ABS, MAX, MIN
 #include "hash_table.h"         // NOT_FOUND, HASH_TABLE_*, hash_table_*
 #include "interval_tree.h"      // Interval_Tree, interval_tree_*
 #include "trie.h"               // Trie, trie_*
@@ -265,6 +266,38 @@ gva_index_query(GVA_Allocator const allocator,
         for (gva_uint i = alleles[idx].head; i != GVA_NULL; i = parts[i].next)
         {
             fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].distance, parts[i].start, parts[i].end);
+
+            GVA_Variant* variants = NULL;
+            size_t distance = 0;
+            while (parts[i].next != GVA_NULL && parts[parts[i].next].start == parts[i].start)
+            {
+                if (variants == NULL)
+                {
+                    ARRAY_APPEND(allocator, variants, variant_from_index(self, self->join[parts[i].part].link ^ alleles[idx].gva_key));
+                    distance += parts[i].distance;
+                } // if
+                i = parts[i].next;
+                ARRAY_APPEND(allocator, variants, variant_from_index(self, self->join[parts[i].part].link ^ alleles[idx].gva_key));
+                distance += parts[i].distance;
+                fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].distance, parts[i].start, parts[i].end);
+            } // while
+            if (variants != NULL)
+            {
+                // TODO: multiple DB hits with one query hit
+                fprintf(stderr, "        DB multi hit: %zu (%zu)\n", array_length(variants), distance);
+                variants = ARRAY_DESTROY(allocator, variants);
+            } // if
+            else if (parts[i].end - parts[i].start > 1)
+            {
+                // TODO: multiple query hits with one DB hit
+                fprintf(stderr, "        Query multi hit: %u\n", parts[i].end - parts[i].start);
+            } // if
+            else if (ABS((intmax_t) self->intervals.nodes[self->join[parts[i].part].link ^ alleles[idx].gva_key].distance - graph.dom_nodes[parts[i].start + 1].distance) != parts[i].distance)
+            {
+                // TODO: calculate not fully calculated relations
+                fprintf(stderr, "        Fully calculate\n");
+            } // if
+            // TODO: aggregate independent results
         } // for
     } // for
 
