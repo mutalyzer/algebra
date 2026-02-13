@@ -24,7 +24,7 @@ gva_index_destroy(GVA_Index* const self);
 // insertions need to happen in allele-order
 void
 gva_index_insert(GVA_Index* restrict const self,
-    size_t const len, char const allele_id[static restrict len],
+    size_t const len_id, char const id[static restrict len_id],
     GVA_Variant const variant, size_t const distance);
 
 

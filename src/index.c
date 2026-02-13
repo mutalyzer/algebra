@@ -243,10 +243,10 @@ gva_index_destroy(GVA_Index* const self)
 
 void
 gva_index_insert(GVA_Index* restrict const self,
-    size_t const len, char const allele_id[static restrict len],
+    size_t const len_id, char const id[static restrict len_id],
     GVA_Variant const variant, size_t const distance)
 {
-    size_t const id_idx = trie_insert(self->allocator, &self->ids, len, allele_id);
+    size_t const id_idx = trie_insert(self->allocator, &self->ids, len_id, id);
     size_t allele_idx = array_length(self->alleles) - 1;
 
     // new allele
