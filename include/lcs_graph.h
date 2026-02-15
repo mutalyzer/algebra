@@ -37,7 +37,7 @@ typedef struct
     union
     {
         gva_uint edges;
-        gva_uint distance;
+        gva_uint distance;  // FIXME: this should be cumulative
     };
     union
     {
@@ -57,7 +57,7 @@ typedef struct
     GVA_Variant supremal;  // FIXME: remove
     GVA_String  observed;  // FIXME: ownership and destroy
     gva_uint    source;
-    gva_uint    distance;
+    gva_uint    distance;  // FIXME: remove
 } GVA_LCS_Graph;
 
 
@@ -77,6 +77,17 @@ GVA_LCS_Graph
 gva_lcs_graph_from_variants(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const n, GVA_Variant const variants[static restrict n]);
+
+
+void
+gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
+    gva_uint const offset,
+    gva_uint const start, gva_uint const end,
+    size_t dels[static restrict 1],
+    size_t as[static restrict 1],
+    size_t cs[static restrict 1],
+    size_t gs[static restrict 1],
+    size_t ts[static restrict 1]);
 
 
 gva_uint

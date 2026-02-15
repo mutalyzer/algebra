@@ -31,7 +31,7 @@ gva_std_allocate(void* const restrict context, void* const restrict ptr, size_t 
     } // if
 
     return new_ptr;
-} // va_std_allocate
+} // gva_std_allocate
 
 
 static GVA_Allocator const gva_std_allocator = { .allocate = gva_std_allocate };

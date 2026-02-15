@@ -153,11 +153,11 @@ variants_common(GVA_Allocator const allocator,
     size_t const end_intersection = MIN(lhs.end, rhs.end);
 
     // could be done on intersection instead of union
-    bitset_fill(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
-    gva_lcs_graph_destroy(allocator, rhs_graph);
-
-    bitset_fill(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+    gva_lcs_graph_uniq_atomics(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
     gva_lcs_graph_destroy(allocator, lhs_graph);
+
+    gva_lcs_graph_uniq_atomics(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+    gva_lcs_graph_destroy(allocator, rhs_graph);
 
     size_t const common =
         bitset_intersection_cnt(lhs_dels, rhs_dels) +

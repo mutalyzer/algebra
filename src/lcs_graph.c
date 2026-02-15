@@ -1,6 +1,7 @@
 #include <inttypes.h>   // intmax_t
 #include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
+#include <stdint.h>     // uint8_t
 #include <string.h>     // memcpy
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -9,10 +10,9 @@
 #include "../include/variant.h"     // GVA_Variant, gva_variant_length
 #include "align.h"      // LCS_Alignment, lcs_align
 #include "array.h"      // ARRAY_*, array_length
+#include "bitset.h"     // bitset_add
 #include "common.h"     // GVA_NULL, MAX, MIN, gva_uint
 
-#include <stdio.h>
-#include <assert.h>
 
 GVA_LCS_Graph
 gva_lcs_graph_init(GVA_Allocator const allocator,
@@ -33,10 +33,8 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         .distance = len_ref + len_obs - 2 * lcs.length
     };
 
-    // no matches or ref == obs
     if (lcs.nodes == NULL || graph.distance == 0)
     {
-        // create sink
         gva_uint const sink = ARRAY_APPEND(allocator, graph.nodes,
             ((GVA_Node)
             {
@@ -90,7 +88,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
              }));
         graph.supremal = (GVA_Variant) {shift, len_ref + shift, {len_obs, observed}};
         return graph;
-    } // if (no matches)
+    } // if
 
     gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
     LCS_Node sink = lcs.nodes[tail_idx];
@@ -274,21 +272,14 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             .distance = 0,
             .link = source.idx
         }));
-    //fprintf(stderr, "shift: %zu\n", shift);
     gva_uint distance = 0;
     gva_uint prev = lcs.index[0].tail;
     if (lcs.nodes[lcs.index[0].tail].idx != source.idx)
     {
         prev = GVA_NULL;
-    }
+    } // if
     for (gva_uint i = 0; i < lcs.length; ++i)
     {
-        // LCS_Node t = lcs.nodes[lcs.index[i].tail];
-        //fprintf(stderr, "allignment: i: %u head: %u tail: %u count: %u offset: %u\n",
-         //       i, lcs.index[i].head, lcs.index[i].tail, lcs.index[i].count, lcs.index[i].offset);
-        //fprintf(stderr, "head: (%u, %u, %u)\n", h.row - shift, h.col, h.length);
-        //fprintf(stderr, "tail: (%u, %u, %u)\n", t.row - shift, t.col, t.length);
-
         // when to extend
         if (lcs.index[i].count == 1)
         {
@@ -308,15 +299,10 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                     .link = lcs.nodes[lcs.index[i].tail].idx
                 }));
 
-                //fprintf(stderr, "new node: (%u, %u, %u) %u\n",
-                //    lcs.nodes[lcs.index[i].tail].row + offset,
-                //    lcs.nodes[lcs.index[i].tail].col + offset, 0,
-                //    offset);
                 prev = lcs.index[i].tail;
                 distance += graph.dom_nodes[array_length(graph.dom_nodes) - 1].distance;
             } // if
 
-            // increase length
             graph.dom_nodes[array_length(graph.dom_nodes) - 1].length += 1;
         } // if
     } // for
@@ -333,14 +319,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                 .distance = graph.distance - distance,
                 .link = sink.idx,
             }));
-        //fprintf(stderr, "add sink\n");
-    }
-
-    //for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
-    //{
-        //fprintf(stderr, "(%u, %u, %u)\n", graph.dom_nodes[i].row,
-    //    graph.dom_nodes[i].col, graph.dom_nodes[i].length);
-    //}
+    } // if
 
     // construct supremal
     if (graph.dom_nodes != NULL)
@@ -425,6 +404,90 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         offset *= 2;  // OVERFLOW
     } // while
 } // gva_lcs_graph_from_variants
+
+
+static uint8_t const NUC_A = 0x1;
+static uint8_t const NUC_C = 0x2;
+static uint8_t const NUC_G = 0x4;
+static uint8_t const NUC_T = 0x8;
+
+
+inline static uint8_t
+nucleotides(size_t const len, char const sequence[static len])
+{
+    static uint8_t const MASK[256] =
+    {
+        ['A'] = NUC_A,
+        ['C'] = NUC_C,
+        ['G'] = NUC_G,
+        ['T'] = NUC_T,
+    };
+    static uint8_t const UNIVERSE = 0xF;
+
+    uint8_t mask = 0x0;
+    for (size_t i = 0; mask < UNIVERSE && i < len; ++i)
+    {
+        mask |= MASK[(size_t) sequence[i]];
+    } // for
+    return mask;
+} // nucleotides
+
+
+void
+gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
+    gva_uint const offset,
+    gva_uint const start, gva_uint const end,
+    size_t dels[static restrict 1],
+    size_t as[static restrict 1],
+    size_t cs[static restrict 1],
+    size_t gs[static restrict 1],
+    size_t ts[static restrict 1])
+{
+    for (size_t i = 0; i < array_length(self.nodes); ++i)
+    {
+        if (self.nodes[i].row > end)
+        {
+            continue;
+        } // if
+
+        for (gva_uint j = self.nodes[i].edges; j != GVA_NULL; j = self.edges[j].next)
+        {
+            if (self.nodes[self.edges[j].tail].row + self.nodes[self.edges[j].tail].length < start)
+            {
+                continue;
+            } // if
+
+            GVA_Variant variant;
+            gva_uint const count = gva_edges(self.observed.str,
+                                             self.nodes[i], self.nodes[self.edges[j].tail],
+                                             i == self.source, self.nodes[self.edges[j].tail].edges == GVA_NULL,
+                                             &variant);
+
+            if (variant.end > variant.start)
+            {
+                bitset_add(dels, variant.start - offset, variant.end + count - 1 - offset);
+            } // if
+
+            uint8_t const mask = nucleotides(variant.sequence.len, variant.sequence.str);
+            if ((mask & NUC_A) == NUC_A)
+            {
+                bitset_add(as, variant.start - offset, variant.end + count - offset);
+            } // if
+            if ((mask & NUC_C) == NUC_C)
+            {
+                bitset_add(cs, variant.start - offset, variant.end + count - offset);
+            } // if
+            if ((mask & NUC_G) == NUC_G)
+            {
+                bitset_add(gs, variant.start - offset, variant.end + count - offset);
+            } // if
+            if ((mask & NUC_T) == NUC_T)
+            {
+                bitset_add(ts, variant.start - offset, variant.end + count - offset);
+            } // if
+        } // for
+    } // for
+} // gva_lcs_graph_uniq_atomics
 
 
 gva_uint
