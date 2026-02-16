@@ -471,7 +471,7 @@ gva_index_query(GVA_Allocator const allocator,
         gva_uint const excluded = self->alleles[alleles[idx].gva_key].distance + graph.distance - 2 * alleles[idx].included;
         fprintf(stderr, GVA_STRING_FMT ": %u\n",
                 GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)),
-                alleles[idx].included);test_alleles_supremal2.txt
+                alleles[idx].included);
 
         for (gva_uint i = alleles[idx].head; i != GVA_NULL; i = parts[i].next)
         {
