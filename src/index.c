@@ -98,14 +98,14 @@ variants_distance(GVA_Allocator const allocator,
     if (lhs.sequence.str != NULL)
     {
         memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-    }
+    } // if
     memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
 
     memcpy((char*) observed_rhs.str, reference + start, rhs.start - start);
     if (rhs.sequence.str != NULL)
     {
         memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-    }
+    } // if
     memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
 
     size_t const distance = gva_edit_distance(allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
@@ -132,14 +132,14 @@ variants_common(GVA_Allocator const allocator,
     if (lhs.sequence.str != NULL)
     {
         memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-    }
+    } // if
     memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
 
     memcpy((char*) observed_rhs.str, reference + start, rhs.start - start);
     if (rhs.sequence.str != NULL)
     {
         memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-    }
+    } // if
     memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
 
     GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_lhs.len, observed_lhs.str, start);
@@ -392,7 +392,6 @@ gva_index_query(GVA_Allocator const allocator,
                 fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].included, parts[i].start, parts[i].end);
             } // while
 
-
             if (gva_variant_length(variant) != 0)
             {
                 GVA_Variant rhs;
@@ -454,7 +453,7 @@ gva_index_query(GVA_Allocator const allocator,
                 {
                     parts[i].included = graph.dom_nodes[parts[i].start + 1].distance;
                 } // if
-            }
+            } // else
             alleles[idx].included += parts[i].included;
             prev = i;
         } // for
@@ -476,39 +475,39 @@ gva_index_query(GVA_Allocator const allocator,
         for (gva_uint i = alleles[idx].head; i != GVA_NULL; i = parts[i].next)
         {
             fprintf(stderr, "    parts incl: %u\n", parts[i].included);
-        }
+        } // for
 
         if (alleles[idx].included == 0)
         {
             fprintf(stdout, GVA_STRING_FMT " %s\n",
                 GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_DISJOINT]);
             continue;
-        }
+        } // if
 
         if (excluded == 0)
         {
             fprintf(stdout, GVA_STRING_FMT " %s\n",
                 GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_EQUIVALENT]);
             continue;
-        }
+        } // if
 
         if (alleles[idx].included == graph.distance)
         {
             fprintf(stdout, GVA_STRING_FMT " %s\n",
                 GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_CONTAINS]);
             continue;
-        }
+        } // if
 
         if (alleles[idx].included == self->alleles[alleles[idx].gva_key].distance)
         {
             fprintf(stdout, GVA_STRING_FMT " %s\n",
                 GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_IS_CONTAINED]);
             continue;
-        }
+        } // if
 
         fprintf(stdout, GVA_STRING_FMT " %s\n",
             GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_OVERLAP]);
-    }
+    } // for
 
     parts = ARRAY_DESTROY(allocator, parts);
     alleles = HASH_TABLE_DESTROY(allocator, alleles);
