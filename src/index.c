@@ -329,7 +329,6 @@ gva_index_query(GVA_Allocator const allocator,
             } // if
 
             fprintf(stderr, "        vs " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant_from_index(self, intervals[j])), self->intervals.nodes[intervals[j]].distance);
-test_alleles_supremal2.txt
             for (gva_uint k = self->intervals.nodes[intervals[j]].alleles; k != GVA_NULL; k = self->join[k].next)
             {
                 gva_uint const allele_idx = self->join[k].link ^ intervals[j];
