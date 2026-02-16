@@ -5,6 +5,7 @@ SOURCES    = $(wildcard $(SRC_DIR)/*.c)
 OBJECTS    = $(SOURCES:.c=.o)
 DEPS       = $(SOURCES:.c=.d)
 TESTS      = $(wildcard $(TEST_DIR)/*.c)
+TEST_DEPS  = $(TESTS:.c=.d)
 TEST_BINS  = $(TESTS:.c=.out)
 TEST_GCNOS = $(TESTS:.c=.gcno)
 TEST_GCDAS = $(TESTS:.c=.gcda)
@@ -42,6 +43,8 @@ clean:
 $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
+
+-include $(TEST_DEPS)
 
 %.out: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -MMD -o $@ $<
