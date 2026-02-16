@@ -583,11 +583,19 @@ index_main(int argc, char* argv[static argc])
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        fprintf(stdout, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_STRING_PRINT(((GVA_String) {id_len, line})), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal), graph.distance);
+        // fprintf(stdout, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_STRING_PRINT(((GVA_String) {id_len, line})), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal), graph.distance);
         GVA_Result* results = gva_index_query(gva_std_allocator, index, graph);
+        for (size_t i = 0; i < array_length(results); ++i)
+        {
+            fprintf(stdout, GVA_STRING_FMT " %s %.*s\n",
+                GVA_STRING_PRINT(results[i].allele),
+                GVA_RELATION_LABELS[results[i].relation],
+                (int)id_len, line);
+        }
 
         gva_string_destroy(gva_std_allocator, graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
+        ARRAY_DESTROY(gva_std_allocator, results);
     } // while
 
     index = gva_index_destroy(index);

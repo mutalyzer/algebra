@@ -15,7 +15,7 @@ typedef struct GVA_Index GVA_Index;  // opaque
 
 typedef struct
 {
-    gva_uint     allele_idx;
+    GVA_String   allele;
     GVA_Relation relation;
 } GVA_Result;
 
