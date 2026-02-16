@@ -11,7 +11,7 @@
 #include "../include/compare.h"     // bitset_fill
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/extractor.h"   // gva_canonical
-#include "../include/index.h"       // GVA_Index, gva_index_*
+#include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // GVA_String, gva_string_destroy
@@ -583,8 +583,8 @@ index_main(int argc, char* argv[static argc])
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        fprintf(stderr, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_STRING_PRINT(((GVA_String) {id_len, line})), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal), graph.distance);
-        gva_index_query(gva_std_allocator, index, graph);
+        fprintf(stdout, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_STRING_PRINT(((GVA_String) {id_len, line})), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal), graph.distance);
+        GVA_Result* results = gva_index_query(gva_std_allocator, index, graph);
 
         gva_string_destroy(gva_std_allocator, graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, graph);

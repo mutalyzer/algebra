@@ -4,7 +4,7 @@
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/edit.h"        // gva_edit_distance
-#include "../include/index.h"       // GVA_Index, gva_index_*
+#include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
 #include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS,
                                     // GVA_DISJOINT, GVA_EQUIVALENT,
@@ -288,7 +288,7 @@ gva_index_insert(GVA_Index* restrict const self,
 } // gva_index_insert
 
 
-void
+GVA_Result*
 gva_index_query(GVA_Allocator const allocator,
     GVA_Index* const self, GVA_LCS_Graph const graph)
 {
@@ -460,6 +460,8 @@ gva_index_query(GVA_Allocator const allocator,
         // TODO: exclude included == 0?
     } // for
 
+    GVA_Result* results = NULL;
+
     for (size_t idx = 0; idx < array_header(alleles)->capacity; ++idx)
     {
         if (alleles[idx].gva_key == NOT_FOUND)
@@ -467,7 +469,6 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
-        gva_uint const excluded = self->alleles[alleles[idx].gva_key].distance + graph.distance - 2 * alleles[idx].included;
         fprintf(stderr, GVA_STRING_FMT ": %u\n",
                 GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)),
                 alleles[idx].included);
@@ -477,38 +478,36 @@ gva_index_query(GVA_Allocator const allocator,
             fprintf(stderr, "    parts incl: %u\n", parts[i].included);
         } // for
 
+        GVA_Relation relation;
         if (alleles[idx].included == 0)
         {
-            fprintf(stdout, GVA_STRING_FMT " %s\n",
-                GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_DISJOINT]);
-            continue;
+            relation = GVA_DISJOINT;
         } // if
-
-        if (excluded == 0)
+        else if (self->alleles[alleles[idx].gva_key].distance + graph.distance - 2 * alleles[idx].included == 0)
         {
-            fprintf(stdout, GVA_STRING_FMT " %s\n",
-                GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_EQUIVALENT]);
-            continue;
+            relation = GVA_EQUIVALENT;
         } // if
-
-        if (alleles[idx].included == graph.distance)
+        else if (alleles[idx].included == graph.distance)
         {
-            fprintf(stdout, GVA_STRING_FMT " %s\n",
-                GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_CONTAINS]);
-            continue;
-        } // if
-
-        if (alleles[idx].included == self->alleles[alleles[idx].gva_key].distance)
+            relation = GVA_CONTAINS;
+        } // else if
+        else if (alleles[idx].included == self->alleles[alleles[idx].gva_key].distance)
         {
-            fprintf(stdout, GVA_STRING_FMT " %s\n",
-                GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_IS_CONTAINED]);
-            continue;
-        } // if
+            relation = GVA_IS_CONTAINED;
+        } // else if
+        else
+        {
+            relation = GVA_OVERLAP;
+        } // else
 
-        fprintf(stdout, GVA_STRING_FMT " %s\n",
-            GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)), GVA_RELATION_LABELS[GVA_OVERLAP]);
+        ARRAY_APPEND(self->allocator, results,
+            ((GVA_Result) {trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx), relation})
+        );
     } // for
+
 
     parts = ARRAY_DESTROY(allocator, parts);
     alleles = HASH_TABLE_DESTROY(allocator, alleles);
+
+    return results;
 } // gva_index_query

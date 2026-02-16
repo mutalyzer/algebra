@@ -6,10 +6,18 @@
 
 #include "allocator.h"  // GVA_Allocator
 #include "lcs_graph.h"  // GVA_LCS_Graph
+#include "relations.h"  // GVA_Relation
 #include "variant.h"    // GVA_Variant
 
 
 typedef struct GVA_Index GVA_Index;  // opaque
+
+
+typedef struct
+{
+    gva_uint     allele_idx;
+    GVA_Relation relation;
+} GVA_Result;
 
 
 GVA_Index*
@@ -29,7 +37,7 @@ gva_index_insert(GVA_Index* restrict const self,
 
 
 // FIXME: returns
-void
+GVA_Result*
 gva_index_query(GVA_Allocator const allocator,
     GVA_Index* const self, GVA_LCS_Graph const graph);
 
