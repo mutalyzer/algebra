@@ -2,7 +2,6 @@
 #include <stdint.h>     // intmax_t
 #include <string.h>     // memcpy
 
-
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, gva_index_*
@@ -112,8 +111,6 @@ variants_distance(GVA_Allocator const allocator,
 } // variants_distance
 
 
-// FIXME: taken from compare_supremals
-// FIXME: overlap with variants_distance
 static size_t
 variants_common(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
@@ -152,7 +149,6 @@ variants_common(GVA_Allocator const allocator,
     size_t const start_intersection = MAX(lhs.start, rhs.start);
     size_t const end_intersection = MIN(lhs.end, rhs.end);
 
-    // could be done on intersection instead of union
     gva_lcs_graph_uniq_atomics(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
     gva_lcs_graph_destroy(allocator, lhs_graph);
 
@@ -165,21 +161,6 @@ variants_common(GVA_Allocator const allocator,
         bitset_intersection_cnt(lhs_cs, rhs_cs) +
         bitset_intersection_cnt(lhs_gs, rhs_gs) +
         bitset_intersection_cnt(lhs_ts, rhs_ts);
-
-    // Also calculate the union
-    // Note: bitset_fill needs to use "plain" start and end.
-    //
-    // size_t const union1 =
-    //         bitset_intersection_cnt(lhs_dels, lhs_dels) +
-    //         bitset_intersection_cnt(lhs_as, lhs_as) +
-    //         bitset_intersection_cnt(lhs_cs, lhs_cs) +
-    //         bitset_intersection_cnt(lhs_gs, lhs_gs) +
-    //         bitset_intersection_cnt(lhs_ts, lhs_ts) +
-    //         bitset_intersection_cnt(rhs_dels, rhs_dels) +
-    //         bitset_intersection_cnt(rhs_as, rhs_as) +
-    //         bitset_intersection_cnt(rhs_cs, rhs_cs) +
-    //         bitset_intersection_cnt(rhs_gs, rhs_gs) +
-    //         bitset_intersection_cnt(rhs_ts, rhs_ts) - common;
 
     rhs_ts = bitset_destroy(allocator, rhs_ts);
     rhs_gs = bitset_destroy(allocator, rhs_gs);
@@ -200,9 +181,30 @@ variants_common(GVA_Allocator const allocator,
 } // variants_common
 
 
+static inline size_t
+variants_with_distance(GVA_Allocator const allocator,
+    size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const lhs, size_t const distance_lhs,
+    GVA_Variant const rhs, size_t const distance_rhs)
+{
+    size_t const distance = variants_distance(allocator, len_ref, reference, lhs, rhs);
+
+    if (distance == 0 || distance_rhs - distance_lhs == distance)
+    {
+        return distance_lhs;
+    } // if
+    if (distance_lhs - distance_rhs == distance)
+    {
+        return distance_rhs;
+    } // if
+
+    return variants_common(allocator, len_ref, reference, lhs, rhs);
+} // variants_with_distance
+
+
 inline GVA_Index*
 gva_index_init(GVA_Allocator const allocator,
-    size_t const len, char const reference[static len])
+    size_t const len_ref, char const reference[static len_ref])
 {
     GVA_Index* index = allocator.allocate(allocator.context, NULL, 0, sizeof(*index));
     if (index == NULL)
@@ -211,7 +213,7 @@ gva_index_init(GVA_Allocator const allocator,
     } // if
 
     index->allocator = allocator;
-    index->reference = (GVA_String) {len, reference};
+    index->reference = (GVA_String) {len_ref, reference};
 
     index->intervals = interval_tree_init();
     index->inserted = trie_init();
@@ -356,6 +358,7 @@ gva_index_query(GVA_Allocator const allocator,
         {
             fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].distance, parts[i].start, parts[i].end);
 
+            // FIXME: don't build an allele, but a supremal instead
             GVA_Variant* variants = NULL;
             size_t distance = 0;
             while (parts[i].next != GVA_NULL && parts[parts[i].next].start == parts[i].start)
@@ -378,15 +381,26 @@ gva_index_query(GVA_Allocator const allocator,
                 fprintf(stderr, "        DB multi hit: %zu (%zu)\n", array_length(variants), distance);
                 variants = ARRAY_DESTROY(allocator, variants);
             } // if
-            else if (parts[i].end - parts[i].start > 1)
+            else if (parts[i].end - parts[i].start > 1)  // FIXME: similar body to if below?
             {
-                size_t distance = 0;
+                // FIXME: use cumulative distances in dom_nodes
+                size_t distance = 0;  // graph.dom_nodes[parts[i].end].distance - graph.dom_nodes[parts[i].start].distance
                 for (gva_uint j = parts[i].start; j < parts[i].end; ++j)
                 {
                     distance += graph.dom_nodes[j + 1].distance;
                 } // for
+                GVA_Variant variant;
+                gva_edges(graph.observed.str,
+                          graph.dom_nodes[parts[i].start], graph.dom_nodes[parts[i].end],
+                          parts[i].start == 0, parts[i].end == array_length(graph.dom_nodes) - 2,
+                          &variant);
+                gva_uint const node_idx = self->join[parts[i].part].link ^ alleles[idx].gva_key;
+                gva_uint const included = variants_with_distance(allocator, self->reference.len, self->reference.str,
+                    variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance,
+                    variant, distance);
+
                 // TODO: multiple query hits with one DB hit
-                fprintf(stderr, "        Query multi hit: %u (%zu)\n", parts[i].end - parts[i].start, distance);
+                fprintf(stderr, "        Query multi hit: %u (%zu) :: %u\n", parts[i].end - parts[i].start, distance, included);
             } // if
             else if (ABS((intmax_t) self->intervals.nodes[self->join[parts[i].part].link ^ alleles[idx].gva_key].distance - graph.dom_nodes[parts[i].start + 1].distance) != parts[i].distance)
             {

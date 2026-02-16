@@ -14,7 +14,7 @@ typedef struct GVA_Index GVA_Index;  // opaque
 
 GVA_Index*
 gva_index_init(GVA_Allocator const allocator,
-    size_t const len, char const reference[static len]);
+    size_t const len_ref, char const reference[static len_ref]);
 
 
 GVA_Index*
