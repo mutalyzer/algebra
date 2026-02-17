@@ -31,8 +31,8 @@
 
 #define LINE_SIZE 8194
 
-// #define REFERENCE_ID "NC_000006.12"
-#define REFERENCE_ID "NC_000001.11"
+#define REFERENCE_ID "NC_000006.12"
+// #define REFERENCE_ID "NC_000001.11"
 
 
 inline void
@@ -510,6 +510,28 @@ parse_line(char const line[static LINE_SIZE],
 } // parse_line
 
 
+static bool
+parse_line2(char const line[static LINE_SIZE],
+    size_t* id_len, GVA_Variant* variant)
+{
+    *id_len = strcspn(line, "\t ");
+    if (*id_len == 0)
+    {
+        fprintf(stderr, "here?!\n");
+        return false;
+    } // if
+
+    size_t const spdi_len = strcspn(line + *id_len + 1, "\n");
+    if (gva_parse_spdi(spdi_len, line + *id_len + 1, variant) == 0)
+    {
+        fprintf(stderr, "or here?!\n");
+        return false;
+    } // if
+
+    return true;
+} // parse_line2
+//
+
 int
 index_main(int argc, char* argv[static argc])
 {
@@ -574,8 +596,7 @@ index_main(int argc, char* argv[static argc])
         line_count += 1;
         size_t id_len = 0;
         GVA_Variant variant;
-        size_t distance = 0;
-        if (!parse_line(line, &id_len, &variant, &distance))
+        if (!parse_line2(line, &id_len, &variant))
         {
             fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
             continue;
