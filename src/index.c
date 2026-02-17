@@ -317,7 +317,7 @@ gva_index_query(GVA_Allocator const allocator,
                   i == 0, i == array_length(graph.dom_nodes) - 2,
                   &variant);
 
-        fprintf(stderr, "    %2zu " GVA_VARIANT_FMT_SPDI " (%u)\n", i, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), graph.dom_nodes[i + 1].distance);
+        // fprintf(stderr, "    %2zu " GVA_VARIANT_FMT_SPDI " (%u)\n", i, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), graph.dom_nodes[i + 1].distance);
 
         gva_uint* intervals = interval_tree_intersection(allocator, self->intervals, variant.start, variant.end);
         for (size_t j = 0; j < array_length(intervals); ++j)
@@ -328,7 +328,7 @@ gva_index_query(GVA_Allocator const allocator,
                 continue;  // disjoint
             } // if
 
-            fprintf(stderr, "        vs " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant_from_index(self, intervals[j])), self->intervals.nodes[intervals[j]].distance);
+            // fprintf(stderr, "        vs " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant_from_index(self, intervals[j])), self->intervals.nodes[intervals[j]].distance);
             for (gva_uint k = self->intervals.nodes[intervals[j]].alleles; k != GVA_NULL; k = self->join[k].next)
             {
                 gva_uint const allele_idx = self->join[k].link ^ intervals[j];
@@ -363,12 +363,12 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
-        fprintf(stderr, GVA_STRING_FMT ":\n", GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)));
+        // fprintf(stderr, GVA_STRING_FMT ":\n", GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)));
 
         gva_uint prev = GVA_NULL;
         for (gva_uint i = alleles[idx].head; i != GVA_NULL; i = parts[i].next)
         {
-            fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].included, parts[i].start, parts[i].end);
+            // fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].included, parts[i].start, parts[i].end);
 
             GVA_Variant variant = {0, 0, {0, NULL}};
             size_t distance = 0;
@@ -389,7 +389,7 @@ gva_index_query(GVA_Allocator const allocator,
                 variant.end = current.end;
                 distance += self->intervals.nodes[node_idx].distance;
 
-                fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].included, parts[i].start, parts[i].end);
+                // fprintf(stderr, "    %u %u  %u %u\n", parts[i].part, parts[i].included, parts[i].start, parts[i].end);
             } // while
 
             if (gva_variant_length(variant) != 0)
@@ -409,7 +409,7 @@ gva_index_query(GVA_Allocator const allocator,
                 {
                     parts[prev].next = i;
                 } // else
-                fprintf(stderr, "        DB multi hit: " GVA_VARIANT_FMT_SPDI " (%zu) :: %u\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), distance, parts[i].included);
+                // fprintf(stderr, "        DB multi hit: " GVA_VARIANT_FMT_SPDI " (%zu) :: %u\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), distance, parts[i].included);
                 gva_string_destroy(allocator, variant.sequence);
             } // if
             else if (parts[i].end - parts[i].start > 1)  // FIXME: similar body to if below?
@@ -430,7 +430,7 @@ gva_index_query(GVA_Allocator const allocator,
                     variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance,
                     variant, distance);
 
-                fprintf(stderr, "        Query multi hit: %u (%zu) :: %u\n", parts[i].end - parts[i].start, distance, parts[i].included);
+                // fprintf(stderr, "        Query multi hit: %u (%zu) :: %u\n", parts[i].end - parts[i].start, distance, parts[i].included);
             } // if
             else if (ABS((intmax_t) self->intervals.nodes[self->join[parts[i].part].link ^ alleles[idx].gva_key].distance - graph.dom_nodes[parts[i].start + 1].distance) != parts[i].included)
             {
@@ -440,7 +440,7 @@ gva_index_query(GVA_Allocator const allocator,
                           parts[i].start == 0, parts[i].end == array_length(graph.dom_nodes) - 2,
                           &variant);
                 parts[i].included = variants_common(allocator, self->reference.len, self->reference.str, variant_from_index(self, self->join[parts[i].part].link ^ alleles[idx].gva_key), variant);
-                fprintf(stderr, "        Fully calculate: %u\n", parts[i].included);
+                // fprintf(stderr, "        Fully calculate: %u\n", parts[i].included);
             } // if
             else
             {
@@ -469,14 +469,14 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
-        fprintf(stderr, GVA_STRING_FMT ": %u\n",
-                GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)),
-                alleles[idx].included);
+        // fprintf(stderr, GVA_STRING_FMT ": %u\n",
+        //         GVA_STRING_PRINT(trie_string(self->ids, self->alleles[alleles[idx].gva_key].id_idx)),
+        //         alleles[idx].included);
 
-        for (gva_uint i = alleles[idx].head; i != GVA_NULL; i = parts[i].next)
-        {
-            fprintf(stderr, "    parts incl: %u\n", parts[i].included);
-        } // for
+        // for (gva_uint i = alleles[idx].head; i != GVA_NULL; i = parts[i].next)
+        // {
+        //     fprintf(stderr, "    parts incl: %u\n", parts[i].included);
+        // } // for
 
         GVA_Relation relation;
         if (alleles[idx].included == 0)
