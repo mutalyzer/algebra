@@ -5,7 +5,7 @@
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Result
-#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS,
                                     // GVA_DISJOINT, GVA_EQUIVALENT,
                                     // GVA_IS_CONTAINED
@@ -318,12 +318,7 @@ gva_index_query(GVA_Allocator const allocator,
     //
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
-        GVA_Variant variant;
-        gva_edges(graph.observed.str,
-                  graph.dom_nodes[i], graph.dom_nodes[i + 1],
-                  i == 0, i == array_length(graph.dom_nodes) - 2,
-                  &variant);
-
+        GVA_Variant const variant = gva_lcs_graph_ls_slice(graph, i, i + 1);
         // fprintf(stderr, "    %2zu " GVA_VARIANT_FMT_SPDI " (%u)\n", i, GVA_VARIANT_PRINT_SPDI("NC_000001.11", variant), graph.dom_nodes[i + 1].distance);
 
         gva_uint* intervals = interval_tree_intersection(allocator, self->intervals, variant.start, variant.end);
@@ -439,16 +434,10 @@ gva_index_query(GVA_Allocator const allocator,
             // single query part has multiple hits
             if (gva_variant_length(lhs) != 0)
             {
-                GVA_Variant rhs;
-                // TODO: break out into gva_lcs_graph_local_supremal_part() function?
-                gva_edges(graph.observed.str,
-                          graph.dom_nodes[hits[i].start], graph.dom_nodes[hits[i].end],
-                          hits[i].start == 0, hits[i].end == array_length(graph.dom_nodes) - 2,
-                          &rhs);
-
                 // aggregate hits in last hit
                 hits[i].included = variants_with_distance(allocator, self->reference.len, self->reference.str,
-                    lhs, distance, rhs, graph.dom_nodes[hits[i].start + 1].distance);
+                    lhs, distance,
+                    gva_lcs_graph_ls_slice(graph, hits[i].start, hits[i].end), graph.dom_nodes[hits[i].start + 1].distance);
 
                 // disable aggregated hits except the last
                 if (prev != GVA_NULL)
@@ -472,27 +461,18 @@ gva_index_query(GVA_Allocator const allocator,
                 {
                     distance += graph.dom_nodes[j + 1].distance;
                 } // for
-                GVA_Variant rhs;
-                gva_edges(graph.observed.str,
-                          graph.dom_nodes[hits[i].start], graph.dom_nodes[hits[i].end],
-                          hits[i].start == 0, hits[i].end == array_length(graph.dom_nodes) - 2,
-                          &rhs);
                 hits[i].included = variants_with_distance(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance,
-                    rhs, distance);
+                    gva_lcs_graph_ls_slice(graph, hits[i].start, hits[i].end), distance);
 
                 // fprintf(stderr, "        Query multi hit: %u (%zu) :: %u\n", hits[i].end - hits[i].start, distance, hits[i].included);
             } // if
             // single hit for single query part, relation is not determined by the distances
             else if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - graph.dom_nodes[hits[i].start + 1].distance) != hits[i].included)
             {
-                GVA_Variant rhs;
-                gva_edges(graph.observed.str,
-                          graph.dom_nodes[hits[i].start], graph.dom_nodes[hits[i].end],
-                          hits[i].start == 0, hits[i].end == array_length(graph.dom_nodes) - 2,
-                          &rhs);
                 hits[i].included = variants_included(allocator, self->reference.len, self->reference.str,
-                    variant_from_index(self, node_idx), rhs);
+                    variant_from_index(self, node_idx),
+                    gva_lcs_graph_ls_slice(graph, hits[i].start, hits[i].end));
                 // fprintf(stderr, "        Fully calculate: %u\n", hits[i].included);
             } // if
             // single hit for single query part, relation is already determined

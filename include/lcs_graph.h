@@ -90,6 +90,11 @@ gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
     size_t ts[static restrict 1]);
 
 
+GVA_Variant
+gva_lcs_graph_ls_slice(GVA_LCS_Graph const self,
+    size_t const start, size_t const end);
+
+
 gva_uint
 gva_edges(char const observed[static restrict 1],
     GVA_Node const head, GVA_Node const tail,

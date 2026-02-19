@@ -483,6 +483,19 @@ gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
 } // gva_lcs_graph_uniq_atomics
 
 
+inline GVA_Variant
+gva_lcs_graph_ls_slice(GVA_LCS_Graph const self,
+    size_t const start, size_t const end)
+{
+    GVA_Variant variant;
+    gva_edges(self.observed.str,
+              self.dom_nodes[start], self.dom_nodes[end],
+              start == 0, end == array_length(self.dom_nodes) - 2,
+              &variant);
+    return variant;
+} // gva_lcs_graph_ls_slice
+
+
 gva_uint
 gva_edges(char const observed[static restrict 1],
     GVA_Node const head, GVA_Node const tail,
@@ -499,8 +512,11 @@ gva_edges(char const observed[static restrict 1],
     gva_uint const head_offset = offset > 0 ? MIN(head_length, offset + 1) : 1;
     gva_uint const tail_offset = offset < 0 ? MIN(tail_length, -offset) : 0;
 
-    *variant = (GVA_Variant) {
-        row + head_offset, tail.row + tail_offset, {
+    *variant = (GVA_Variant)
+    {
+        row + head_offset,
+        tail.row + tail_offset,
+        {
             (tail.col + tail_offset) - (col + head_offset),
             observed + col + head_offset
         }
