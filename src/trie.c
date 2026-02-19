@@ -47,7 +47,7 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
     {
         gva_uint const start = 0;
         self->strings = gva_string_concat(allocator, self->strings, (GVA_String) {len, key});
-        self->root = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start, start, len})) - 1;
+        self->root = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start, start, len}));
         return self->root;
     } // if
 
@@ -70,7 +70,7 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
                 gva_uint const start = self->strings.len;
                 self->strings = gva_string_concat(allocator, self->strings, (GVA_String) {len, key});
                 gva_uint const end = self->strings.len;
-                gva_uint const next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
+                gva_uint const next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end}));
                 self->nodes[idx].next = next;
                 return next;
             } // if
@@ -85,7 +85,7 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
                 gva_uint const start = self->strings.len;
                 self->strings = gva_string_concat(allocator, self->strings, (GVA_String) {len, key});
                 gva_uint const end = self->strings.len;
-                gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
+                gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end}));
                 self->nodes[idx].link = link;
                 return link;
             } // if
@@ -101,9 +101,9 @@ trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
                 gva_uint const start = self->strings.len;
                 self->strings = gva_string_concat(allocator, self->strings, (GVA_String) {len, key});
                 gva_uint const end = self->strings.len;
-                next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end})) - 1;
+                next = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {GVA_NULL, GVA_NULL, start + prefix, start, end}));
             } // if
-            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {idx, self->nodes[idx].next, self->nodes[idx].p_start, self->nodes[idx].start, self->nodes[idx].p_start + k})) - 1;
+            gva_uint const link = ARRAY_APPEND(allocator, self->nodes, ((TrieNode) {idx, self->nodes[idx].next, self->nodes[idx].p_start, self->nodes[idx].start, self->nodes[idx].p_start + k}));
             self->nodes[idx].next = next;
             self->nodes[idx].p_start += k;
             if (prev != GVA_NULL)

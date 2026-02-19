@@ -266,14 +266,14 @@ gva_index_insert(GVA_Index* restrict const self,
     // new allele
     if (array_length(self->alleles) == 0 || id_idx != self->alleles[allele_idx].id_idx)
     {
-        allele_idx = ARRAY_APPEND(self->allocator, self->alleles, ((Allele) {id_idx, 0, array_length(self->join), 0})) - 1;
+        allele_idx = ARRAY_APPEND(self->allocator, self->alleles, ((Allele) {id_idx, 0, array_length(self->join), 0}));
     } // if
 
     // add variant
     gva_uint const inserted_idx = trie_insert(self->allocator, &self->inserted, variant.sequence.len, variant.sequence.str);
     gva_uint const tmp_idx = ARRAY_APPEND(self->allocator, self->intervals.nodes,
                                           ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL},
-                                          variant.start, variant.end, variant.end, 0, inserted_idx, GVA_NULL, distance})) - 1;
+                                          variant.start, variant.end, variant.end, 0, inserted_idx, GVA_NULL, distance}));
     gva_uint const node_idx = interval_tree_insert(&self->intervals, tmp_idx);
     // undo append: interval already in the tree
     if (node_idx != tmp_idx)
@@ -281,7 +281,7 @@ gva_index_insert(GVA_Index* restrict const self,
         array_header(self->intervals.nodes)->length -= 1;
     } // if
     self->intervals.nodes[node_idx].alleles = ARRAY_APPEND(self->allocator, self->join,
-                                  ((Join) {node_idx ^ allele_idx, self->intervals.nodes[node_idx].alleles})) - 1;
+                                  ((Join) {node_idx ^ allele_idx, self->intervals.nodes[node_idx].alleles}));
 
     // update allele
     self->alleles[allele_idx].distance += distance;
@@ -357,17 +357,14 @@ gva_index_query(GVA_Allocator const allocator,
                             .start = i,
                             .end = i + 1,
                             .next = GVA_NULL
-                        })
-                    ) - 1;
+                        }));
                     HASH_TABLE_SET(allocator, entries, allele_idx,
                         ((struct Allele_Entry)
                         {
                             .gva_key = allele_idx,
-                            .included = 0,
                             .head = tail,
                             .tail = tail
-                        })
-                    );
+                        }));
                     continue;
                 } // if
 
@@ -382,8 +379,7 @@ gva_index_query(GVA_Allocator const allocator,
                             .start = i,
                             .end = i + 1,
                             .next = GVA_NULL
-                        })
-                    ) - 1;
+                        }));
                     // add to end of list
                     hits[entries[idx].tail].next = tail;
                     entries[idx].tail = tail;
@@ -393,13 +389,13 @@ gva_index_query(GVA_Allocator const allocator,
                 {
                     hits[entries[idx].tail].end = i + 1;
                 } // else
-            } // for alleles
-        } // for intervals
+            } // for
+        } // for
         intervals = ARRAY_DESTROY(allocator, intervals);
-    } // for dom_nodes
+    } // for
 
     //
-    // Phase 2: combine 1:N and N:1 hits into single hits
+    // Phase 2:
     //
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
@@ -515,19 +511,20 @@ gva_index_query(GVA_Allocator const allocator,
             } // else
             entries[idx].included += hits[i].included;
             prev = i;
-        } // for hits
-
-        // Disable disjoint entries
+        } // for
+        // TODO: exclude included == 0?
         if (entries[idx].included == 0)
         {
             entries[idx].gva_key = NOT_FOUND;
         } // if
-    } // for entries
+    } // for
 
     //
-    // Phase 3: determine relation per allele based on included
+    // Phase 3:
     //
+
     GVA_Result* results = NULL;
+
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
         if (entries[idx].gva_key == NOT_FOUND)

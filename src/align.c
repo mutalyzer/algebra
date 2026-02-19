@@ -75,9 +75,15 @@ expand(Context const context,
             intmax_t const d_col = context.len_obs - col;
             size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2 - 1;
             size_t const length = row - match_row;
-            gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
-                match_row + context.shift, match_col, length, 0, false, GVA_NULL, GVA_NULL
-            })) - 1;
+            gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes,
+                ((LCS_Node)
+                {
+                    .row = match_row + context.shift,
+                    .col = match_col,
+                    .length = length,
+                    .idx = GVA_NULL,
+                    .next = GVA_NULL
+                }));
             if (lcs->index[lcs_pos].head != GVA_NULL)
             {
                 lcs->nodes[lcs->index[lcs_pos].tail].next = idx;
@@ -116,9 +122,15 @@ expand(Context const context,
         intmax_t const d_col = context.len_obs - col;
         size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2 - 1;
         size_t const length = row - match_row;
-        gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes, ((LCS_Node) {
-            match_row + context.shift, match_col, length, 0, false, GVA_NULL, GVA_NULL
-        })) - 1;
+        gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes,
+            ((LCS_Node)
+            {
+                .row = match_row + context.shift,
+                .col = match_col,
+                .length = length,
+                .idx = GVA_NULL,
+                .next = GVA_NULL
+            }));
         if (lcs->index[lcs_pos].head != GVA_NULL)
         {
             lcs->nodes[lcs->index[lcs_pos].tail].next = idx;
