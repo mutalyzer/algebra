@@ -393,14 +393,13 @@ gva_index_query(GVA_Allocator const allocator,
                 {
                     hits[entries[idx].tail].end = i + 1;
                 } // else
-            } // for
-        } // for
+            } // for alleles
+        } // for intervals
         intervals = ARRAY_DESTROY(allocator, intervals);
-    } // for
-
+    } // for dom_nodes
 
     //
-    // Phase 2:
+    // Phase 2: combine 1:N and N:1 hits into single hits
     //
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
@@ -516,21 +515,19 @@ gva_index_query(GVA_Allocator const allocator,
             } // else
             entries[idx].included += hits[i].included;
             prev = i;
-        } // for
-        // TODO: exclude included == 0?
+        } // for hits
+
+        // Disable disjoint entries
         if (entries[idx].included == 0)
         {
             entries[idx].gva_key = NOT_FOUND;
         } // if
-    } // for
-
+    } // for entries
 
     //
-    // Phase 3:
+    // Phase 3: determine relation per allele based on included
     //
-
     GVA_Result* results = NULL;
-
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
         if (entries[idx].gva_key == NOT_FOUND)
@@ -578,7 +575,6 @@ gva_index_query(GVA_Allocator const allocator,
             ((GVA_Result) {trie_string(self->ids, self->alleles[entries[idx].gva_key].id_idx), relation, entries[idx].included, excluded})
         );
     } // for
-
 
     hits = ARRAY_DESTROY(allocator, hits);
     entries = HASH_TABLE_DESTROY(allocator, entries);
