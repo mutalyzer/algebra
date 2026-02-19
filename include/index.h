@@ -15,8 +15,10 @@ typedef struct GVA_Index GVA_Index;  // opaque
 
 typedef struct
 {
-    GVA_String   allele;
+    GVA_String   allele;  // FIXME: allele_idx
     GVA_Relation relation;
+    size_t       included;
+    size_t       excluded;
 } GVA_Result;
 
 
