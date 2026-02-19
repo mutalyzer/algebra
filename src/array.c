@@ -79,4 +79,4 @@ array_ensure(GVA_Allocator const allocator, void* const self,
 
     new_header->capacity = new_capacity;
     return new_header + 1;
-} // array_ensure_one
+} // array_ensure
