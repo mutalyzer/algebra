@@ -577,15 +577,15 @@ index_main(int argc, char* argv[static argc])
     while (fgets(line, sizeof(line), stream) != NULL)
     {
         line_count += 1;
-        size_t id_len = 0;
+        size_t len_id = 0;
         GVA_Variant variant;
         size_t distance = 0;
-        if (!parse_line(line, &id_len, &variant, &distance))
+        if (!parse_line(line, &len_id, &variant, &distance))
         {
             fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
             continue;
         } // if
-        gva_index_insert(index, id_len, line, variant, distance);
+        gva_index_insert(index, len_id, line, variant, distance);
     } // while
 
     fclose(stream);
@@ -594,9 +594,9 @@ index_main(int argc, char* argv[static argc])
     while (fgets(line, sizeof(line), stdin) != NULL)
     {
         line_count += 1;
-        size_t id_len = 0;
+        size_t len_id = 0;
         GVA_Variant variant;
-        if (!parse_line2(line, &id_len, &variant))
+        if (!parse_line2(line, &len_id, &variant))
         {
             fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
             continue;
@@ -605,18 +605,19 @@ index_main(int argc, char* argv[static argc])
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
         // fprintf(stderr, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%u)\n", GVA_STRING_PRINT(((GVA_String) {id_len, line})), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, graph.supremal), graph.distance);
-        GVA_Result* results = gva_index_query(gva_std_allocator, index, graph);
+        GVA_Query_Result* results = gva_index_query(gva_std_allocator, index, graph);
         for (size_t i = 0; i < array_length(results); ++i)
         {
-            fprintf(stdout, GVA_STRING_FMT " %s %.*s %zu %zu\n",
+            fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %zu %zu\n",
                 GVA_STRING_PRINT(results[i].allele),
                 GVA_RELATION_LABELS[results[i].relation],
-                (int)id_len, line, results[i].included, results[i].excluded);
-        }
+                GVA_STRING_PRINT(((GVA_String) {len_id, line})),
+                results[i].included, results[i].excluded);
+        } // for
 
+        ARRAY_DESTROY(gva_std_allocator, results);
         gva_string_destroy(gva_std_allocator, graph.observed);
         gva_lcs_graph_destroy(gva_std_allocator, graph);
-        ARRAY_DESTROY(gva_std_allocator, results);
     } // while
 
     index = gva_index_destroy(index);

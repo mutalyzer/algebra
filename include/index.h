@@ -15,11 +15,11 @@ typedef struct GVA_Index GVA_Index;  // opaque
 
 typedef struct
 {
-    GVA_String   allele;  // FIXME: allele_idx
+    GVA_String   allele;    // FIXME: allele_idx
     GVA_Relation relation;
     size_t       included;
     size_t       excluded;
-} GVA_Result;
+} GVA_Query_Result;
 
 
 GVA_Index*
@@ -38,8 +38,7 @@ gva_index_insert(GVA_Index* restrict const self,
     GVA_Variant const variant, size_t const distance);
 
 
-// FIXME: returns
-GVA_Result*
+GVA_Query_Result*
 gva_index_query(GVA_Allocator const allocator,
     GVA_Index* const self, GVA_LCS_Graph const graph);
 
