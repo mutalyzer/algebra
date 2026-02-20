@@ -272,8 +272,16 @@ gva_index_insert(GVA_Index* restrict const self,
     // add variant
     gva_uint const inserted_idx = trie_insert(self->allocator, &self->inserted, variant.sequence.len, variant.sequence.str);
     gva_uint const tmp_idx = ARRAY_APPEND(self->allocator, self->intervals.nodes,
-                                          ((Interval_Tree_Node) {{GVA_NULL, GVA_NULL},
-                                          variant.start, variant.end, variant.end, 0, inserted_idx, GVA_NULL, distance}));
+        ((Interval_Tree_Node)
+        {
+            .child = {GVA_NULL, GVA_NULL},
+            .start = variant.start,
+            .end = variant.end,
+            .max = variant.end,
+            .inserted = inserted_idx,
+            .alleles = GVA_NULL,
+            .distance = distance
+        }));
     gva_uint const node_idx = interval_tree_insert(&self->intervals, tmp_idx);
     // undo append: interval already in the tree
     if (node_idx != tmp_idx)
@@ -281,7 +289,11 @@ gva_index_insert(GVA_Index* restrict const self,
         array_header(self->intervals.nodes)->length -= 1;
     } // if
     self->intervals.nodes[node_idx].alleles = ARRAY_APPEND(self->allocator, self->join,
-                                  ((Join) {node_idx ^ allele_idx, self->intervals.nodes[node_idx].alleles}));
+        ((Join)
+        {
+            node_idx ^ allele_idx,
+            self->intervals.nodes[node_idx].alleles
+        }));
 
     // update allele
     self->alleles[allele_idx].distance += distance;
@@ -390,7 +402,11 @@ gva_index_query(GVA_Allocator const allocator,
     } // for
 
     //
-    // Phase 2:
+    // Phase 2: combine 1:N and N:1 hits into single hits
+    //          - calculate relations that could not be determined on distances
+    //          - switch from distances to `included` perspective
+    //          - aggregate `included` per allele
+    //          - discard disjoint alleles
     //
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
@@ -500,7 +516,7 @@ gva_index_query(GVA_Allocator const allocator,
     } // for
 
     //
-    // Phase 3:
+    // Phase 3: determine relation per allele based on included
     //
 
     GVA_Result* results = NULL;
