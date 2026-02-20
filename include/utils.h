@@ -20,6 +20,10 @@ GVA_String
 gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream);
 
 
+GVA_String
+gva_fasta_sequence_blob(GVA_Allocator const allocator, FILE* const stream);
+
+
 void
 gva_lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph);
 

@@ -1,77 +1,27 @@
 #include <errno.h>      // errno
-#include <limits.h>     // CHAR_BIT
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, stdout, fclose, fopen, fprintf
-#include <stdlib.h>     // EXIT_*
+#include <stdlib.h>     // EXIT_*, atoll
 #include <string.h>     // strerror, strlen
 
-#include "../include/compare.h"     // bitset_fill
 #include "../include/edit.h"        // gva_edit_distance
-#include "../include/extractor.h"   // gva_canonical
 #include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, GVA_Variant, gva_lcs_graph_*, gva_edges
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/types.h"       // GVA_NULL, gva_uint
-#include "../include/utils.h"       // gva_fasta_sequence, gva_lcs_graph_dot
+#include "../include/utils.h"       // gva_fasta_sequence*, gva_lcs_graph_dot
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi
-#include "array.h"          // ARRAY_DESTROY, array_length
+#include "array.h"          // ARRAY_*, array_length
 #include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
 #include "hash_table.h"     // GVA_NOT_FOUND, HASH_TABLE_KEY, hash_table_*
-#include "interval_tree.h"  // Interval_Tree, interval_tree_*
-#include "trie.h"           // Trie, trie_*
 
 
 #define LINE_SIZE 8194
 
 // #define REFERENCE_ID "NC_000006.12"
 #define REFERENCE_ID "NC_000001.11"
-
-
-// FIXME: see `match_number` in src/variant.c
-static inline size_t
-parse_number(char const buffer[static 1], size_t idx[static 1])
-{
-    size_t number = 0;
-    while (buffer[*idx] >= '0' && buffer[*idx] <= '9')
-    {
-        number = number * 10 + buffer[*idx] - '0';
-        *idx += 1;
-    } // while
-    return number;
-} // parse_number
-
-
-GVA_String
-gva_fasta_sequence_blob(GVA_Allocator const allocator, FILE* const stream)
-{
-    GVA_String reference = {0, NULL};
-
-    errno = 0;
-    if (fread(&reference.len, sizeof(reference.len), 1, stream) != 1)
-    {
-        fprintf(stderr, "error: %s\n", strerror(errno));
-        return (GVA_String) {0, NULL};
-    }  // if
-
-    reference.str = allocator.allocate(allocator.context, NULL, 0, reference.len);
-    if (reference.str == NULL)
-    {
-        fprintf(stderr, "OOM\n");
-        return (GVA_String) {0, NULL};
-    } // if
-
-    errno = 0;
-    if (fread((char*) reference.str, 1, reference.len, stream) != reference.len)
-    {
-        fprintf(stderr, "error: %s\n", strerror(errno));
-        gva_string_destroy(allocator, reference);
-        return (GVA_String) {0, NULL};
-    } // if
-
-    return reference;
-} // gva_fasta_sequence_blob
 
 
 static void
@@ -104,13 +54,13 @@ parse_line(char const line[static LINE_SIZE],
         return false;
     } // if
 
-    size_t const spdi_len = strcspn(line + *len_id + 1, "\n\t ");
-    if (gva_parse_spdi(spdi_len, line + *len_id + 1, variant) == 0)
+    size_t const len_spdi = strcspn(line + *len_id + 1, "\n\t ");
+    if (gva_parse_spdi(len_spdi, line + *len_id + 1, variant) == 0)
     {
         return false;
     } // if
 
-    *distance = parse_number(line, &(size_t) {*len_id + spdi_len + 2});
+    *distance = atoll(line + *len_id + len_spdi + 2);
     return true;
 } // parse_line
 
@@ -323,7 +273,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
                 graph.dom_nodes[i], graph.dom_nodes[i + 1],
                 i == 0, i == array_length(graph.dom_nodes) - 2,
                 &variant);
-            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance);
+            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
         } // for
         gva_lcs_graph_destroy(gva_std_allocator, graph);
     } // if
@@ -421,7 +371,7 @@ int
 extract_main(int argc, char* argv[static argc])
 {
     errno = 0;
-    FILE *stream = fopen(argv[1], "r");
+    FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
@@ -453,7 +403,7 @@ make_ref_blob_main(int argc, char* argv[static argc])
     } // if
 
     errno = 0;
-    FILE *stream = fopen(argv[1], "r");
+    FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
@@ -480,7 +430,7 @@ make_obs_blob_main(int argc, char* argv[static argc])
     } // if
 
     errno = 0;
-    FILE *stream = fopen(argv[1], "r");
+    FILE* stream = fopen(argv[1], "r");
     if (stream == NULL)
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
@@ -502,7 +452,6 @@ int
 main(int argc, char* argv[static argc])
 {
     // return wu_main(argc, argv);
-    // return slice_blob_main(argc, argv);
     // return fasta_blob_write(argc, argv);
     // return extract_main(argc, argv);
     // return make_ref_blob_main(argc, argv);

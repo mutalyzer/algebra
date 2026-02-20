@@ -1,7 +1,8 @@
 // NOT FREESTANDING
+#include <errno.h>      // errno
 #include <stddef.h>     // NULL, size_t
 #include <stdlib.h>     // rand
-#include <stdio.h>      // FILE, fgets
+#include <stdio.h>      // FILE, stderr, fgets, fprintf
 #include <string.h>     // strcspn
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -48,6 +49,37 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream)
     seq.str = allocator.allocate(allocator.context, (char*) seq.str, capacity, seq.len);
     return seq;
 } // gva_fasta_sequence
+
+
+GVA_String
+gva_fasta_sequence_blob(GVA_Allocator const allocator, FILE* const stream)
+{
+    GVA_String reference = {0, NULL};
+
+    errno = 0;
+    if (fread(&reference.len, sizeof(reference.len), 1, stream) != 1)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return (GVA_String) {0, NULL};
+    }  // if
+
+    reference.str = allocator.allocate(allocator.context, NULL, 0, reference.len);
+    if (reference.str == NULL)
+    {
+        fprintf(stderr, "OOM\n");
+        return (GVA_String) {0, NULL};
+    } // if
+
+    errno = 0;
+    if (fread((char*) reference.str, 1, reference.len, stream) != reference.len)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        gva_string_destroy(allocator, reference);
+        return (GVA_String) {0, NULL};
+    } // if
+
+    return reference;
+} // gva_fasta_sequence_blob
 
 
 void
