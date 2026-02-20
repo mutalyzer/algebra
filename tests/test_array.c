@@ -27,16 +27,16 @@ test_array_append_null(void)
 {
     int* a = NULL;
 
-    assert(ARRAY_APPEND(gva_std_allocator, a, 0) == 1);
+    assert(ARRAY_APPEND(gva_std_allocator, a, 0) == 0);
     assert(array_header(a)->capacity == 1);
 
-    assert(ARRAY_APPEND(gva_std_allocator, a, 1) == 2);
+    assert(ARRAY_APPEND(gva_std_allocator, a, 1) == 1);
     assert(array_header(a)->capacity == 2);
 
-    assert(ARRAY_APPEND(gva_std_allocator, a, 2) == 3);
+    assert(ARRAY_APPEND(gva_std_allocator, a, 2) == 2);
     assert(array_header(a)->capacity == 4);
 
-    assert(ARRAY_APPEND(gva_std_allocator, a, 3) == 4);
+    assert(ARRAY_APPEND(gva_std_allocator, a, 3) == 3);
     assert(array_header(a)->capacity == 4);
 
     assert(array_length(a) == 4);
