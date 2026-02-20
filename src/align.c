@@ -17,7 +17,7 @@ typedef struct
     char const* const restrict reference;
     size_t const len_obs;
     char const* const restrict observed;
-    size_t const shift;
+    size_t const offset;
     size_t* const restrict diagonals;
 } Context;
 
@@ -78,11 +78,11 @@ expand(Context const context,
             gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes,
                 ((LCS_Node)
                 {
-                    .row = match_row + context.shift,
+                    .row = match_row + context.offset,
                     .col = match_col,
                     .length = length,
                     .idx = GVA_NULL,
-                    .next = GVA_NULL
+                    .next = GVA_NULL,
                 }));
             if (lcs->index[lcs_pos].head != GVA_NULL)
             {
@@ -125,11 +125,11 @@ expand(Context const context,
         gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes,
             ((LCS_Node)
             {
-                .row = match_row + context.shift,
+                .row = match_row + context.offset,
                 .col = match_col,
                 .length = length,
                 .idx = GVA_NULL,
-                .next = GVA_NULL
+                .next = GVA_NULL,
             }));
         if (lcs->index[lcs_pos].head != GVA_NULL)
         {
@@ -154,15 +154,15 @@ LCS_Alignment
 lcs_align(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs],
-    size_t const shift)
+    size_t const offset)
 {
     intmax_t const delta = len_obs - len_ref;
-    size_t const offset = len_ref + 1;
     size_t const size = len_ref + len_obs + 3;
 
     LCS_Alignment lcs = {0, NULL, NULL};
 
-    lcs.index = allocator.allocate(allocator.context, NULL, 0, MIN(len_ref, len_obs) * sizeof(*lcs.index));
+    lcs.index = allocator.allocate(allocator.context, NULL,
+        0, MIN(len_ref, len_obs) * sizeof(*lcs.index));
     if (lcs.index == NULL)
     {
         return lcs;
@@ -175,12 +175,14 @@ lcs_align(GVA_Allocator const allocator,
         reference,
         len_obs,
         observed,
-        shift,
-        .diagonals = allocator.allocate(allocator.context, NULL, 0, size * sizeof(*context.diagonals)),
+        offset,
+        .diagonals = allocator.allocate(allocator.context, NULL,
+            0, size * sizeof(*context.diagonals)),
     };
     if (context.diagonals == NULL)
     {
-        lcs.index = allocator.allocate(allocator.context, lcs.index, MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
+        lcs.index = allocator.allocate(allocator.context, lcs.index,
+            MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
         return lcs;
     } // if
 
@@ -197,22 +199,24 @@ lcs_align(GVA_Allocator const allocator,
     size_t const upper = delta > 0 ? delta : 0;
     size_t const len = MAX(len_ref, len_obs) - ABS(delta);
     size_t p = 0;
-    while (context.diagonals[offset + delta] <= len)
+    while (context.diagonals[len_ref + 1 + delta] <= len)
     {
         for (intmax_t idx = lower - p; idx < delta; ++idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &lcs);
+            context.diagonals[len_ref + 1 + idx] = expand(context, idx, p, &lcs);
         } // for
         for (intmax_t idx = upper + p; idx > delta; --idx)
         {
-            context.diagonals[offset + idx] = expand(context, idx, p, &lcs);
+            context.diagonals[len_ref + 1 + idx] = expand(context, idx, p, &lcs);
         } // for
-        context.diagonals[offset + delta] = expand(context, delta, p, &lcs);
+        context.diagonals[len_ref + 1 + delta] = expand(context, delta, p, &lcs);
 
         p += 1;
     } // while
 
-    lcs.index = allocator.allocate(allocator.context, lcs.index, MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
-    allocator.allocate(allocator.context, context.diagonals, size * sizeof(*context.diagonals), 0);
+    lcs.index = allocator.allocate(allocator.context, lcs.index,
+        MIN(len_ref, len_obs) * sizeof(*lcs.index), lcs.length * sizeof(*lcs.index));
+    allocator.allocate(allocator.context, context.diagonals,
+        size * sizeof(*context.diagonals), 0);
     return lcs;
 } // lcs_align
