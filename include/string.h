@@ -35,4 +35,12 @@ GVA_String
 gva_string_dup(GVA_Allocator const allocator, GVA_String const self);
 
 
-#endif
+void
+gva_string_reverse(GVA_String self);
+
+
+size_t
+gva_string_prefix_length(GVA_String const lhs, GVA_String const rhs);
+
+
+#endif // GVA_STRING_H

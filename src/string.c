@@ -46,3 +46,31 @@ gva_string_dup(GVA_Allocator const allocator, GVA_String const self)
 {
     return gva_string_concat(allocator, (GVA_String) {0, NULL}, self);
 } // gva_string_dup
+
+
+inline void
+gva_string_reverse(GVA_String self)
+{
+    size_t i = self.len - 1;
+    size_t j = 0;
+    while (i > j)
+    {
+        char const ch = self.str[i];
+        ((char*) self.str)[i] = self.str[j];
+        ((char*) self.str)[j] = ch;
+        i -= 1;
+        j += 1;
+    } // while
+} // gva_string_reverse
+
+
+inline size_t
+gva_string_prefix_length(GVA_String const lhs, GVA_String const rhs)
+{
+    size_t idx = 0;
+    while (idx < lhs.len && idx < rhs.len && lhs.str[idx] == rhs.str[idx])
+    {
+        idx += 1;
+    } // while
+    return idx;
+} // gva_string_prefix_length

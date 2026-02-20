@@ -7,6 +7,7 @@
 #include <stdio.h>      // FILE
 
 #include "allocator.h"  // GVA_Allocator
+#include "lcs_graph.h"  // GVA_LCS_Graph
 #include "string.h"     // GVA_String
 
 
@@ -19,9 +20,8 @@ GVA_String
 gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream);
 
 
-GVA_String
-gva_random_sequence(GVA_Allocator const allocator,
-    size_t const min_length, size_t const max_length);
+void
+gva_lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph);
 
 
 #endif // GVA_UTILS_H

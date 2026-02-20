@@ -26,7 +26,7 @@ interval_tree_destroy(GVA_Allocator const allocator, Interval_Tree self[static 1
 enum
 {
     LEFT  = 0,
-    RIGHT = 1
+    RIGHT = 1,
 };
 
 

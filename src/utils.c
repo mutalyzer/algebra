@@ -5,8 +5,10 @@
 #include <string.h>     // strcspn
 
 #include "../include/allocator.h"   // GVA_Allocator
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
 #include "../include/string.h"      // GVA_String
 #include "../include/utils.h"       // gva_fasta_sequence
+#include "array.h"      // array_length
 
 
 GVA_String
@@ -48,30 +50,37 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream)
 } // gva_fasta_sequence
 
 
-static inline void
-random_sequence(size_t const len, char sequence[static len])
+void
+gva_lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph)
 {
-    for (size_t i = 0; i < len; ++i)
+    fprintf(stream, "strict digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->%u\n", graph.source);
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
-        sequence[i] = "AC"[rand() % 2];
+        fprintf(stream, "%zu[label=\"(%u, %u, %u)\"%s]\n", i, graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length, graph.nodes[i].edges == GVA_NULL ? ",peripheries=2" : "");
+        if (graph.nodes[i].lambda != GVA_NULL)
+        {
+            fprintf(stream, "%zu->%u[label=\"&lambda;\",style=dashed]\n", i, graph.nodes[i].lambda);
+        } // if
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            GVA_Variant variant;
+            gva_uint const count = gva_edges(graph.observed.str,
+                graph.nodes[i], graph.nodes[graph.edges[j].tail],
+                i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                &variant);
+            if (count > 1)
+            {
+                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT " x %u\",penwidth=2]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant), count);
+            } // if
+            else
+            {
+                fprintf(stream, "%zu->%u[label=\"" GVA_VARIANT_FMT "\"]\n", i, graph.edges[j].tail, GVA_VARIANT_PRINT(variant));
+            } // else
+        } // for
     } // for
-} // random_sequence
-
-
-GVA_String
-gva_random_sequence(GVA_Allocator const allocator, size_t const min_length, size_t const max_length)
-{
-    if (max_length < min_length)
+    for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
     {
-        return (GVA_String) {0, NULL};
-    } // if
-
-    size_t const len = rand() % (max_length - min_length + 1) + min_length;
-    GVA_String sequence = {len, allocator.allocate(allocator.context, NULL, 0, len)};
-    if (sequence.str == NULL)
-    {
-        return (GVA_String) {0, NULL};
-    } // if
-    random_sequence(len, (char*) sequence.str);
-    return sequence;
-} // gva_random_sequence
+        fprintf(stream, "%u[penwidth=2]\n", graph.dom_nodes[i].link);
+    } // for
+    fprintf(stream, "}\n");
+} // gva_lcs_graph_dot

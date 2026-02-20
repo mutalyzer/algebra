@@ -134,6 +134,15 @@ gva_variant_length(GVA_Variant const variant)
 } // gva_variant_length
 
 
+inline GVA_Variant
+gva_variant_prefix_trimmed(size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const variant)
+{
+    size_t const len = gva_string_prefix_length((GVA_String) {(variant.end - variant.start), reference + variant.start}, variant.sequence);
+    return (GVA_Variant) {variant.start + len, variant.end, {variant.sequence.len - len, variant.sequence.str + len}};
+} // gva_variant_prefix_trimmed
+
+
 GVA_String
 gva_patch(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],

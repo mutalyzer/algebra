@@ -42,6 +42,11 @@ size_t
 gva_variant_length(GVA_Variant const variant);
 
 
+GVA_Variant
+gva_variant_prefix_trimmed(size_t const len_ref, char const reference[static len_ref],
+    GVA_Variant const variant);
+
+
 GVA_String
 gva_patch(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
