@@ -18,33 +18,31 @@ GVA_LCS_Graph
 gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs],
-    size_t const shift)
+    size_t const offset)
 {
-    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, shift);
+    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, offset);
+    size_t const distance = len_ref + len_obs - 2 * lcs.length;
 
     GVA_LCS_Graph graph =
     {
-        .nodes = NULL,
-        .edges = NULL,
-        .dom_nodes = NULL,
         .supremal = {0, 0, {0, observed}},
         .observed = {len_obs, observed},
         .source = GVA_NULL,
-        .distance = len_ref + len_obs - 2 * lcs.length
+        .distance = distance,
     };
 
-    if (lcs.nodes == NULL || graph.distance == 0)
+    if (lcs.nodes == NULL || distance == 0)
     {
         gva_uint const sink = ARRAY_APPEND(allocator, graph.nodes,
             ((GVA_Node)
             {
-                .row = len_ref + shift,
+                .row = len_ref + offset,
                 .col = len_obs,
                 .edges = GVA_NULL,
-                .lambda = GVA_NULL
+                .lambda = GVA_NULL,
             }));
 
-        if (graph.distance == 0)
+        if (distance == 0)
         {
             graph.source = sink;
             graph.nodes[sink].row = 0;
@@ -59,32 +57,32 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         graph.source = ARRAY_APPEND(allocator, graph.nodes,
             ((GVA_Node)
             {
-                .row = shift,
+                .row = offset,
                 .edges = ARRAY_APPEND(allocator, graph.edges, ((GVA_Edge) {sink, GVA_NULL})),
-                .lambda = GVA_NULL
+                .lambda = GVA_NULL,
             }));
 
         ARRAY_APPEND(allocator, graph.dom_nodes,
              ((GVA_Node)
              {
-                 .row = shift,
-                 .link = graph.source
+                 .row = offset,
+                 .link = graph.source,
              }));
         ARRAY_APPEND(allocator, graph.dom_nodes,
              ((GVA_Node)
              {
-                 .row = len_ref + shift,
+                 .row = len_ref + offset,
                  .col = len_obs,
-                 .distance = graph.distance,
-                 .link = sink
+                 .distance = distance,
+                 .link = sink,
              }));
-        graph.supremal = (GVA_Variant) {shift, len_ref + shift, {len_obs, observed}};
+        graph.supremal = (GVA_Variant) {offset, len_ref + offset, {len_obs, observed}};
         return graph;
     } // if
 
     gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
     LCS_Node sink = lcs.nodes[tail_idx];
-    if (sink.row + sink.length == len_ref + shift && sink.col + sink.length == len_obs)
+    if (sink.row + sink.length == len_ref + offset && sink.col + sink.length == len_obs)
     {
         lcs.nodes[tail_idx].idx = ARRAY_APPEND(allocator, graph.nodes,
             ((GVA_Node)
@@ -93,14 +91,14 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                 .col = sink.col,
                 .length = sink.length,
                 .edges = GVA_NULL,
-                .lambda = GVA_NULL
+                .lambda = GVA_NULL,
             }));
         lcs.nodes[tail_idx].moved = true;
         sink = lcs.nodes[tail_idx];
     } // if
     else
     {
-        sink = (LCS_Node) {.row = len_ref + shift, .col = len_obs, .length = 0};
+        sink = (LCS_Node) {.row = len_ref + offset, .col = len_obs, .length = 0};
         sink.idx = ARRAY_APPEND(allocator, graph.nodes,
             ((GVA_Node)
             {
@@ -108,7 +106,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                 .col = sink.col,
                 .length = sink.length,
                 .edges = GVA_NULL,
-                .lambda = GVA_NULL
+                .lambda = GVA_NULL,
             }));
         tail_idx = GVA_NULL;
     } // else
@@ -121,7 +119,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                 .col = lcs.nodes[i].col,
                 .length = lcs.nodes[i].length,
                 .edges = ARRAY_APPEND(allocator, graph.edges, ((GVA_Edge) {sink.idx, GVA_NULL})),
-                .lambda = GVA_NULL
+                .lambda = GVA_NULL,
             }));
     } // for
 
@@ -190,8 +188,8 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                     graph.nodes[head->idx].edges = ARRAY_APPEND(allocator, graph.edges,
                         ((GVA_Edge)
                         {
-                            tail->idx,
-                            graph.nodes[head->idx].edges
+                            .tail = tail->idx,
+                            .next = graph.nodes[head->idx].edges,
                         }));
                 } // if
             } // for
@@ -217,7 +215,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
     gva_uint head_idx = lcs.index[0].head;
     LCS_Node source = lcs.nodes[head_idx];
-    if (source.row == shift && source.col == 0)
+    if (source.row == offset && source.col == 0)
     {
         lcs.index[0].tail = head_idx;
         lcs.index[0].count += 1;
@@ -227,7 +225,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     } // if
     else
     {
-        source = (LCS_Node) {.row = shift, .col = 0, .length = 0};
+        source = (LCS_Node) {.row = offset, .col = 0, .length = 0};
         source.idx = ARRAY_APPEND(allocator, graph.nodes,
             ((GVA_Node)
             {
@@ -235,7 +233,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                 .col = source.col,
                 .length = source.length,
                 .edges = GVA_NULL,
-                .lambda = GVA_NULL
+                .lambda = GVA_NULL,
             }));
     } // else
     for (gva_uint i = head_idx; i != GVA_NULL; i = lcs.nodes[i].next)
@@ -254,8 +252,8 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             graph.nodes[source.idx].edges = ARRAY_APPEND(allocator, graph.edges,
                 ((GVA_Edge)
                 {
-                    lcs.nodes[i].idx,
-                    graph.nodes[source.idx].edges
+                    .tail = lcs.nodes[i].idx,
+                    .next = graph.nodes[source.idx].edges,
                 }));
         } // if
     } // for
@@ -264,10 +262,9 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
     ARRAY_APPEND(allocator, graph.dom_nodes,
         ((GVA_Node)
         {
-            .row = shift,
-            .link = source.idx
+            .row = offset,
+            .link = source.idx,
         }));
-    gva_uint distance = 0;
     gva_uint prev = lcs.index[0].tail;
     if (lcs.nodes[lcs.index[0].tail].idx != source.idx)
     {
@@ -281,20 +278,18 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             // start new
             if (lcs.index[i].tail != prev)
             {
-                gva_uint const offset = graph.nodes[lcs.nodes[lcs.index[i].tail].idx].length - lcs.index[i].offset - 1;
+                gva_uint const pos = graph.nodes[lcs.nodes[lcs.index[i].tail].idx].length - lcs.index[i].offset - 1;
                 ARRAY_APPEND(allocator, graph.dom_nodes,
                     ((GVA_Node)
                     {
-                        .row = lcs.nodes[lcs.index[i].tail].row + offset,
-                        .col = lcs.nodes[lcs.index[i].tail].col + offset,
-                        .distance = lcs.nodes[lcs.index[i].tail].row + offset - shift +
-                                    lcs.nodes[lcs.index[i].tail].col + offset -
-                                    2 * i - distance,
-                        .link = lcs.nodes[lcs.index[i].tail].idx
+                        .row = lcs.nodes[lcs.index[i].tail].row + pos,
+                        .col = lcs.nodes[lcs.index[i].tail].col + pos,
+                        .distance = lcs.nodes[lcs.index[i].tail].row + pos - offset +
+                                    lcs.nodes[lcs.index[i].tail].col + pos - 2 * i,
+                        .link = lcs.nodes[lcs.index[i].tail].idx,
                     }));
 
                 prev = lcs.index[i].tail;
-                distance += graph.dom_nodes[array_length(graph.dom_nodes) - 1].distance;
             } // if
 
             graph.dom_nodes[array_length(graph.dom_nodes) - 1].length += 1;
@@ -309,7 +304,7 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
             {
                 .row = sink.row + sink.length,
                 .col = sink.col + sink.length,
-                .distance = graph.distance - distance,
+                .distance = distance,
                 .link = sink.idx,
             }));
     } // if
@@ -514,12 +509,9 @@ gva_edges(char const observed[static restrict 1],
 
     *variant = (GVA_Variant)
     {
-        row + head_offset,
-        tail.row + tail_offset,
-        {
-            (tail.col + tail_offset) - (col + head_offset),
-            observed + col + head_offset
-        }
+        .start = row + head_offset,
+        .end = tail.row + tail_offset,
+        .sequence = {(tail.col + tail_offset) - (col + head_offset), observed + col + head_offset},
     };
     return MIN(head_length - head_offset, tail_length - tail_offset - 1) + 1;
 } // gva_edges

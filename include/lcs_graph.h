@@ -37,7 +37,7 @@ typedef struct
     union
     {
         gva_uint edges;
-        gva_uint distance;  // FIXME: this should be cumulative
+        gva_uint distance;
     };
     union
     {
@@ -61,12 +61,11 @@ typedef struct
 } GVA_LCS_Graph;
 
 
-// FIXME: shift -> offset
 GVA_LCS_Graph
 gva_lcs_graph_init(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs],
-    size_t const shift);
+    size_t const offset);
 
 
 void

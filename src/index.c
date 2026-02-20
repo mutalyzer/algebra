@@ -445,7 +445,7 @@ gva_index_query(GVA_Allocator const allocator,
                 // aggregate hits in last hit
                 hits[i].included = variants_with_distance(allocator, self->reference.len, self->reference.str,
                     lhs, distance,
-                    gva_lcs_graph_ls_slice(graph, hits[i].start, hits[i].end), graph.dom_nodes[hits[i].start + 1].distance);
+                    gva_lcs_graph_ls_slice(graph, hits[i].start, hits[i].end), graph.dom_nodes[hits[i].end].distance - graph.dom_nodes[hits[i].start].distance);
 
                 // disable aggregated hits except the last
                 if (prev != GVA_NULL)
@@ -462,18 +462,12 @@ gva_index_query(GVA_Allocator const allocator,
             // single hit with multiple query parts
             else if (hits[i].end - hits[i].start > 1)
             {
-                // FIXME: use cumulative distances in dom_nodes
-                size_t distance = 0;  // graph.dom_nodes[hits[i].end].distance - graph.dom_nodes[hits[i].start].distance
-                for (gva_uint j = hits[i].start; j < hits[i].end; ++j)
-                {
-                    distance += graph.dom_nodes[j + 1].distance;
-                } // for
                 hits[i].included = variants_with_distance(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance,
-                    gva_lcs_graph_ls_slice(graph, hits[i].start, hits[i].end), distance);
+                    gva_lcs_graph_ls_slice(graph, hits[i].start, hits[i].end), graph.dom_nodes[hits[i].end].distance - graph.dom_nodes[hits[i].start].distance);
             } // if
             // single hit for single query part, relation is not determined by the distances
-            else if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - graph.dom_nodes[hits[i].start + 1].distance) != hits[i].included)
+            else if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - (graph.dom_nodes[hits[i].end].distance - graph.dom_nodes[hits[i].start].distance)) != hits[i].included)
             {
                 hits[i].included = variants_included(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx),
@@ -482,13 +476,14 @@ gva_index_query(GVA_Allocator const allocator,
             // single hit for single query part, relation is already determined
             else
             {
+                gva_uint const distance = graph.dom_nodes[hits[i].end].distance - graph.dom_nodes[hits[i].start].distance;
                 // equivalent or contains
-                if (self->intervals.nodes[node_idx].distance - graph.dom_nodes[hits[i].start + 1].distance == hits[i].included)
+                if (self->intervals.nodes[node_idx].distance - distance == hits[i].included)
                 {
-                    hits[i].included = graph.dom_nodes[hits[i].start + 1].distance;
+                    hits[i].included = distance;
                 } // if
                 // is_contained
-                else if (graph.dom_nodes[hits[i].start + 1].distance - self->intervals.nodes[node_idx].distance == hits[i].included)
+                else if (distance - self->intervals.nodes[node_idx].distance == hits[i].included)
                 {
                     hits[i].included = self->intervals.nodes[node_idx].distance;
                 } // if
