@@ -65,7 +65,7 @@ size_t
 gva_parse_spdi(size_t const len, char const expression[static restrict len],
     GVA_Variant variants[static restrict 1])
 {
-    variants[0] = (GVA_Variant) {0, 0, {0, NULL}};
+    variants[0] = (GVA_Variant) {0};
     // sequence
     size_t idx = match_until(len, expression, ':');
     if (idx >= len)
@@ -148,7 +148,7 @@ gva_patch(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const n, GVA_Variant const variants[static restrict n])
 {
-    GVA_String observed = {0, NULL};
+    GVA_String observed = {0};
     size_t start = 0;
     for (size_t i = 0; i < n; ++i)
     {

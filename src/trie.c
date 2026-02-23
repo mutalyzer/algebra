@@ -11,7 +11,7 @@
 inline Trie
 trie_init(void)
 {
-    return (Trie) {{0, NULL}, NULL, GVA_NULL};
+    return (Trie) {.root = GVA_NULL};
 } // trie_init
 
 
@@ -136,7 +136,7 @@ trie_string(Trie const self, size_t const idx)
 {
     if (idx >= array_length(self.nodes))
     {
-        return (GVA_String) {0, NULL};
+        return (GVA_String) {0};
     } // if
     return (GVA_String) {self.nodes[idx].end - self.nodes[idx].start, self.strings.str + self.nodes[idx].start};
 } //trie_string

@@ -112,7 +112,7 @@ onp_compare_matches(GVA_Allocator const allocator,
     intmax_t* const restrict fp = allocator.allocate(allocator.context, NULL, 0, size * sizeof(*fp));
     if (fp == NULL)
     {
-        return (GVA_Matches) {NULL, NULL, 0, -1};
+        return (GVA_Matches) {NULL};
     } // if
 
     for (intmax_t i = -1; i <= delta; ++i)
@@ -131,7 +131,7 @@ onp_compare_matches(GVA_Allocator const allocator,
         result.uniq = allocator.allocate(allocator.context, result.uniq, sizeof(*result.uniq) * m, 0);
         result.matches = allocator.allocate(allocator.context, result.matches, sizeof(*result.matches) * m, 0);
         allocator.allocate(allocator.context, fp, size * sizeof(*fp), 0);
-        return (GVA_Matches) {NULL, NULL, 0, -1};
+        return (GVA_Matches) {NULL};
     } // if
 
     size_t p = 0;

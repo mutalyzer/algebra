@@ -11,7 +11,7 @@ gva_string_init(GVA_Allocator const allocator, size_t const len)
     GVA_String string = {len, allocator.allocate(allocator.context, NULL, 0, len)};
     if (string.str == NULL)
     {
-        return (GVA_String) {0, NULL};
+        return (GVA_String) {0};
     } // if
     return string;
 } // gva_string_init
@@ -32,7 +32,7 @@ gva_string_concat(GVA_Allocator const allocator, GVA_String lhs, GVA_String cons
     lhs.str = allocator.allocate(allocator.context, (char*) lhs.str, lhs.len, len);
     if (lhs.str == NULL)
     {
-        return (GVA_String) {0, NULL};
+        return (GVA_String) {0};
     } // if
 
     memcpy((char*) lhs.str + lhs.len, rhs.str, rhs.len);
@@ -44,7 +44,7 @@ gva_string_concat(GVA_Allocator const allocator, GVA_String lhs, GVA_String cons
 inline GVA_String
 gva_string_dup(GVA_Allocator const allocator, GVA_String const self)
 {
-    return gva_string_concat(allocator, (GVA_String) {0, NULL}, self);
+    return gva_string_concat(allocator, (GVA_String) {0}, self);
 } // gva_string_dup
 
 

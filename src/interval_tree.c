@@ -11,7 +11,7 @@
 inline Interval_Tree
 interval_tree_init(void)
 {
-    return (Interval_Tree) {NULL, GVA_NULL};
+    return (Interval_Tree) {.root = GVA_NULL};
 } // interval_tree_init
 
 

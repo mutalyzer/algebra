@@ -447,7 +447,7 @@ gva_index_query(GVA_Allocator const allocator,
         for (gva_uint i = entries[idx].head; i != GVA_NULL; i = hits[i].next)
         {
             // Look ahead for the same local supremal part in the query
-            GVA_Variant lhs = {0, 0, {0, NULL}};
+            GVA_Variant lhs = {0};
             size_t distance = 0;
             gva_uint start = GVA_NULL;
             while (hits[i].next != GVA_NULL && hits[hits[i].next].query.start == hits[i].query.start)

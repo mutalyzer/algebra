@@ -17,57 +17,57 @@ gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream)
 {
     static size_t const FASTA_LINE_SIZE = 65536;
     size_t capacity = FASTA_LINE_SIZE;
-    GVA_String seq = {0, allocator.allocate(allocator.context, NULL, 0, capacity)};
-    if (seq.str == NULL)
+    GVA_String sequence = {0, allocator.allocate(allocator.context, NULL, 0, capacity)};
+    if (sequence.str == NULL)
     {
-        return seq;
+        return (GVA_String) {0};
     } // if
 
-    while (fgets((char*) seq.str + seq.len, FASTA_LINE_SIZE, stream) != NULL)
+    while (fgets((char*) sequence.str + sequence.len, FASTA_LINE_SIZE, stream) != NULL)
     {
-        if (seq.str[seq.len] == '>')
+        if (sequence.str[sequence.len] == '>')
         {
-            if (seq.len == 0)
+            if (sequence.len == 0)
             {
                 continue;
             } // if
             break;
         } // if
-        seq.len += strcspn(seq.str + seq.len, "\n");
+        sequence.len += strcspn(sequence.str + sequence.len, "\n");
 
-        if (capacity - FASTA_LINE_SIZE < seq.len)
+        if (capacity - FASTA_LINE_SIZE < sequence.len)
         {
-            seq.str = allocator.allocate(allocator.context, (char*) seq.str, capacity, capacity + FASTA_LINE_SIZE);
-            if (seq.str == NULL)
+            sequence.str = allocator.allocate(allocator.context, (char*) sequence.str, capacity, capacity + FASTA_LINE_SIZE);
+            if (sequence.str == NULL)
             {
-                seq.len = 0;
-                return seq;
+                sequence.len = 0;
+                return sequence;
             } // if
             capacity += FASTA_LINE_SIZE;
         } // if
     } // while
-    seq.str = allocator.allocate(allocator.context, (char*) seq.str, capacity, seq.len);
-    return seq;
+    sequence.str = allocator.allocate(allocator.context, (char*) sequence.str, capacity, sequence.len);
+    return sequence;
 } // gva_fasta_sequence
 
 
 GVA_String
 gva_fasta_sequence_blob(GVA_Allocator const allocator, FILE* const stream)
 {
-    GVA_String reference = {0, NULL};
+    GVA_String reference = {0};
 
     errno = 0;
     if (fread(&reference.len, sizeof(reference.len), 1, stream) != 1)
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
-        return (GVA_String) {0, NULL};
+        return (GVA_String) {0};
     }  // if
 
     reference.str = allocator.allocate(allocator.context, NULL, 0, reference.len);
     if (reference.str == NULL)
     {
         fprintf(stderr, "OOM\n");
-        return (GVA_String) {0, NULL};
+        return (GVA_String) {0};
     } // if
 
     errno = 0;
@@ -75,7 +75,7 @@ gva_fasta_sequence_blob(GVA_Allocator const allocator, FILE* const stream)
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
         gva_string_destroy(allocator, reference);
-        return (GVA_String) {0, NULL};
+        return (GVA_String) {0};
     } // if
 
     return reference;

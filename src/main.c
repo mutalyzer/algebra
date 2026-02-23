@@ -82,7 +82,7 @@ index_main(int argc, char* argv[static argc])
         return EXIT_FAILURE;
     } // if
 
-    GVA_String reference = {0, NULL};
+    GVA_String reference = {0};
     reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
     fclose(stream);
 
@@ -402,7 +402,7 @@ extract_main(int argc, char* argv[static argc])
         {
             if (i > 0)
             {
-                GVA_Variant variant = {0, 0, {0, NULL}};
+                GVA_Variant variant = {0};
                 gva_edges(graph.observed.str,
                     graph.dom_nodes[i - 1].match, graph.dom_nodes[i].match,
                     i - 1 == 0, i == array_length(graph.dom_nodes) - 1,

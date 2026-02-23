@@ -155,7 +155,7 @@ lcs_align(GVA_Allocator const allocator,
     intmax_t const delta = len_obs - len_ref;
     size_t const size = len_ref + len_obs + 3;
 
-    LCS_Alignment lcs = {0, NULL, NULL};
+    LCS_Alignment lcs = {0};
 
     lcs.index = allocator.allocate(allocator.context, NULL,
         0, MIN(len_ref, len_obs) * sizeof(*lcs.index));
