@@ -485,8 +485,8 @@ main(int argc, char* argv[static argc])
 {
     // return wu_main(argc, argv);
     // return fasta_blob_write(argc, argv);
-    return extract_main(argc, argv);
+    // return extract_main(argc, argv);
     // return make_ref_blob_main(argc, argv);
     // return make_obs_blob_main(argc, argv);
-    // return index_main(argc, argv);
+    return index_main(argc, argv);
 } // main

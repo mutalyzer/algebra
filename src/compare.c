@@ -67,17 +67,17 @@ gva_compare_graphs(GVA_Allocator const allocator,
         gva_string_destroy(allocator, observed_lhs);
     } // else
 
-    if (lhs.distance + rhs.distance == distance)
+    if (gva_lcs_graph_distance(lhs) + gva_lcs_graph_distance(rhs) == distance)
     {
         return GVA_DISJOINT;
     } // if
 
-    if (lhs.distance - rhs.distance == distance)
+    if (gva_lcs_graph_distance(lhs) - gva_lcs_graph_distance(rhs) == distance)
     {
         return GVA_CONTAINS;
     } // if
 
-    if (rhs.distance - lhs.distance == distance)
+    if (gva_lcs_graph_distance(rhs) - gva_lcs_graph_distance(lhs) == distance)
     {
         return GVA_IS_CONTAINED;
     } // if

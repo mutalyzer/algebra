@@ -21,7 +21,7 @@ typedef struct
 } GVA_Edge;
 
 
-// FIXME: refactor: typedef struct { row; col; lenght; } GVA_Match;
+// FIXME: refactor: typedef struct { row; col; length; } GVA_Match;
 // see also: src/align.h
 
 
@@ -57,7 +57,6 @@ typedef struct
     GVA_Variant supremal;  // FIXME: remove
     GVA_String  observed;  // FIXME: ownership and destroy
     gva_uint    source;
-    gva_uint    distance;  // FIXME: remove
 } GVA_LCS_Graph;
 
 

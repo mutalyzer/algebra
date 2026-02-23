@@ -28,7 +28,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         .supremal = {0, 0, {0, observed}},
         .observed = {len_obs, observed},
         .source = GVA_NULL,
-        .distance = distance,
     };
 
     if (lcs.nodes == NULL || distance == 0)
@@ -369,7 +368,7 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         if (observed == NULL)
         {
             gva_string_destroy(allocator, variant.sequence);
-            return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL, 0};
+            return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL};
         } // if
 
         memcpy(observed, reference + start, variant.start - start);
