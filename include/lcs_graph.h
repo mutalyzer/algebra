@@ -7,7 +7,7 @@
 
 #include "allocator.h"  // GVA_Allocator
 #include "string.h"     // GVA_String
-#include "types.h"      // gva_uint
+#include "types.h"      // GVA_Match, gva_uint
 #include "variant.h"    // GVA_Variant
 
 
@@ -21,41 +21,35 @@ typedef struct
 } GVA_Edge;
 
 
-// FIXME: refactor: typedef struct { row; col; length; } GVA_Match;
-// see also: src/align.h
-
-
-// Internal: The triple (`row`, `col`, `length`) uniquely defines each
+// Internal: The `GVA_Match` structure uniquely defines each
 // node in the graph. Its outgoing edges are found in the edges array of
 // graph as a singly linked list with `edges` as entry point.
 // A possible `lambda` edge is given as an index to another node.
 typedef struct
 {
-    gva_uint row;
-    gva_uint col;
-    gva_uint length;
-    union
-    {
-        gva_uint edges;
-        gva_uint distance;
-    };
-    union
-    {
-        gva_uint lambda;
-        gva_uint link;
-    };
+    GVA_Match match;
+    gva_uint  edges;
+    gva_uint  lambda;
 } GVA_Node;
+
+
+typedef struct
+{
+    GVA_Match match;
+    gva_uint  distance;
+    gva_uint  link;
+} GVA_Dom_Node;
 
 
 // The LCS graph stores arrays of nodes and edges with `source` as the
 // entry point in the `nodes` array.
 typedef struct
 {
-    GVA_Node*  nodes;
-    GVA_Edge*  edges;
-    GVA_Node*  dom_nodes;
-    GVA_String observed;  // FIXME: ownership and destroy
-    gva_uint   source;
+    GVA_Node*     nodes;
+    GVA_Edge*     edges;
+    GVA_Dom_Node* dom_nodes;
+    GVA_String    observed;  // FIXME: ownership and destroy
+    gva_uint      source;
 } GVA_LCS_Graph;
 
 
@@ -102,7 +96,7 @@ gva_lcs_graph_supremal(GVA_LCS_Graph const self);
 
 gva_uint
 gva_edges(char const observed[static restrict 1],
-    GVA_Node const head, GVA_Node const tail,
+    GVA_Match const head, GVA_Match const tail,
     bool const is_source, bool const is_sink,
     GVA_Variant variant[static restrict 1]);
 

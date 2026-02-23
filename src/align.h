@@ -6,14 +6,12 @@
 #include <stddef.h>     // size_t
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/types.h"       // gva_uint
+#include "../include/types.h"       // GVA_Match, gva_uint
 
 
 typedef struct
 {
-    gva_uint row;
-    gva_uint col;
-    gva_uint length;
+    GVA_Match match;
     gva_uint incoming : sizeof(gva_uint) * CHAR_BIT - 1;
     gva_uint moved    : 1;
     gva_uint idx;

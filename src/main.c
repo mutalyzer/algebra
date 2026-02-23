@@ -270,7 +270,7 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
         {
             GVA_Variant variant;
             gva_edges(graph.observed.str,
-                graph.dom_nodes[i], graph.dom_nodes[i + 1],
+                graph.dom_nodes[i].match, graph.dom_nodes[i + 1].match,
                 i == 0, i == array_length(graph.dom_nodes) - 2,  // FIXME: check
                 &variant);
             printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
@@ -394,7 +394,7 @@ extract_main(int argc, char* argv[static argc])
         for (size_t i = 0; i < array_length(graph.nodes); ++i)
         {
             fprintf(stdout, "        %zu: (%u, %u, %u)\n", i,
-                graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+                graph.nodes[i].match.row, graph.nodes[i].match.col, graph.nodes[i].match.length);
         } // for
         fprintf(stdout, "    #edges:     %zu\n", array_length(graph.edges));
         fprintf(stdout, "    #dom_nodes: %zu\n", array_length(graph.dom_nodes));
@@ -404,13 +404,13 @@ extract_main(int argc, char* argv[static argc])
             {
                 GVA_Variant variant = {0, 0, {0, NULL}};
                 gva_edges(graph.observed.str,
-                    graph.dom_nodes[i - 1], graph.dom_nodes[i],
+                    graph.dom_nodes[i - 1].match, graph.dom_nodes[i].match,
                     i - 1 == 0, i == array_length(graph.dom_nodes) - 1,
                     &variant);
                 fprintf(stdout, "           " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
             } // if
             fprintf(stdout, "        %zu: (%u, %u, %u) %u\n", i,
-                graph.dom_nodes[i].row, graph.dom_nodes[i].col, graph.dom_nodes[i].length,
+                graph.dom_nodes[i].match.row, graph.dom_nodes[i].match.col, graph.dom_nodes[i].match.length,
                 graph.dom_nodes[i].distance);
         } // for
 

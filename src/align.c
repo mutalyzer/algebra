@@ -78,9 +78,7 @@ expand(Context const context,
             gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes,
                 ((LCS_Node)
                 {
-                    .row = match_row + context.offset,
-                    .col = match_col,
-                    .length = length,
+                    .match = {match_row + context.offset, match_col, length},
                     .idx = GVA_NULL,
                     .next = GVA_NULL,
                 }));
@@ -125,9 +123,7 @@ expand(Context const context,
         gva_uint const idx = ARRAY_APPEND(context.allocator, lcs->nodes,
             ((LCS_Node)
             {
-                .row = match_row + context.offset,
-                .col = match_col,
-                .length = length,
+                .match = {match_row + context.offset, match_col, length},
                 .idx = GVA_NULL,
                 .next = GVA_NULL,
             }));

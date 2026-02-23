@@ -2,7 +2,7 @@
 
 #include "../include/extractor.h"   // gva_canonical
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
-#include "../include/types.h"       // GVA_NULL, gva_uint
+#include "../include/types.h"       // GVA_NULL, GVA_Match, gva_uint
 #include "array.h"      // ARRAY_APPEND, array_length
 #include "common.h"     // MAX, MIN
 
@@ -114,7 +114,10 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
             {
                 // add regular successors in queue order
                 GVA_Variant variant;
-                gva_uint const count = gva_edges(graph.observed.str, graph.nodes[head], graph.nodes[edge_tail], head == graph.source, edge_tail == 0, &variant);
+                gva_uint const count = gva_edges(graph.observed.str,
+                    graph.nodes[head].match, graph.nodes[edge_tail].match,
+                    head == graph.source, edge_tail == 0,
+                    &variant);
                 visited[edge_tail] = (LCA_Table) {head, rank, visited[head].depth + 1, variant.start, variant.end + count - 1, tail, GVA_NULL};
                 rank += 1;
                 visited[tail].next = edge_tail;
@@ -123,7 +126,10 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
             else if (visited[edge_tail].depth - 1 == visited[head].depth)
             {
                 GVA_Variant variant;
-                gva_uint const count = gva_edges(graph.observed.str, graph.nodes[head], graph.nodes[edge_tail], head == graph.source, edge_tail == 0, &variant);
+                gva_uint const count = gva_edges(graph.observed.str,
+                    graph.nodes[head].match, graph.nodes[edge_tail].match,
+                    head == graph.source, edge_tail == 0,
+                    &variant);
                 visited[edge_tail].start = MIN(visited[edge_tail].start, variant.start);
                 visited[edge_tail].lca = lca(&visited[edge_tail].start, visited[edge_tail].lca, head, length, visited);
                 visited[edge_tail].end = MAX(visited[edge_tail].end, variant.end + count - 1);
@@ -138,13 +144,15 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
         if (head != GVA_NULL && visited[tail].start != GVA_NULL)
         {
             // we need to skip lambda edges: start && end == -1
-            gva_uint const start_offset = visited[tail].start - graph.nodes[head].row;
-            gva_uint const end_offset = visited[tail].end - graph.nodes[tail].row;
-            GVA_Variant const variant = {
-                visited[tail].start, visited[tail].end, {
-                    (graph.nodes[tail].col + end_offset) - (graph.nodes[head].col + start_offset),
-                    graph.observed.str + graph.nodes[head].col + start_offset
-                }
+            gva_uint const start_offset = visited[tail].start - graph.nodes[head].match.row;
+            gva_uint const end_offset = visited[tail].end - graph.nodes[tail].match.row;
+            GVA_Variant const variant =
+            {
+                visited[tail].start, visited[tail].end,
+                {
+                    (graph.nodes[tail].match.col + end_offset) - (graph.nodes[head].match.col + start_offset),
+                    graph.observed.str + graph.nodes[head].match.col + start_offset,
+                },
             };
             ARRAY_APPEND(allocator, canonical, variant);
         } // if
