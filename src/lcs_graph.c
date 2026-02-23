@@ -485,10 +485,29 @@ gva_lcs_graph_ls_slice(GVA_LCS_Graph const self,
     GVA_Variant variant;
     gva_edges(self.observed.str,
               self.dom_nodes[start], self.dom_nodes[end],
-              start == 0, end == array_length(self.dom_nodes) - 2,
+              start == 0, end == array_length(self.dom_nodes) - 1,
               &variant);
     return variant;
 } // gva_lcs_graph_ls_slice
+
+
+inline size_t
+gva_lcs_graph_distance(GVA_LCS_Graph const self)
+{
+    return self.dom_nodes[array_length(self.dom_nodes) - 1].distance;
+} // gva_lcs_graph_distance
+
+
+inline GVA_Variant
+gva_lcs_graph_supremal(GVA_LCS_Graph const self)
+{
+    GVA_Variant variant = {0, 0, {0, NULL}};
+    gva_edges(self.observed.str,
+        self.dom_nodes[0], self.dom_nodes[array_length(self.dom_nodes) - 1],
+        true, true,
+        &variant);
+    return variant;
+} // gva_lcs_graph_supremal
 
 
 gva_uint

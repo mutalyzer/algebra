@@ -94,6 +94,14 @@ gva_lcs_graph_ls_slice(GVA_LCS_Graph const self,
     size_t const start, size_t const end);
 
 
+size_t
+gva_lcs_graph_distance(GVA_LCS_Graph const self);
+
+
+GVA_Variant
+gva_lcs_graph_supremal(GVA_LCS_Graph const self);
+
+
 gva_uint
 gva_edges(char const observed[static restrict 1],
     GVA_Node const head, GVA_Node const tail,

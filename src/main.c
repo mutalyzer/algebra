@@ -1,3 +1,4 @@
+#include <assert.h>     // assert
 #include <errno.h>      // errno
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, stdout, fclose, fopen, fprintf
@@ -370,24 +371,48 @@ wu_main(int argc, char* argv[static argc])
 int
 extract_main(int argc, char* argv[static argc])
 {
-    errno = 0;
-    FILE* stream = fopen(argv[1], "r");
-    if (stream == NULL)
+    (void) argv;
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
     {
-        fprintf(stderr, "error: %s\n", strerror(errno));
-        return EXIT_FAILURE;
-    } // if
+        line_count += 1;
 
-    GVA_String reference = {0, NULL};
-    reference = gva_fasta_sequence(gva_std_allocator, stream);
-    fclose(stream);
+        size_t const len_ref = strcspn(line, "\t ");
+        GVA_String const reference = {len_ref, line};
+        size_t const len_obs = strcspn(line + len_ref + 1, "\n\t ");
+        GVA_String const observed = {len_obs, line + len_ref + 1};
 
-    fprintf(stderr, "reference length: %zu\n", reference.len);
+        fprintf(stderr, "%zu: " GVA_STRING_FMT " (%zu) " GVA_STRING_FMT " (%zu)\n", line_count,
+            GVA_STRING_PRINT(reference), reference.len, GVA_STRING_PRINT(observed), observed.len);
 
-    GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, 31, "CAGATGACAGGGTTGGGCTCAGAGTCAGAGT", 25, "CTCTCATACACACTCTCATCAGATT", 0);
-    fprintf(stderr, "graph distance: %u\n", graph.distance);
+        GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator,
+            reference.len, reference.str, observed.len, observed.str, 0);
 
-    gva_lcs_graph_dot(stderr, graph);
+        fprintf(stderr, "    distance:   %u\n", graph.distance);
+        fprintf(stderr, "    #nodes:     %zu\n", array_length(graph.nodes));
+        for (size_t i = 0; i < array_length(graph.nodes); ++i)
+        {
+            fprintf(stderr, "        %zu: (%u, %u, %u)\n", i,
+                graph.nodes[i].row, graph.nodes[i].col, graph.nodes[i].length);
+        } // for
+        fprintf(stderr, "    #edges:     %zu\n", array_length(graph.edges));
+        fprintf(stderr, "    #dom_nodes: %zu\n", array_length(graph.dom_nodes));
+        for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
+        {
+            fprintf(stderr, "        %zu: (%u, %u, %u) %u\n", i,
+                graph.dom_nodes[i].row, graph.dom_nodes[i].col, graph.dom_nodes[i].length,
+                graph.dom_nodes[i].distance);
+        } // for
+
+        fprintf(stderr, "    supremal:   " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(graph.supremal));
+
+        assert(gva_lcs_graph_distance(graph) == graph.distance);
+        assert(gva_variant_eq(gva_lcs_graph_supremal(graph), graph.supremal));
+
+        gva_lcs_graph_destroy(gva_std_allocator, graph);
+    } // while
 
     return EXIT_SUCCESS;
 } // extract_main

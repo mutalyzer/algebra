@@ -540,7 +540,7 @@ gva_index_query(GVA_Allocator const allocator,
         } // if
 
         size_t excluded = 0;
-        GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, graph.distance, &excluded);
+        GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
 
         fprintf(stderr, GVA_STRING_FMT " %u %zu %s\n",
             GVA_STRING_PRINT(trie_string(self->ids, self->alleles[entries[idx].gva_key].id_idx)),
