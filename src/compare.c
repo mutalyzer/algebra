@@ -18,21 +18,24 @@ gva_compare_graphs(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_LCS_Graph const lhs, GVA_LCS_Graph const rhs)
 {
-    if (gva_variant_eq(lhs.supremal, rhs.supremal))
+    GVA_Variant const supremal_lhs = gva_lcs_graph_supremal(lhs);
+    GVA_Variant const supremal_rhs = gva_lcs_graph_supremal(rhs);
+
+    if (gva_variant_eq(supremal_lhs, supremal_rhs))
     {
         return GVA_EQUIVALENT;
     } // if
 
-    if (lhs.supremal.start > rhs.supremal.end || rhs.supremal.start > lhs.supremal.end)
+    if (supremal_lhs.start > supremal_rhs.end || supremal_rhs.start > supremal_lhs.end)
     {
         return GVA_DISJOINT;
     } // if
 
-    size_t const start = MIN(lhs.supremal.start, rhs.supremal.start);
-    size_t const end = MAX(lhs.supremal.end, rhs.supremal.end);
+    size_t const start = MIN(supremal_lhs.start, supremal_rhs.start);
+    size_t const end = MAX(supremal_lhs.end, supremal_rhs.end);
 
-    size_t const len_lhs = (lhs.supremal.start - start) + lhs.supremal.sequence.len + (end - lhs.supremal.end);
-    size_t const len_rhs = (rhs.supremal.start - start) + rhs.supremal.sequence.len + (end - rhs.supremal.end);
+    size_t const len_lhs = (supremal_lhs.start - start) + supremal_lhs.sequence.len + (end - supremal_lhs.end);
+    size_t const len_rhs = (supremal_rhs.start - start) + supremal_rhs.sequence.len + (end - supremal_rhs.end);
 
     size_t distance = 0;
     if (len_lhs == 0)
@@ -54,13 +57,13 @@ gva_compare_graphs(GVA_Allocator const allocator,
             return GVA_DISJOINT;  // FIXME: OOM
         } // if
 
-        memcpy((char*) observed_lhs.str, reference + start, lhs.supremal.start - start);
-        memcpy((char*) observed_lhs.str + lhs.supremal.start - start, lhs.supremal.sequence.str, lhs.supremal.sequence.len);
-        memcpy((char*) observed_lhs.str + lhs.supremal.start - start + lhs.supremal.sequence.len, reference + lhs.supremal.end, end - lhs.supremal.end);
+        memcpy((char*) observed_lhs.str, reference + start, supremal_lhs.start - start);
+        memcpy((char*) observed_lhs.str + supremal_lhs.start - start, supremal_lhs.sequence.str, supremal_lhs.sequence.len);
+        memcpy((char*) observed_lhs.str + supremal_lhs.start - start + supremal_lhs.sequence.len, reference + supremal_lhs.end, end - supremal_lhs.end);
 
-        memcpy((char*) observed_rhs.str, reference + start, rhs.supremal.start - start);
-        memcpy((char*) observed_rhs.str + rhs.supremal.start - start, rhs.supremal.sequence.str, rhs.supremal.sequence.len);
-        memcpy((char*) observed_rhs.str + rhs.supremal.start - start + rhs.supremal.sequence.len, reference + rhs.supremal.end, end - rhs.supremal.end);
+        memcpy((char*) observed_rhs.str, reference + start, supremal_rhs.start - start);
+        memcpy((char*) observed_rhs.str + supremal_rhs.start - start, supremal_rhs.sequence.str, supremal_rhs.sequence.len);
+        memcpy((char*) observed_rhs.str + supremal_rhs.start - start + supremal_rhs.sequence.len, reference + supremal_rhs.end, end - supremal_rhs.end);
 
         distance = gva_edit_distance(allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
         gva_string_destroy(allocator, observed_rhs);
@@ -95,8 +98,8 @@ gva_compare_graphs(GVA_Allocator const allocator,
     size_t* rhs_gs = bitset_init(allocator, len);
     size_t* rhs_ts = bitset_init(allocator, len);
 
-    size_t const start_intersection = MAX(lhs.supremal.start, rhs.supremal.start);
-    size_t const end_intersection = MIN(lhs.supremal.end, rhs.supremal.end);
+    size_t const start_intersection = MAX(supremal_lhs.start, supremal_rhs.start);
+    size_t const end_intersection = MIN(supremal_lhs.end, supremal_rhs.end);
 
     gva_lcs_graph_uniq_atomics(lhs, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
     gva_lcs_graph_uniq_atomics(rhs, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);

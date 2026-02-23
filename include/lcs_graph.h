@@ -51,12 +51,11 @@ typedef struct
 // entry point in the `nodes` array.
 typedef struct
 {
-    GVA_Node*   nodes;
-    GVA_Edge*   edges;
-    GVA_Node*   dom_nodes;
-    GVA_Variant supremal;  // FIXME: remove
-    GVA_String  observed;  // FIXME: ownership and destroy
-    gva_uint    source;
+    GVA_Node*  nodes;
+    GVA_Edge*  edges;
+    GVA_Node*  dom_nodes;
+    GVA_String observed;  // FIXME: ownership and destroy
+    gva_uint   source;
 } GVA_LCS_Graph;
 
 

@@ -25,7 +25,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
     GVA_LCS_Graph graph =
     {
-        .supremal = {0, 0, {0, observed}},
         .observed = {len_obs, observed},
         .source = GVA_NULL,
     };
@@ -75,7 +74,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
                  .distance = distance,
                  .link = sink,
              }));
-        graph.supremal = (GVA_Variant) {offset, len_ref + offset, {len_obs, observed}};
         return graph;
     } // if
 
@@ -316,11 +314,6 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         graph.nodes[source.idx].length -= graph.dom_nodes[0].length;
 
         graph.nodes[sink.idx].length -= graph.dom_nodes[array_length(graph.dom_nodes) - 1].length;
-
-        gva_edges(graph.observed.str,
-            graph.dom_nodes[0], graph.dom_nodes[array_length(graph.dom_nodes) - 1],
-            true, true,
-            &graph.supremal);
     } // if
 
     graph.source = source.idx;
@@ -368,7 +361,7 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         if (observed == NULL)
         {
             gva_string_destroy(allocator, variant.sequence);
-            return (GVA_LCS_Graph) {NULL, NULL, NULL, {0, 0, {0, NULL}}, {0, NULL}, GVA_NULL};
+            return (GVA_LCS_Graph) {NULL};
         } // if
 
         memcpy(observed, reference + start, variant.start - start);
@@ -376,9 +369,10 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         memcpy(observed + variant.start - start + variant.sequence.len, reference + variant.end, end - variant.end);
 
         GVA_LCS_Graph graph = gva_lcs_graph_init(allocator, end - start, reference + start, len, observed, start);
+        GVA_Variant const supremal = gva_lcs_graph_supremal(graph);
 
-        if ((graph.supremal.start > start || graph.supremal.start == 0) &&
-            (graph.supremal.end   < end   || graph.supremal.end   == len_ref))
+        if ((supremal.start > start || supremal.start == 0) &&
+            (supremal.end   < end   || supremal.end   == len_ref))
         {
             // FIXME: observed is now owned by graph
             gva_string_destroy(allocator, variant.sequence);
