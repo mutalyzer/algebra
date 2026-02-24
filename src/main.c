@@ -310,7 +310,7 @@ wu_main(int argc, char* argv[static argc])
         GVA_Variant part;
         gva_edges(graph.observed.str,
             graph.dom_nodes[i], graph.dom_nodes[i + 1],
-            i == 0, i == array_length(graph.dom_nodes) - 2,
+            i == 0, i + 1 == array_length(graph.dom_nodes) - 1,
             &part);
         fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(part), graph.dom_nodes[i + 1].distance);
     } // for
