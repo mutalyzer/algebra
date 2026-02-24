@@ -462,7 +462,7 @@ gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
 
 
 inline GVA_Variant
-gva_lcs_graph_ls_slice(GVA_LCS_Graph const self,
+gva_lcs_graph_local_supremal(GVA_LCS_Graph const self,
     size_t const start, size_t const end)
 {
     GVA_Variant variant;
@@ -471,7 +471,7 @@ gva_lcs_graph_ls_slice(GVA_LCS_Graph const self,
               start == 0, end == array_length(self.dom_nodes) - 1,
               &variant);
     return variant;
-} // gva_lcs_graph_ls_slice
+} // gva_lcs_graph_local_supremal
 
 
 inline size_t
@@ -484,12 +484,7 @@ gva_lcs_graph_distance(GVA_LCS_Graph const self)
 inline GVA_Variant
 gva_lcs_graph_supremal(GVA_LCS_Graph const self)
 {
-    GVA_Variant variant = {0};
-    gva_edges(self.observed.str,
-        self.dom_nodes[0].match, self.dom_nodes[array_length(self.dom_nodes) - 1].match,
-        true, true,
-        &variant);
-    return variant;
+    return gva_lcs_graph_local_supremal(self, 0, array_length(self.dom_nodes) -1);
 } // gva_lcs_graph_supremal
 
 

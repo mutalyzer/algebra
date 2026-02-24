@@ -83,7 +83,7 @@ gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
 
 
 GVA_Variant
-gva_lcs_graph_ls_slice(GVA_LCS_Graph const self,
+gva_lcs_graph_local_supremal(GVA_LCS_Graph const self,
     size_t const start, size_t const end);
 
 
