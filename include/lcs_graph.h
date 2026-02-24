@@ -82,13 +82,13 @@ gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
     size_t ts[static restrict 1]);
 
 
+size_t
+gva_lcs_graph_distance(GVA_LCS_Graph const self);
+
+
 GVA_Variant
 gva_lcs_graph_local_supremal(GVA_LCS_Graph const self,
     size_t const start, size_t const end);
-
-
-size_t
-gva_lcs_graph_distance(GVA_LCS_Graph const self);
 
 
 GVA_Variant

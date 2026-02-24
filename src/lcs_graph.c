@@ -461,6 +461,13 @@ gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
 } // gva_lcs_graph_uniq_atomics
 
 
+inline size_t
+gva_lcs_graph_distance(GVA_LCS_Graph const self)
+{
+    return self.dom_nodes[array_length(self.dom_nodes) - 1].distance;
+} // gva_lcs_graph_distance
+
+
 inline GVA_Variant
 gva_lcs_graph_local_supremal(GVA_LCS_Graph const self,
     size_t const start, size_t const end)
@@ -474,17 +481,10 @@ gva_lcs_graph_local_supremal(GVA_LCS_Graph const self,
 } // gva_lcs_graph_local_supremal
 
 
-inline size_t
-gva_lcs_graph_distance(GVA_LCS_Graph const self)
-{
-    return self.dom_nodes[array_length(self.dom_nodes) - 1].distance;
-} // gva_lcs_graph_distance
-
-
 inline GVA_Variant
 gva_lcs_graph_supremal(GVA_LCS_Graph const self)
 {
-    return gva_lcs_graph_local_supremal(self, 0, array_length(self.dom_nodes) -1);
+    return gva_lcs_graph_local_supremal(self, 0, array_length(self.dom_nodes) - 1);
 } // gva_lcs_graph_supremal
 
 
