@@ -48,7 +48,7 @@ typedef struct
     GVA_Node*     nodes;
     GVA_Edge*     edges;
     GVA_Dom_Node* dom_nodes;
-    GVA_String    observed;  // FIXME: ownership and destroy
+    GVA_String    observed;
     gva_uint      source;
 } GVA_LCS_Graph;
 

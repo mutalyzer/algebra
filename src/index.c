@@ -334,13 +334,15 @@ GVA_Query_Result*
 gva_index_query(GVA_Allocator const allocator,
     GVA_Index* const self, GVA_LCS_Graph const graph)
 {
+    static size_t const INITIAL_SIZE = 1024;
+
     struct Allele_Entry
     {
         HASH_TABLE_KEY;     // index into self->alleles
         gva_uint included;
         gva_uint head;      // singly linked list in hits
         gva_uint tail;
-    }* entries = hash_table_init(allocator, 1024, sizeof(*entries));  // FIXME: magic number
+    }* entries = hash_table_init(allocator, INITIAL_SIZE, sizeof(*entries));
 
     struct Hit
     {
@@ -533,6 +535,7 @@ gva_index_query(GVA_Allocator const allocator,
     } // for
 
     // Phase 3: determine relation per allele based on included
+    // FIXME: shouldn't this be in the outer-loop above?
     GVA_Query_Result* results = NULL;
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
