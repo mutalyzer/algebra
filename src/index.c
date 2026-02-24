@@ -375,7 +375,7 @@ gva_index_query(GVA_Allocator const allocator,
 
             size_t const distance = variants_distance(allocator, self->reference.len, self->reference.str,
                 variant_from_index(self, node_idx), variant);
-            if (self->intervals.nodes[node_idx].distance + graph.dom_nodes[i + 1].distance <= distance)
+            if (self->intervals.nodes[node_idx].distance + graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance <= distance)
             {
                 // Disjoint based on distance
                 continue;

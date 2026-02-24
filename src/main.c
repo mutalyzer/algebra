@@ -312,7 +312,7 @@ wu_main(int argc, char* argv[static argc])
             graph.dom_nodes[i], graph.dom_nodes[i + 1],
             i == 0, i + 1 == array_length(graph.dom_nodes) - 1,
             &part);
-        fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(part), graph.dom_nodes[i + 1].distance);
+        fprintf(stderr, GVA_VARIANT_FMT " %u\n", GVA_VARIANT_PRINT(part), graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
     } // for
     fprintf(stderr, GVA_VARIANT_FMT " %zu\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
 
