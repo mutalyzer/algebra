@@ -182,10 +182,10 @@ variants_included(GVA_Allocator const allocator,
     size_t const end_intersection = MIN(lhs.end, rhs.end);
 
     gva_lcs_graph_uniq_atomics(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
-    gva_lcs_graph_destroy(allocator, lhs_graph);
+    gva_lcs_graph_destroy(allocator, lhs_graph, false);
 
     gva_lcs_graph_uniq_atomics(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
-    gva_lcs_graph_destroy(allocator, rhs_graph);
+    gva_lcs_graph_destroy(allocator, rhs_graph, false);
 
     size_t const included =
         bitset_intersection_cnt(lhs_dels, rhs_dels) +
@@ -249,9 +249,11 @@ gva_index_init(GVA_Allocator const allocator,
 
     index->intervals = interval_tree_init();
     index->inserted = trie_init();
+
     index->ids = trie_init();
-    index->join = NULL;
+
     index->alleles = NULL;
+    index->join = NULL;
 
     return index;
 } // gva_index_init
@@ -268,8 +270,8 @@ gva_index_destroy(GVA_Index* const self)
     interval_tree_destroy(self->allocator, &self->intervals);
     trie_destroy(self->allocator, &self->inserted);
     trie_destroy(self->allocator, &self->ids);
-    self->join = ARRAY_DESTROY(self->allocator, self->join);
     self->alleles = ARRAY_DESTROY(self->allocator, self->alleles);
+    self->join = ARRAY_DESTROY(self->allocator, self->join);
 
     return self->allocator.allocate(self->allocator.context, self, sizeof(*self), 0);
 } // gva_index_destroy

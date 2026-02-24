@@ -149,8 +149,7 @@ index_main(int argc, char* argv[static argc])
         } // for
 
         ARRAY_DESTROY(gva_std_allocator, results);
-        gva_string_destroy(gva_std_allocator, graph.observed);
-        gva_lcs_graph_destroy(gva_std_allocator, graph);
+        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
 
     index = gva_index_destroy(index);
@@ -271,11 +270,11 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
             GVA_Variant variant;
             gva_edges(graph.observed.str,
                 graph.dom_nodes[i].match, graph.dom_nodes[i + 1].match,
-                i == 0, i == array_length(graph.dom_nodes) - 2,  // FIXME: check
+                i == 0, i + 1 == array_length(graph.dom_nodes) - 1,
                 &variant);
             printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
         } // for
-        gva_lcs_graph_destroy(gva_std_allocator, graph);
+        gva_lcs_graph_destroy(gva_std_allocator, graph, false);
     } // if
 
     if (forward.distance != sum)
@@ -418,7 +417,7 @@ extract_main(int argc, char* argv[static argc])
 
         gva_lcs_graph_dot(stdout, graph);
 
-        gva_lcs_graph_destroy(gva_std_allocator, graph);
+        gva_lcs_graph_destroy(gva_std_allocator, graph, false);
     } // while
 
     return EXIT_SUCCESS;

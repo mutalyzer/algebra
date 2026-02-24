@@ -61,7 +61,8 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
 
 void
-gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self);
+gva_lcs_graph_destroy(GVA_Allocator const allocator,
+    GVA_LCS_Graph self, bool const observed);
 
 
 GVA_LCS_Graph

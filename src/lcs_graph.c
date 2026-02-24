@@ -311,11 +311,16 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 
 
 inline void
-gva_lcs_graph_destroy(GVA_Allocator const allocator, GVA_LCS_Graph self)
+gva_lcs_graph_destroy(GVA_Allocator const allocator,
+    GVA_LCS_Graph self, bool const observed)
 {
     self.nodes = ARRAY_DESTROY(allocator, self.nodes);
     self.edges = ARRAY_DESTROY(allocator, self.edges);
     self.dom_nodes = ARRAY_DESTROY(allocator, self.dom_nodes);
+    if (observed)
+    {
+        gva_string_destroy(allocator, self.observed);
+    } // if
 } // gva_lcs_graph_destroy
 
 
@@ -359,12 +364,12 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         if ((supremal.start > start || supremal.start == 0) &&
             (supremal.end   < end   || supremal.end   == len_ref))
         {
-            // FIXME: observed is now owned by graph
+            // observed is now owned by graph
             gva_string_destroy(allocator, variant.sequence);
             return graph;
         } // if
 
-        gva_lcs_graph_destroy(allocator, graph);
+        gva_lcs_graph_destroy(allocator, graph, false);
 
         old_len = len;
         offset *= 2;  // OVERFLOW
