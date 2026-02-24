@@ -141,11 +141,11 @@ index_main(int argc, char* argv[static argc])
         GVA_Query_Result* results = gva_index_query(gva_std_allocator, index, graph);
         for (size_t i = 0; i < array_length(results); ++i)
         {
-            fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %zu %zu\n",
+            fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %zu %zu %zu\n",
                 GVA_STRING_PRINT(results[i].allele),
                 GVA_RELATION_LABELS[results[i].relation],
                 GVA_STRING_PRINT(((GVA_String) {len_id, line})),
-                results[i].included, results[i].excluded);
+                results[i].included, results[i].excluded, array_length(graph.dom_nodes) - 1);
         } // for
 
         ARRAY_DESTROY(gva_std_allocator, results);
