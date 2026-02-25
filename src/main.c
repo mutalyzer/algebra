@@ -2,7 +2,7 @@
 #include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // FILE, stderr, stdout, fclose, fopen, fprintf
-#include <stdlib.h>     // EXIT_*, atoll
+#include <stdlib.h>     // EXIT_*, atoll, qsort
 #include <string.h>     // strerror, strlen
 
 #include "../include/edit.h"        // gva_edit_distance
