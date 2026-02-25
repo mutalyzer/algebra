@@ -424,6 +424,8 @@ gva_index_query(GVA_Allocator const allocator,
         intervals = ARRAY_DESTROY(allocator, intervals);
     } // for
 
+    GVA_Query_Result result = {NULL};
+
     // Phase 2: resolve 1:N and N:1 hits into 1:1 hits
     //     - calculate relations that could not be determined on distances
     //     - switch from distances to `included` perspective
@@ -520,17 +522,6 @@ gva_index_query(GVA_Allocator const allocator,
         if (entries[idx].included == 0)
         {
             entries[idx].gva_key = NOT_FOUND;
-        } // if
-    } // for
-
-    // Phase 3: determine relation per allele based on included
-    // FIXME: shouldn't this be in the outer-loop above?
-    GVA_Query_Result result = {NULL};
-
-    for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
-    {
-        if (entries[idx].gva_key == NOT_FOUND)
-        {
             continue;
         } // if
 
