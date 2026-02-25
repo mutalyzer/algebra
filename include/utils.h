@@ -20,6 +20,7 @@ GVA_String
 gva_fasta_sequence(GVA_Allocator const allocator, FILE* const stream);
 
 
+// FIXME: remove
 GVA_String
 gva_fasta_sequence_blob(GVA_Allocator const allocator, FILE* const stream);
 

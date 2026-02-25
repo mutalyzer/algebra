@@ -5,7 +5,7 @@
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/compare.h"     // gva_compare_graphs
 #include "../include/edit.h"        // gva_edit_distance
-#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*, gva_edges
+#include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS, GVA_DISJOINT,
                                     // GVA_EQUIVALENT GVA_IS_CONTAINED, GVA_OVERLAP
 #include "../include/variant.h"     // GVA_Variant, gva_variant_eq
