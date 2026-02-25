@@ -21,6 +21,14 @@ static gva_uint const GVA_NULL = UINT32_MAX;
 
 typedef struct
 {
+    gva_uint start;
+    gva_uint end;
+} GVA_Interval;
+
+
+
+typedef struct
+{
     gva_uint row;
     gva_uint col;
     gva_uint length;

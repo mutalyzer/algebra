@@ -10,7 +10,7 @@
                                     // GVA_DISJOINT, GVA_EQUIVALENT,
                                     // GVA_IS_CONTAINED
 #include "../include/string.h"      // GVA_String
-#include "../include/types.h"       // GVA_NULL, gva_uint
+#include "../include/types.h"       // GVA_NULL, GVA_Interval, gva_uint
 #include "../include/variant.h"     // GVA_Variant, gva_variant_dup
 #include "array.h"              // ARRAY_*, array_length
 #include "bitset.h"             // bitset_*
@@ -18,9 +18,6 @@
 #include "hash_table.h"         // NOT_FOUND, HASH_TABLE_*, hash_table_*
 #include "interval_tree.h"      // Interval_Tree, interval_tree_*
 #include "trie.h"               // Trie, trie_*
-
-
-#include <stdio.h>      // DEBUG
 
 
 typedef struct
@@ -330,7 +327,7 @@ gva_index_insert(GVA_Index* restrict const self,
 } // gva_index_insert
 
 
-GVA_Query_Result*
+GVA_Query_Result
 gva_index_query(GVA_Allocator const allocator,
     GVA_Index* const self, GVA_LCS_Graph const graph)
 {
@@ -346,17 +343,9 @@ gva_index_query(GVA_Allocator const allocator,
 
     struct Hit
     {
-        struct
-        {
-            gva_uint start;
-            gva_uint end;
-        } join;             // index into self->join
-        gva_uint included;  // double purpose: distance or included
-        struct
-        {
-            gva_uint start;
-            gva_uint end;
-        } query;            // wrt local supremal parts in the query
+        GVA_Interval join;      // index into self->join
+        gva_uint     included;  // double purpose: distance or included
+        GVA_Interval query;     // wrt local supremal parts in the query
         gva_uint next;
     }* hits = NULL;
 
@@ -536,7 +525,8 @@ gva_index_query(GVA_Allocator const allocator,
 
     // Phase 3: determine relation per allele based on included
     // FIXME: shouldn't this be in the outer-loop above?
-    GVA_Query_Result* results = NULL;
+    GVA_Query_Result result = {NULL};
+
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
         if (entries[idx].gva_key == NOT_FOUND)
@@ -544,48 +534,52 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
+        size_t const start = array_length(result.hits);
         size_t excluded = 0;
         GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
 
-        fprintf(stderr, GVA_STRING_FMT " %u %zu %s\n",
-            GVA_STRING_PRINT(trie_string(self->ids, self->alleles[entries[idx].gva_key].id_idx)),
-            entries[idx].included, excluded, GVA_RELATION_LABELS[relation]);
-
-        if (entries[idx].head != entries[idx].tail && relation != GVA_EQUIVALENT)
+        for (gva_uint i = entries[idx].head; i != GVA_NULL; i = hits[i].next)
         {
-            for (gva_uint i = entries[idx].head; i != GVA_NULL; i = hits[i].next)
+            size_t lhs_distance = 0;
+            for (gva_uint j = hits[i].join.start; j < hits[i].join.end; ++j)
             {
-                size_t lhs_distance = 0;
-                for (gva_uint j = hits[i].join.start; j < hits[i].join.end; ++j)
-                {
-                    gva_uint const node_idx = self->join[j].link ^ entries[idx].gva_key;
-                    lhs_distance += self->intervals.nodes[node_idx].distance;
-                } // for
-                size_t const rhs_distance = graph.dom_nodes[hits[i].query.end].distance - graph.dom_nodes[hits[i].query.start].distance;
-                size_t excluded = 0;
-                GVA_Relation const relation = relation_from_included(hits[i].included, lhs_distance, rhs_distance, &excluded);
-
-                fprintf(stderr, "    [%u, %u) [%u, %u) %u %zu %s\n",
-                    hits[i].join.start, hits[i].join.end,
-                    hits[i].query.start, hits[i].query.end,
-                    hits[i].included,
-                    excluded,
-                    GVA_RELATION_LABELS[relation]);
+                gva_uint const node_idx = self->join[j].link ^ entries[idx].gva_key;
+                lhs_distance += self->intervals.nodes[node_idx].distance;
             } // for
-        } // if
+            size_t const rhs_distance = graph.dom_nodes[hits[i].query.end].distance - graph.dom_nodes[hits[i].query.start].distance;
+            size_t excluded = 0;
+            GVA_Relation const relation = relation_from_included(hits[i].included, lhs_distance, rhs_distance, &excluded);
 
-        ARRAY_APPEND(self->allocator, results,
-            ((GVA_Query_Result)
+            ARRAY_APPEND(allocator, result.hits,
+                ((struct GVA_Query_Hit)
+                {
+                    .relation = relation,
+                    .included = hits[i].included,
+                    .excluded = excluded,
+                    .index = hits[i].join,
+                    .query = hits[i].query,
+                }));
+        } // for
+        ARRAY_APPEND(allocator, result.alleles,
+            ((struct GVA_Query_Allele)
             {
-                .allele = trie_string(self->ids, self->alleles[entries[idx].gva_key].id_idx),
+                .idx = entries[idx].gva_key,
                 .relation = relation,
                 .included = entries[idx].included,
                 .excluded = excluded,
+                .hits = {start, array_length(result.hits)},
             }));
     } // for
 
     hits = ARRAY_DESTROY(allocator, hits);
     entries = HASH_TABLE_DESTROY(allocator, entries);
 
-    return results;
+    return result;
 } // gva_index_query
+
+
+inline GVA_String
+gva_index_id(GVA_Index const* const self, size_t const idx)
+{
+    return trie_string(self->ids, self->alleles[idx].id_idx);
+} // gva_index_id

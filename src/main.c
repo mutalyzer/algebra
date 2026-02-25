@@ -46,6 +46,21 @@ parse_line(char const line[static LINE_SIZE],
 } // parse_line
 
 
+static int
+compare_alleles(void const* a, void const* b)
+{
+    struct GVA_Query_Allele const lhs = *(struct GVA_Query_Allele*) a;
+    struct GVA_Query_Allele const rhs = *(struct GVA_Query_Allele*) b;
+
+    if (lhs.included > rhs.included ||
+        (lhs.included == rhs.included && lhs.excluded < rhs.excluded))
+    {
+        return -1;
+    } // if
+    return 1;
+} // compare_alleles
+
+
 int
 index_main(int argc, char* argv[static argc])
 {
@@ -120,17 +135,33 @@ index_main(int argc, char* argv[static argc])
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
         fprintf(stderr, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
-        GVA_Query_Result* results = gva_index_query(gva_std_allocator, index, graph);
-        for (size_t i = 0; i < array_length(results); ++i)
+        GVA_Query_Result const result = gva_index_query(gva_std_allocator, index, graph);
+
+        qsort(result.alleles, array_length(result.alleles), sizeof(*result.alleles), compare_alleles);
+
+        for (size_t i = 0; i < array_length(result.alleles); ++i)
         {
-            fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %zu %zu %zu\n",
-                GVA_STRING_PRINT(results[i].allele),
-                GVA_RELATION_LABELS[results[i].relation],
+            fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %zu\n",
+                GVA_STRING_PRINT(gva_index_id(index, result.alleles[i].idx)),
+                GVA_RELATION_LABELS[result.alleles[i].relation],
                 GVA_STRING_PRINT(id),
-                results[i].included, results[i].excluded, array_length(graph.dom_nodes) - 1);
+                result.alleles[i].included, result.alleles[i].excluded, array_length(graph.dom_nodes) - 1);
+            fprintf(stderr, "    " GVA_STRING_FMT ": %u %u %s\n",
+                GVA_STRING_PRINT(gva_index_id(index, result.alleles[i].idx)),
+                result.alleles[i].included, result.alleles[i].excluded,
+                GVA_RELATION_LABELS[result.alleles[i].relation]);
+            for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
+            {
+                fprintf(stderr, "        [%u, %u) [%u, %u): %u %u %s\n",
+                    result.hits[j].query.start, result.hits[j].query.end,
+                    result.hits[j].index.start, result.hits[j].index.end,
+                    result.hits[j].included, result.hits[j].excluded,
+                    GVA_RELATION_LABELS[result.hits[j].relation]);
+            } // for
         } // for
 
-        ARRAY_DESTROY(gva_std_allocator, results);
+        ARRAY_DESTROY(gva_std_allocator, result.alleles);
+        ARRAY_DESTROY(gva_std_allocator, result.hits);
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
 
