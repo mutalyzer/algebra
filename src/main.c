@@ -131,13 +131,15 @@ index_main(int argc, char* argv[static argc])
             fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
             continue;
         } // if
-
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
         fprintf(stderr, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
-        GVA_Query_Result const result = gva_index_query(gva_std_allocator, index, graph);
+        GVA_Query_Result result = gva_index_query(gva_std_allocator, index, graph);
 
-        qsort(result.alleles, array_length(result.alleles), sizeof(*result.alleles), compare_alleles);
+        if (array_length(result.alleles) > 0)
+        {
+            qsort(result.alleles, array_length(result.alleles), sizeof(*result.alleles), compare_alleles);
+        } // if
 
         for (size_t i = 0; i < array_length(result.alleles); ++i)
         {
@@ -159,9 +161,8 @@ index_main(int argc, char* argv[static argc])
                     GVA_RELATION_LABELS[result.hits[j].relation]);
             } // for
         } // for
-
-        ARRAY_DESTROY(gva_std_allocator, result.alleles);
-        ARRAY_DESTROY(gva_std_allocator, result.hits);
+        result.alleles = ARRAY_DESTROY(gva_std_allocator, result.alleles);
+        result.hits = ARRAY_DESTROY(gva_std_allocator, result.hits);
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
 
