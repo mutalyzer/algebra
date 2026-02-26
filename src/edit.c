@@ -68,6 +68,7 @@ onp_compare(GVA_Allocator const allocator,
 } // onp_compare
 
 
+/*
 static inline size_t
 onp_snake_matches(size_t const m, char const a[static restrict m],
     size_t const n, char const b[static restrict n],
@@ -155,6 +156,7 @@ onp_compare_matches(GVA_Allocator const allocator,
     result.distance = delta + 2 * (p - 1);
     return result;
 } // onp_compare_matches
+*/
 
 
 inline size_t
@@ -168,6 +170,7 @@ gva_edit_distance(GVA_Allocator const allocator,
 } // gva_edit_distance
 
 
+/*
 inline GVA_Matches
 gva_edit_distance_matches(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
@@ -187,3 +190,4 @@ gva_edit_distance_matches(GVA_Allocator const allocator,
 
     return onp_compare_matches(allocator, len_ref, reference, len_obs, observed);
 } // gva_edit_distance_matches
+*/
