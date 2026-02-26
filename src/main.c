@@ -17,6 +17,9 @@
 #include "common.h"         // MAX, MIN
 
 
+#include "../include/edit_m.h"
+
+
 #define LINE_SIZE 8194
 
 // #define REFERENCE_ID "NC_000006.12"
@@ -173,7 +176,7 @@ index_main(int argc, char* argv[static argc])
 } // index_main
 
 
-//#define SMALL
+#define SMALL
 
 
 void
@@ -181,82 +184,103 @@ local_supremal(size_t const len_ref, char const reference[static len_ref],
     size_t const len_obs, char const observed[static len_obs],
     size_t const offset)
 {
-    //fprintf(stderr, "LOCAL %zu %zu :: %zu\n", len_ref, len_obs, offset);
+    fprintf(stderr, "LOCAL %zu %zu :: %zu\n", len_ref, len_obs, offset);
     if (len_ref == 0 || len_obs == 0)
     {
-        // fprintf(stderr, "triv distance: %zu\n", len_ref + len_obs);
         printf(GVA_VARIANT_FMT_SPDI " %zu\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, ((GVA_Variant) {offset, offset + len_ref, {len_obs, observed}})), len_ref + len_obs);
         return;
     } // if
-    
-    GVA_Matches forward = gva_edit_distance_matches(gva_std_allocator, len_ref, reference, len_obs, observed);
+    size_t distance = gva_edit_distance_m(gva_std_allocator, len_ref, reference, len_obs, observed);
+    MNode* forward = matches;
+    char* f_uniq = uniq;
+    fprintf(stderr, "distance: %zu\n", distance);
+    fprintf(stderr, "max_lcs_pos: %zu\n", max_lcs_pos);
 
     gva_string_reverse((GVA_String) {len_ref, reference});
     gva_string_reverse((GVA_String) {len_obs, observed});
 
-    GVA_Matches backward = gva_edit_distance_matches(gva_std_allocator, len_ref, reference, len_obs, observed);
 
-    if (forward.distance != backward.distance)
-    {
-         fprintf(stderr, "distance mismatch between f and b\n");
-         exit(EXIT_FAILURE);  // FIXME
-    } // if
+//    reference = strrev(len_ref, (char*) reference);
+//    observed = strrev(len_obs, (char*) observed);
+
+    distance = gva_edit_distance_m(gva_std_allocator, len_ref, reference, len_obs, observed);
+    MNode* backward = matches;
+    char* b_uniq = uniq;
+    fprintf(stderr, "distance: %zu\n", distance);
+    fprintf(stderr, "max_lcs_pos: %zu\n", max_lcs_pos);
+    size_t const max_lcs_pos_local = max_lcs_pos;
+
+//    reference = strrev(len_ref, (char*) reference);
+//    observed = strrev(len_obs, (char*) observed);
 
     gva_string_reverse((GVA_String) {len_ref, reference});
     gva_string_reverse((GVA_String) {len_obs, observed});
+
 
     size_t sum = 0;
     size_t prev_lcs_pos = 0;
     size_t prev_row = -1;
     size_t prev_col = -1;
-    for (size_t i = 0; i < forward.max_lcs_pos; ++i)
+    for (size_t i = 0; i < max_lcs_pos_local; ++i)
     {
-        size_t const j = forward.max_lcs_pos - i - 1;
-        if (forward.matches[i].row == len_ref - backward.matches[j].row - 1 &&
-            forward.matches[i].col == len_obs - backward.matches[j].col - 1 &&
-            (forward.uniq[i] == 1 || backward.uniq[j] == 1))
+        size_t const j = max_lcs_pos_local - i - 1;
+/*
+        if (forward[i].row != (gva_uint) -1 &&
+            backward[j].row != (gva_uint) -1 &&
+            forward[i].row == len_ref - backward[j].row - 1 &&
+            forward[i].col == len_obs - backward[j].col - 1)
+*/
+        if (forward[i].row == len_ref - backward[j].row - 1 &&
+            forward[i].col == len_obs - backward[j].col - 1 &&
+            (f_uniq[i] == 1 || b_uniq[j] == 1))
         {
 #ifdef SMALL
-            fprintf(stderr, "common: %zu: (%u, %u)\n", i, forward.matches[i].row, forward.matches[i].col);
+            fprintf(stderr, "common: %zu: (%u, %u)\n", i, forward[i].row, forward[i].col);
 #endif
             if (i > prev_lcs_pos + 1 ||
-                forward.matches[i].row > prev_row + 1 ||
-                forward.matches[i].col > prev_col + 1)
+                forward[i].row > prev_row + 1 ||
+                forward[i].col > prev_col + 1)
             {
-                size_t const distance = forward.matches[i].row + forward.matches[i].col - 2 * i - sum;
+                size_t const distance = forward[i].row + forward[i].col - 2 * i - sum;
                 if (distance > 0)
                 {
                     sum += distance;
-                    local_supremal(forward.matches[i].row - prev_row - 1, reference + prev_row + 1, forward.matches[i].col - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
+                    //printf("R gap %zu: (%zu, %zu)--(%u, %u)  %zu\n", i, prev_row + 1, prev_col + 1, forward[i].row, forward[i].col, distance);
+                    local_supremal(forward[i].row - prev_row - 1, reference + prev_row + 1, forward[i].col - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
+                    //printf(GVA_STRING_FMT "\n", (int) (forward[i].row - prev_row - 1), reference + prev_row + 1);
+                    //printf(GVA_STRING_FMT "\n", (int) (forward[i].col - prev_col - 1), observed + prev_col + 1);
                 } // if
             } // if
             prev_lcs_pos = i;
-            prev_row = forward.matches[i].row;
-            prev_col = forward.matches[i].col;
+            prev_row = forward[i].row;
+            prev_col = forward[i].col;
         } // if
     } // for
     if (len_ref > prev_row + 1 || len_obs > prev_col + 1)
     {
-        size_t const distance = len_ref + len_obs - 2 * forward.max_lcs_pos - sum;
+        size_t const distance = len_ref + len_obs - 2 * max_lcs_pos_local - sum;
         sum += distance;
+        //printf(GVA_STRING_FMT " ", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
+        //printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
         GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset + prev_row + 1);
         for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
-            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, i, i + 1)), graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
+            GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, i, i + 1);
+            printf(GVA_VARIANT_FMT_SPDI " %u\n", GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variant), graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
         } // for
         gva_lcs_graph_destroy(gva_std_allocator, graph, false);
+        //printf("L " GVA_VARIANT_FMT " %zu  %zu+[(%zu, %zu)--(%zu, %zu)]\n", GVA_VARIANT_PRINT(((GVA_Variant) {offset + prev_row + 1, offset + len_ref, {len_obs - prev_col - 1, observed + prev_col + 1}})), distance, offset, prev_row + 1, prev_col + 1, len_ref, len_obs);
+        //printf("L gap %zu: (%zu, %zu)--(%zu, %zu)  %zu\n", max_lcs_pos_local, prev_row + 1, prev_col + 1, len_ref, len_obs, distance);
+        //printf(GVA_STRING_FMT "\n", (int) (len_ref - prev_row - 1), reference + prev_row + 1);
+        //printf(GVA_STRING_FMT "\n", (int) (len_obs - prev_col - 1), observed + prev_col + 1);
     } // if
 
-    if (forward.distance != sum)
-    {
-         fprintf(stderr, "distance mismatch between f and sum\n");
-         exit(EXIT_FAILURE);  // FIXME
-    } // if
+    //fprintf(stderr, "distance: %zu\n", sum);
 
-    backward.uniq = gva_std_allocator.allocate(gva_std_allocator.context, backward.uniq, MIN(len_ref, len_obs), 0);
-    backward.matches = gva_std_allocator.allocate(gva_std_allocator.context, backward.matches, MIN(len_ref, len_obs) * sizeof(*backward.matches), 0);
-    forward.uniq = gva_std_allocator.allocate(gva_std_allocator.context, forward.uniq, MIN(len_ref, len_obs), 0);
-    forward.matches = gva_std_allocator.allocate(gva_std_allocator.context, forward.matches, MIN(len_ref, len_obs) * sizeof(*forward.matches), 0);
+    forward = gva_std_allocator.allocate(gva_std_allocator.context, forward, MIN(len_ref, len_obs), 0);
+    f_uniq = gva_std_allocator.allocate(gva_std_allocator.context, f_uniq, MIN(len_ref, len_obs), 0);
+    backward = gva_std_allocator.allocate(gva_std_allocator.context, backward, MIN(len_ref, len_obs), 0);
+    b_uniq = gva_std_allocator.allocate(gva_std_allocator.context, b_uniq, MIN(len_ref, len_obs), 0);
 } // local_supremal
 
 
@@ -281,9 +305,7 @@ allele_main(int argc, char* argv[static argc])
     } // for
     fprintf(stderr, GVA_VARIANT_FMT " %zu\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
 
-    gva_lcs_graph_destroy(gva_std_allocator, graph);
-
-    return 0;
+    gva_lcs_graph_destroy(gva_std_allocator, graph, false);
 
 #else
     errno = 0;
@@ -327,7 +349,7 @@ allele_main(int argc, char* argv[static argc])
 
         if (array_length(variants) > 0 && trimmed.start < variants[array_length(variants) - 1].end)
         {
-            //fprintf(stderr, "dropped: at line %zu: %s", line_count + 1, line);
+            fprintf(stderr, "dropped: at line %zu: %s", line_count + 1, line);
             dropped += 1;
             continue;
         } // if
@@ -419,7 +441,7 @@ extract_main(int argc, char* argv[static argc])
 int
 main(int argc, char* argv[static argc])
 {
-    // return allele_main(argc, argv);
+    return allele_main(argc, argv);
     // return extract_main(argc, argv);
-    return index_main(argc, argv);
+    // return index_main(argc, argv);
 } // main
