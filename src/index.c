@@ -519,6 +519,7 @@ gva_index_query(GVA_Allocator const allocator,
             entries[idx].included += hits[i].included;
             prev = i;
         } // for
+
         if (entries[idx].included == 0)
         {
             entries[idx].gva_key = NOT_FOUND;

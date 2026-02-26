@@ -8,15 +8,12 @@
 #include "common.h"     // ABS, MAX
 
 
-#include <stdio.h>  // DEBUG
-
-
 static inline size_t
 onp_snake(size_t const m, char const a[static restrict m],
     size_t const n, char const b[static restrict n],
     intmax_t const k, intmax_t const lower, intmax_t const upper,
     intmax_t const delta, size_t const p, bool const swapped,
-    GVA_Matches result)
+    GVA_Matches result[static restrict 1])
 {
     size_t col = MAX(lower, upper);
     size_t row = col - k;
@@ -29,22 +26,20 @@ onp_snake(size_t const m, char const a[static restrict m],
         row += 1;
         col += 1;
         size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2;
-        //fprintf(stderr, "%zu: (%zu, %zu)\n", lcs_pos - 1, row - 1, col - 1);
-        result.uniq[lcs_pos - 1] = 0;
-        //matches[lcs_pos - 1] = (MNode) {-1, -1};
-        if (lcs_pos > result.max_lcs_pos)
+        result->uniq[lcs_pos - 1] = 0;
+        if (lcs_pos > result->max_lcs_pos)
         {
-            result.max_lcs_pos = lcs_pos;
-            result.uniq[lcs_pos - 1] = 1;
+            result->max_lcs_pos = lcs_pos;
+            result->uniq[lcs_pos - 1] = 1;
             if (swapped)
             {
-                result.matches[lcs_pos - 1].row = col - 1;
-                result.matches[lcs_pos - 1].col = row - 1;
+                result->matches[lcs_pos - 1].row = col - 1;
+                result->matches[lcs_pos - 1].col = row - 1;
             } // if
             else
             {
-                result.matches[lcs_pos - 1].row = row - 1;
-                result.matches[lcs_pos - 1].col = col - 1;
+                result->matches[lcs_pos - 1].row = row - 1;
+                result->matches[lcs_pos - 1].col = col - 1;
             } // else
         } // if
     } // while
@@ -61,9 +56,18 @@ onp_compare(GVA_Allocator const allocator,
     intmax_t const delta = n - m;
     size_t const offset = m + 1;
     size_t const size = m + n + 3;
-    intmax_t* const restrict fp = allocator.allocate(allocator.context, NULL, 0, size * sizeof(*fp));
-    if (fp == NULL)
+
+    intmax_t* restrict fp = allocator.allocate(allocator.context, NULL, 0, size * sizeof(*fp));
+    GVA_Matches result =
     {
+        .matches = allocator.allocate(allocator.context, NULL, 0, sizeof(*result.matches) * m),
+        .uniq = allocator.allocate(allocator.context, NULL, 0, sizeof(*result.uniq) * m),
+    };
+    if (fp == NULL || result.matches == NULL || result.uniq == NULL)
+    {
+        result.uniq = allocator.allocate(allocator.context, result.uniq, sizeof(*result.uniq) * m, 0);
+        result.matches = allocator.allocate(allocator.context, result.matches, sizeof(*result.matches) * m, 0);
+        fp = allocator.allocate(allocator.context, fp, size * sizeof(*fp), 0);
         return (GVA_Matches) {NULL};
     } // if
 
@@ -72,12 +76,6 @@ onp_compare(GVA_Allocator const allocator,
         fp[i + offset] = -1;
     } // for
 
-    GVA_Matches result =
-    {
-        .matches = allocator.allocate(allocator.context, NULL, 0, sizeof(*result.matches) * m),
-        .uniq = allocator.allocate(allocator.context, NULL, 0, sizeof(*result.uniq) * m),
-    };
-
     size_t p = 0;
     while ((size_t) fp[delta + offset] != n)
     {
@@ -85,13 +83,13 @@ onp_compare(GVA_Allocator const allocator,
         fp[delta + p + 1 + offset] = -1;
         for (intmax_t k = -p; k <= delta - 1; ++k)
         {
-            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], delta, p, swapped, result);
+            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], delta, p, swapped, &result);
         } // for
         for (intmax_t k = delta + p; k >= delta + 1; --k)
         {
-            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], delta, p, swapped, result);
+            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], delta, p, swapped, &result);
         } // for
-        fp[delta + offset] = onp_snake(m, a, n, b, delta, fp[delta - 1 + offset] + 1, fp[delta + 1 + offset], delta, p, swapped, result);
+        fp[delta + offset] = onp_snake(m, a, n, b, delta, fp[delta - 1 + offset] + 1, fp[delta + 1 + offset], delta, p, swapped, &result);
         p += 1;
     } // while
 
@@ -107,7 +105,6 @@ gva_edit_distance_m(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs])
 {
-    fprintf(stderr, "ALIGN\n");
     return len_ref > len_obs ?
            onp_compare(allocator, len_obs, observed, len_ref, reference, true) :
            onp_compare(allocator, len_ref, reference, len_obs, observed, false);
