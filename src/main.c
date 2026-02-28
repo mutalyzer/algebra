@@ -22,9 +22,9 @@
 
 #define LINE_SIZE 8194
 
-#define REFERENCE_ID "NC_000022.11"
+// #define REFERENCE_ID "NC_000022.11"
 // #define REFERENCE_ID "NC_000006.12"
-// #define REFERENCE_ID "NC_000001.11"
+#define REFERENCE_ID "NC_000001.11"
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -184,18 +184,20 @@ merge(GVA_Allocator const allocator,
 {
     size_t const offset_nodes = array_length(lhs->nodes);
     size_t const offset_edges = array_length(lhs->edges);
-    size_t offset_distance = 0;
 
     gva_uint sink_idx = GVA_NULL;
-    if (lhs->nodes != NULL)
+    size_t offset_distance = 0;
+    if (offset_nodes > 0)
     {
         sink_idx = lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].link;
+        offset_distance = lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].distance;
+
+        // merge the sink of lhs with the source of rhs
         lhs->nodes[sink_idx].match.length += (rhs.nodes[rhs.source].match.row + rhs.nodes[rhs.source].match.length) -
             (lhs->nodes[sink_idx].match.row + lhs->nodes[sink_idx].match.length);
         lhs->nodes[sink_idx].edges = rhs.nodes[rhs.source].edges + offset_edges;
         lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].match.length += (rhs.dom_nodes[0].match.row + rhs.dom_nodes[0].match.length) -
             (lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].match.row + lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].match.length);
-        offset_distance = lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].distance;
     } // if
     else
     {
@@ -419,6 +421,8 @@ allele_main(int argc, char* argv[static argc])
     //    graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.col,
     //    graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.length);
     //gva_lcs_graph_dot(stderr, graph);
+    fprintf(stderr, "#nodes: %zu\n", array_length(graph.nodes));
+    fprintf(stderr, "#edges: %zu\n", array_length(graph.edges));
 
     gva_lcs_graph_destroy(gva_std_allocator, graph, false);
 
