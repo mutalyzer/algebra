@@ -18,9 +18,9 @@
 
 #define LINE_SIZE 8194
 
-#define REFERENCE_ID "NC_000022.11"
+// #define REFERENCE_ID "NC_000022.11"
 // #define REFERENCE_ID "NC_000006.12"
-// #define REFERENCE_ID "NC_000001.11"
+#define REFERENCE_ID "NC_000001.11"
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -307,7 +307,7 @@ extract_main(int argc, char* argv[static argc])
 int
 main(int argc, char* argv[static argc])
 {
-    return allele_main(argc, argv);
+    // return allele_main(argc, argv);
     // return extract_main(argc, argv);
-    // return index_main(argc, argv);
+    return index_main(argc, argv);
 } // main

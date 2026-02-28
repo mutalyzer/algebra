@@ -137,7 +137,8 @@ variants_distance(GVA_Allocator const allocator,
 static size_t
 variants_included(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
-    GVA_Variant const lhs, GVA_Variant const rhs)
+    GVA_Variant const lhs, GVA_Variant const rhs,
+    size_t* const excluded)
 {
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
@@ -191,6 +192,18 @@ variants_included(GVA_Allocator const allocator,
         bitset_intersection_cnt(lhs_gs, rhs_gs) +
         bitset_intersection_cnt(lhs_ts, rhs_ts);
 
+    *excluded =
+        bitset_intersection_cnt(lhs_dels, lhs_dels) +
+        bitset_intersection_cnt(rhs_dels, rhs_dels) +
+        bitset_intersection_cnt(lhs_as, lhs_as) +
+        bitset_intersection_cnt(rhs_as, rhs_as) +
+        bitset_intersection_cnt(lhs_cs, lhs_cs) +
+        bitset_intersection_cnt(rhs_cs, rhs_cs) +
+        bitset_intersection_cnt(lhs_gs, lhs_gs) +
+        bitset_intersection_cnt(rhs_gs, rhs_gs) +
+        bitset_intersection_cnt(lhs_ts, lhs_ts) +
+        bitset_intersection_cnt(rhs_ts, rhs_ts);
+
     rhs_ts = bitset_destroy(allocator, rhs_ts);
     rhs_gs = bitset_destroy(allocator, rhs_gs);
     rhs_cs = bitset_destroy(allocator, rhs_cs);
@@ -206,7 +219,7 @@ variants_included(GVA_Allocator const allocator,
     gva_string_destroy(allocator, observed_rhs);
     gva_string_destroy(allocator, observed_lhs);
 
-    return included > 0 ? 1 : 0;
+    return included;
 } // variants_included
 
 
@@ -227,7 +240,13 @@ variants_with_distance(GVA_Allocator const allocator,
         return distance_rhs;
     } // if
 
-    return variants_included(allocator, len_ref, reference, lhs, rhs);
+    size_t excluded = 0;
+    size_t const included = variants_included(allocator, len_ref, reference, lhs, rhs, &excluded);
+    if (included == 0)
+    {
+        return 0;  // disjoint
+    } // if
+    return MAX(1, (double) included / excluded * MIN(distance_lhs, distance_rhs));
 } // variants_with_distance
 
 
@@ -497,9 +516,15 @@ gva_index_query(GVA_Allocator const allocator,
             // single hit for single query part, relation is not determined by the distances
             else if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - (graph.dom_nodes[hits[i].query.end].distance - graph.dom_nodes[hits[i].query.start].distance)) != hits[i].included)
             {
+                size_t excluded = 0;
                 hits[i].included = variants_included(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx),
-                    gva_lcs_graph_local_supremal(graph, hits[i].query.start, hits[i].query.end));
+                    gva_lcs_graph_local_supremal(graph, hits[i].query.start, hits[i].query.end),
+                    &excluded);
+                if (hits[i].included > 0)
+                {
+                    hits[i].included = MAX(1, (double) hits[i].included / excluded * MIN(self->intervals.nodes[node_idx].distance, graph.dom_nodes[hits[i].query.end].distance - graph.dom_nodes[hits[i].query.start].distance));
+                } // if
             } // if
             // single hit for single query part, relation is already determined
             else
