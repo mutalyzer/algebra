@@ -184,6 +184,7 @@ merge(GVA_Allocator const allocator,
 {
     size_t const offset_nodes = array_length(lhs->nodes);
     size_t const offset_edges = array_length(lhs->edges);
+    size_t offset_distance = 0;
 
     gva_uint sink_idx = GVA_NULL;
     if (lhs->nodes != NULL)
@@ -194,6 +195,7 @@ merge(GVA_Allocator const allocator,
         lhs->nodes[sink_idx].edges = rhs.nodes[rhs.source].edges + offset_edges;
         lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].match.length += (rhs.dom_nodes[0].match.row + rhs.dom_nodes[0].match.length) -
             (lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].match.row + lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].match.length);
+        offset_distance = lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].distance;
     } // if
     else
     {
@@ -230,7 +232,7 @@ merge(GVA_Allocator const allocator,
         ((GVA_Dom_Node)
         {
             .match = {rhs.dom_nodes[i].match.row, rhs.dom_nodes[i].match.col + offset, rhs.dom_nodes[i].match.length},
-            .distance = rhs.dom_nodes[i].distance + lhs->dom_nodes[array_length(lhs->dom_nodes) - 1].distance,
+            .distance = rhs.dom_nodes[i].distance + offset_distance,
             .link = rhs.dom_nodes[i].link + offset_nodes  - (rhs.dom_nodes[i].link > rhs.source && sink_idx != GVA_NULL),
         }));
     } // for
@@ -301,7 +303,7 @@ local_supremal(GVA_Allocator const allocator,
 } // local_supremal
 
 
-#define SMALL
+//#define SMALL
 
 
 int
@@ -374,7 +376,7 @@ allele_main(int argc, char* argv[static argc])
 
         if (array_length(variants) > 0 && trimmed.start < variants[array_length(variants) - 1].end)
         {
-            fprintf(stderr, "dropped: at line %zu: %s", line_count + 1, line);
+            fprintf(stderr, "dropped at line %zu: %s", line_count + 1, line);
             dropped += 1;
             continue;
         } // if
@@ -407,15 +409,15 @@ allele_main(int argc, char* argv[static argc])
 
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
-        fprintf(stderr, "(%u, %u, %u)\n", graph.dom_nodes[i].match.row, graph.dom_nodes[i].match.col, graph.dom_nodes[i].match.length);
-        fprintf(stderr, GVA_VARIANT_FMT " %u\n",
-            GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(graph, i, i + 1)),
+        //fprintf(stderr, "(%u, %u, %u)\n", graph.dom_nodes[i].match.row, graph.dom_nodes[i].match.col, graph.dom_nodes[i].match.length);
+        fprintf(stdout, GVA_VARIANT_FMT_SPDI " %u\n",
+            GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, i, i + 1)),
             graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
     } // for
-    fprintf(stderr, "(%u, %u, %u)\n\n",
-        graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.row,
-        graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.col,
-        graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.length);
+    //fprintf(stderr, "(%u, %u, %u)\n\n",
+    //    graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.row,
+    //    graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.col,
+    //    graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.length);
     //gva_lcs_graph_dot(stderr, graph);
 
     gva_lcs_graph_destroy(gva_std_allocator, graph, false);
