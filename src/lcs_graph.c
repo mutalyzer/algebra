@@ -299,7 +299,13 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
         graph.nodes[source.idx].match.col += graph.dom_nodes[0].match.length;
         graph.nodes[source.idx].match.length -= graph.dom_nodes[0].match.length;
 
+        graph.dom_nodes[0].match.row += graph.dom_nodes[0].match.length;
+        graph.dom_nodes[0].match.col += graph.dom_nodes[0].match.length;
+        graph.dom_nodes[0].match.length = 0;
+
         graph.nodes[sink.idx].match.length -= graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.length;
+
+        graph.dom_nodes[array_length(graph.dom_nodes) - 1].match.length = 0;
     } // if
 
     graph.source = source.idx;
