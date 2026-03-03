@@ -218,7 +218,6 @@ lcs_align(GVA_Allocator const allocator,
 } // lcs_align
 
 
-
 static inline size_t
 onp_snake(size_t const m, char const a[static restrict m],
     size_t const n, char const b[static restrict n],
