@@ -263,10 +263,10 @@ gva_index_init(GVA_Allocator const allocator,
     index->allocator = allocator;
     index->reference = (GVA_String) {len_ref, reference};
 
-    index->intervals = interval_tree_init();
-    index->inserted = trie_init();
+    index->intervals = interval_tree_init(allocator);
+    index->inserted = trie_init(allocator);
 
-    index->ids = trie_init();
+    index->ids = trie_init(allocator);
 
     index->alleles = NULL;
     index->join = NULL;
@@ -283,9 +283,9 @@ gva_index_destroy(GVA_Index* const self)
         return NULL;
     } // if
 
-    interval_tree_destroy(self->allocator, &self->intervals);
-    trie_destroy(self->allocator, &self->inserted);
-    trie_destroy(self->allocator, &self->ids);
+    interval_tree_destroy(&self->intervals);
+    trie_destroy(&self->inserted);
+    trie_destroy(&self->ids);
     self->alleles = ARRAY_DESTROY(self->allocator, self->alleles);
     self->join = ARRAY_DESTROY(self->allocator, self->join);
 
@@ -298,7 +298,7 @@ gva_index_insert(GVA_Index* restrict const self,
     size_t const len_id, char const id[static restrict len_id],
     GVA_Variant const variant, size_t const distance)
 {
-    size_t const id_idx = trie_insert(self->allocator, &self->ids, len_id, id);
+    size_t const id_idx = trie_insert(&self->ids, len_id, id);
     size_t allele_idx = array_length(self->alleles) - 1;
 
     // new allele
@@ -314,7 +314,7 @@ gva_index_insert(GVA_Index* restrict const self,
     } // if
 
     // add variant
-    gva_uint const inserted_idx = trie_insert(self->allocator, &self->inserted,
+    gva_uint const inserted_idx = trie_insert(&self->inserted,
         variant.sequence.len, variant.sequence.str);
     gva_uint const tmp_idx = ARRAY_APPEND(self->allocator, self->intervals.nodes,
         ((Interval_Tree_Node)

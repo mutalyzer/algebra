@@ -9,16 +9,20 @@
 
 
 inline Interval_Tree
-interval_tree_init(void)
+interval_tree_init(GVA_Allocator const allocator)
 {
-    return (Interval_Tree) {.root = GVA_NULL};
+    return (Interval_Tree)
+    {
+        .allocator = allocator,
+        .root = GVA_NULL,
+    };
 } // interval_tree_init
 
 
 inline void
-interval_tree_destroy(GVA_Allocator const allocator, Interval_Tree self[static 1])
+interval_tree_destroy(Interval_Tree self[static 1])
 {
-    self->nodes = ARRAY_DESTROY(allocator, self->nodes);
+    self->nodes = ARRAY_DESTROY(self->allocator, self->nodes);
     self->root = GVA_NULL;
 } // interval_tree_destroy
 

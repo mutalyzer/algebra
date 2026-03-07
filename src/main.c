@@ -111,7 +111,7 @@ index_main(int argc, char* argv[static argc])
         size_t distance = 0;
         if (!parse_line(line, &id, &variant, &distance))
         {
-            fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
             continue;
         } // if
         gva_index_insert(index, id.len, id.str, variant, distance);
@@ -128,7 +128,7 @@ index_main(int argc, char* argv[static argc])
         GVA_Variant variant = {0};
         if (!parse_line(line, &id, &variant, &(size_t) {0}))
         {
-            fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
             continue;
         } // if
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
@@ -245,6 +245,7 @@ allele_main(int argc, char* argv[static argc])
     fprintf(stderr, "#edges: %zu\n", array_length(graph.edges));
 
     gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+    gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
 } // allele_main
@@ -305,9 +306,62 @@ extract_main(int argc, char* argv[static argc])
 
 
 int
+supremal_main(int argc, char* argv[static argc])
+{
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage %s reference.blob\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0};
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        line_count += 1;
+        GVA_String id = {0};
+        GVA_Variant variant = {0};
+        size_t distance = 0;
+        if (!parse_line(line, &id, &variant, &distance))
+        {
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
+            continue;
+        } // if
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+
+        GVA_Variant supremal = gva_lcs_graph_supremal(graph);
+
+        fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
+            GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, supremal), gva_lcs_graph_distance(graph));
+
+        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+    } // while
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+} // supremal_main
+
+
+int
 main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
     // return extract_main(argc, argv);
     return index_main(argc, argv);
+    // return supremal_main(argc, argv);
 } // main
