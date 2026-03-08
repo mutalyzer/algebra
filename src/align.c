@@ -10,6 +10,9 @@
 #include "common.h"     // ABS, MAX, MIN
 
 
+#include <stdio.h>  // DEBUG
+
+
 typedef struct
 {
     GVA_Allocator const allocator;
@@ -228,6 +231,15 @@ onp_snake(size_t const m, char const a[static restrict m],
     size_t col = MAX(lower, upper);
     size_t row = col - k;
 
+    if (swapped)
+    {
+        fprintf(stderr, "  snake start: (%zu, %zu)\n", col, row);
+    } // if
+    else
+    {
+        fprintf(stderr, "  snake start: (%zu, %zu)\n", row, col);
+    } // else
+
     intmax_t const d_row = m - row;
     intmax_t const d_col = n - col;
 
@@ -236,6 +248,16 @@ onp_snake(size_t const m, char const a[static restrict m],
         row += 1;
         col += 1;
         size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2;
+
+        if (swapped)
+        {
+            fprintf(stderr, "    snake match @ %zu: (%zu, %zu)\n", lcs_pos, col - 1, row - 1);
+        } // if
+        else
+        {
+            fprintf(stderr, "    snake match @ %zu: (%zu, %zu)\n", lcs_pos, row - 1, col - 1);
+        } // else
+
         result->uniq[lcs_pos - 1] = 0;
         if (lcs_pos > result->max_lcs_pos)
         {
@@ -253,6 +275,16 @@ onp_snake(size_t const m, char const a[static restrict m],
             } // else
         } // if
     } // while
+
+    if (swapped)
+    {
+        fprintf(stderr, "  snake end: (%zu, %zu)\n", col, row);
+    } // if
+    else
+    {
+        fprintf(stderr, "  snake end: (%zu, %zu)\n", row, col);
+    } // else
+
     return col;
 } // onp_snake
 
@@ -289,6 +321,7 @@ onp_compare(GVA_Allocator const allocator,
     size_t p = 0;
     while ((size_t) fp[delta + offset] != n)
     {
+        fprintf(stderr, "p: %zu\n", p);
         fp[-p - 1 + offset] = -1;
         fp[delta + p + 1 + offset] = -1;
         for (intmax_t k = -p; k <= delta - 1; ++k)

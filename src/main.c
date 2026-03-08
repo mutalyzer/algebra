@@ -12,6 +12,7 @@
 #include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/utils.h"       // gva_fasta_sequence*, gva_lcs_graph_dot
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_variant_*
+#include "align.h"          // LCS_Matches, lcs_align_one
 #include "array.h"          // ARRAY_*, array_length
 #include "common.h"         // MAX, MIN
 
@@ -255,6 +256,20 @@ allele_main(int argc, char* argv[static argc])
 int
 extract_main(int argc, char* argv[static argc])
 {
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage: %s reference observed\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    LCS_Matches align = lcs_align_one(gva_std_allocator, strlen(argv[1]), argv[1], strlen(argv[2]), argv[2]);
+
+
+    align.match = gva_std_allocator.allocate(gva_std_allocator.context, align.match, align.max_lcs_pos, 0);
+    align.uniq = gva_std_allocator.allocate(gva_std_allocator.context, align.uniq, align.max_lcs_pos, 0);
+
+    return EXIT_SUCCESS;
+
     (void) argv;
 
     size_t line_count = 0;
@@ -361,7 +376,7 @@ int
 main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
-    // return extract_main(argc, argv);
-    return index_main(argc, argv);
+    return extract_main(argc, argv);
+    // return index_main(argc, argv);
     // return supremal_main(argc, argv);
 } // main
