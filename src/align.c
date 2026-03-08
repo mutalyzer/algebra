@@ -251,11 +251,11 @@ onp_snake(size_t const m, char const a[static restrict m],
 
         if (swapped)
         {
-            fprintf(stderr, "    snake match @ %zu: (%zu, %zu)\n", lcs_pos, col - 1, row - 1);
+            fprintf(stderr, "    snake match @ %zu: (%zu, %zu)\n", lcs_pos - 1, col - 1, row - 1);
         } // if
         else
         {
-            fprintf(stderr, "    snake match @ %zu: (%zu, %zu)\n", lcs_pos, row - 1, col - 1);
+            fprintf(stderr, "    snake match @ %zu: (%zu, %zu)\n", lcs_pos - 1, row - 1, col - 1);
         } // else
 
         result->uniq[lcs_pos - 1] = 0;
