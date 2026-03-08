@@ -3,7 +3,7 @@
 #include <string.h>     // memcpy
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/string.h"      // GVA_String
+#include "../include/string.h"      // GVA_String, gva_prefix_length
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"  // ARRAY_*, array_*
 #include "trie.h"   // Trie, TrieNode, trie_*
@@ -27,19 +27,6 @@ trie_destroy(Trie self[static 1])
     self->nodes = ARRAY_DESTROY(self->allocator, self->nodes);
     self->root = GVA_NULL;
 } // trie_destroy
-
-
-static inline size_t
-prefix_length(size_t const len_lhs, char const lhs[static restrict len_lhs],
-    size_t const len_rhs, char const rhs[static restrict len_rhs])
-{
-    size_t i = 0;
-    while (i < len_lhs && i < len_rhs && lhs[i] == rhs[i])
-    {
-        i += 1;
-    } // while
-    return i;
-} // prefix_length
 
 
 static inline size_t
@@ -79,7 +66,7 @@ trie_insert(Trie self[static restrict 1],
     while (true)
     {
         gva_uint const p_len = self->nodes[idx].end - self->nodes[idx].p_start;
-        size_t const k = prefix_length(len - prefix, key + prefix,
+        size_t const k = gva_prefix_length(len - prefix, key + prefix,
             p_len, self->strings + self->nodes[idx].p_start);
         if (k == len - prefix && k == p_len)
         {
