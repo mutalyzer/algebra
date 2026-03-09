@@ -264,7 +264,6 @@ extract_main(int argc, char* argv[static argc])
 
     LCS_Matches align = lcs_align_one(gva_std_allocator, strlen(argv[1]), argv[1], strlen(argv[2]), argv[2]);
 
-
     align.match = gva_std_allocator.allocate(gva_std_allocator.context, align.match, align.max_lcs_pos, 0);
     align.uniq = gva_std_allocator.allocate(gva_std_allocator.context, align.uniq, align.max_lcs_pos, 0);
 

@@ -17,7 +17,7 @@
 
 static void
 merge(GVA_Allocator const allocator,
-    GVA_LCS_Graph* const lhs, GVA_LCS_Graph const rhs,
+    GVA_LCS_Graph lhs[static 1], GVA_LCS_Graph const rhs,
     size_t const offset)
 {
     size_t const offset_nodes = array_length(lhs->nodes);
@@ -82,10 +82,10 @@ merge(GVA_Allocator const allocator,
 // FIXME: recursion!
 static void
 local_supremal(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    size_t const len_obs, char const observed[static len_obs],
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const len_obs, char const observed[static restrict len_obs],
     size_t const offset_row, size_t const offset_col,
-    GVA_LCS_Graph* const graph)
+    GVA_LCS_Graph graph[static restrict 1])
 {
     if (len_ref == 0 || len_obs == 0)
     {
