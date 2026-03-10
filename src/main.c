@@ -20,8 +20,8 @@
 #define LINE_SIZE 8194
 
 // #define REFERENCE_ID "NC_000022.11"
-// #define REFERENCE_ID "NC_000006.12"
-#define REFERENCE_ID "NC_000001.11"
+#define REFERENCE_ID "NC_000006.12"
+// #define REFERENCE_ID "NC_000001.11"
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -357,10 +357,19 @@ supremal_main(int argc, char* argv[static argc])
         } // if
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
+        /*
         GVA_Variant supremal = gva_lcs_graph_supremal(graph);
 
         fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
             GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, supremal), gva_lcs_graph_distance(graph));
+        */
+
+        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
+        {
+            fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %u\n",
+                GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, i, i + 1)), graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
+        } // for
+
 
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
