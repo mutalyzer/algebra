@@ -21,22 +21,23 @@ typedef struct
 
 typedef struct
 {
-    GVA_String strings;
-    TrieNode*  nodes;
-    gva_uint   root;
+    char* restrict     strings;
+    TrieNode* restrict nodes;
+    GVA_Allocator      allocator;
+    gva_uint           root;
 } Trie;
 
 
 Trie
-trie_init(void);
+trie_init(GVA_Allocator const allocator);
 
 
 void
-trie_destroy(GVA_Allocator const allocator, Trie self[static 1]);
+trie_destroy(Trie self[static 1]);
 
 
 gva_uint
-trie_insert(GVA_Allocator const allocator, Trie self[static restrict 1],
+trie_insert(Trie self[static restrict 1],
     size_t const len, char const key[static restrict len]);
 
 

@@ -29,16 +29,17 @@ typedef struct
 typedef struct
 {
     Interval_Tree_Node* nodes;
+    GVA_Allocator       allocator;
     gva_uint            root;
 } Interval_Tree;
 
 
 Interval_Tree
-interval_tree_init(void);
+interval_tree_init(GVA_Allocator const allocator);
 
 
 void
-interval_tree_destroy(GVA_Allocator const allocator, Interval_Tree self[static 1]);
+interval_tree_destroy(Interval_Tree self[static 1]);
 
 
 gva_uint

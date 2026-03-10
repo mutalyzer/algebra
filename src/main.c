@@ -12,6 +12,7 @@
 #include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/utils.h"       // gva_fasta_sequence*, gva_lcs_graph_dot
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_variant_*
+#include "align.h"          // LCS_Matches, lcs_align_one
 #include "array.h"          // ARRAY_*, array_length
 #include "common.h"         // MAX, MIN
 
@@ -111,7 +112,7 @@ index_main(int argc, char* argv[static argc])
         size_t distance = 0;
         if (!parse_line(line, &id, &variant, &distance))
         {
-            fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
             continue;
         } // if
         gva_index_insert(index, id.len, id.str, variant, distance);
@@ -128,7 +129,7 @@ index_main(int argc, char* argv[static argc])
         GVA_Variant variant = {0};
         if (!parse_line(line, &id, &variant, &(size_t) {0}))
         {
-            fprintf(stderr, "parsing failed at line %zu: %s\n", line_count, line);
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
             continue;
         } // if
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
@@ -249,6 +250,7 @@ allele_main(int argc, char* argv[static argc])
     fprintf(stderr, "#edges: %zu\n", array_length(graph.edges));
 
     gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+    gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
 } // allele_main
@@ -258,6 +260,19 @@ allele_main(int argc, char* argv[static argc])
 int
 extract_main(int argc, char* argv[static argc])
 {
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage: %s reference observed\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    LCS_Matches align = lcs_align_one(gva_std_allocator, strlen(argv[1]), argv[1], strlen(argv[2]), argv[2]);
+
+    align.match = gva_std_allocator.allocate(gva_std_allocator.context, align.match, align.max_lcs_pos, 0);
+    align.uniq = gva_std_allocator.allocate(gva_std_allocator.context, align.uniq, align.max_lcs_pos, 0);
+
+    return EXIT_SUCCESS;
+
     (void) argv;
 
     size_t line_count = 0;
@@ -309,9 +324,62 @@ extract_main(int argc, char* argv[static argc])
 
 
 int
+supremal_main(int argc, char* argv[static argc])
+{
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage %s reference.blob\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0};
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        line_count += 1;
+        GVA_String id = {0};
+        GVA_Variant variant = {0};
+        size_t distance = 0;
+        if (!parse_line(line, &id, &variant, &distance))
+        {
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
+            continue;
+        } // if
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+
+        GVA_Variant supremal = gva_lcs_graph_supremal(graph);
+
+        fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
+            GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, supremal), gva_lcs_graph_distance(graph));
+
+        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+    } // while
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+} // supremal_main
+
+
+int
 main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
-    // return extract_main(argc, argv);
-    return index_main(argc, argv);
+    return extract_main(argc, argv);
+    // return index_main(argc, argv);
+    // return supremal_main(argc, argv);
 } // main

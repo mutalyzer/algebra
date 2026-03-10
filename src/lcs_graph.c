@@ -17,7 +17,7 @@
 
 static void
 merge(GVA_Allocator const allocator,
-    GVA_LCS_Graph* const lhs, GVA_LCS_Graph const rhs,
+    GVA_LCS_Graph lhs[static 1], GVA_LCS_Graph const rhs,
     size_t const offset)
 {
     size_t const offset_nodes = array_length(lhs->nodes);
@@ -82,10 +82,10 @@ merge(GVA_Allocator const allocator,
 // FIXME: recursion!
 static void
 local_supremal(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    size_t const len_obs, char const observed[static len_obs],
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const len_obs, char const observed[static restrict len_obs],
     size_t const offset_row, size_t const offset_col,
-    GVA_LCS_Graph* const graph)
+    GVA_LCS_Graph graph[static restrict 1])
 {
     if (len_ref == 0 || len_obs == 0)
     {
@@ -96,12 +96,12 @@ local_supremal(GVA_Allocator const allocator,
     } // if
 
     LCS_Matches forward = lcs_align_one(allocator, len_ref, reference, len_obs, observed);
-    gva_string_reverse((GVA_String) {len_ref, reference});
-    gva_string_reverse((GVA_String) {len_obs, observed});
+    gva_string_reverse(len_ref, (char*) reference);
+    gva_string_reverse(len_obs, (char*) observed);
 
     LCS_Matches backward = lcs_align_one(allocator, len_ref, reference, len_obs, observed);
-    gva_string_reverse((GVA_String) {len_ref, reference});
-    gva_string_reverse((GVA_String) {len_obs, observed});
+    gva_string_reverse(len_ref, (char*) reference);
+    gva_string_reverse(len_obs, (char*) observed);
 
     size_t sum = 0;
     size_t prev_row = -1;
