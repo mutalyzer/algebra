@@ -1,6 +1,6 @@
 #include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
-#include <string.h>     // memcmp
+#include <string.h>     // memcmp, memcpy
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/types.h"       // gva_uint
@@ -149,19 +149,36 @@ gva_patch(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const n, GVA_Variant const variants[static restrict n])
 {
-    GVA_String observed = {0};
+    size_t deleted = 0;
+    size_t inserted = 0;
+    for (size_t i = 0; i < n; ++i)
+    {
+        deleted += variants[i].end - variants[i].start;
+        inserted += variants[i].sequence.len;
+    } // for
+
+    char* str = allocator.allocate(allocator.context, NULL, 0, len_ref + inserted - deleted);
+    if (str == NULL)
+    {
+        return (GVA_String) {0};
+    } // if
+
+    size_t len = 0;
     size_t start = 0;
     for (size_t i = 0; i < n; ++i)
     {
-        observed = gva_string_concat(allocator, observed, (GVA_String) {variants[i].start - start, reference + start});
-        observed = gva_string_concat(allocator, observed, variants[i].sequence);
+        memcpy(str + len, reference + start, variants[i].start - start);
+        len += variants[i].start - start;
+        memcpy(str + len, variants[i].sequence.str, variants[i].sequence.len);
+        len += variants[i].sequence.len;
         start = variants[i].end;
     } // for
 
     if (start < len_ref)
     {
-        observed = gva_string_concat(allocator, observed, (GVA_String) {len_ref - start, reference + start});
+        memcpy(str + len, reference + start, len_ref - start);
+        len += len_ref - start;
     } // if
 
-    return observed;
+    return (GVA_String) {len, str};
 } // gva_patch
