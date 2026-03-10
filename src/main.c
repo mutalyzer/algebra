@@ -17,11 +17,14 @@
 #include "common.h"         // MAX, MIN
 
 
+#include <assert.h>
+
+
 #define LINE_SIZE 8194
 
 // #define REFERENCE_ID "NC_000022.11"
-// #define REFERENCE_ID "NC_000006.12"
-#define REFERENCE_ID "NC_000001.11"
+#define REFERENCE_ID "NC_000006.12"
+// #define REFERENCE_ID "NC_000001.11"
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -292,30 +295,58 @@ extract_main(int argc, char* argv[static argc])
         GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator,
             reference.len, reference.str, observed.len, observed.str, 0);
 
-        fprintf(stdout, "    distance:   %zu\n", gva_lcs_graph_distance(graph));
-        fprintf(stdout, "    #nodes:     %zu\n", array_length(graph.nodes));
-        for (size_t i = 0; i < array_length(graph.nodes); ++i)
-        {
-            fprintf(stdout, "        %zu: (%u, %u, %u)\n", i,
-                graph.nodes[i].match.row, graph.nodes[i].match.col, graph.nodes[i].match.length);
-        } // for
-        fprintf(stdout, "    #edges:     %zu\n", array_length(graph.edges));
-        fprintf(stdout, "    #dom_nodes: %zu\n", array_length(graph.dom_nodes));
-        for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
-        {
-            if (i > 0)
-            {
-                fprintf(stdout, "           " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(graph, i - 1, i)));
-            } // if
-            fprintf(stdout, "        %zu: (%u, %u, %u) %u\n", i,
-                graph.dom_nodes[i].match.row, graph.dom_nodes[i].match.col, graph.dom_nodes[i].match.length,
-                graph.dom_nodes[i].distance);
-        } // for
+        // fprintf(stdout, "    distance:   %zu\n", gva_lcs_graph_distance(graph));
+        // fprintf(stdout, "    #nodes:     %zu\n", array_length(graph.nodes));
+        // for (size_t i = 0; i < array_length(graph.nodes); ++i)
+        // {
+        //     fprintf(stdout, "        %zu: (%u, %u, %u)\n", i,
+        //         graph.nodes[i].match.row, graph.nodes[i].match.col, graph.nodes[i].match.length);
+        // } // for
+        // fprintf(stdout, "    #edges:     %zu\n", array_length(graph.edges));
+        // fprintf(stdout, "    #dom_nodes: %zu\n", array_length(graph.dom_nodes));
+        // if (array_length(graph.dom_nodes) < 3)
+        // {
+        //     continue;
+        // }
 
-        fprintf(stdout, "    supremal:   " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(graph)));
+        // for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
+        // {
+        //     if (i > 0)
+        //     {
+        //         fprintf(stdout, "           " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(graph, i - 1, i)));
+        //     } // if
+        //     fprintf(stdout, "        %zu: (%u, %u, %u) %u\n", i,
+        //         graph.dom_nodes[i].match.row, graph.dom_nodes[i].match.col, graph.dom_nodes[i].match.length,
+        //         graph.dom_nodes[i].distance);
+        // } // for
+
+        // fprintf(stdout, "    supremal:   " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(graph)));
 
         gva_lcs_graph_dot(stdout, graph);
+        GVA_Variant sup = gva_variant_dup(gva_std_allocator, gva_lcs_graph_supremal(graph));
 
+        GVA_LCS_Graph graph2 = gva_lcs_graph_from_allele(gva_std_allocator, reference.len, reference.str, 1, &sup);
+        gva_lcs_graph_dot(stdout, graph2);
+
+        if (array_length(graph.dom_nodes) != array_length(graph2.dom_nodes))
+        {
+            fprintf(stderr, "length dom nodes mismatch\n");
+            assert(0 == 1);
+        }
+
+        for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
+        {
+            if (graph.dom_nodes[i].match.row != graph2.dom_nodes[i].match.row ||
+                graph.dom_nodes[i].match.col != graph2.dom_nodes[i].match.col ||
+                graph.dom_nodes[i].match.length != graph2.dom_nodes[i].match.length)
+            {
+                fprintf(stderr, "dom nodes mismatch\n");
+                assert(0 == 1);
+            }
+        }
+
+        gva_string_destroy(gva_std_allocator, sup.sequence);
+        gva_lcs_graph_destroy(gva_std_allocator, graph2, true);
         gva_lcs_graph_destroy(gva_std_allocator, graph, false);
     } // while
 
