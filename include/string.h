@@ -36,12 +36,11 @@ gva_string_dup(GVA_Allocator const allocator, GVA_String const self);
 
 
 void
-gva_string_reverse(size_t const len, char str[static len]);
+gva_string_reverse(GVA_String self);
 
 
 size_t
-gva_prefix_length(size_t const len_lhs, char const lhs[static restrict len_lhs],
-    size_t const len_rhs, char const rhs[static restrict len_rhs]);
+gva_string_prefix_length(GVA_String const lhs, GVA_String const rhs);
 
 
 #endif // GVA_STRING_H

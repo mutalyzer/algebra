@@ -49,29 +49,28 @@ gva_string_dup(GVA_Allocator const allocator, GVA_String const self)
 
 
 inline void
-gva_string_reverse(size_t const len, char str[static len])
+gva_string_reverse(GVA_String self)
 {
-    size_t i = 0;
-    size_t j = len - 1;
-    while (i < j)
+    size_t i = self.len - 1;
+    size_t j = 0;
+    while (i > j)
     {
-        char const ch = str[i];
-        str[j] = str[i];
-        str[i] = ch;
-        i += 1;
-        j -= 1;
+        char const ch = self.str[i];
+        ((char*) self.str)[i] = self.str[j];
+        ((char*) self.str)[j] = ch;
+        i -= 1;
+        j += 1;
     } // while
 } // gva_string_reverse
 
 
 inline size_t
-gva_prefix_length(size_t const len_lhs, char const lhs[static restrict len_lhs],
-    size_t const len_rhs, char const rhs[static restrict len_rhs])
+gva_string_prefix_length(GVA_String const lhs, GVA_String const rhs)
 {
-    size_t i = 0;
-    while (i < len_lhs && i < len_rhs && lhs[i] == rhs[i])
+    size_t idx = 0;
+    while (idx < lhs.len && idx < rhs.len && lhs.str[idx] == rhs.str[idx])
     {
-        i += 1;
+        idx += 1;
     } // while
-    return i;
-} // gva_prefix_length
+    return idx;
+} // gva_string_prefix_length
