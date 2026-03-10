@@ -154,11 +154,15 @@ index_main(int argc, char* argv[static argc])
                 GVA_RELATION_LABELS[result.alleles[i].relation]);
             for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
             {
-                fprintf(stderr, "        [%u, %u) [%u, %u): %u %u %s\n",
+                // TODO: deal with multiple part hits
+                fprintf(stderr, "        [%u, %u) [%u, %u): %u %u %s " GVA_VARIANT_FMT_SPDI " " GVA_VARIANT_FMT_SPDI "\n",
                     result.hits[j].query.start, result.hits[j].query.end,
                     result.hits[j].index.start, result.hits[j].index.end,
                     result.hits[j].included, result.hits[j].excluded,
-                    GVA_RELATION_LABELS[result.hits[j].relation]);
+                    GVA_RELATION_LABELS[result.hits[j].relation],
+                    GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, result.hits[j].query.start, result.hits[j].query.end)),
+                    GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_index_variant(index, result.alleles[i].idx, result.hits[j].index.start))
+                    );
             } // for
         } // for
         result.alleles = ARRAY_DESTROY(gva_std_allocator, result.alleles);
