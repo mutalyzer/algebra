@@ -96,12 +96,12 @@ local_supremal(GVA_Allocator const allocator,
     } // if
 
     LCS_Matches forward = lcs_align_one(allocator, len_ref, reference, len_obs, observed);
-    gva_string_reverse((GVA_String) {len_ref, reference});
-    gva_string_reverse((GVA_String) {len_obs, observed});
+    gva_string_reverse(len_ref, (char*) reference);
+    gva_string_reverse(len_obs, (char*) observed);
 
     LCS_Matches backward = lcs_align_one(allocator, len_ref, reference, len_obs, observed);
-    gva_string_reverse((GVA_String) {len_ref, reference});
-    gva_string_reverse((GVA_String) {len_obs, observed});
+    gva_string_reverse(len_ref, (char*) reference);
+    gva_string_reverse(len_obs, (char*) observed);
 
     size_t sum = 0;
     size_t prev_row = -1;

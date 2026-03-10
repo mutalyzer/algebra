@@ -4,7 +4,7 @@
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/types.h"       // gva_uint
-#include "../include/string.h"      // GVA_String, gva_string_*
+#include "../include/string.h"      // GVA_String, gva_string_*, gva_prefix_length
 #include "../include/variant.h"     // gva_parse_spdi, gva_patch
 #include "common.h"     // MIN
 
@@ -138,7 +138,8 @@ inline GVA_Variant
 gva_variant_prefix_trimmed(size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const variant)
 {
-    size_t const len = gva_string_prefix_length((GVA_String) {(variant.end - variant.start), reference + variant.start}, variant.sequence);
+    size_t const len = gva_prefix_length(variant.end - variant.start, reference + variant.start,
+        variant.sequence.len, variant.sequence.str);
     return (GVA_Variant) {variant.start + len, variant.end, {variant.sequence.len - len, variant.sequence.str + len}};
 } // gva_variant_prefix_trimmed
 
