@@ -61,7 +61,8 @@ gva_index_id(GVA_Index const* const self, size_t const idx);
 
 
 GVA_Variant
-gva_index_variant(GVA_Index const* const self, gva_uint const allele_idx, gva_uint const variant_idx);
+gva_index_variant(GVA_Index const* const self,
+    size_t const allele_idx, size_t const variant_idx);
 
 
 #endif // GVA_INDEX_H
