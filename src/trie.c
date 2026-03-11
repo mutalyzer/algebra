@@ -35,6 +35,10 @@ concat(Trie self[static restrict 1],
 {
     size_t const start = array_length(self->strings);
     self->strings = array_ensure(self->allocator, self->strings, sizeof(*self->strings), len);
+    if (self->strings == NULL)
+    {
+        return start;
+    } // if
     memcpy(self->strings + start, key, len);
     array_header(self->strings)->length += len;
     return start;
