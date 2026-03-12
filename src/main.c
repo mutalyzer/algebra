@@ -156,16 +156,78 @@ index_main(int argc, char* argv[static argc])
                 GVA_STRING_PRINT(gva_index_id(index, result.alleles[i].idx)),
                 result.alleles[i].included, result.alleles[i].excluded,
                 GVA_RELATION_LABELS[result.alleles[i].relation]);
+
+            size_t last_q = -1;
+            size_t last_i = gva_index_allele_start(index, result.alleles[i].idx);
+            // TODO: also address trailing disjoints?
             for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
             {
-                // TODO: deal with multiple part hits
-                fprintf(stderr, "        [%u, %u) [%u, %u): %u %u %s " GVA_VARIANT_FMT_SPDI " " GVA_VARIANT_FMT_SPDI "\n",
-                    result.hits[j].query.start, result.hits[j].query.end,
+                for (size_t k = last_q + 1; k < result.hits[j].query.start; ++k)
+                {
+                    fprintf(stderr, "        [) [%zu, %zu): 0 %u disjoint ", k, k + 1,
+                            graph.dom_nodes[k + 1].distance - graph.dom_nodes[k].distance);
+                    fprintf(stderr, "* " GVA_VARIANT_FMT_SPDI_ALLELE "\n",
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_lcs_graph_local_supremal(graph, k, k + 1)));
+                }
+                last_q = result.hits[j].query.start;
+
+                for (size_t k = last_i + 1; k < result.hits[j].index.start; ++k)
+                {
+                    fprintf(stderr, "        [%zu, %zu) [): 0 %u disjoint ", k, k + 1, gva_index_node_distance(index, result.alleles[i].idx, k));
+                    fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE " *\n",
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_index_variant(index, result.alleles[i].idx, k)));
+                }
+                last_i = result.hits[j].index.start;
+
+                fprintf(stderr, "        [%u, %u) [%u, %u): %u %u %s ",
                     result.hits[j].index.start, result.hits[j].index.end,
+                    result.hits[j].query.start, result.hits[j].query.end,
                     result.hits[j].included, result.hits[j].excluded,
-                    GVA_RELATION_LABELS[result.hits[j].relation],
-                    GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, result.hits[j].query.start, result.hits[j].query.end)),
-                    GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_index_variant(index, result.alleles[i].idx, result.hits[j].index.start)));
+                    GVA_RELATION_LABELS[result.hits[j].relation]);
+
+                // print index allele
+                fprintf(stderr, REFERENCE_ID ":");
+                if (result.hits[j].index.end - result.hits[j].index.start > 1)
+                {
+                    fprintf(stderr, "[");
+                }
+                for (size_t k = result.hits[j].index.start; k < result.hits[j].index.end; ++k)
+                {
+                    fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE,
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_index_variant(index, result.alleles[i].idx, k)));
+                    if (k + 1 < result.hits[j].index.end)
+                    {
+                        fprintf(stderr, "/");
+                    }
+                }
+                if (result.hits[j].index.end - result.hits[j].index.start > 1)
+                {
+                    fprintf(stderr, "]");
+                }
+                fprintf(stderr, " ");
+
+                // print query allele
+                fprintf(stderr, REFERENCE_ID ":");
+
+                if (result.hits[j].query.end - result.hits[j].query.start > 1)
+                {
+                    fprintf(stderr, "[");
+                }
+                for (size_t k = result.hits[j].query.start; k < result.hits[j].query.end; ++k)
+                {
+                    fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE,
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_lcs_graph_local_supremal(graph, k, k + 1)));
+                    if (k + 1 < result.hits[j].query.end)
+                    {
+                        fprintf(stderr, "/");
+                    }
+                }
+                if (result.hits[j].query.end - result.hits[j].query.start > 1)
+                {
+                    fprintf(stderr, "]");
+                }
+                fprintf(stderr, "\n");
+
             } // for
         } // for
         result.alleles = ARRAY_DESTROY(gva_std_allocator, result.alleles);
