@@ -66,7 +66,7 @@ compare_query_alleles(void const* a, void const* b)
 
 
 static void
-hla_results_output(GVA_Index *index, GVA_LCS_Graph graph, GVA_String id, GVA_Query_Result const result)
+results_output(GVA_Index *index, GVA_LCS_Graph graph, GVA_String id, GVA_Query_Result const result, bool show_disjoints)
 {
     for (size_t i = 0; i < array_length(result.alleles); ++i)
     {
@@ -85,22 +85,25 @@ hla_results_output(GVA_Index *index, GVA_LCS_Graph graph, GVA_String id, GVA_Que
         // TODO: also address trailing disjoints?
         for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
         {
-            for (size_t k = last_q + 1; k < result.hits[j].query.start; ++k)
+            if (show_disjoints)
             {
-                fprintf(stderr, "        [) [%zu, %zu): 0 %u disjoint ", k, k + 1,
-                        graph.dom_nodes[k + 1].distance - graph.dom_nodes[k].distance);
-                fprintf(stderr, "* " GVA_VARIANT_FMT_SPDI_ALLELE "\n",
-                    GVA_VARIANT_PRINT_SPDI_ALLELE(gva_lcs_graph_local_supremal(graph, k, k + 1)));
-            } // for
-            last_q = result.hits[j].query.start;
+                for (size_t k = last_q + 1; k < result.hits[j].query.start; ++k)
+                {
+                    fprintf(stderr, "        [) [%zu, %zu): 0 %u disjoint ", k, k + 1,
+                            graph.dom_nodes[k + 1].distance - graph.dom_nodes[k].distance);
+                    fprintf(stderr, "* " GVA_VARIANT_FMT_SPDI_ALLELE "\n",
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_lcs_graph_local_supremal(graph, k, k + 1)));
+                } // for
+                last_q = result.hits[j].query.start;
 
-            for (size_t k = last_i + 1; k < result.hits[j].index.start; ++k)
-            {
-                fprintf(stderr, "        [%zu, %zu) [): 0 %u disjoint ", k, k + 1, gva_index_node_distance(index, result.alleles[i].idx, k));
-                fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE " *\n",
-                    GVA_VARIANT_PRINT_SPDI_ALLELE(gva_index_variant(index, result.alleles[i].idx, k)));
-            } // for
-            last_i = result.hits[j].index.start;
+                for (size_t k = last_i + 1; k < result.hits[j].index.start; ++k)
+                {
+                    fprintf(stderr, "        [%zu, %zu) [): 0 %u disjoint ", k, k + 1, gva_index_node_distance(index, result.alleles[i].idx, k));
+                    fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE " *\n",
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_index_variant(index, result.alleles[i].idx, k)));
+                } // for
+                last_i = result.hits[j].index.start;
+            }
 
             fprintf(stderr, "        [%u, %u) [%u, %u): %u %u %s ",
                 result.hits[j].index.start, result.hits[j].index.end,
@@ -151,7 +154,7 @@ hla_results_output(GVA_Index *index, GVA_LCS_Graph graph, GVA_String id, GVA_Que
             fprintf(stderr, "\n");
         } // for
     } // for
-} // hla_results_output
+} // results_output
 
 
 int
@@ -234,7 +237,7 @@ index_main(int argc, char* argv[static argc])
             qsort(result.alleles, array_length(result.alleles), sizeof(*result.alleles), compare_query_alleles);
         } // if
 
-        hla_results_output(index, graph, id, result);
+        results_output(index, graph, id, result, false);
 
         result.alleles = ARRAY_DESTROY(gva_std_allocator, result.alleles);
         result.hits = ARRAY_DESTROY(gva_std_allocator, result.hits);
