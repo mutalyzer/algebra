@@ -65,4 +65,12 @@ gva_index_variant(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx);
 
 
+gva_uint
+gva_index_allele_start(GVA_Index const* const self, size_t const allele_idx);
+
+
+gva_uint
+gva_index_node_distance(GVA_Index const* const self, size_t const allele_idx, size_t const variant_idx);
+
+
 #endif // GVA_INDEX_H
