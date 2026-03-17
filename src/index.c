@@ -246,7 +246,7 @@ variants_with_distance(GVA_Allocator const allocator,
     {
         return 0;  // disjoint
     } // if
-    return MAX(1, (double) included / excluded * MIN(distance_lhs, distance_rhs));
+    return MAX(1, (double) (2 * included - 1) / excluded * MIN(distance_lhs, distance_rhs));
 } // variants_with_distance
 
 
@@ -523,7 +523,7 @@ gva_index_query(GVA_Allocator const allocator,
                     &excluded);
                 if (hits[i].included > 0)
                 {
-                    hits[i].included = MAX(1, (double) hits[i].included / excluded * MIN(self->intervals.nodes[node_idx].distance, graph.dom_nodes[hits[i].query.end].distance - graph.dom_nodes[hits[i].query.start].distance));
+                    hits[i].included = MAX(1, (double) (2 * hits[i].included - 1) / excluded * MIN(self->intervals.nodes[node_idx].distance, graph.dom_nodes[hits[i].query.end].distance - graph.dom_nodes[hits[i].query.start].distance));
                 } // if
             } // if
             // single hit for single query part, relation is already determined
