@@ -365,7 +365,7 @@ gva_index_query(GVA_Allocator const allocator,
         GVA_Interval join;      // index into self->join
         gva_uint     included;  // double purpose: distance or included
         GVA_Interval query;     // wrt local supremal parts in the query
-        gva_uint next;
+        gva_uint     next;
     }* hits = NULL;
 
     // Phase 1: for every local supremal part:
@@ -552,9 +552,6 @@ gva_index_query(GVA_Allocator const allocator,
         } // if
 
         size_t const start = array_length(result.hits);
-        size_t excluded = 0;
-        GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
-
         for (gva_uint i = entries[idx].head; i != GVA_NULL; i = hits[i].next)
         {
             size_t lhs_distance = 0;
@@ -577,6 +574,9 @@ gva_index_query(GVA_Allocator const allocator,
                     .query = hits[i].query,
                 }));
         } // for
+
+        size_t excluded = 0;
+        GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
         ARRAY_APPEND(allocator, result.alleles,
             ((struct GVA_Query_Allele)
             {
