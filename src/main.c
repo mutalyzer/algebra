@@ -489,7 +489,7 @@ int
 main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
-    return extract_main(argc, argv);
-    // return index_main(argc, argv);
+    // return extract_main(argc, argv);
+    return index_main(argc, argv);
     // return supremal_main(argc, argv);
 } // main
