@@ -32,10 +32,9 @@ typedef struct
 
 typedef struct
 {
-    gva_uint id_idx;
-    gva_uint distance;
-    gva_uint start;     // wrt to join
-    gva_uint end;
+    gva_uint     id_idx;
+    gva_uint     distance;
+    GVA_Interval join;
 } Allele;
 
 
@@ -312,7 +311,7 @@ gva_index_insert(GVA_Index* restrict const self,
             ((Allele)
             {
                 .id_idx = id_idx,
-                .start = array_length(self->join),
+                .join.start = array_length(self->join),
             }));
     } // if
 
@@ -345,7 +344,7 @@ gva_index_insert(GVA_Index* restrict const self,
 
     // update allele
     self->alleles[allele_idx].distance += distance;
-    self->alleles[allele_idx].end = self->intervals.nodes[node_idx].alleles;
+    self->alleles[allele_idx].join.end = self->intervals.nodes[node_idx].alleles + 1;
 } // gva_index_insert
 
 
@@ -436,11 +435,11 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
-        fprintf(stderr, GVA_STRING_FMT "\n", GVA_STRING_PRINT(gva_index_id(self, entries[idx].gva_key)));
+        //fprintf(stderr, GVA_STRING_FMT "\n", GVA_STRING_PRINT(gva_index_id(self, entries[idx].gva_key)));
         gva_uint prev = GVA_NULL;
         for (gva_uint i = entries[idx].head; i != GVA_NULL; i = hits[i].next)
         {
-            fprintf(stderr, "  %2u %2u %2u\n", hits[i].join.start, hits[i].query.start, hits[i].included);
+            //fprintf(stderr, "  %2u %2u %2u\n", hits[i].join.start, hits[i].query.start, hits[i].included);
 
             // look aheads for multi hits: build new local supremal
             size_t start_ranges = array_length(ranges);
@@ -476,7 +475,7 @@ gva_index_query(GVA_Allocator const allocator,
                     start = hits[i].query.start;
                 } // if
                 end = hits[i].query.end;
-                fprintf(stderr, "   \" %2u %2u (query)\n", hits[i].query.start, hits[i].included);
+                //fprintf(stderr, "   \" %2u %2u (query)\n", hits[i].query.start, hits[i].included);
             } // while
             if (start_ranges < array_length(ranges))
             {
@@ -493,7 +492,7 @@ gva_index_query(GVA_Allocator const allocator,
                     supremal.end = variant.end;
                 } // else
                 distance += (graph.dom_nodes[end].distance - graph.dom_nodes[start].distance);
-                fprintf(stderr, "  SOLVE multiple query: " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", supremal), distance);
+                //fprintf(stderr, "  SOLVE multiple query: " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", supremal), distance);
                 gva_uint const node_idx = self->join[hits[i].join.start].link ^ entries[idx].gva_key;
                 hits[i].included = variants_with_distance(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance,
@@ -538,11 +537,11 @@ gva_index_query(GVA_Allocator const allocator,
                 supremal.sequence = gva_string_concat(allocator, supremal.sequence, variant.sequence);
                 supremal.end = variant.end;
                 distance += self->intervals.nodes[node_idx].distance;
-                fprintf(stderr, "  %2u  \" %2u (join)\n", hits[i].join.start, hits[i].included);
+                //fprintf(stderr, "  %2u  \" %2u (join)\n", hits[i].join.start, hits[i].included);
             } // while
             if (start_ranges < array_length(ranges))
             {
-                fprintf(stderr, "  SOLVE multiple join: " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", supremal), distance);
+                //fprintf(stderr, "  SOLVE multiple join: " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_VARIANT_PRINT_SPDI("NC_000001.11", supremal), distance);
                 hits[i].included = variants_with_distance(allocator, self->reference.len, self->reference.str,
                     supremal, distance,
                     gva_lcs_graph_local_supremal(graph, hits[i].query.start, hits[i].query.end), graph.dom_nodes[hits[i].query.end].distance - graph.dom_nodes[hits[i].query.start].distance);
@@ -574,7 +573,7 @@ gva_index_query(GVA_Allocator const allocator,
             // non-distance based
             if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - (intmax_t) distance) != hits[i].included)
             {
-                fprintf(stderr, "  SOLVE non-distance based\n");
+                //fprintf(stderr, "  SOLVE non-distance based\n");
                 size_t excluded = 0;
                 hits[i].included = variants_included(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx),
@@ -611,6 +610,14 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
+        // disjoint alleles
+        gva_uint* join = NULL;
+        gva_uint prev_join = self->alleles[entries[idx].gva_key].join.start;
+        size_t distance_join = 0;
+        gva_uint* query = NULL;
+        gva_uint prev_query = 0;
+        size_t distance_query = 0;
+
         gva_uint excluded = 0;
         GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
         fprintf(stderr, GVA_STRING_FMT " %2u %2u %s\n", GVA_STRING_PRINT(gva_index_id(self, entries[idx].gva_key)), entries[idx].included, excluded, GVA_RELATION_LABELS[relation]);
@@ -621,24 +628,92 @@ gva_index_query(GVA_Allocator const allocator,
                 fprintf(stderr, "  [");
                 for (gva_uint j = hits[i].join.start; j < hits[i].join.end; ++j)
                 {
+                    for (gva_uint k = prev_join; k < ranges[j]; ++k)
+                    {
+                        ARRAY_APPEND(allocator, join, k);
+                        distance_join += self->intervals.nodes[self->join[k].link ^ entries[idx].gva_key].distance;
+                    } // for
+                    prev_join = ranges[j] + 1;
                     fprintf(stderr, "%2u, ", ranges[j]);
                 } // for
                 fprintf(stderr, "] %2u %2u %2u %s\n", hits[i].query.start, hits[i].included, hits[i].excluded, GVA_RELATION_LABELS[hits[i].relation]);
+                for (gva_uint k = prev_query; k < hits[i].query.start; ++k)
+                {
+                    ARRAY_APPEND(allocator, query, k);
+                } // for
+                distance_query += graph.dom_nodes[hits[i].query.start].distance - graph.dom_nodes[prev_query].distance;
+                prev_query = hits[i].query.start + 1;
             } // if
             else if (hits[i].query.end - hits[i].query.start > 1)
             {
                 fprintf(stderr, "  %2u [", hits[i].join.start);
                 for (gva_uint j = hits[i].query.start; j < hits[i].query.end; ++j)
                 {
+                    for (gva_uint k = prev_query; k < ranges[j]; ++k)
+                    {
+                        ARRAY_APPEND(allocator, query, k);
+                    } // for
+                    distance_query += graph.dom_nodes[ranges[j]].distance - graph.dom_nodes[prev_query].distance;
+                    prev_query = ranges[j] + 1;
                     fprintf(stderr, "%2u, ", ranges[j]);
                 } // for
                 fprintf(stderr, "] %2u %2u %s\n", hits[i].included, hits[i].excluded, GVA_RELATION_LABELS[hits[i].relation]);
+                for (gva_uint k = prev_join; k < hits[i].join.start; ++k)
+                {
+                    ARRAY_APPEND(allocator, join, k);
+                    distance_join += self->intervals.nodes[self->join[k].link ^ entries[idx].gva_key].distance;
+                } // for
+                prev_join = hits[i].join.start + 1;
             } // if
             else if (hits[i].included > 0)
             {
                 fprintf(stderr, "  %2u %2u %2u %2u %s\n", hits[i].join.start, hits[i].query.start, hits[i].included, hits[i].excluded, GVA_RELATION_LABELS[hits[i].relation]);
+                for (gva_uint k = prev_join; k < hits[i].join.start; ++k)
+                {
+                    ARRAY_APPEND(allocator, join, k);
+                    distance_join += self->intervals.nodes[self->join[k].link ^ entries[idx].gva_key].distance;
+                } // for
+                prev_join = hits[i].join.start + 1;
+                for (gva_uint k = prev_query; k < hits[i].query.start; ++k)
+                {
+                    ARRAY_APPEND(allocator, query, k);
+                } // for
+                distance_query += graph.dom_nodes[hits[i].query.start].distance - graph.dom_nodes[prev_query].distance;
+                prev_query = hits[i].query.start + 1;
             } // if
         } // for
+        for (gva_uint k = prev_join; k < self->alleles[entries[idx].gva_key].join.end; ++k)
+        {
+            ARRAY_APPEND(allocator, join, k);
+            distance_join += self->intervals.nodes[self->join[k].link ^ entries[idx].gva_key].distance;
+        } // for
+        for (gva_uint k = prev_query; k < array_length(graph.dom_nodes) - 1; ++k)
+        {
+            ARRAY_APPEND(allocator, query, k);
+        } // for
+        distance_query += graph.dom_nodes[array_length(graph.dom_nodes) - 1].distance - graph.dom_nodes[prev_query].distance;
+
+        if (distance_join > 0)
+        {
+            fprintf(stderr, "  [");
+            for (size_t i = 0; i < array_length(join); ++i)
+            {
+                fprintf(stderr, "%2u, ", join[i]);
+            } // for
+            fprintf(stderr, "]  *  0 %2zu disjoint\n", distance_join);
+        } // if
+        if (distance_query > 0)
+        {
+            fprintf(stderr, "   * [");
+            for (size_t i = 0; i < array_length(query); ++i)
+            {
+                fprintf(stderr, "%2u, ", query[i]);
+            } // for
+            fprintf(stderr, "]  0 %2zu disjoint\n", distance_query);
+        } // if
+
+        join = ARRAY_DESTROY(allocator, join);
+        query = ARRAY_DESTROY(allocator, query);
     } // for
 
     ranges = ARRAY_DESTROY(allocator, ranges);
@@ -667,7 +742,7 @@ gva_index_variant(GVA_Index const* const self,
 gva_uint
 gva_index_allele_start(GVA_Index const* const self, size_t const allele_idx)
 {
-    return self->alleles[allele_idx].start;
+    return self->alleles[allele_idx].join.start;
 } // gva_index_allele_start
 
 
