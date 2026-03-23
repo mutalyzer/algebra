@@ -60,13 +60,13 @@ relation_from_included(size_t const included,
     {
         return GVA_EQUIVALENT;
     } // if
-    if (rhs_distance == included)
-    {
-         return GVA_CONTAINS;
-    } // if
     if (lhs_distance == included)
     {
         return GVA_IS_CONTAINED;
+    } // if
+    if (rhs_distance == included)
+    {
+         return GVA_CONTAINS;
     } // if
     return GVA_OVERLAP;
 } // relation_from_included
