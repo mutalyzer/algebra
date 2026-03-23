@@ -140,7 +140,7 @@ static size_t
 variants_included(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const lhs, GVA_Variant const rhs,
-    size_t* const excluded)
+    size_t excluded[static 1])
 {
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
