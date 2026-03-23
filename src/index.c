@@ -53,7 +53,7 @@ struct GVA_Index
 static inline GVA_Relation
 relation_from_included(size_t const included,
     size_t const lhs_distance, size_t const rhs_distance,
-    gva_uint* const excluded)
+    gva_uint excluded[static 1])
 {
     *excluded = lhs_distance + rhs_distance - 2 * included;
     if (*excluded == 0)
