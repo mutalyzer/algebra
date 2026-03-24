@@ -554,17 +554,19 @@ gva_index_query(GVA_Allocator const allocator,
             if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - (intmax_t) distance) != hits[i].distance)
             {
                 size_t excluded = 0;
-                size_t const included = variants_included(allocator, self->reference.len, self->reference.str,
+                size_t included = variants_included(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx),
                     gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1),
                     &excluded);
+
                 if (included > 0)
                 {
+                    included = MAX(1, (double) (2 * included - 1) / excluded * MIN(self->intervals.nodes[node_idx].distance, distance));
                     ARRAY_APPEND(allocator, result.hits, ((struct GVA_Query_Hit)
                         {
                             .relation = GVA_OVERLAP,
-                            .included = MAX(1, (double) (2 * included - 1) / excluded * MIN(self->intervals.nodes[node_idx].distance, distance)),
-                            .excluded = excluded,
+                            .included = included,
+                            .excluded = self->intervals.nodes[node_idx].distance + distance - 2 * included,
                             .query_parts = {hits[i].query, hits[i].query},
                             .index_parts = {hits[i].join, hits[i].join},
                         }));
