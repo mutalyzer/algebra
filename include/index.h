@@ -58,7 +58,11 @@ gva_index_query(GVA_Allocator const allocator,
 
 
 GVA_String
-gva_index_id(GVA_Index const* const self, size_t const idx);
+gva_index_allele_id(GVA_Index const* const self, size_t const idx);
+
+
+GVA_Interval
+gva_index_allele_parts(GVA_Index const* const self, size_t const idx);
 
 
 GVA_Variant
@@ -69,10 +73,6 @@ gva_index_variant(GVA_Index const* const self,
 gva_uint
 gva_index_variant_distance(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx);
-
-
-GVA_Interval
-gva_index_allele_parts(GVA_Index const* const self, size_t const allele_idx);
 
 
 #endif // GVA_INDEX_H

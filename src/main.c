@@ -67,121 +67,150 @@ compare_query_alleles(void const* a, void const* b)
 
 static void
 report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA_String const id,
-    GVA_Query_Result const result, bool const query_disjoint, bool const index_disjoint)
+    GVA_Query_Result const result,
+    bool const hits, bool const query_disjoint, bool const index_disjoint)
 {
     for (size_t i = 0; i < array_length(result.alleles); ++i)
     {
         fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %zu\n",
-            GVA_STRING_PRINT(gva_index_id(index, result.alleles[i].idx)),
+            GVA_STRING_PRINT(gva_index_allele_id(index, result.alleles[i].idx)),
             GVA_RELATION_LABELS[result.alleles[i].relation],
             GVA_STRING_PRINT(id),
             result.alleles[i].included, result.alleles[i].excluded, array_length(graph.dom_nodes) - 1);
-        fprintf(stderr, GVA_STRING_FMT ": %u %u %s\n",
-            GVA_STRING_PRINT(gva_index_id(index, result.alleles[i].idx)),
-            result.alleles[i].included, result.alleles[i].excluded,
-            GVA_RELATION_LABELS[result.alleles[i].relation]);
 
-        gva_uint* join = NULL;
-        gva_uint prev_join = gva_index_allele_parts(index, result.alleles[i].idx).start;
-        size_t distance_join = 0;
-        gva_uint* query = NULL;
-        gva_uint prev_query = 0;
-        size_t distance_query = 0;
-
-        for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
+        if (hits)
         {
-            if (result.hits[j].index_parts.end - result.hits[j].index_parts.start > 1)
+            fprintf(stderr, GVA_STRING_FMT ": %u %u %s\n",
+                GVA_STRING_PRINT(gva_index_allele_id(index, result.alleles[i].idx)),
+                result.alleles[i].included, result.alleles[i].excluded,
+                GVA_RELATION_LABELS[result.alleles[i].relation]);
+
+            gva_uint* join = NULL;
+            gva_uint prev_join = gva_index_allele_parts(index, result.alleles[i].idx).start;
+            size_t distance_join = 0;
+            gva_uint* query = NULL;
+            gva_uint prev_query = 0;
+            size_t distance_query = 0;
+
+            for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
+            {
+                if (result.hits[j].index_parts.end - result.hits[j].index_parts.start > 1)
+                {
+                    fprintf(stderr, "  [");
+                    for (gva_uint k = result.hits[j].index_parts.start; k < result.hits[j].index_parts.end; ++k)
+                    {
+                        if (index_disjoint)
+                        {
+                            for (gva_uint ii = prev_join; ii < result.parts[k]; ++ii)
+                            {
+                                ARRAY_APPEND(gva_std_allocator, join, ii);
+                                distance_join += gva_index_variant_distance(index, result.alleles[i].idx, ii);
+                            } // for
+                            prev_join = result.parts[k] + 1;
+                        } // if
+                        fprintf(stderr, "%2u, ", result.parts[k]);
+                    } // for
+                    fprintf(stderr, "] %2u %2u %2u %s\n", result.hits[j].query_parts.start, result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
+                    if (query_disjoint)
+                    {
+                        for (gva_uint k = prev_query; k < result.hits[j].query_parts.start; ++k)
+                        {
+                            ARRAY_APPEND(gva_std_allocator, query, k);
+                        } // for
+                        distance_query += graph.dom_nodes[result.hits[j].query_parts.start].distance - graph.dom_nodes[prev_query].distance;
+                        prev_query = result.hits[j].query_parts.start + 1;
+                    } // if
+                } // if
+                else if (result.hits[j].query_parts.end - result.hits[j].query_parts.start > 1)
+                {
+                    fprintf(stderr, "  %2u [", result.hits[j].index_parts.start);
+                    for (gva_uint k = result.hits[j].query_parts.start; k < result.hits[j].query_parts.end; ++k)
+                    {
+                        if (query_disjoint)
+                        {
+                            for (gva_uint ii = prev_query; ii < result.parts[k]; ++ii)
+                            {
+                                ARRAY_APPEND(gva_std_allocator, query, ii);
+                            } // for
+                            distance_query += graph.dom_nodes[result.parts[k]].distance - graph.dom_nodes[prev_query].distance;
+                            prev_query = result.parts[k] + 1;
+                        } // if
+                        fprintf(stderr, "%2u, ", result.parts[k]);
+                    } // for
+                    fprintf(stderr, "] %2u %2u %s\n", result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
+                    if (index_disjoint)
+                    {
+                        for (gva_uint k = prev_join; k < result.hits[j].index_parts.start; ++k)
+                        {
+                            ARRAY_APPEND(gva_std_allocator, join, k);
+                            distance_join += gva_index_variant_distance(index, result.alleles[i].idx, k);
+                        } // for
+                        prev_join = result.hits[j].index_parts.start + 1;
+                    } // if
+                } // if
+                else if (result.hits[j].included > 0)
+                {
+                    fprintf(stderr, "  %2u %2u %2u %2u %s\n", result.hits[j].index_parts.start, result.hits[j].query_parts.start, result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
+                    if (index_disjoint)
+                    {
+                        for (gva_uint k = prev_join; k < result.hits[j].index_parts.start; ++k)
+                        {
+                            ARRAY_APPEND(gva_std_allocator, join, k);
+                            distance_join += gva_index_variant_distance(index, result.alleles[i].idx, k);
+                        } // for
+                        prev_join = result.hits[j].index_parts.start + 1;
+                    } // if
+                    if (query_disjoint)
+                    {
+                        for (gva_uint k = prev_query; k < result.hits[j].query_parts.start; ++k)
+                        {
+                            ARRAY_APPEND(gva_std_allocator, query, k);
+                        } // for
+                        distance_query += graph.dom_nodes[result.hits[j].query_parts.start].distance - graph.dom_nodes[prev_query].distance;
+                        prev_query = result.hits[j].query_parts.start + 1;
+                    } // if
+                } // if
+            } // for
+
+            if (index_disjoint)
+            {
+                for (gva_uint k = prev_join; k < gva_index_allele_parts(index, result.alleles[i].idx).end; ++k)
+                {
+                    ARRAY_APPEND(gva_std_allocator, join, k);
+                    distance_join += gva_index_variant_distance(index, result.alleles[i].idx, k);
+                } // for
+            } // if
+            if (query_disjoint)
+            {
+                for (gva_uint k = prev_query; k < array_length(graph.dom_nodes) - 1; ++k)
+                {
+                    ARRAY_APPEND(gva_std_allocator, query, k);
+                } // for
+                distance_query += graph.dom_nodes[array_length(graph.dom_nodes) - 1].distance - graph.dom_nodes[prev_query].distance;
+            } // if
+
+            if (join != NULL)
             {
                 fprintf(stderr, "  [");
-                for (gva_uint k = result.hits[j].index_parts.start; k < result.hits[j].index_parts.end; ++k)
+                for (size_t i = 0; i < array_length(join); ++i)
                 {
-                    for (gva_uint ii = prev_join; ii < result.parts[k]; ++ii)
-                    {
-                        ARRAY_APPEND(gva_std_allocator, join, ii);
-                        distance_join += gva_index_variant_distance(index, result.alleles[i].idx, ii);
-                    } // for
-                    prev_join = result.parts[k] + 1;
-                    fprintf(stderr, "%2u, ", result.parts[k]);
+                    fprintf(stderr, "%2u, ", join[i]);
                 } // for
-                fprintf(stderr, "] %2u %2u %2u %s\n", result.hits[j].query_parts.start, result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
-                for (gva_uint k = prev_query; k < result.hits[j].query_parts.start; ++k)
-                {
-                    ARRAY_APPEND(gva_std_allocator, query, k);
-                } // for
-                distance_query += graph.dom_nodes[result.hits[j].query_parts.start].distance - graph.dom_nodes[prev_query].distance;
-                prev_query = result.hits[j].query_parts.start + 1;
+                fprintf(stderr, "]  *  0 %2zu disjoint\n", distance_join);
             } // if
-            else if (result.hits[j].query_parts.end - result.hits[j].query_parts.start > 1)
+            if (query != NULL)
             {
-                fprintf(stderr, "  %2u [", result.hits[j].index_parts.start);
-                for (gva_uint k = result.hits[j].query_parts.start; k < result.hits[j].query_parts.end; ++k)
+                fprintf(stderr, "   * [");
+                for (size_t i = 0; i < array_length(query); ++i)
                 {
-                    for (gva_uint ii = prev_query; ii < result.parts[k]; ++ii)
-                    {
-                        ARRAY_APPEND(gva_std_allocator, query, ii);
-                    } // for
-                    distance_query += graph.dom_nodes[result.parts[k]].distance - graph.dom_nodes[prev_query].distance;
-                    prev_query = result.parts[k] + 1;
-                    fprintf(stderr, "%2u, ", result.parts[k]);
+                    fprintf(stderr, "%2u, ", query[i]);
                 } // for
-                fprintf(stderr, "] %2u %2u %s\n", result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
-                for (gva_uint k = prev_join; k < result.hits[j].index_parts.start; ++k)
-                {
-                    ARRAY_APPEND(gva_std_allocator, join, k);
-                    distance_join += gva_index_variant_distance(index, result.alleles[i].idx, k);
-                } // for
-                prev_join = result.hits[j].index_parts.start + 1;
+                fprintf(stderr, "]  0 %2zu disjoint\n", distance_query);
             } // if
-            else if (result.hits[j].included > 0)
-            {
-                fprintf(stderr, "  %2u %2u %2u %2u %s\n", result.hits[j].index_parts.start, result.hits[j].query_parts.start, result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
-                for (gva_uint k = prev_join; k < result.hits[j].index_parts.start; ++k)
-                {
-                    ARRAY_APPEND(gva_std_allocator, join, k);
-                    distance_join += gva_index_variant_distance(index, result.alleles[i].idx, k);
-                } // for
-                prev_join = result.hits[j].index_parts.start + 1;
-                for (gva_uint k = prev_query; k < result.hits[j].query_parts.start; ++k)
-                {
-                    ARRAY_APPEND(gva_std_allocator, query, k);
-                } // for
-                distance_query += graph.dom_nodes[result.hits[j].query_parts.start].distance - graph.dom_nodes[prev_query].distance;
-                prev_query = result.hits[j].query_parts.start + 1;
-            } // if
-        } // for
 
-        for (gva_uint k = prev_join; k < gva_index_allele_parts(index, result.alleles[i].idx).end; ++k)
-        {
-            ARRAY_APPEND(gva_std_allocator, join, k);
-            distance_join += gva_index_variant_distance(index, result.alleles[i].idx, k);
-        } // for
-        for (gva_uint k = prev_query; k < array_length(graph.dom_nodes) - 1; ++k)
-        {
-            ARRAY_APPEND(gva_std_allocator, query, k);
-        } // for
-        distance_query += graph.dom_nodes[array_length(graph.dom_nodes) - 1].distance - graph.dom_nodes[prev_query].distance;
-
-        if (join != NULL)
-        {
-            fprintf(stderr, "  [");
-            for (size_t i = 0; i < array_length(join); ++i)
-            {
-                fprintf(stderr, "%2u, ", join[i]);
-            } // for
-            fprintf(stderr, "]  *  0 %2zu disjoint\n", distance_join);
+            join = ARRAY_DESTROY(gva_std_allocator, join);
+            query = ARRAY_DESTROY(gva_std_allocator, query);
         } // if
-        if (query != NULL)
-        {
-            fprintf(stderr, "   * [");
-            for (size_t i = 0; i < array_length(query); ++i)
-            {
-                fprintf(stderr, "%2u, ", query[i]);
-            } // for
-            fprintf(stderr, "]  0 %2zu disjoint\n", distance_query);
-        } // if
-
-        join = ARRAY_DESTROY(gva_std_allocator, join);
-        query = ARRAY_DESTROY(gva_std_allocator, query);
     } // for
 } // report_query_result
 
@@ -266,7 +295,7 @@ index_main(int argc, char* argv[static argc])
             qsort(result.alleles, array_length(result.alleles), sizeof(*result.alleles), compare_query_alleles);
         } // if
 
-        report_query_result(index, graph, id, result, false, false);
+        report_query_result(index, graph, id, result, true, true, true);
 
         result.alleles = ARRAY_DESTROY(gva_std_allocator, result.alleles);
         result.hits = ARRAY_DESTROY(gva_std_allocator, result.hits);

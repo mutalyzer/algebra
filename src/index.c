@@ -624,10 +624,17 @@ gva_index_query(GVA_Allocator const allocator,
 
 
 inline GVA_String
-gva_index_id(GVA_Index const* const self, size_t const idx)
+gva_index_allele_id(GVA_Index const* const self, size_t const idx)
 {
     return trie_string(self->ids, self->alleles[idx].id_idx);
-} // gva_index_id
+} // gva_index_allele_id
+
+
+inline GVA_Interval
+gva_index_allele_parts(GVA_Index const* const self, size_t const idx)
+{
+    return self->alleles[idx].join;
+} // gva_index_allele_parts
 
 
 inline GVA_Variant
@@ -638,16 +645,9 @@ gva_index_variant(GVA_Index const* const self,
 } // gva_index_variant
 
 
-gva_uint
+inline gva_uint
 gva_index_variant_distance(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx)
 {
     return self->intervals.nodes[self->join[variant_idx].link ^ allele_idx].distance;
 } // gva_index_variant_distance
-
-
-GVA_Interval
-gva_index_allele_parts(GVA_Index const* const self, size_t const allele_idx)
-{
-    return self->alleles[allele_idx].join;
-} // gva_index_allele_parts
