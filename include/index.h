@@ -29,9 +29,10 @@ typedef struct
         GVA_Relation relation;
         gva_uint     included;
         gva_uint     excluded;
-        GVA_Interval index;
-        GVA_Interval query;
+        GVA_Interval index_parts;
+        GVA_Interval query_parts;
     }* hits;
+    gva_uint* parts;
 } GVA_Query_Result;
 
 
@@ -66,11 +67,12 @@ gva_index_variant(GVA_Index const* const self,
 
 
 gva_uint
-gva_index_allele_start(GVA_Index const* const self, size_t const allele_idx);
+gva_index_variant_distance(GVA_Index const* const self,
+    size_t const allele_idx, size_t const variant_idx);
 
 
-gva_uint
-gva_index_node_distance(GVA_Index const* const self, size_t const allele_idx, size_t const variant_idx);
+GVA_Interval
+gva_index_allele_parts(GVA_Index const* const self, size_t const allele_idx);
 
 
 #endif // GVA_INDEX_H
