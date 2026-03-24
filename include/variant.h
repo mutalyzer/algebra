@@ -19,6 +19,7 @@
 #define GVA_VARIANT_PRINT_SPDI_ALLELE(variant) variant.start, (variant.end - variant.start), GVA_STRING_PRINT(variant.sequence)
 #define GVA_VARIANT_FMT_SPDI_ALLELE GVA_UINT_FMT ":" GVA_UINT_FMT ":" GVA_STRING_FMT
 
+
 typedef struct
 {
     gva_uint   start;
