@@ -491,7 +491,7 @@ gva_index_query(GVA_Allocator const allocator,
 
                 size_t excluded = 0;
                 GVA_Relation const relation = relation_from_included(included, self->intervals.nodes[node_idx].distance, distance, &excluded);
-                ARRAY_APPEND(allocator, result.hits, ((struct GVA_Query_Hit)
+                ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                     {
                         .relation = relation,
                         .included = included,
@@ -534,7 +534,7 @@ gva_index_query(GVA_Allocator const allocator,
                 size_t excluded = 0;
                 GVA_Relation const relation = relation_from_included(included, distance, graph.dom_nodes[hits[i].query + 1].distance - graph.dom_nodes[hits[i].query].distance, &excluded);
 
-                ARRAY_APPEND(allocator, result.hits, ((struct GVA_Query_Hit)
+                ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                     {
                         .relation = relation,
                         .included = included,
@@ -562,7 +562,7 @@ gva_index_query(GVA_Allocator const allocator,
                 if (included > 0)
                 {
                     included = MAX(1, (double) (2 * included - 1) / excluded * MIN(self->intervals.nodes[node_idx].distance, distance));
-                    ARRAY_APPEND(allocator, result.hits, ((struct GVA_Query_Hit)
+                    ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                         {
                             .relation = GVA_OVERLAP,
                             .included = included,
@@ -586,7 +586,7 @@ gva_index_query(GVA_Allocator const allocator,
             size_t excluded = 0;
             GVA_Relation const relation = relation_from_included(included, self->intervals.nodes[node_idx].distance, distance, &excluded);
 
-            ARRAY_APPEND(allocator, result.hits, ((struct GVA_Query_Hit)
+            ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                 {
                     .relation = relation,
                     .included = included,
@@ -606,7 +606,7 @@ gva_index_query(GVA_Allocator const allocator,
         size_t excluded = 0;
         GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
 
-        ARRAY_APPEND(allocator, result.alleles, ((struct GVA_Query_Allele)
+        ARRAY_APPEND(allocator, result.alleles, ((GVA_Query_Allele)
             {
                 .idx = entries[idx].gva_key,
                 .relation = relation,
@@ -645,7 +645,7 @@ gva_index_variant(GVA_Index const* const self,
 } // gva_index_variant
 
 
-inline gva_uint
+inline size_t
 gva_index_variant_distance(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx)
 {

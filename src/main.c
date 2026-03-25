@@ -53,8 +53,8 @@ parse_line(char const line[static restrict LINE_SIZE],
 static int
 compare_query_alleles(void const* a, void const* b)
 {
-    struct GVA_Query_Allele const lhs = *(struct GVA_Query_Allele*) a;
-    struct GVA_Query_Allele const rhs = *(struct GVA_Query_Allele*) b;
+    GVA_Query_Allele const lhs = *(GVA_Query_Allele*) a;
+    GVA_Query_Allele const rhs = *(GVA_Query_Allele*) b;
 
     if (lhs.included > rhs.included ||
         (lhs.included == rhs.included && lhs.excluded < rhs.excluded))

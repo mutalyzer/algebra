@@ -16,23 +16,29 @@ typedef struct GVA_Index GVA_Index;  // opaque
 
 typedef struct
 {
-    struct GVA_Query_Allele
-    {
-        gva_uint     idx;
-        GVA_Relation relation;
-        gva_uint     included;
-        gva_uint     excluded;
-        GVA_Interval hits;
-    }* alleles;
-    struct GVA_Query_Hit
-    {
-        GVA_Relation relation;
-        gva_uint     included;
-        gva_uint     excluded;
-        GVA_Interval index_parts;
-        GVA_Interval query_parts;
-    }* hits;
-    gva_uint* parts;
+    gva_uint     idx;
+    GVA_Relation relation;
+    gva_uint     included;
+    gva_uint     excluded;
+    GVA_Interval hits;
+} GVA_Query_Allele;
+
+
+typedef struct
+{
+    GVA_Relation relation;
+    gva_uint     included;
+    gva_uint     excluded;
+    GVA_Interval index_parts;
+    GVA_Interval query_parts;
+} GVA_Query_Hit;
+
+
+typedef struct
+{
+    GVA_Query_Allele* alleles;
+    GVA_Query_Hit*    hits;
+    gva_uint*         parts;
 } GVA_Query_Result;
 
 
@@ -70,7 +76,7 @@ gva_index_variant(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx);
 
 
-gva_uint
+size_t
 gva_index_variant_distance(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx);
 
