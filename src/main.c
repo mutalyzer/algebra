@@ -23,8 +23,8 @@
 #define LINE_SIZE 8194
 
 // #define REFERENCE_ID "NC_000022.11"
-// #define REFERENCE_ID "NC_000006.12"
-#define REFERENCE_ID "NC_000001.11"
+#define REFERENCE_ID "NC_000006.12"
+// #define REFERENCE_ID "NC_000001.11"
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -70,6 +70,9 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
     GVA_Query_Result const result,
     bool const hits, bool const query_disjoint, bool const index_disjoint)
 {
+    gva_uint* join = NULL;
+    gva_uint* query = NULL;
+
     for (size_t i = 0; i < array_length(result.alleles); ++i)
     {
         fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %zu\n",
@@ -85,12 +88,18 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
                 result.alleles[i].included, result.alleles[i].excluded,
                 GVA_RELATION_LABELS[result.alleles[i].relation]);
 
-            gva_uint* join = NULL;
             gva_uint prev_join = gva_index_allele_parts(index, result.alleles[i].idx).start;
             size_t distance_join = 0;
-            gva_uint* query = NULL;
             gva_uint prev_query = 0;
             size_t distance_query = 0;
+            if (join != NULL)
+            {
+                array_header(join)->length = 0;
+            } // if
+            if (query != NULL)
+            {
+                array_header(query)->length = 0;
+            } // if
 
             for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
             {
@@ -207,11 +216,11 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
                 } // for
                 fprintf(stderr, "]  0 %2zu disjoint\n", distance_query);
             } // if
-
-            join = ARRAY_DESTROY(gva_std_allocator, join);
-            query = ARRAY_DESTROY(gva_std_allocator, query);
         } // if
     } // for
+
+    join = ARRAY_DESTROY(gva_std_allocator, join);
+    query = ARRAY_DESTROY(gva_std_allocator, query);
 } // report_query_result
 
 
