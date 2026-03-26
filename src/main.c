@@ -83,8 +83,9 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
 
         if (hits)
         {
-            fprintf(stderr, GVA_STRING_FMT ": %u %u %s\n",
+            fprintf(stderr, GVA_STRING_FMT " " GVA_STRING_FMT " %u %u %s\n",
                 GVA_STRING_PRINT(gva_index_allele_id(index, result.alleles[i].idx)),
+                GVA_STRING_PRINT(id),
                 result.alleles[i].included, result.alleles[i].excluded,
                 GVA_RELATION_LABELS[result.alleles[i].relation]);
 
@@ -105,7 +106,8 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
             {
                 if (result.hits[j].index_parts.end - result.hits[j].index_parts.start > 1)
                 {
-                    fprintf(stderr, "  [");
+                    fprintf(stderr, "  " REFERENCE_ID ":[");
+                    size_t sum = 0;
                     for (gva_uint k = result.hits[j].index_parts.start; k < result.hits[j].index_parts.end; ++k)
                     {
                         if (index_disjoint)
@@ -117,9 +119,16 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
                             } // for
                             prev_join = result.parts[k] + 1;
                         } // if
-                        fprintf(stderr, "%2u, ", result.parts[k]);
+                        fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE " (%zu), ",
+                            GVA_VARIANT_PRINT_SPDI_ALLELE(gva_index_variant(index, result.alleles[i].idx, result.parts[k])),
+                            gva_index_variant_distance(index, result.alleles[i].idx, result.parts[k]));
+                        sum += gva_index_variant_distance(index, result.alleles[i].idx, result.parts[k]);
                     } // for
-                    fprintf(stderr, "] %2u %2u %2u %s\n", result.hits[j].query_parts.start, result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
+                    fprintf(stderr, "] (%zu) " GVA_VARIANT_FMT_SPDI " (%u) %u %u %s\n",
+                        sum,
+                        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, result.hits[j].query_parts.start, result.hits[j].query_parts.start + 1)),
+                        graph.dom_nodes[result.hits[j].query_parts.start + 1].distance - graph.dom_nodes[result.hits[j].query_parts.start].distance,
+                        result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
                     if (query_disjoint)
                     {
                         for (gva_uint k = prev_query; k < result.hits[j].query_parts.start; ++k)
@@ -132,7 +141,10 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
                 } // if
                 else if (result.hits[j].query_parts.end - result.hits[j].query_parts.start > 1)
                 {
-                    fprintf(stderr, "  %2u [", result.hits[j].index_parts.start);
+                    fprintf(stderr, "  " GVA_VARIANT_FMT_SPDI " (%zu) " REFERENCE_ID ":[",
+                        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_index_variant(index, result.alleles[i].idx, result.hits[j].index_parts.start)),
+                        gva_index_variant_distance(index, result.alleles[i].idx, result.hits[j].index_parts.start));
+                    size_t sum = 0;
                     for (gva_uint k = result.hits[j].query_parts.start; k < result.hits[j].query_parts.end; ++k)
                     {
                         if (query_disjoint)
@@ -144,9 +156,12 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
                             distance_query += graph.dom_nodes[result.parts[k]].distance - graph.dom_nodes[prev_query].distance;
                             prev_query = result.parts[k] + 1;
                         } // if
-                        fprintf(stderr, "%2u, ", result.parts[k]);
+                        fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE " (%u), ",
+                            GVA_VARIANT_PRINT_SPDI_ALLELE(gva_lcs_graph_local_supremal(graph, result.parts[k], result.parts[k] + 1)),
+                            graph.dom_nodes[result.parts[k] + 1].distance - graph.dom_nodes[result.parts[k]].distance);
+                        sum += graph.dom_nodes[result.parts[k] + 1].distance - graph.dom_nodes[result.parts[k]].distance;
                     } // for
-                    fprintf(stderr, "] %2u %2u %s\n", result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
+                    fprintf(stderr, "] (%zu) %u %u %s\n", sum, result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
                     if (index_disjoint)
                     {
                         for (gva_uint k = prev_join; k < result.hits[j].index_parts.start; ++k)
@@ -159,7 +174,12 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
                 } // if
                 else if (result.hits[j].included > 0)
                 {
-                    fprintf(stderr, "  %2u %2u %2u %2u %s\n", result.hits[j].index_parts.start, result.hits[j].query_parts.start, result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
+                    fprintf(stderr, "  " GVA_VARIANT_FMT_SPDI " (%u) " GVA_VARIANT_FMT_SPDI " (%zu) %u %u %s\n",
+                        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, result.hits[j].query_parts.start, result.hits[j].query_parts.start + 1)),
+                        graph.dom_nodes[result.hits[j].query_parts.start + 1].distance - graph.dom_nodes[result.hits[j].query_parts.start].distance,
+                        GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_index_variant(index, result.alleles[i].idx, result.hits[j].index_parts.start)),
+                        gva_index_variant_distance(index, result.alleles[i].idx, result.hits[j].index_parts.start),
+                        result.hits[j].included, result.hits[j].excluded, GVA_RELATION_LABELS[result.hits[j].relation]);
                     if (index_disjoint)
                     {
                         for (gva_uint k = prev_join; k < result.hits[j].index_parts.start; ++k)
@@ -198,23 +218,27 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
                 distance_query += graph.dom_nodes[array_length(graph.dom_nodes) - 1].distance - graph.dom_nodes[prev_query].distance;
             } // if
 
-            if (join != NULL)
+            if (index_disjoint && join != NULL)
             {
-                fprintf(stderr, "  [");
-                for (size_t i = 0; i < array_length(join); ++i)
+                fprintf(stderr, "  " REFERENCE_ID ":[");
+                for (size_t j = 0; j < array_length(join); ++j)
                 {
-                    fprintf(stderr, "%2u, ", join[i]);
+                    fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE " (%zu), ",
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_index_variant(index, result.alleles[i].idx, join[j])),
+                        gva_index_variant_distance(index, result.alleles[i].idx, join[j]));
                 } // for
-                fprintf(stderr, "]  *  0 %2zu disjoint\n", distance_join);
+                fprintf(stderr, "] * 0 %zu disjoint\n", distance_join);
             } // if
-            if (query != NULL)
+            if (query_disjoint && query != NULL)
             {
-                fprintf(stderr, "   * [");
-                for (size_t i = 0; i < array_length(query); ++i)
+                fprintf(stderr, "  * " REFERENCE_ID ":[");
+                for (size_t j = 0; j < array_length(query); ++j)
                 {
-                    fprintf(stderr, "%2u, ", query[i]);
+                    fprintf(stderr, GVA_VARIANT_FMT_SPDI_ALLELE " (%u), ",
+                        GVA_VARIANT_PRINT_SPDI_ALLELE(gva_lcs_graph_local_supremal(graph, query[j], query[j] + 1)),
+                        graph.dom_nodes[query[j] + 1].distance - graph.dom_nodes[query[j]].distance);
                 } // for
-                fprintf(stderr, "]  0 %2zu disjoint\n", distance_query);
+                fprintf(stderr, "] 0 %zu disjoint\n", distance_query);
             } // if
         } // if
     } // for
@@ -296,7 +320,7 @@ index_main(int argc, char* argv[static argc])
         } // if
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        fprintf(stderr, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
+        //fprintf(stderr, "\nQuery (" GVA_STRING_FMT "): " GVA_VARIANT_FMT_SPDI " (%zu)\n", GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
         GVA_Query_Result result = gva_index_query(gva_std_allocator, index, graph);
 
         if (array_length(result.alleles) > 0)
