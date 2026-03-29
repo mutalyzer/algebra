@@ -51,7 +51,7 @@ merge(GVA_Allocator const allocator,
             {
                 .match = {rhs.nodes[i].match.row, rhs.nodes[i].match.col + offset, rhs.nodes[i].match.length},
                 .edges = rhs.nodes[i].edges == GVA_NULL ? GVA_NULL : rhs.nodes[i].edges + offset_edges,
-                .lambda = rhs.nodes[i].lambda == GVA_NULL ? GVA_NULL : rhs.nodes[i].lambda + offset_nodes - (i > rhs.source),
+                .lambda = rhs.nodes[i].lambda == GVA_NULL ? GVA_NULL : rhs.nodes[i].lambda + offset_nodes - (rhs.nodes[i].lambda > rhs.source && sink_idx != GVA_NULL),
             }));
         } // if
     } // for
