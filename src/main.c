@@ -735,7 +735,6 @@ overlap_main(int argc, char* argv[static argc])
 
         Priority_Queue fringe = priority_queue_init(gva_std_allocator, 1024);
         priority_queue_update(&fringe, lhs.source * array_length(rhs.nodes) + rhs.source, 0, 0);
-        pq_dot(fringe, array_length(rhs.nodes));
 
         while (!priority_queue_empty(fringe))
         {
@@ -743,7 +742,7 @@ overlap_main(int argc, char* argv[static argc])
             priority_queue_remove(&fringe);
 
             size_t const lhs_idx = head.gva_key / array_length(rhs.nodes);
-            size_t const rhs_idx = head.gva_key / array_length(rhs.nodes);
+            size_t const rhs_idx = head.gva_key % array_length(rhs.nodes);
             fprintf(stderr, "{%zu, %zu} :: %u %u\n", lhs_idx, rhs_idx, head.included, head.excluded);
 
             for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
@@ -782,18 +781,6 @@ overlap_main(int argc, char* argv[static argc])
                     } // for
                 } // if
             } // for
-
-            pq_dot(fringe, array_length(rhs.nodes));
-            for (size_t i = 0; i < array_header(fringe.states)->capacity; ++i)
-            {
-                if (fringe.states[i].gva_key != NOT_FOUND)
-                {
-                    size_t const lhs_idx = fringe.states[i].gva_key / array_length(rhs.nodes);
-                    size_t const rhs_idx = fringe.states[i].gva_key % array_length(rhs.nodes);
-                    fprintf(stderr, "%4zu: {%zu, %zu} (%4u) :: %2u %2u %2d\n", i, lhs_idx, rhs_idx, fringe.states[i].gva_key, fringe.states[i].included, fringe.states[i].excluded, fringe.states[i].idx);
-                } // if
-            } // for
-            break;
         } // while
 
         priority_queue_destroy(&fringe);

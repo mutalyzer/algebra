@@ -82,7 +82,8 @@ priority_queue_update(Priority_Queue self[static 1], size_t const key,
     } // if
     else
     {
-        if (greater_than(self->states[idx].included, self->states[idx].excluded, included, excluded))
+        if (self->states[idx].idx == GVA_NULL ||
+            greater_than(self->states[idx].included, self->states[idx].excluded, included, excluded))
         {
             return;
         } // if
