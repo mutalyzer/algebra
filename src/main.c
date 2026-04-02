@@ -771,63 +771,30 @@ overlap_main(int argc, char* argv[static argc])
                 } // for
 
                 // follow only one edge
-                priority_queue_update(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs_idx, head.included, head.excluded + gva_variant_length(lhs_variant));
+                priority_queue_update(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs_idx,
+                    head.included, head.excluded + gva_variant_length(lhs_variant));
                 if (i == lhs.nodes[lhs_idx].edges)
                 {
                     for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
                     {
-                        priority_queue_update(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.edges[j].tail, head.included, head.excluded + gva_variant_length(rhs_variant));
+                        priority_queue_update(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.edges[j].tail,
+                            head.included, head.excluded + gva_variant_length(rhs_variant));
                     } // for
                 } // if
-
             } // for
+
             pq_dot(fringe, array_length(rhs.nodes));
-            break;
-
-        } // while
-
-
-        /*
-            size_t const lhs_idx = heap[0] / array_length(rhs.nodes);
-            size_t const rhs_idx = heap[0] % array_length(rhs.nodes);
-
-            fprintf(stdout, "%zu[label=\"%zu\\n{%zu,%zu}\\n%u %u\"]\n", heap[0], heap[0], lhs_idx, rhs_idx, states[heap[0]].included, states[heap[0]].excluded);
-
-            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
+            for (size_t i = 0; i < array_header(fringe.states)->capacity; ++i)
             {
-                GVA_Variant lhs_variant = {0};
-                size_t const lhs_count = gva_edges(lhs.observed.str,
-                    lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
-                    lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
-                    &lhs_variant);
-
-                for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
+                if (fringe.states[i].gva_key != NOT_FOUND)
                 {
-                    GVA_Variant rhs_variant = {0};
-                    size_t const rhs_count = gva_edges(rhs.observed.str,
-                        rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[j].tail].match,
-                        rhs_idx == rhs.source, rhs.nodes[rhs.edges[j].tail].edges == GVA_NULL,
-                        &rhs_variant);
-
-                    size_t const included = variant_included(lhs_count, lhs_variant, rhs_count, rhs_variant);
-                    size_t const excluded = gva_variant_length(lhs_variant) + gva_variant_length(rhs_variant) - 2 * included;
-
-                    // follow two edges
-                    tail = expand(states, heap, array_length(rhs.nodes), lhs.edges[i].tail, rhs.edges[j].tail, included, excluded, tail);
-                } // for
-
-                // follow only one edge
-                tail = expand(states, heap, array_length(rhs.nodes), lhs.edges[i].tail, rhs_idx, 0, gva_variant_length(lhs_variant), tail);
-                if (i == lhs.nodes[lhs_idx].edges)
-                {
-                    for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
-                    {
-                        tail = expand(states, heap, array_length(rhs.nodes), lhs_idx, rhs.edges[j].tail, 0, gva_variant_length(lhs_variant), tail);
-                    } // for
+                    size_t const lhs_idx = fringe.states[i].gva_key / array_length(rhs.nodes);
+                    size_t const rhs_idx = fringe.states[i].gva_key % array_length(rhs.nodes);
+                    fprintf(stderr, "%4zu: {%zu, %zu} (%4u) :: %2u %2u %2d\n", i, lhs_idx, rhs_idx, fringe.states[i].gva_key, fringe.states[i].included, fringe.states[i].excluded, fringe.states[i].idx);
                 } // if
             } // for
+            break;
         } // while
-        */
 
         priority_queue_destroy(&fringe);
 
