@@ -5,6 +5,7 @@
 #include <stdlib.h>     // EXIT_*, atoll, qsort
 #include <string.h>     // strerror, strlen
 
+#include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Query_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/relations.h"   // GVA_RELATION_LABELS
@@ -15,6 +16,7 @@
 #include "align.h"          // LCS_Matches, lcs_align_one
 #include "array.h"          // ARRAY_*, array_length
 #include "common.h"         // MAX, MIN
+#include "priority_queue.h" // Priority_Queue, priority_queue_*
 
 
 #include <assert.h>
@@ -25,6 +27,41 @@
 // #define REFERENCE_ID "NC_000022.11"
 #define REFERENCE_ID "NC_000006.12"
 // #define REFERENCE_ID "NC_000001.11"
+
+
+static void
+pq_dot_traverse(Priority_Queue const self, size_t const i, size_t const rhs_length)
+{
+    size_t const len = array_length(self.heap);
+    size_t const lhs_idx = self.states[self.heap[i]].gva_key / rhs_length;
+    size_t const rhs_idx = self.states[self.heap[i]].gva_key % rhs_length;
+    fprintf(stderr, "%zu[label=\"{%zu, %zu}\\n%u %u\\n%u@%u\"]\n",
+        i, lhs_idx, rhs_idx,
+        self.states[self.heap[i]].included, self.states[self.heap[i]].excluded,
+        self.states[self.heap[i]].gva_key, self.heap[i]);
+    if (2 * i + 1 < len)
+    {
+        fprintf(stderr, "%zu->%zu\n", i, 2 * i + 1);
+        pq_dot_traverse(self, 2 * i + 1, rhs_length);
+        if (2 * i + 2 < len)
+        {
+            fprintf(stderr, "%zu->%zu\n", i, 2 * i + 2);
+            pq_dot_traverse(self, 2 * i + 2, rhs_length);
+        } // if
+    } // if
+} // pq_dot_traverse
+
+
+static inline void
+pq_dot(Priority_Queue const self, size_t const rhs_length)
+{
+    fprintf(stderr, "strict digraph{\nnode[fixedsize=true,shape=circle,width=1]\n");
+    if (array_length(self.heap) > 0)
+    {
+        pq_dot_traverse(self, 0, rhs_length);
+    } // if
+    fprintf(stderr, "}\n");
+} // pq_dot
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -75,11 +112,29 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
 
     for (size_t i = 0; i < array_length(result.alleles); ++i)
     {
+
+        if (result.alleles[i].relation == GVA_OVERLAP &&
+            result.alleles[i].hits.end - result.alleles[i].hits.start > 1)
+        {
+            bool overlap = false;
+            for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
+            {
+                if (result.hits[j].relation == GVA_OVERLAP)
+                {
+                    overlap = true;
+                    break;
+                } // if
+            } // for
+            if (!overlap)
+            {
         fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %zu\n",
             GVA_STRING_PRINT(gva_index_allele_id(index, result.alleles[i].idx)),
             GVA_RELATION_LABELS[result.alleles[i].relation],
             GVA_STRING_PRINT(id),
             result.alleles[i].included, result.alleles[i].excluded, array_length(graph.dom_nodes) - 1);
+            } // if
+        } // if
+
 
         if (hits)
         {
@@ -328,7 +383,7 @@ index_main(int argc, char* argv[static argc])
             qsort(result.alleles, array_length(result.alleles), sizeof(*result.alleles), compare_query_alleles);
         } // if
 
-        report_query_result(index, graph, id, result, true, true, true);
+        report_query_result(index, graph, id, result, false, true, true);
 
         result.alleles = ARRAY_DESTROY(gva_std_allocator, result.alleles);
         result.hits = ARRAY_DESTROY(gva_std_allocator, result.hits);
@@ -551,15 +606,14 @@ supremal_main(int argc, char* argv[static argc])
         } // if
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
-        /*
         GVA_Variant supremal = gva_lcs_graph_supremal(graph);
 
         fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
             GVA_STRING_PRINT(id),
             GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, supremal),
             gva_lcs_graph_distance(graph));
-        */
 
+        /*
         for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
             fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %u\n",
@@ -567,6 +621,7 @@ supremal_main(int argc, char* argv[static argc])
                 GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, i, i + 1)),
                 graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
         } // for
+        */
 
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
@@ -577,11 +632,219 @@ supremal_main(int argc, char* argv[static argc])
 } // supremal_main
 
 
+static size_t
+variant_included(size_t const lhs_count, GVA_Variant const lhs,
+    size_t const rhs_count, GVA_Variant const rhs)
+{
+    if (rhs.start > lhs.end + lhs_count - 1 || lhs.start > rhs.end + rhs_count - 1)
+    {
+        return 0;
+    } // if
+
+    size_t const length = gva_variant_length(lhs) + gva_variant_length(rhs);
+
+    size_t max_included = 0;
+    for (size_t i = 0; i < lhs_count; ++i)
+    {
+        GVA_Variant const lhs_variant =
+        {
+            .start = lhs.start + i,
+            .end = lhs.end + i,
+            .sequence = {lhs.sequence.len, lhs.sequence.str + i},
+        };
+
+        for (size_t j = 0; j < rhs_count; ++j)
+        {
+            GVA_Variant const rhs_variant =
+            {
+                .start = rhs.start + j,
+                .end = rhs.end + j,
+                .sequence = {rhs.sequence.len, rhs.sequence.str + j},
+            };
+
+            if (rhs_variant.start > lhs_variant.end || lhs_variant.start > rhs_variant.end)
+            {
+                continue;
+            } // if
+
+            size_t const start = MAX(lhs_variant.start, rhs_variant.start);
+            size_t const end = MIN(lhs_variant.end, rhs_variant.end);
+            size_t const lcs = (length - gva_edit_distance(gva_std_allocator, lhs_variant.sequence.len, lhs_variant.sequence.str, rhs_variant.sequence.len, rhs_variant.sequence.str)) / 2;
+
+            size_t const included = (end - start) + lcs;
+            if (included > max_included)
+            {
+                max_included = included;
+                if (included == gva_variant_length(lhs) || included == gva_variant_length(rhs))
+                {
+                    return max_included;
+                } // if
+            } // if
+        } // for
+    } // for
+
+    return max_included;
+} // variant_included
+
+
+int
+overlap_main(int argc, char* argv[static argc])
+{
+    (void) argv;
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        line_count += 1;
+        size_t start = 0;
+        size_t end = 0;
+
+        end = strcspn(line, "\t ");
+        GVA_String reference = {end, line + start};
+
+        start += end + 1;
+        end = strcspn(line + start, "\t ");
+
+        GVA_Variant lhs_variant = {0};
+        if (gva_parse_spdi(end, line + start, &lhs_variant) == 0)
+        {
+            fprintf(stderr, "Error parsing LHS SPDI at line %zu: %s", line_count, line);
+            continue;
+        } // if
+
+        start += end + 1;
+        end = strcspn(line + start, "\n\t ");
+
+        GVA_Variant rhs_variant = {0};
+        if (gva_parse_spdi(end, line + start, &rhs_variant) == 0)
+        {
+            fprintf(stderr, "Error parsing RHS SPDI at line %zu: %s", line_count, line);
+            continue;
+        } // if
+
+        GVA_LCS_Graph lhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &lhs_variant);
+        GVA_LCS_Graph rhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
+
+        static char filename[128] = {0};
+        snprintf(filename, 128, "overlap/graph_%zu.dot", line_count);
+        FILE* stream = fopen(filename, "w");
+        gva_lcs_graph_dot(stream, lhs);
+        gva_lcs_graph_dot(stream, rhs);
+        fclose(stream);
+
+        Priority_Queue fringe = priority_queue_init(gva_std_allocator, 1024);
+        priority_queue_update(&fringe, lhs.source * array_length(rhs.nodes) + rhs.source, 0, 0);
+        pq_dot(fringe, array_length(rhs.nodes));
+
+        while (!priority_queue_empty(fringe))
+        {
+            State const head = priority_queue_peek(fringe);
+            priority_queue_remove(&fringe);
+
+            size_t const lhs_idx = head.gva_key / array_length(rhs.nodes);
+            size_t const rhs_idx = head.gva_key / array_length(rhs.nodes);
+            fprintf(stderr, "{%zu, %zu} :: %u %u\n", lhs_idx, rhs_idx, head.included, head.excluded);
+
+            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
+            {
+                GVA_Variant lhs_variant = {0};
+                size_t const lhs_count = gva_edges(lhs.observed.str,
+                    lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
+                    lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
+                    &lhs_variant);
+
+                for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
+                {
+                    GVA_Variant rhs_variant = {0};
+                    size_t const rhs_count = gva_edges(rhs.observed.str,
+                        rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[j].tail].match,
+                        rhs_idx == rhs.source, rhs.nodes[rhs.edges[j].tail].edges == GVA_NULL,
+                        &rhs_variant);
+
+                    size_t const included = variant_included(lhs_count, lhs_variant, rhs_count, rhs_variant);
+                    size_t const excluded = gva_variant_length(lhs_variant) + gva_variant_length(rhs_variant) - 2 * included;
+
+                    // follow two edges
+                    priority_queue_update(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs.edges[j].tail,
+                        head.included + included, head.excluded + excluded);
+                } // for
+
+                // follow only one edge
+                priority_queue_update(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs_idx, head.included, head.excluded + gva_variant_length(lhs_variant));
+                if (i == lhs.nodes[lhs_idx].edges)
+                {
+                    for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
+                    {
+                        priority_queue_update(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.edges[j].tail, head.included, head.excluded + gva_variant_length(rhs_variant));
+                    } // for
+                } // if
+
+            } // for
+            pq_dot(fringe, array_length(rhs.nodes));
+            break;
+
+        } // while
+
+
+        /*
+            size_t const lhs_idx = heap[0] / array_length(rhs.nodes);
+            size_t const rhs_idx = heap[0] % array_length(rhs.nodes);
+
+            fprintf(stdout, "%zu[label=\"%zu\\n{%zu,%zu}\\n%u %u\"]\n", heap[0], heap[0], lhs_idx, rhs_idx, states[heap[0]].included, states[heap[0]].excluded);
+
+            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
+            {
+                GVA_Variant lhs_variant = {0};
+                size_t const lhs_count = gva_edges(lhs.observed.str,
+                    lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
+                    lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
+                    &lhs_variant);
+
+                for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
+                {
+                    GVA_Variant rhs_variant = {0};
+                    size_t const rhs_count = gva_edges(rhs.observed.str,
+                        rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[j].tail].match,
+                        rhs_idx == rhs.source, rhs.nodes[rhs.edges[j].tail].edges == GVA_NULL,
+                        &rhs_variant);
+
+                    size_t const included = variant_included(lhs_count, lhs_variant, rhs_count, rhs_variant);
+                    size_t const excluded = gva_variant_length(lhs_variant) + gva_variant_length(rhs_variant) - 2 * included;
+
+                    // follow two edges
+                    tail = expand(states, heap, array_length(rhs.nodes), lhs.edges[i].tail, rhs.edges[j].tail, included, excluded, tail);
+                } // for
+
+                // follow only one edge
+                tail = expand(states, heap, array_length(rhs.nodes), lhs.edges[i].tail, rhs_idx, 0, gva_variant_length(lhs_variant), tail);
+                if (i == lhs.nodes[lhs_idx].edges)
+                {
+                    for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
+                    {
+                        tail = expand(states, heap, array_length(rhs.nodes), lhs_idx, rhs.edges[j].tail, 0, gva_variant_length(lhs_variant), tail);
+                    } // for
+                } // if
+            } // for
+        } // while
+        */
+
+        priority_queue_destroy(&fringe);
+
+        gva_lcs_graph_destroy(gva_std_allocator, rhs, true);
+        gva_lcs_graph_destroy(gva_std_allocator, lhs, true);
+    } // while
+
+    return EXIT_SUCCESS;
+} // overlap_main
+
+
 int
 main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
     // return extract_main(argc, argv);
-    return index_main(argc, argv);
-    // return supremal_main(argc, argv);
+    // return index_main(argc, argv);
+    return overlap_main(argc, argv);
+    // return dot_main(argc, argv);
 } // main
