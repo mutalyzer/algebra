@@ -79,8 +79,8 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
 
 void
 gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
-    gva_uint const offset,
-    gva_uint const start, gva_uint const end,
+    size_t const offset,
+    size_t const start, size_t const end,
     size_t dels[static restrict 1],
     size_t as[static restrict 1],
     size_t cs[static restrict 1],
@@ -101,7 +101,7 @@ GVA_Variant
 gva_lcs_graph_supremal(GVA_LCS_Graph const self);
 
 
-gva_uint
+size_t
 gva_edges(char const observed[static restrict 1],
     GVA_Match const head, GVA_Match const tail,
     bool const is_source, bool const is_sink,

@@ -16,7 +16,7 @@
 
 
 static void
-merge(GVA_Allocator const allocator,
+concat(GVA_Allocator const allocator,
     GVA_LCS_Graph lhs[static 1], GVA_LCS_Graph const rhs,
     size_t const offset)
 {
@@ -76,7 +76,7 @@ merge(GVA_Allocator const allocator,
             .link = rhs.dom_nodes[i].link + offset_nodes  - (rhs.dom_nodes[i].link > rhs.source && sink_idx != GVA_NULL),
         }));
     } // for
-} // merge
+} // concat
 
 
 // FIXME: recursion!
@@ -90,7 +90,7 @@ local_supremal(GVA_Allocator const allocator,
     if (len_ref == 0 || len_obs == 0)
     {
         GVA_LCS_Graph local = gva_lcs_graph_init(allocator, len_ref, reference, len_obs, observed, offset_row);
-        merge(allocator, graph, local, offset_col);
+        concat(allocator, graph, local, offset_col);
         gva_lcs_graph_destroy(allocator, local, false);
         return;
     } // if
@@ -133,7 +133,7 @@ local_supremal(GVA_Allocator const allocator,
     {
         sum += distance;
         GVA_LCS_Graph local = gva_lcs_graph_init(allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset_row + prev_row + 1);
-        merge(allocator, graph, local, offset_col + prev_col + 1);
+        concat(allocator, graph, local, offset_col + prev_col + 1);
         gva_lcs_graph_destroy(allocator, local, false);
     } // if
 
@@ -556,8 +556,8 @@ nucleotides(size_t const len, char const sequence[static len])
 
 void
 gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
-    gva_uint const offset,
-    gva_uint const start, gva_uint const end,
+    size_t const offset,
+    size_t const start, size_t const end,
     size_t dels[static restrict 1],
     size_t as[static restrict 1],
     size_t cs[static restrict 1],
@@ -638,7 +638,7 @@ gva_lcs_graph_supremal(GVA_LCS_Graph const self)
 } // gva_lcs_graph_supremal
 
 
-gva_uint
+inline size_t
 gva_edges(char const observed[static restrict 1],
     GVA_Match const head, GVA_Match const tail,
     bool const is_source, bool const is_sink,
