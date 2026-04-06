@@ -15,7 +15,7 @@
 #include "array.h"              // ARRAY_*, array_length
 #include "bitset.h"             // bitset_*
 #include "common.h"             // ABS, MAX, MIN
-#include "hash_table.h"         // NOT_FOUND, HASH_TABLE_*, hash_table_*
+#include "hash_table.h"         // HASH_TABLE_*, hash_table_*
 #include "interval_tree.h"      // Interval_Tree, interval_tree_*
 #include "trie.h"               // Trie, trie_*
 
@@ -425,7 +425,7 @@ gva_index_query(GVA_Allocator const allocator,
     // Phase 2
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
-        if (entries[idx].gva_key == NOT_FOUND)
+        if (entries[idx].gva_key == GVA_NULL)
         {
             continue;
         } // if

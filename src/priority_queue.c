@@ -5,7 +5,7 @@
 #include "../include/types.h"       // GVA_NULL, gva_uint
 
 #include "array.h"              // ARRAY_*
-#include "hash_table.h"         // HASH_TABLE_*, NOT_FOUND, hash_table_init
+#include "hash_table.h"         // HASH_TABLE_*, hash_table_init
 #include "priority_queue.h"     // Priority_Queue, priority_queue_*, State
 
 
@@ -54,20 +54,48 @@ priority_queue_empty(Priority_Queue const self)
 
 
 inline State
-priority_queue_peek(Priority_Queue const self)
+priority_queue_pop(Priority_Queue self[static 1])
 {
-    return self.states[self.heap[0]];
-} // priority_queue_peek
+    size_t const idx = self->heap[0];
+    self->states[self->heap[0]].idx = GVA_NULL;
+    size_t const len = array_header(self->heap)->length -= 1;
+    self->heap[0] = self->heap[len];
+    if (len > 0)
+    {
+        self->states[self->heap[0]].idx = 0;
+    } // if
+
+    size_t i = 0;
+    while (i < len / 2)
+    {
+        size_t child = 2 * i + 1;  // left child
+        if (child + 1 < len && greater_than(self->states[self->heap[child + 1]].included, self->states[self->heap[child + 1]].excluded,
+                                            self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
+        {
+            child += 1;  // right child
+        } // if
+        if (greater_than(self->states[self->heap[i]].included, self->states[self->heap[i]].excluded,
+                         self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
+        {
+            break;
+        } // if
+        swap(&self->states[self->heap[i]].idx, &self->states[self->heap[child]].idx);
+        swap(&self->heap[i], &self->heap[child]);
+        i = child;
+    } // while
+
+    return self->states[idx];
+} // priority_queue_pop
 
 
 inline void
-priority_queue_update(Priority_Queue self[static 1], size_t const key,
+priority_queue_push(Priority_Queue self[static 1], size_t const key,
     size_t const included, size_t const excluded)
 {
     size_t i = 0;
 
     size_t idx = HASH_TABLE_INDEX(self->states, key);
-    if (self->states[idx].gva_key == NOT_FOUND)
+    if (self->states[idx].gva_key == GVA_NULL)
     {
         HASH_TABLE_SET(self->allocator, self->states, key,
             ((State)
@@ -102,41 +130,4 @@ priority_queue_update(Priority_Queue self[static 1], size_t const key,
         swap(&self->heap[i], &self->heap[parent]);
         i = parent;
     } // while
-} // priority_queue_update
-
-
-inline void
-priority_queue_remove(Priority_Queue self[static 1])
-{
-    if (array_length(self->heap) == 0)
-    {
-        return;
-    } // if
-
-    self->states[self->heap[0]].idx = GVA_NULL;
-    size_t const len = array_header(self->heap)->length -= 1;
-    self->heap[0] = self->heap[len];
-    if (len > 0)
-    {
-        self->states[self->heap[0]].idx = 0;
-    } // if
-
-    size_t i = 0;
-    while (i < len / 2)
-    {
-        size_t child = 2 * i + 1;  // left child
-        if (child + 1 < len && greater_than(self->states[self->heap[child + 1]].included, self->states[self->heap[child + 1]].excluded,
-                                            self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
-        {
-            child += 1;  // right child
-        } // if
-        if (greater_than(self->states[self->heap[i]].included, self->states[self->heap[i]].excluded,
-                         self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
-        {
-            break;
-        } // if
-        swap(&self->states[self->heap[i]].idx, &self->states[self->heap[child]].idx);
-        swap(&self->heap[i], &self->heap[child]);
-        i = child;
-    } // while
-} // priority_queue_remove
+} // priority_queue_push

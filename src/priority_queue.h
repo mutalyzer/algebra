@@ -41,16 +41,12 @@ priority_queue_empty(Priority_Queue const self);
 
 
 State
-priority_queue_peek(Priority_Queue const self);
+priority_queue_pop(Priority_Queue self[static 1]);
 
 
 void
-priority_queue_update(Priority_Queue self[static 1], size_t const key,
+priority_queue_push(Priority_Queue self[static 1], size_t const key,
     size_t const included, size_t const excluded);
-
-
-void
-priority_queue_remove(Priority_Queue self[static 1]);
 
 
 #endif  // GVA_PRIORITY_QUEUE_H
