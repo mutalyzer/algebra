@@ -5,7 +5,6 @@
 #include "../include/types.h"       // GVA_NULL, gva_uint
 
 #include "array.h"              // ARRAY_*
-#include "hash_table.h"         // HASH_TABLE_*, hash_table_init
 #include "priority_queue.h"     // Priority_Queue, priority_queue_*, State
 
 
@@ -30,9 +29,21 @@ swap(gva_uint lhs[static restrict 1], gva_uint rhs[static restrict 1])
 inline Priority_Queue
 priority_queue_init(GVA_Allocator const allocator, size_t const capacity)
 {
+    State* const states = allocator.allocate(allocator.context, NULL, 0, capacity * sizeof(*states));
+    if (states == NULL)
+    {
+        return (Priority_Queue) {NULL};
+    } // if
+
+    for (size_t i = 0; i < capacity; ++i)
+    {
+        states[i].idx = GVA_NULL;
+    } // for
+
     return (Priority_Queue)
     {
-        .states = hash_table_init(allocator, capacity, sizeof(State)),
+        .states = states,
+        .capacity = capacity,
         .allocator = allocator,
     };
 } // priority_queue_init
@@ -41,8 +52,9 @@ priority_queue_init(GVA_Allocator const allocator, size_t const capacity)
 inline void
 priority_queue_destroy(Priority_Queue self[static 1])
 {
-    self->states = HASH_TABLE_DESTROY(self->allocator, self->states);
     self->heap = ARRAY_DESTROY(self->allocator, self->heap);
+    self->states = self->allocator.allocate(self->allocator.context, self->states, self->capacity * sizeof(State), 0);
+    self->capacity = 0;
 } // priority_queue_destroy
 
 
@@ -53,7 +65,7 @@ priority_queue_empty(Priority_Queue const self)
 } // priority_queue_empty
 
 
-inline State
+inline size_t
 priority_queue_pop(Priority_Queue self[static 1])
 {
     size_t const idx = self->heap[0];
@@ -84,7 +96,7 @@ priority_queue_pop(Priority_Queue self[static 1])
         i = child;
     } // while
 
-    return self->states[idx];
+    return idx;
 } // priority_queue_pop
 
 
@@ -92,33 +104,26 @@ inline void
 priority_queue_push(Priority_Queue self[static 1], size_t const key,
     size_t const included, size_t const excluded)
 {
-    size_t i = 0;
-
-    size_t idx = HASH_TABLE_INDEX(self->states, key);
-    if (self->states[idx].gva_key == GVA_NULL)
+    if (self->states[key].idx == GVA_NULL)
     {
-        HASH_TABLE_SET(self->allocator, self->states, key,
-            ((State)
-            {
-                .gva_key = key,
-                .included = included,
-                .excluded = excluded,
-            }));
-        idx = HASH_TABLE_INDEX(self->states, key);
-        i = ARRAY_APPEND(self->allocator, self->heap, idx);
-        self->states[idx].idx = i;
+        self->states[key] = (State)
+        {
+            .idx = ARRAY_APPEND(self->allocator, self->heap, key),
+            .included = included,
+            .excluded = excluded,
+        };
     } // if
     else
     {
-        if (greater_than(self->states[idx].included, self->states[idx].excluded, included, excluded))
+        if (greater_than(self->states[key].included, self->states[key].excluded, included, excluded))
         {
             return;
         } // if
-        self->states[idx].included = included;
-        self->states[idx].excluded = excluded;
-        i = self->states[idx].idx;
+        self->states[key].included = included;
+        self->states[key].excluded = excluded;
     } // else
 
+    size_t i = self->states[key].idx;
     while (i > 0)
     {
         size_t const parent = (i - 1) / 2;

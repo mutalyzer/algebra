@@ -33,12 +33,12 @@ static void
 pq_dot_traverse(Priority_Queue const self, size_t const i, size_t const rhs_length)
 {
     size_t const len = array_length(self.heap);
-    size_t const lhs_idx = self.states[self.heap[i]].gva_key / rhs_length;
-    size_t const rhs_idx = self.states[self.heap[i]].gva_key % rhs_length;
-    fprintf(stderr, "%zu[label=\"{%zu, %zu}\\n%u %u\\n%u@%u\"]\n",
+    size_t const lhs_idx = self.heap[i] / rhs_length;
+    size_t const rhs_idx = self.heap[i] % rhs_length;
+    fprintf(stderr, "%zu[label=\"{%zu, %zu}\\n%u %u\\n%u\"]\n",
         i, lhs_idx, rhs_idx,
         self.states[self.heap[i]].included, self.states[self.heap[i]].excluded,
-        self.states[self.heap[i]].gva_key, self.heap[i]);
+        self.heap[i]);
     if (2 * i + 1 < len)
     {
         fprintf(stderr, "%zu->%zu\n", i, 2 * i + 1);
@@ -728,20 +728,20 @@ overlap_main(int argc, char* argv[static argc])
         fprintf(stderr, "nodes lhs: %zu rhs %zu :: %zu\n", array_length(lhs.nodes), array_length(rhs.nodes), array_length(lhs.nodes) * array_length(rhs.nodes));
 
         size_t const distance = gva_lcs_graph_distance(lhs) + gva_lcs_graph_distance(rhs);
-        Priority_Queue fringe = priority_queue_init(gva_std_allocator, 2 * array_length(lhs.nodes) * array_length(rhs.nodes) + 1);
+        Priority_Queue fringe = priority_queue_init(gva_std_allocator, array_length(lhs.nodes) * array_length(rhs.nodes));
         priority_queue_push(&fringe, lhs.source * array_length(rhs.nodes) + rhs.source, 0, 0);
 
         size_t steps = 0;
         while (!priority_queue_empty(fringe))
         {
             steps += 1;
-            State const head = priority_queue_pop(&fringe);
+            size_t const head = priority_queue_pop(&fringe);
 
-            size_t const lhs_idx = head.gva_key / array_length(rhs.nodes);
-            size_t const rhs_idx = head.gva_key % array_length(rhs.nodes);
+            size_t const lhs_idx = head / array_length(rhs.nodes);
+            size_t const rhs_idx = head % array_length(rhs.nodes);
 
-            fprintf(stderr, "{%zu, %zu} :: %u %u  %zu\n", lhs_idx, rhs_idx, head.included, head.excluded, distance - 2 * head.included - head.excluded);
-            if (distance - 2 * head.included - head.excluded == 0)
+            fprintf(stderr, "{%zu, %zu} :: %u %u  %zu\n", lhs_idx, rhs_idx, fringe.states[head].included, fringe.states[head].excluded, distance - 2 * fringe.states[head].included - fringe.states[head].excluded);
+            if (distance - 2 * fringe.states[head].included - fringe.states[head].excluded == 0)
             {
                 break;
             } // if
@@ -749,13 +749,13 @@ overlap_main(int argc, char* argv[static argc])
             if (lhs.nodes[lhs_idx].lambda != GVA_NULL)
             {
                 priority_queue_push(&fringe, lhs.nodes[lhs_idx].lambda * array_length(rhs.nodes) + rhs_idx,
-                    head.included, head.excluded);
+                    fringe.states[head].included, fringe.states[head].excluded);
             } // if
 
             if (rhs.nodes[rhs_idx].lambda != GVA_NULL)
             {
                 priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.nodes[rhs_idx].lambda,
-                    head.included, head.excluded);
+                    fringe.states[head].included, fringe.states[head].excluded);
             } // if
 
             for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
@@ -776,36 +776,38 @@ overlap_main(int argc, char* argv[static argc])
 
                     size_t const included = variant_included(lhs_count, lhs_variant, rhs_count, rhs_variant);
                     size_t const excluded = gva_variant_length(lhs_variant) + gva_variant_length(rhs_variant) - 2 * included;
+
 /*
                     fprintf(stderr, "  {%u, %u} ", lhs.edges[i].tail, rhs.edges[j].tail);
                     fprintf(stderr, GVA_VARIANT_FMT " x %zu (%zu) vs " GVA_VARIANT_FMT " x %zu (%zu) ", GVA_VARIANT_PRINT(lhs_variant), lhs_count, gva_variant_length(lhs_variant), GVA_VARIANT_PRINT(rhs_variant), rhs_count, gva_variant_length(rhs_variant));
                     fprintf(stderr, "+ %zu %zu\n", included, excluded);
 */
+
                     // follow two edges
                     priority_queue_push(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs.edges[j].tail,
-                        head.included + included, head.excluded + excluded);
+                        fringe.states[head].included + included, fringe.states[head].excluded + excluded);
 
                     // follow only one edge
                     if (i == lhs.nodes[lhs_idx].edges)
                     {
                         priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.edges[j].tail,
-                            head.included, head.excluded + gva_variant_length(rhs_variant));
+                            fringe.states[head].included, fringe.states[head].excluded + gva_variant_length(rhs_variant));
                     } // if
                 } // for
 
                 // follow only one edge
                 priority_queue_push(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs_idx,
-                    head.included, head.excluded + gva_variant_length(lhs_variant));
+                    fringe.states[head].included, fringe.states[head].excluded + gva_variant_length(lhs_variant));
             } // for
 /*
             pq_dot(fringe, array_length(rhs.nodes));
-            for (size_t i = 0; i < array_header(fringe.states)->capacity; ++i)
+            for (size_t i = 0; i < fringe.capacity; ++i)
             {
-                if (fringe.states[i].gva_key != NOT_FOUND)
+                if (fringe.states[i].idx != GVA_NULL)
                 {
-                    size_t const lhs_idx = fringe.states[i].gva_key / array_length(rhs.nodes);
-                    size_t const rhs_idx = fringe.states[i].gva_key % array_length(rhs.nodes);
-                    fprintf(stderr, "%4zu: {%zu, %zu} (%4u) :: %2u %2u %2d\n", i, lhs_idx, rhs_idx, fringe.states[i].gva_key, fringe.states[i].included, fringe.states[i].excluded, fringe.states[i].idx);
+                    size_t const lhs_idx = i / array_length(rhs.nodes);
+                    size_t const rhs_idx = i % array_length(rhs.nodes);
+                    fprintf(stderr, "%4zu: {%zu, %zu} :: %2u %2u %2d\n", i, lhs_idx, rhs_idx, fringe.states[i].included, fringe.states[i].excluded, fringe.states[i].idx);
                 } // if
             } // for
 */
