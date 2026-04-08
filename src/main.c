@@ -728,7 +728,7 @@ overlap_main(int argc, char* argv[static argc])
         fprintf(stderr, "nodes lhs: %zu rhs %zu :: %zu\n", array_length(lhs.nodes), array_length(rhs.nodes), array_length(lhs.nodes) * array_length(rhs.nodes));
 
         size_t const distance = gva_lcs_graph_distance(lhs) + gva_lcs_graph_distance(rhs);
-        Priority_Queue fringe = priority_queue_init(gva_std_allocator, 1024);
+        Priority_Queue fringe = priority_queue_init(gva_std_allocator, 2 * array_length(lhs.nodes) * array_length(rhs.nodes) + 1);
         priority_queue_push(&fringe, lhs.source * array_length(rhs.nodes) + rhs.source, 0, 0);
 
         size_t steps = 0;
@@ -776,7 +776,6 @@ overlap_main(int argc, char* argv[static argc])
 
                     size_t const included = variant_included(lhs_count, lhs_variant, rhs_count, rhs_variant);
                     size_t const excluded = gva_variant_length(lhs_variant) + gva_variant_length(rhs_variant) - 2 * included;
-
 /*
                     fprintf(stderr, "  {%u, %u} ", lhs.edges[i].tail, rhs.edges[j].tail);
                     fprintf(stderr, GVA_VARIANT_FMT " x %zu (%zu) vs " GVA_VARIANT_FMT " x %zu (%zu) ", GVA_VARIANT_PRINT(lhs_variant), lhs_count, gva_variant_length(lhs_variant), GVA_VARIANT_PRINT(rhs_variant), rhs_count, gva_variant_length(rhs_variant));
