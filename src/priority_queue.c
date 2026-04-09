@@ -9,12 +9,12 @@
 
 
 static inline bool
-greater_than(size_t const lhs_included, size_t const lhs_excluded,
+less_than(size_t const lhs_included, size_t const lhs_excluded,
     size_t const rhs_included, size_t const rhs_excluded)
 {
-    return lhs_included > rhs_included ||
-        (lhs_included == rhs_included && lhs_excluded <= rhs_excluded);
-} // greater_than
+    return lhs_excluded < rhs_excluded ||
+        (lhs_excluded == rhs_excluded && lhs_included >= rhs_included);
+} // less_than
 
 
 static inline void
@@ -69,7 +69,7 @@ inline size_t
 priority_queue_pop(Priority_Queue self[static 1])
 {
     size_t const idx = self->heap[0];
-    self->states[self->heap[0]].idx = GVA_NULL;
+    self->states[self->heap[0]].idx = array_length(self->heap);
     size_t const len = array_header(self->heap)->length -= 1;
     self->heap[0] = self->heap[len];
     if (len > 0)
@@ -81,13 +81,14 @@ priority_queue_pop(Priority_Queue self[static 1])
     while (i < len / 2)
     {
         size_t child = 2 * i + 1;  // left child
-        if (child + 1 < len && greater_than(self->states[self->heap[child + 1]].included, self->states[self->heap[child + 1]].excluded,
-                                            self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
+        if (child + 1 < len &&
+            less_than(self->states[self->heap[child + 1]].included, self->states[self->heap[child + 1]].excluded,
+                self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
         {
             child += 1;  // right child
         } // if
-        if (greater_than(self->states[self->heap[i]].included, self->states[self->heap[i]].excluded,
-                         self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
+        if (less_than(self->states[self->heap[i]].included, self->states[self->heap[i]].excluded,
+                self->states[self->heap[child]].included, self->states[self->heap[child]].excluded))
         {
             break;
         } // if
@@ -115,7 +116,7 @@ priority_queue_push(Priority_Queue self[static 1], size_t const key,
     } // if
     else
     {
-        if (greater_than(self->states[key].included, self->states[key].excluded, included, excluded))
+        if (less_than(self->states[key].included, self->states[key].excluded, included, excluded))
         {
             return;
         } // if
@@ -127,7 +128,7 @@ priority_queue_push(Priority_Queue self[static 1], size_t const key,
     while (i > 0)
     {
         size_t const parent = (i - 1) / 2;
-        if (greater_than(self->states[self->heap[parent]].included, self->states[self->heap[parent]].excluded, included, excluded))
+        if (less_than(self->states[self->heap[parent]].included, self->states[self->heap[parent]].excluded, included, excluded))
         {
             break;
         } // if
