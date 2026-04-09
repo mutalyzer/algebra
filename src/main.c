@@ -745,39 +745,9 @@ overlap_main(int argc, char* argv[static argc])
                 fringe.states[idx].included, fringe.states[idx].excluded);
             if (distance == 2 * fringe.states[idx].included + fringe.states[idx].excluded)
             {
-                fprintf(stdout, "%u\n", fringe.states[idx].included);
+                fprintf(stdout, "%u %zu %zu\n", fringe.states[idx].included, steps, array_length(fringe.heap));
                 break;
             } // if
-
-            if (lhs.nodes[lhs_idx].lambda != GVA_NULL)
-            {
-                priority_queue_push(&fringe, lhs.nodes[lhs_idx].lambda * array_length(rhs.nodes) + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded);
-            } // if
-            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
-            {
-                GVA_Variant lhs_variant = {0};
-                gva_edges(lhs.observed.str, lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
-                    lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
-                    &lhs_variant);
-                priority_queue_push(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded + gva_variant_length(lhs_variant));
-            } // for
-
-            if (rhs.nodes[rhs_idx].lambda != GVA_NULL)
-            {
-                priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.nodes[rhs_idx].lambda,
-                    fringe.states[idx].included, fringe.states[idx].excluded);
-            } // if
-            for (gva_uint i = rhs.nodes[rhs_idx].edges; i != GVA_NULL; i = rhs.edges[i].next)
-            {
-                GVA_Variant rhs_variant = {0};
-                gva_edges(rhs.observed.str, rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[i].tail].match,
-                    rhs_idx == rhs.source, rhs.nodes[rhs.edges[i].tail].edges == GVA_NULL,
-                    &rhs_variant);
-                priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.edges[i].tail,
-                    fringe.states[idx].included, fringe.states[idx].excluded + gva_variant_length(rhs_variant));
-            } // for
 
             for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
             {
@@ -806,6 +776,36 @@ overlap_main(int argc, char* argv[static argc])
                         fringe.states[idx].included + included, fringe.states[idx].excluded + excluded);
                 } // for
             } // for
+
+            if (lhs.nodes[lhs_idx].lambda != GVA_NULL)
+            {
+                priority_queue_push(&fringe, lhs.nodes[lhs_idx].lambda * array_length(rhs.nodes) + rhs_idx,
+                    fringe.states[idx].included, fringe.states[idx].excluded);
+            } // if
+            if (rhs.nodes[rhs_idx].lambda != GVA_NULL)
+            {
+                priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.nodes[rhs_idx].lambda,
+                    fringe.states[idx].included, fringe.states[idx].excluded);
+            } // if
+
+            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
+            {
+                GVA_Variant lhs_variant = {0};
+                gva_edges(lhs.observed.str, lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
+                    lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
+                    &lhs_variant);
+                priority_queue_push(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs_idx,
+                    fringe.states[idx].included, fringe.states[idx].excluded + gva_variant_length(lhs_variant));
+            } // for
+            for (gva_uint i = rhs.nodes[rhs_idx].edges; i != GVA_NULL; i = rhs.edges[i].next)
+            {
+                GVA_Variant rhs_variant = {0};
+                gva_edges(rhs.observed.str, rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[i].tail].match,
+                    rhs_idx == rhs.source, rhs.nodes[rhs.edges[i].tail].edges == GVA_NULL,
+                    &rhs_variant);
+                priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.edges[i].tail,
+                    fringe.states[idx].included, fringe.states[idx].excluded + gva_variant_length(rhs_variant));
+            } // for
 /*
             pq_dot(fringe, array_length(rhs.nodes));
             for (size_t i = 0; i < fringe.capacity; ++i)
@@ -820,7 +820,6 @@ overlap_main(int argc, char* argv[static argc])
             } // for
 */
         } // while
-        fprintf(stderr, "steps: %zu\nin queue: %zu\n", steps, array_length(fringe.heap));
 
         priority_queue_destroy(&fringe);
 
