@@ -88,7 +88,7 @@ gva_lcs_graph_dot(FILE* const stream, GVA_LCS_Graph const graph)
     fprintf(stream, "strict digraph{\nrankdir=LR\nedge[fontname=monospace]\nnode[fixedsize=true,fontname=serif,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->%u\n", graph.source);
     for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
-        fprintf(stream, "%zu[label=\"%zu\n(%u, %u, %u)\"%s]\n", i, i, graph.nodes[i].match.row, graph.nodes[i].match.col, graph.nodes[i].match.length, graph.nodes[i].edges == GVA_NULL ? ",peripheries=2" : "");
+        fprintf(stream, "%zu[label=\"%zu\\n(%u, %u, %u)\"%s]\n", i, i, graph.nodes[i].match.row, graph.nodes[i].match.col, graph.nodes[i].match.length, graph.nodes[i].edges == GVA_NULL ? ",peripheries=2" : "");
         if (graph.nodes[i].lambda != GVA_NULL)
         {
             fprintf(stream, "%zu->%u[label=\"&lambda;\",style=dashed]\n", i, graph.nodes[i].lambda);
