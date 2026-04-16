@@ -64,8 +64,8 @@ array_ensure(GVA_Allocator const allocator, void* const self,
 )
 
 
-// Adds an element at the end of the array. Returns the new length of the
-// array. -1 if (re)allocation failed.
+// Adds an element at the end of the array. Returns the index of the new
+// element. -1 if (re)allocation failed.
 // Warning: `self` is evaluated multiple times.
 #define ARRAY_APPEND(allocator, self, value) (                          \
     (self) = array_ensure((allocator), (self), sizeof(*(self)), 1),     \
