@@ -15,8 +15,10 @@
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_variant_*
 #include "align.h"          // LCS_Matches, lcs_align_one
 #include "array.h"          // ARRAY_*, array_length
+#include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
 #include "priority_queue.h" // Priority_Queue, priority_queue_*
+#include "trie.h"           // Trie, trie_*
 
 
 #include <assert.h>
@@ -25,43 +27,8 @@
 #define LINE_SIZE 8194
 
 // #define REFERENCE_ID "NC_000022.11"
-#define REFERENCE_ID "NC_000006.12"
-// #define REFERENCE_ID "NC_000001.11"
-
-
-static void
-pq_dot_traverse(Priority_Queue const self, size_t const i, size_t const rhs_length)
-{
-    size_t const len = array_length(self.heap);
-    size_t const lhs_idx = self.heap[i] / rhs_length;
-    size_t const rhs_idx = self.heap[i] % rhs_length;
-    fprintf(stderr, "%zu[label=\"{%zu, %zu}\\n%u %u\\n %u\"]\n",
-        i, lhs_idx, rhs_idx,
-        self.states[self.heap[i]].included, self.states[self.heap[i]].excluded,
-        self.heap[i]);
-    if (2 * i + 1 < len)
-    {
-        fprintf(stderr, "%zu->%zu\n", i, 2 * i + 1);
-        pq_dot_traverse(self, 2 * i + 1, rhs_length);
-        if (2 * i + 2 < len)
-        {
-            fprintf(stderr, "%zu->%zu\n", i, 2 * i + 2);
-            pq_dot_traverse(self, 2 * i + 2, rhs_length);
-        } // if
-    } // if
-} // pq_dot_traverse
-
-
-static inline void
-pq_dot(Priority_Queue const self, size_t const rhs_length)
-{
-    fprintf(stderr, "strict digraph{\nnode[fixedsize=true,shape=circle,width=1]\n");
-    if (array_length(self.heap) > 0)
-    {
-        pq_dot_traverse(self, 0, rhs_length);
-    } // if
-    fprintf(stderr, "}\n");
-} // pq_dot
+// #define REFERENCE_ID "NC_000006.12"
+#define REFERENCE_ID "NC_000001.11"
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -831,6 +798,276 @@ overlap_main(int argc, char* argv[static argc])
 } // overlap_main
 
 
+typedef struct
+{
+    gva_uint start;
+    gva_uint end;
+    gva_uint inserted;
+    gva_uint distance;
+    gva_uint label;
+} Entry;
+
+
+static inline int
+entry_cmp(void const* a, void const* b)
+{
+    Entry const* const lhs = a;
+    Entry const* const rhs = b;
+
+    if (lhs->start < rhs->start)
+    {
+        return -1;
+    } // if
+    if (lhs->start > rhs->start)
+    {
+        return 1;
+    } // if
+    if (lhs->distance > rhs->distance)
+    {
+        return -1;
+    } // if
+    if (lhs->distance < rhs->distance)
+    {
+        return 1;
+    } // if
+    return 0;
+} // entry_cmp
+
+
+int
+all_main(int argc, char* argv[static argc])
+{
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage %s reference.blob data\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0};
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    errno = 0;
+    stream = fopen(argv[2], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        gva_string_destroy(gva_std_allocator, reference);
+        return EXIT_FAILURE;
+    } // if
+
+    Trie labels = trie_init(gva_std_allocator);
+    Trie sequences = trie_init(gva_std_allocator);
+    Entry* entries = NULL;
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stream) != NULL)
+    {
+        line_count += 1;
+        GVA_String id = {0};
+        GVA_Variant variant = {0};
+        size_t distance = 0;
+        if (!parse_line(line, &id, &variant, &distance))
+        {
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
+            continue;
+        } // if
+
+        if (distance == 0)
+        {
+            fprintf(stderr, "ERROR: DISTANCE\n");
+        } // if
+
+        ARRAY_APPEND(gva_std_allocator, entries,
+            ((Entry)
+            {
+                .start = variant.start,
+                .end = variant.end,
+                .inserted = trie_insert(&sequences, variant.sequence.len, variant.sequence.str),
+                .distance = distance,
+                .label = trie_insert(&labels, id.len, id.str),
+            }));
+    } // while
+    fclose(stream);
+
+    fprintf(stderr, "#lines: %zu\n", line_count);
+
+    if (entries != NULL)
+    {
+        qsort(entries, array_length(entries), sizeof(*entries), entry_cmp);
+        fprintf(stderr, "#entries: %zu\n", array_length(entries));
+
+        size_t count = 0;
+        for (size_t i = 0; i < array_length(entries); ++i)
+        {
+            GVA_Variant const lhs = { entries[i].start, entries[i].end, trie_string(sequences, entries[i].inserted) };
+
+            GVA_LCS_Graph lhs_graph = {NULL};
+            size_t* lhs_dels = NULL;
+            size_t* lhs_as = NULL;
+            size_t* lhs_cs = NULL;
+            size_t* lhs_gs = NULL;
+            size_t* lhs_ts = NULL;
+
+            for (size_t j = i + 1; j < array_length(entries); ++j)
+            {
+                if (entries[i].end < entries[j].start)
+                {
+                    break;
+                } // if
+                count += 1;
+
+                if (entries[i].start == entries[j].start && entries[i].end == entries[j].end && entries[i].inserted == entries[j].inserted)
+                {
+                    fprintf(stdout, GVA_STRING_FMT " equivalent " GVA_STRING_FMT "\n",
+                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
+                    continue;  // equivalent
+                } // if
+
+                GVA_Variant const rhs = { entries[j].start, entries[j].end, trie_string(sequences, entries[j].inserted) };
+
+                size_t const start = MIN(lhs.start, rhs.start);
+                size_t const end = MAX(lhs.end, rhs.end);
+
+                size_t const len_lhs = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
+                size_t const len_rhs = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
+
+                size_t distance = 0;
+                if (len_lhs == 0)
+                {
+                    distance = len_rhs;
+                } // if
+                else if (len_rhs == 0)
+                {
+                    distance = len_lhs;
+                } // if
+                else
+                {
+                    GVA_String observed_lhs = gva_string_init(gva_std_allocator, len_lhs);
+                    GVA_String observed_rhs = gva_string_init(gva_std_allocator, len_rhs);
+                    if (observed_lhs.str == NULL || observed_rhs.str == NULL)
+                    {
+                        return EXIT_FAILURE;  // FIXME: OOM
+                    } // if
+
+                    memcpy((char*) observed_lhs.str, reference.str + start, lhs.start - start);
+                    memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
+                    memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
+
+                    memcpy((char*) observed_rhs.str, reference.str + start, rhs.start - start);
+                    memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
+                    memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
+
+                    distance = gva_edit_distance(gva_std_allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
+                    gva_string_destroy(gva_std_allocator, observed_rhs);
+                    gva_string_destroy(gva_std_allocator, observed_lhs);
+                } // else
+
+                if (entries[i].distance + entries[j].distance == distance)
+                {
+                    continue;  // disjoint
+                } // if
+
+                if (entries[i].distance - entries[j].distance == distance)
+                {
+                    fprintf(stdout, GVA_STRING_FMT " contains " GVA_STRING_FMT "\n",
+                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
+                    continue;  // contains
+                } // if
+
+                if (entries[j].distance - entries[i].distance == distance)
+                {
+                    fprintf(stdout, GVA_STRING_FMT " is_contained " GVA_STRING_FMT "\n",
+                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
+                    continue;  // is_contained
+                } // if
+
+                if (lhs_graph.nodes == NULL)
+                {
+                    lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
+                    size_t const len = end - start + 1;
+                    lhs_dels = bitset_init(gva_std_allocator, len);
+                    lhs_as = bitset_init(gva_std_allocator, len);
+                    lhs_cs = bitset_init(gva_std_allocator, len);
+                    lhs_gs = bitset_init(gva_std_allocator, len);
+                    lhs_ts = bitset_init(gva_std_allocator, len);
+                    gva_lcs_graph_uniq_atomics(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
+                } // if
+
+                GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
+
+                size_t const len = end - start + 1;
+                size_t* rhs_dels = bitset_init(gva_std_allocator, len);
+                size_t* rhs_as = bitset_init(gva_std_allocator, len);
+                size_t* rhs_cs = bitset_init(gva_std_allocator, len);
+                size_t* rhs_gs = bitset_init(gva_std_allocator, len);
+                size_t* rhs_ts = bitset_init(gva_std_allocator, len);
+
+                gva_lcs_graph_uniq_atomics(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+
+                bool const overlap = bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
+                    bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
+                    bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
+                    bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
+                    bitset_intersection_cnt(lhs_ts, rhs_ts) > 0;
+
+                rhs_ts = bitset_destroy(gva_std_allocator, rhs_ts);
+                rhs_gs = bitset_destroy(gva_std_allocator, rhs_gs);
+                rhs_cs = bitset_destroy(gva_std_allocator, rhs_cs);
+                rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
+                rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
+
+                gva_lcs_graph_destroy(gva_std_allocator, rhs_graph, false);
+
+                if (overlap)
+                {
+                    fprintf(stdout, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %zu\n",
+                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)),
+                        (entries[i].distance + entries[j].distance - distance) / 2);
+                } // if
+                else
+                {
+                    fprintf(stdout, GVA_STRING_FMT " disjoint " GVA_STRING_FMT "\n",
+                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
+                } // else
+            } // for
+            lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
+            lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
+            lhs_cs = bitset_destroy(gva_std_allocator, lhs_cs);
+            lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
+            lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
+            gva_lcs_graph_destroy(gva_std_allocator, lhs_graph, false);
+        } // for
+
+        fprintf(stderr, "#combos: %zu\n", count);
+    } // if
+
+    entries = ARRAY_DESTROY(gva_std_allocator, entries);
+    trie_destroy(&labels);
+    trie_destroy(&sequences);
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+} // all_main
+
+
 int
 main(int argc, char* argv[static argc])
 {
@@ -839,4 +1076,5 @@ main(int argc, char* argv[static argc])
     // return index_main(argc, argv);
     return overlap_main(argc, argv);
     // return dot_main(argc, argv);
+    // return all_main(argc, argv);
 } // main
