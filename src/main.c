@@ -18,7 +18,6 @@
 #include "array.h"          // ARRAY_*, array_length
 #include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
-#include "priority_queue.h" // Priority_Queue, priority_queue_*
 #include "trie.h"           // Trie, trie_*
 
 
@@ -30,6 +29,148 @@
 // #define REFERENCE_ID "NC_000022.11"
 // #define REFERENCE_ID "NC_000006.12"
 #define REFERENCE_ID "NC_000001.11"
+
+
+static inline bool
+variant_disjoint(size_t const lhs_count, GVA_Variant const lhs,
+    size_t const rhs_count, GVA_Variant const rhs)
+{
+    if (rhs.start > lhs.end + lhs_count - 1 ||
+        lhs.start > rhs.end + rhs_count - 1)
+    {
+        return true;
+    } // if
+
+    size_t lhs_offset = 0;
+    size_t rhs_offset = 0;
+    if (rhs.start > lhs.start)
+    {
+        lhs_offset = MIN(rhs.start - lhs.start, lhs_count - 1);
+    } // if
+    else if (lhs.start > rhs.start)
+    {
+        rhs_offset = MIN(lhs.start - rhs.start, rhs_count - 1);
+    } // if
+
+    size_t const start = MAX(lhs.start + lhs_offset, rhs.start + rhs_offset);
+    size_t const end = MIN(lhs.end + lhs_offset, rhs.end + rhs_offset);
+
+    if (end > start)
+    {
+        return false;
+    } // if
+
+    unsigned __int128 lhs_seq = 0;
+    for (size_t i = 0; i < lhs.sequence.len; ++i)
+    {
+        lhs_seq |= 1 << (lhs.sequence.str[lhs_offset + i] & 0x7f);
+    } // for
+    unsigned __int128 rhs_seq = 0;
+    for (size_t i = 0; i < rhs.sequence.len; ++i)
+    {
+        rhs_seq |= 1 << (rhs.sequence.str[rhs_offset + i] & 0x7f);
+    } // for
+
+    return (lhs_seq & rhs_seq) == 0;
+} // variant_disjoint
+
+
+static bool
+is_disjoint(GVA_Allocator const allocator,
+    GVA_LCS_Graph const lhs, GVA_LCS_Graph const rhs)
+{
+    size_t const rhs_nodes = array_length(rhs.nodes);
+    size_t const length = array_length(lhs.nodes) * rhs_nodes;
+    gva_uint* queue = allocator.allocate(allocator.context, NULL, 0, length * sizeof(*queue));
+    if (queue == NULL)
+    {
+        return true;  // FIXME: OOM
+    } // if
+
+    for (size_t i = 0; i < length; ++i)
+    {
+        queue[i] = GVA_NULL;
+    } // for
+
+    gva_uint tail =  lhs.source * rhs_nodes + rhs.source;
+    for (gva_uint head = tail; head != GVA_NULL; head = queue[head])
+    {
+        size_t const lhs_idx = head / rhs_nodes;
+        size_t const rhs_idx = head % rhs_nodes;
+
+        fprintf(stderr, "{%zu, %zu}\n", lhs_idx, rhs_idx);
+
+        if (lhs.nodes[lhs_idx].match.row + lhs.nodes[lhs_idx].match.length <
+            rhs.nodes[rhs_idx].match.row)
+        {
+            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
+            {
+                fprintf(stderr, "    LHS {%u, %zu}\n", lhs.edges[i].tail, rhs_idx);
+                size_t const next = lhs.edges[i].tail * rhs_nodes + rhs_idx;
+                if (lhs.nodes[lhs.edges[i].tail].edges != GVA_NULL)
+                {
+                    queue[tail] = next;
+                    tail = next;
+                } // if
+            } // for
+            continue;
+        } // if
+
+        if (rhs.nodes[rhs_idx].match.row + rhs.nodes[rhs_idx].match.length <
+            lhs.nodes[lhs_idx].match.row)
+        {
+            for (gva_uint i = rhs.nodes[rhs_idx].edges; i != GVA_NULL; i = rhs.edges[i].next)
+            {
+                fprintf(stderr, "    RHS {%zu, %u}\n", lhs_idx, rhs.edges[i].tail);
+                size_t const next = lhs_idx * rhs_nodes + rhs.edges[i].tail;
+                if (rhs.nodes[rhs.edges[i].tail].edges != GVA_NULL)
+                {
+                    queue[tail] = next;
+                    tail = next;
+                } // if
+            } // for
+            continue;
+        } // if
+
+        for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
+        {
+            GVA_Variant lhs_variant = {0};
+            size_t const lhs_count = gva_edges(lhs.observed.str,
+                lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
+                lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
+                &lhs_variant);
+
+            for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
+            {
+                GVA_Variant rhs_variant = {0};
+                size_t const rhs_count = gva_edges(rhs.observed.str,
+                    rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[j].tail].match,
+                    rhs_idx == rhs.source, rhs.nodes[rhs.edges[j].tail].edges == GVA_NULL,
+                    &rhs_variant);
+
+                fprintf(stderr, "    " GVA_VARIANT_FMT " x %zu  vs  " GVA_VARIANT_FMT " x %zu\n",
+                    GVA_VARIANT_PRINT(lhs_variant), lhs_count, GVA_VARIANT_PRINT(rhs_variant), rhs_count);
+
+                if (!variant_disjoint(lhs_count, lhs_variant, rhs_count, rhs_variant))
+                {
+                    queue = allocator.allocate(allocator.context, queue, length * sizeof(*queue), 0);
+                    return false;
+                } // if
+
+                size_t const next = lhs.edges[i].tail * rhs_nodes + rhs.edges[j].tail;
+                if (lhs.nodes[lhs.edges[i].tail].edges != GVA_NULL &&
+                    rhs.nodes[rhs.edges[j].tail].edges != GVA_NULL)
+                {
+                    queue[tail] = next;
+                    tail = next;
+                } // if
+            } // for
+        } // for
+    } // for
+
+    queue = allocator.allocate(allocator.context, queue, length * sizeof(*queue), 0);
+    return true;
+} // is_disjoint
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -453,88 +594,6 @@ allele_main(int argc, char* argv[static argc])
 } // allele_main
 
 
-// DEBUG / check
-int
-extract_main(int argc, char* argv[static argc])
-{
-    (void) argv;
-
-    size_t line_count = 0;
-    static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stdin) != NULL)
-    {
-        line_count += 1;
-
-        size_t const len_ref = strcspn(line, "\t ");
-        GVA_String const reference = {len_ref, line};
-        size_t const len_obs = strcspn(line + len_ref + 1, "\n\t ");
-        GVA_String const observed = {len_obs, line + len_ref + 1};
-
-        fprintf(stdout, "%zu: " GVA_STRING_FMT " (%zu) " GVA_STRING_FMT " (%zu)\n", line_count,
-            GVA_STRING_PRINT(reference), reference.len, GVA_STRING_PRINT(observed), observed.len);
-
-        GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator,
-            reference.len, reference.str, observed.len, observed.str, 0);
-
-        // fprintf(stdout, "    distance:   %zu\n", gva_lcs_graph_distance(graph));
-        // fprintf(stdout, "    #nodes:     %zu\n", array_length(graph.nodes));
-        // for (size_t i = 0; i < array_length(graph.nodes); ++i)
-        // {
-        //     fprintf(stdout, "        %zu: (%u, %u, %u)\n", i,
-        //         graph.nodes[i].match.row, graph.nodes[i].match.col, graph.nodes[i].match.length);
-        // } // for
-        // fprintf(stdout, "    #edges:     %zu\n", array_length(graph.edges));
-        // fprintf(stdout, "    #dom_nodes: %zu\n", array_length(graph.dom_nodes));
-        // if (array_length(graph.dom_nodes) < 3)
-        // {
-        //     continue;
-        // }
-
-        // for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
-        // {
-        //     if (i > 0)
-        //     {
-        //         fprintf(stdout, "           " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(graph, i - 1, i)));
-        //     } // if
-        //     fprintf(stdout, "        %zu: (%u, %u, %u) %u\n", i,
-        //         graph.dom_nodes[i].match.row, graph.dom_nodes[i].match.col, graph.dom_nodes[i].match.length,
-        //         graph.dom_nodes[i].distance);
-        // } // for
-
-        // fprintf(stdout, "    supremal:   " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(graph)));
-
-        gva_lcs_graph_dot(stdout, graph);
-        GVA_Variant sup = gva_variant_dup(gva_std_allocator, gva_lcs_graph_supremal(graph));
-
-        GVA_LCS_Graph graph2 = gva_lcs_graph_from_allele(gva_std_allocator, reference.len, reference.str, 1, &sup);
-        gva_lcs_graph_dot(stdout, graph2);
-
-        if (array_length(graph.dom_nodes) != array_length(graph2.dom_nodes))
-        {
-            fprintf(stderr, "length dom nodes mismatch\n");
-            assert(0);
-        } // if
-
-        for (size_t i = 0; i < array_length(graph.dom_nodes); ++i)
-        {
-            if (graph.dom_nodes[i].match.row != graph2.dom_nodes[i].match.row ||
-                graph.dom_nodes[i].match.col != graph2.dom_nodes[i].match.col ||
-                graph.dom_nodes[i].match.length != graph2.dom_nodes[i].match.length)
-            {
-                fprintf(stderr, "dom nodes mismatch\n");
-                assert(0);
-            } // if
-        } // for
-
-        gva_string_destroy(gva_std_allocator, sup.sequence);
-        gva_lcs_graph_destroy(gva_std_allocator, graph2, true);
-        gva_lcs_graph_destroy(gva_std_allocator, graph, false);
-    } // while
-
-    return EXIT_SUCCESS;
-} // extract_main
-
-
 int
 supremal_main(int argc, char* argv[static argc])
 {
@@ -599,46 +658,6 @@ supremal_main(int argc, char* argv[static argc])
 } // supremal_main
 
 
-static inline size_t
-variant_included(size_t const lhs_count, GVA_Variant const lhs,
-    size_t const rhs_count, GVA_Variant const rhs)
-{
-    if (rhs.start > lhs.end + lhs_count - 1 ||
-        lhs.start > rhs.end + rhs_count - 1)
-    {
-        return 0;
-    } // if
-
-    size_t lhs_offset = 0;
-    size_t rhs_offset = 0;
-    if (rhs.start > lhs.start)
-    {
-        lhs_offset = MIN(rhs.start - lhs.start, lhs_count - 1);
-    } // if
-    else if (lhs.start > rhs.start)
-    {
-        rhs_offset = MIN(lhs.start - rhs.start, rhs_count - 1);
-    } // if
-
-    size_t const start = MAX(lhs.start + lhs_offset, rhs.start + rhs_offset);
-    size_t const end = MIN(lhs.end + lhs_offset, rhs.end + rhs_offset);
-
-    if (lhs.sequence.len == 0 || rhs.sequence.len == 0)
-    {
-        return end - start;
-    } // if
-    if (lhs.sequence.len == 1 && rhs.sequence.len == 1)
-    {
-        return (lhs.sequence.str[0] == rhs.sequence.str[0]) + end - start;
-    } // if
-
-    size_t const lcs = (lhs.sequence.len + rhs.sequence.len -
-        gva_edit_distance(gva_std_allocator, lhs.sequence.len, lhs.sequence.str + lhs_offset,
-                                             rhs.sequence.len, rhs.sequence.str + rhs_offset)) / 2;
-    return lcs + end - start;
-} // variant_included
-
-
 int
 overlap_main(int argc, char* argv[static argc])
 {
@@ -697,100 +716,7 @@ overlap_main(int argc, char* argv[static argc])
         fprintf(stderr, "#nodes lhs: %zu rhs %zu :: %zu\n", array_length(lhs.nodes), array_length(rhs.nodes), array_length(lhs.nodes) * array_length(rhs.nodes));
         fprintf(stderr, "#edges lhs: %zu rhs %zu :: %zu\n", array_length(lhs.edges), array_length(rhs.edges), array_length(lhs.edges) * array_length(rhs.edges));
 
-        size_t const distance = gva_lcs_graph_distance(lhs) + gva_lcs_graph_distance(rhs);
-        Priority_Queue fringe = priority_queue_init(gva_std_allocator, array_length(lhs.nodes) * array_length(rhs.nodes));
-        priority_queue_push(&fringe, lhs.source * array_length(rhs.nodes) + rhs.source, 0, 0);
-
-        size_t steps = 0;
-        while (!priority_queue_empty(fringe))
-        {
-            steps += 1;
-            size_t const idx = priority_queue_pop(&fringe);
-
-            size_t const lhs_idx = idx / array_length(rhs.nodes);
-            size_t const rhs_idx = idx % array_length(rhs.nodes);
-
-            fprintf(stderr, "{%zu, %zu} (%zu) :: %u %u\n", lhs_idx, rhs_idx, idx,
-                fringe.states[idx].included, fringe.states[idx].excluded);
-            if (distance == 2 * fringe.states[idx].included + fringe.states[idx].excluded)
-            {
-                fprintf(stdout, "%u %zu %zu\n", fringe.states[idx].included, steps, array_length(fringe.heap));
-                break;
-            } // if
-
-            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
-            {
-                GVA_Variant lhs_variant = {0};
-                size_t const lhs_count = gva_edges(lhs.observed.str,
-                    lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
-                    lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
-                    &lhs_variant);
-
-                for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
-                {
-                    GVA_Variant rhs_variant = {0};
-                    size_t const rhs_count = gva_edges(rhs.observed.str,
-                        rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[j].tail].match,
-                        rhs_idx == rhs.source, rhs.nodes[rhs.edges[j].tail].edges == GVA_NULL,
-                        &rhs_variant);
-
-                    size_t const included = variant_included(lhs_count, lhs_variant, rhs_count, rhs_variant);
-                    size_t const excluded = gva_variant_length(lhs_variant) + gva_variant_length(rhs_variant) - 2 * included;
-/*
-                    fprintf(stderr, "  {%u, %u} ", lhs.edges[i].tail, rhs.edges[j].tail);
-                    fprintf(stderr, GVA_VARIANT_FMT " x %zu (%zu) vs " GVA_VARIANT_FMT " x %zu (%zu) ", GVA_VARIANT_PRINT(lhs_variant), lhs_count, gva_variant_length(lhs_variant), GVA_VARIANT_PRINT(rhs_variant), rhs_count, gva_variant_length(rhs_variant));
-                    fprintf(stderr, "+ %zu %zu\n", included, excluded);
-*/
-                    priority_queue_push(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs.edges[j].tail,
-                        fringe.states[idx].included + included, fringe.states[idx].excluded + excluded);
-                } // for
-            } // for
-
-            if (lhs.nodes[lhs_idx].lambda != GVA_NULL)
-            {
-                priority_queue_push(&fringe, lhs.nodes[lhs_idx].lambda * array_length(rhs.nodes) + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded);
-            } // if
-            if (rhs.nodes[rhs_idx].lambda != GVA_NULL)
-            {
-                priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.nodes[rhs_idx].lambda,
-                    fringe.states[idx].included, fringe.states[idx].excluded);
-            } // if
-
-            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
-            {
-                GVA_Variant lhs_variant = {0};
-                gva_edges(lhs.observed.str, lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
-                    lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
-                    &lhs_variant);
-                priority_queue_push(&fringe, lhs.edges[i].tail * array_length(rhs.nodes) + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded + gva_variant_length(lhs_variant));
-            } // for
-            for (gva_uint i = rhs.nodes[rhs_idx].edges; i != GVA_NULL; i = rhs.edges[i].next)
-            {
-                GVA_Variant rhs_variant = {0};
-                gva_edges(rhs.observed.str, rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[i].tail].match,
-                    rhs_idx == rhs.source, rhs.nodes[rhs.edges[i].tail].edges == GVA_NULL,
-                    &rhs_variant);
-                priority_queue_push(&fringe, lhs_idx * array_length(rhs.nodes) + rhs.edges[i].tail,
-                    fringe.states[idx].included, fringe.states[idx].excluded + gva_variant_length(rhs_variant));
-            } // for
-/*
-            pq_dot(fringe, array_length(rhs.nodes));
-            for (size_t i = 0; i < fringe.capacity; ++i)
-            {
-                if (fringe.states[i].idx != GVA_NULL)
-                {
-                    size_t const lhs_idx = i / array_length(rhs.nodes);
-                    size_t const rhs_idx = i % array_length(rhs.nodes);
-                    fprintf(stderr, "%4zu: {%zu, %zu} :: %2u %2u %2d\n", i, lhs_idx, rhs_idx,
-                        fringe.states[i].included, fringe.states[i].excluded, fringe.states[i].idx);
-                } // if
-            } // for
-*/
-        } // while
-
-        priority_queue_destroy(&fringe);
+        fprintf(stderr, "disjoint: %d\n", is_disjoint(gva_std_allocator, lhs, rhs));
 
         gva_lcs_graph_destroy(gva_std_allocator, rhs, true);
         gva_lcs_graph_destroy(gva_std_allocator, lhs, true);
@@ -811,7 +737,7 @@ typedef struct
 
 
 static inline int
-entry_cmp(void const* a, void const* b)
+compare_entries(void const* a, void const* b)
 {
     Entry const* const lhs = a;
     Entry const* const rhs = b;
@@ -833,7 +759,7 @@ entry_cmp(void const* a, void const* b)
         return 1;
     } // if
     return 0;
-} // entry_cmp
+} // compare_entries
 
 
 int
@@ -907,7 +833,7 @@ all_main(int argc, char* argv[static argc])
 
     if (entries != NULL)
     {
-        qsort(entries, array_length(entries), sizeof(*entries), entry_cmp);
+        qsort(entries, array_length(entries), sizeof(*entries), compare_entries);
         fprintf(stderr, "#entries: %zu\n", array_length(entries));
 
         size_t count = 0;
@@ -1074,9 +1000,7 @@ int
 main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
-    // return extract_main(argc, argv);
     // return index_main(argc, argv);
     return overlap_main(argc, argv);
-    // return dot_main(argc, argv);
     // return all_main(argc, argv);
 } // main
