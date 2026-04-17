@@ -5,6 +5,7 @@
 #include <stdlib.h>     // EXIT_*, atoll, qsort
 #include <string.h>     // strerror, strlen
 
+#include "../include/compare.h"     // gva_compare_graphs
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Query_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
@@ -101,7 +102,6 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
             result.alleles[i].included, result.alleles[i].excluded, array_length(graph.dom_nodes) - 1);
             } // if
         } // if
-
 
         if (hits)
         {
@@ -678,6 +678,8 @@ overlap_main(int argc, char* argv[static argc])
         GVA_LCS_Graph lhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &lhs_variant);
         GVA_LCS_Graph rhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
 
+        fprintf(stderr, "%s\n", GVA_RELATION_LABELS[gva_compare_graphs(gva_std_allocator, reference.len, reference.str, lhs, rhs)]);
+
         static char filename[128] = {0};
         snprintf(filename, 128, "overlap/graph_%zu.dot", line_count);
         FILE* stream = fopen(filename, "w");
@@ -688,10 +690,10 @@ overlap_main(int argc, char* argv[static argc])
         fprintf(stderr, "%sdistances lhs: %zu rhs: %zu :: ", line, gva_lcs_graph_distance(lhs), gva_lcs_graph_distance(rhs));
         {
             size_t const distance = gva_edit_distance(gva_std_allocator,
-                gva_lcs_graph_supremal(lhs).sequence.len, gva_lcs_graph_supremal(lhs).sequence.str,
-                gva_lcs_graph_supremal(rhs).sequence.len, gva_lcs_graph_supremal(rhs).sequence.str);
+                lhs_variant.sequence.len, lhs_variant.sequence.str,
+                rhs_variant.sequence.len, rhs_variant.sequence.str);
             fprintf(stderr, "%zu\n", distance);
-        } // empty
+        }
         fprintf(stderr, "#nodes lhs: %zu rhs %zu :: %zu\n", array_length(lhs.nodes), array_length(rhs.nodes), array_length(lhs.nodes) * array_length(rhs.nodes));
         fprintf(stderr, "#edges lhs: %zu rhs %zu :: %zu\n", array_length(lhs.edges), array_length(rhs.edges), array_length(lhs.edges) * array_length(rhs.edges));
 
