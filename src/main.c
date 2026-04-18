@@ -18,6 +18,7 @@
 #include "array.h"          // ARRAY_*, array_length
 #include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
+#include "nfa.h"            // DFA, dfa_*
 #include "trie.h"           // Trie, trie_*
 
 
@@ -81,7 +82,11 @@ is_disjoint(GVA_Allocator const allocator,
 {
     size_t const rhs_nodes = array_length(rhs.nodes);
     size_t const length = array_length(lhs.nodes) * rhs_nodes;
-    gva_uint* queue = allocator.allocate(allocator.context, NULL, 0, length * sizeof(*queue));
+    struct
+    {
+        gva_uint seen;
+        gva_uint next;
+    }* queue = allocator.allocate(allocator.context, NULL, 0, length * sizeof(*queue));
     if (queue == NULL)
     {
         return true;  // FIXME: OOM
@@ -89,48 +94,17 @@ is_disjoint(GVA_Allocator const allocator,
 
     for (size_t i = 0; i < length; ++i)
     {
-        queue[i] = GVA_NULL;
+        queue[i].seen = false;
+        queue[i].next = GVA_NULL;
     } // for
 
-    gva_uint tail =  lhs.source * rhs_nodes + rhs.source;
-    for (gva_uint head = tail; head != GVA_NULL; head = queue[head])
+    gva_uint tail = lhs.source * rhs_nodes + rhs.source;
+    for (gva_uint head = tail; head != GVA_NULL; head = queue[head].next)
     {
         size_t const lhs_idx = head / rhs_nodes;
         size_t const rhs_idx = head % rhs_nodes;
 
         fprintf(stderr, "{%zu, %zu}\n", lhs_idx, rhs_idx);
-
-        if (lhs.nodes[lhs_idx].match.row + lhs.nodes[lhs_idx].match.length <
-            rhs.nodes[rhs_idx].match.row)
-        {
-            for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
-            {
-                fprintf(stderr, "    LHS {%u, %zu}\n", lhs.edges[i].tail, rhs_idx);
-                size_t const next = lhs.edges[i].tail * rhs_nodes + rhs_idx;
-                if (lhs.nodes[lhs.edges[i].tail].edges != GVA_NULL)
-                {
-                    queue[tail] = next;
-                    tail = next;
-                } // if
-            } // for
-            continue;
-        } // if
-
-        if (rhs.nodes[rhs_idx].match.row + rhs.nodes[rhs_idx].match.length <
-            lhs.nodes[lhs_idx].match.row)
-        {
-            for (gva_uint i = rhs.nodes[rhs_idx].edges; i != GVA_NULL; i = rhs.edges[i].next)
-            {
-                fprintf(stderr, "    RHS {%zu, %u}\n", lhs_idx, rhs.edges[i].tail);
-                size_t const next = lhs_idx * rhs_nodes + rhs.edges[i].tail;
-                if (rhs.nodes[rhs.edges[i].tail].edges != GVA_NULL)
-                {
-                    queue[tail] = next;
-                    tail = next;
-                } // if
-            } // for
-            continue;
-        } // if
 
         for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
         {
@@ -148,8 +122,8 @@ is_disjoint(GVA_Allocator const allocator,
                     rhs_idx == rhs.source, rhs.nodes[rhs.edges[j].tail].edges == GVA_NULL,
                     &rhs_variant);
 
-                fprintf(stderr, "    " GVA_VARIANT_FMT " x %zu  vs  " GVA_VARIANT_FMT " x %zu\n",
-                    GVA_VARIANT_PRINT(lhs_variant), lhs_count, GVA_VARIANT_PRINT(rhs_variant), rhs_count);
+                //fprintf(stderr, "    " GVA_VARIANT_FMT " x %zu  vs  " GVA_VARIANT_FMT " x %zu\n",
+                //    GVA_VARIANT_PRINT(lhs_variant), lhs_count, GVA_VARIANT_PRINT(rhs_variant), rhs_count);
 
                 if (!variant_disjoint(lhs_count, lhs_variant, rhs_count, rhs_variant))
                 {
@@ -159,13 +133,62 @@ is_disjoint(GVA_Allocator const allocator,
 
                 size_t const next = lhs.edges[i].tail * rhs_nodes + rhs.edges[j].tail;
                 if (lhs.nodes[lhs.edges[i].tail].edges != GVA_NULL &&
-                    rhs.nodes[rhs.edges[j].tail].edges != GVA_NULL)
+                    rhs.nodes[rhs.edges[j].tail].edges != GVA_NULL &&
+                    !queue[next].seen)
                 {
-                    queue[tail] = next;
+                    queue[tail].next = next;
                     tail = next;
+                    queue[next].seen = true;
                 } // if
             } // for
         } // for
+
+        if (lhs.nodes[lhs_idx].lambda != GVA_NULL)
+        {
+            size_t const next = lhs.nodes[lhs_idx].lambda * rhs_nodes + rhs_idx;
+            if (!queue[next].seen)
+            {
+                //fprintf(stderr, "  lambda lhs: {%u, %zu}\n", lhs.nodes[lhs_idx].lambda, rhs_idx);
+                queue[tail].next = next;
+                tail = next;
+                queue[next].seen = true;
+            } // if
+        } // if
+        if (rhs.nodes[rhs_idx].lambda != GVA_NULL)
+        {
+            size_t const next = lhs_idx * rhs_nodes + rhs.nodes[rhs_idx].lambda;
+            if (!queue[next].seen)
+            {
+                //fprintf(stderr, "  lambda rhs: {%zu, %u}\n", lhs_idx, rhs.nodes[rhs_idx].lambda);
+                queue[tail].next = next;
+                tail = next;
+                queue[next].seen = true;
+            } // if
+        } // if
+
+        for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
+        {
+            size_t const next = lhs.edges[i].tail * rhs_nodes + rhs_idx;
+            if (lhs.nodes[lhs.edges[i].tail].edges != GVA_NULL && !queue[next].seen)
+            {
+                //fprintf(stderr, "  advance lhs: {%u, %zu}\n", lhs.edges[i].tail, rhs_idx);
+                queue[tail].next = next;
+                tail = next;
+                queue[next].seen = true;
+            } // if
+        } // for
+        for (gva_uint i = rhs.nodes[rhs_idx].edges; i != GVA_NULL; i = rhs.edges[i].next)
+        {
+            size_t const next = lhs_idx * rhs_nodes + rhs.edges[i].tail;
+            if (rhs.nodes[rhs.edges[i].tail].edges != GVA_NULL && !queue[next].seen)
+            {
+                //fprintf(stderr, "  advance rhs: {%zu, %u}\n", lhs_idx, rhs.edges[i].tail);
+                queue[tail].next = next;
+                tail = next;
+                queue[next].seen = true;
+            } // if
+        } // for
+
     } // for
 
     queue = allocator.allocate(allocator.context, queue, length * sizeof(*queue), 0);
@@ -697,6 +720,12 @@ overlap_main(int argc, char* argv[static argc])
         GVA_LCS_Graph lhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &lhs_variant);
         GVA_LCS_Graph rhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
 
+        DFA dfa = dfa_from_lcs_graph(gva_std_allocator, lhs);
+
+        dfa_dot(dfa);
+
+        dfa_destroy(gva_std_allocator, &dfa);
+
         fprintf(stderr, "%s\n", GVA_RELATION_LABELS[gva_compare_graphs(gva_std_allocator, reference.len, reference.str, lhs, rhs)]);
 
         static char filename[128] = {0};
@@ -716,7 +745,7 @@ overlap_main(int argc, char* argv[static argc])
         fprintf(stderr, "#nodes lhs: %zu rhs %zu :: %zu\n", array_length(lhs.nodes), array_length(rhs.nodes), array_length(lhs.nodes) * array_length(rhs.nodes));
         fprintf(stderr, "#edges lhs: %zu rhs %zu :: %zu\n", array_length(lhs.edges), array_length(rhs.edges), array_length(lhs.edges) * array_length(rhs.edges));
 
-        fprintf(stderr, "disjoint: %d\n", is_disjoint(gva_std_allocator, lhs, rhs));
+        //fprintf(stderr, "disjoint: %d\n", is_disjoint(gva_std_allocator, lhs, rhs));
 
         gva_lcs_graph_destroy(gva_std_allocator, rhs, true);
         gva_lcs_graph_destroy(gva_std_allocator, lhs, true);
@@ -959,6 +988,21 @@ all_main(int argc, char* argv[static argc])
                 rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
                 rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
 
+                fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n",
+                    GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                    GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
+                bool const disjoint = is_disjoint(gva_std_allocator, lhs_graph, rhs_graph);
+
+                if (disjoint == overlap)
+                {
+                    fprintf(stderr, "ERROR: %d\n", disjoint);
+                    fprintf(stderr, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %zu\n",
+                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)),
+                        (entries[i].distance + entries[j].distance - distance) / 2);
+                        return EXIT_FAILURE;
+                } // if
+
                 gva_lcs_graph_destroy(gva_std_allocator, rhs_graph, false);
 
                 if (overlap)
@@ -1001,6 +1045,6 @@ main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
-    return overlap_main(argc, argv);
-    // return all_main(argc, argv);
+    // return overlap_main(argc, argv);
+    return all_main(argc, argv);
 } // main
