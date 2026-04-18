@@ -1,12 +1,110 @@
-#include <stddef.h>     // size_t
+#include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // stderr, fprintf  FIXME: DEBUG
+#include <string.h>     // memset
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
+#include "../include/string.h"      // GVA_String, gva_string_*
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/variant.h"     // GVA_Variant
 #include "array.h"      // ARRAY_*, array_length
-#include "nfa.h"        // NFA*, nfa_*
+#include "nfa.h"        // DFA, dfa*, NFA*, nfa_*
+
+
+static inline void
+dfa_edge(DFA self[static 1], size_t const width,
+    size_t const start, size_t const end,
+    size_t const len, size_t const offset)
+{
+    for (size_t i = start; i <= end; ++i)
+    {
+        for (size_t j = 0; j <= len; ++j)
+        {
+            self->states[i * width + offset + j].present = 1;
+        } // for
+    } // for
+} // dfa_edge
+
+
+DFA
+dfa_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
+{
+    GVA_Variant const supremal = gva_lcs_graph_supremal(graph);
+    size_t const size = (supremal.end - supremal.start + 1) * (supremal.sequence.len + 1);
+    DFA dfa =
+    {
+        .observed = supremal.sequence,
+        .states = allocator.allocate(allocator.context, NULL, 0, size),
+    };
+    if (dfa.states == NULL)
+    {
+        dfa.size = 0;
+        return dfa;  // OOM
+    } // if
+
+    dfa.size = size;
+    memset(dfa.states, 0, dfa.size);
+
+    size_t const width = dfa.observed.len + 1;
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        dfa.states[graph.nodes[i].match.row * width + graph.nodes[i].match.col].present = 1;
+        for (size_t j = 0; j < graph.nodes[i].match.length; ++j)
+        {
+            dfa.states[(graph.nodes[i].match.row + j) * width + graph.nodes[i].match.col + j].present = 1;
+            dfa.states[(graph.nodes[i].match.row + j) * width + graph.nodes[i].match.col + j].match = 1;
+        } // for
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            GVA_Variant variant = {0};
+            size_t const count = gva_edges(graph.observed.str,
+                graph.nodes[i].match, graph.nodes[graph.edges[j].tail].match,
+                i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                &variant);
+            for (size_t k = 0; k < count; ++k)
+            {
+                dfa_edge(&dfa, width, variant.start + k, variant.end + k, variant.sequence.len, variant.sequence.str - dfa.observed.str + k);
+            } // for
+        } // for
+    } // for
+
+    return dfa;
+} // dfa_from_lcs_graph
+
+
+inline void
+dfa_destroy(GVA_Allocator const allocator, DFA self[static 1])
+{
+    self->states = allocator.allocate(allocator.context, self->states, self->size * sizeof(*self->states), 0);
+    self->size = 0;
+} // dfa_destroy
+
+
+void
+dfa_dot(DFA const self)
+{
+    size_t const width = self.observed.len + 1;
+    fprintf(stderr, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,label=\"\",shape=circle,width=1]\ni[shape=none,width=0]\ni->0\n");
+    for (size_t i = 0; i < self.size; ++i)
+    {
+        if (self.states[i].present)
+        {
+            if (i < self.size - 1 && self.states[i + 1].present)
+            {
+                fprintf(stderr, "%zu->%zu[label=\"%c\"]\n", i, i + 1, self.observed.str[i % width]);
+            } // if
+            if (i < self.size - width && self.states[i + width].present)
+            {
+                fprintf(stderr, "%zu->%zu[label=\"&Delta;\"]\n", i, i + width);
+            } // if
+            if (self.states[i].match)
+            {
+                fprintf(stderr, "%zu->%zu[label=\"&Mu;\"]\n", i, i + width + 1);
+            } // if
+        } // if
+    } // for
+    fprintf(stderr, "%zu[peripheries=2]\n}\n", self.size - 1);
+} // dfa_dot
 
 
 static void

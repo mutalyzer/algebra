@@ -2,13 +2,45 @@
 #define GVA_NFA_H
 
 
+#include <stddef.h>     // size_t
+#include <stdint.h>     // uint8_t
+
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph
+#include "../include/string.h"      // GVA_String
 #include "../include/types.h"       // gva_uint
 
 
+typedef struct
+{
+    uint8_t present : 1;
+    uint8_t match   : 1;
+} DFA_State;  // FIXME: could realy be 2 bits
+
+
+typedef struct
+{
+    size_t     size;
+    GVA_String observed;
+    DFA_State* states;
+} DFA;
+
+
+DFA
+dfa_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
+
+
+void
+dfa_destroy(GVA_Allocator const allocator, DFA self[static 1]);
+
+
+// FIXME: DEBUG
+void
+dfa_dot(DFA const self);
+
+
+static char const NFA_LAMBDA =   0;
 static char const NFA_DELETE = 127;
-static char const NFA_LAMBDA = (char) 235;
 
 
 typedef struct
