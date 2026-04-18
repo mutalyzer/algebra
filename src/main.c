@@ -720,11 +720,12 @@ overlap_main(int argc, char* argv[static argc])
         GVA_LCS_Graph lhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &lhs_variant);
         GVA_LCS_Graph rhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
 
-        DFA dfa = dfa_from_lcs_graph(gva_std_allocator, lhs);
-
-        dfa_dot(dfa);
-
-        dfa_destroy(gva_std_allocator, &dfa);
+        DFA lhs_dfa = dfa_from_lcs_graph(gva_std_allocator, lhs);
+        DFA rhs_dfa = dfa_from_lcs_graph(gva_std_allocator, rhs);
+        dfa_dot(lhs_dfa);
+        dfa_dot(rhs_dfa);
+        dfa_destroy(gva_std_allocator, &rhs_dfa);
+        dfa_destroy(gva_std_allocator, &lhs_dfa);
 
         fprintf(stderr, "%s\n", GVA_RELATION_LABELS[gva_compare_graphs(gva_std_allocator, reference.len, reference.str, lhs, rhs)]);
 
@@ -1045,6 +1046,6 @@ main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
-    // return overlap_main(argc, argv);
-    return all_main(argc, argv);
+    return overlap_main(argc, argv);
+    // return all_main(argc, argv);
 } // main
