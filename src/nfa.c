@@ -107,7 +107,7 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
         fprintf(stderr, "{%zu, %zu} (%zu) :: %u %u\n", lhs_idx, rhs_idx, idx,
             fringe.states[idx].included, fringe.states[idx].excluded);
 
-        if (lhs_idx == lhs.size - 1 && rhs_idx == rhs.size - 1)
+        if (lhs_idx == lhs.size - 1 || rhs_idx == rhs.size - 1)
         {
             fprintf(stderr, "%u %zu %zu\n", fringe.states[idx].included, count, array_length(fringe.heap));
             break;
