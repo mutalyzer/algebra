@@ -5,7 +5,7 @@
 #include "../include/types.h"       // GVA_NULL, gva_uint
 
 #include "array.h"              // ARRAY_*
-#include "priority_queue.h"     // Priority_Queue, priority_queue_*, State
+#include "priority_queue.h"     // Priority_Queue*, priority_queue_*
 
 
 static inline bool
@@ -29,7 +29,7 @@ swap(gva_uint lhs[static restrict 1], gva_uint rhs[static restrict 1])
 inline Priority_Queue
 priority_queue_init(GVA_Allocator const allocator, size_t const capacity)
 {
-    State* const states = allocator.allocate(allocator.context, NULL, 0, capacity * sizeof(*states));
+    Priority_Queue_State* const states = allocator.allocate(allocator.context, NULL, 0, capacity * sizeof(*states));
     if (states == NULL)
     {
         return (Priority_Queue) {NULL};
@@ -53,7 +53,7 @@ inline void
 priority_queue_destroy(Priority_Queue self[static 1])
 {
     self->heap = ARRAY_DESTROY(self->allocator, self->heap);
-    self->states = self->allocator.allocate(self->allocator.context, self->states, self->capacity * sizeof(State), 0);
+    self->states = self->allocator.allocate(self->allocator.context, self->states, self->capacity * sizeof(*self->states), 0);
     self->capacity = 0;
 } // priority_queue_destroy
 
@@ -107,7 +107,7 @@ priority_queue_push(Priority_Queue self[static 1], size_t const key,
 {
     if (self->states[key].idx == GVA_NULL)
     {
-        self->states[key] = (State)
+        self->states[key] = (Priority_Queue_State)
         {
             .idx = ARRAY_APPEND(self->allocator, self->heap, key),
             .included = included,

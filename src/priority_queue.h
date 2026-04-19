@@ -14,13 +14,13 @@ typedef struct
     gva_uint idx;
     gva_uint included;
     gva_uint excluded;
-} State;
+} Priority_Queue_State;
 
 
 typedef struct
 {
+    Priority_Queue_State* states;
     gva_uint*     heap;
-    State*        states;
     size_t        capacity;
     GVA_Allocator allocator;
 } Priority_Queue;

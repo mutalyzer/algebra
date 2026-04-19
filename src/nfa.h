@@ -13,9 +13,10 @@
 
 typedef struct
 {
-    uint8_t present : 1;
-    uint8_t match   : 1;
-} DFA_State;  // FIXME: could realy be 2 bits
+    uint8_t deletion  : 1;
+    uint8_t insertion : 1;
+    uint8_t match     : 1;
+} DFA_State;  // FIXME: could realy be 3 bits
 
 
 typedef struct
@@ -32,6 +33,10 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
 
 void
 dfa_destroy(GVA_Allocator const allocator, DFA self[static 1]);
+
+
+size_t
+dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs);
 
 
 // FIXME: DEBUG

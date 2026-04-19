@@ -724,6 +724,9 @@ overlap_main(int argc, char* argv[static argc])
         DFA rhs_dfa = dfa_from_lcs_graph(gva_std_allocator, rhs);
         dfa_dot(lhs_dfa);
         dfa_dot(rhs_dfa);
+
+        fprintf(stderr, "OVERLAP: %zu\n", dfa_max_overlap(gva_std_allocator, lhs_dfa, rhs_dfa));
+
         dfa_destroy(gva_std_allocator, &rhs_dfa);
         dfa_destroy(gva_std_allocator, &lhs_dfa);
 
