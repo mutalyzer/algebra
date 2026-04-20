@@ -114,6 +114,74 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
             break;
         } // if
 
+        if (lhs.states[lhs_idx].deletion)
+        {
+            // altijd stilstaan in rhs
+            priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx,
+                fringe.states[idx].included, fringe.states[idx].excluded + 1);
+
+            if (rhs.states[rhs_idx].deletion)
+            {
+                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx + rhs_width,
+                    fringe.states[idx].included + 1, fringe.states[idx].excluded);
+            } // if
+
+            // ook de andere combo's?
+        } // if
+
+        if (lhs.states[lhs_idx].insertion)
+        {
+            // altijd stilstaan in rhs
+            priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx,
+                fringe.states[idx].included, fringe.states[idx].excluded + 1);
+
+            if (rhs.states[rhs_idx].insertion &&
+                lhs.observed.str[lhs_idx % lhs_width] == rhs.observed.str[rhs_idx % rhs_width])
+            {
+                priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx + 1,
+                    fringe.states[idx].included + 1, fringe.states[idx].excluded);
+            } // if
+            // ook else?
+
+            // ook de andere combo's?
+        } // if
+
+        if (lhs.states[lhs_idx].match)
+        {
+            // altijd stilstaan in rhs
+            priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx,
+                fringe.states[idx].included, fringe.states[idx].excluded);
+
+            if (rhs.states[rhs_idx].match)
+            {
+                priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width + 1,
+                    fringe.states[idx].included, fringe.states[idx].excluded);
+            } // if
+
+            // ook de andere combo's?
+        } // if
+
+        if (rhs.states[rhs_idx].deletion)
+        {
+            // altijd stilstaan in lhs
+            priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + rhs_width,
+                fringe.states[idx].included, fringe.states[idx].excluded + 1);
+        } // if
+
+        if (rhs.states[rhs_idx].insertion)
+        {
+            // altijd stilstaan in lhs
+            priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + 1,
+                fringe.states[idx].included, fringe.states[idx].excluded + 1);
+        } // if
+
+        if (rhs.states[rhs_idx].match)
+        {
+            // altijd stilstaan in lhs
+            priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + rhs_width + 1,
+                fringe.states[idx].included, fringe.states[idx].excluded);
+        } // if
+
     } // while
 
     priority_queue_destroy(&fringe);
