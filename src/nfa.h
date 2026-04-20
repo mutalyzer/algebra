@@ -17,7 +17,6 @@ typedef struct
     uint8_t insertion : 1;
     uint8_t match     : 1;
 } DFA_State;  // FIXME: could realy be 3 bits
-// Thm. each state has a maximum of two outgoing transitions.
 
 
 typedef struct

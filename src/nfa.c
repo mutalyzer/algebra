@@ -38,6 +38,7 @@ DFA
 dfa_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
 {
     GVA_Variant const supremal = gva_lcs_graph_supremal(graph);
+    size_t const offset = supremal.start;
     size_t const size = (supremal.end - supremal.start + 1) * (supremal.sequence.len + 1);
     DFA dfa =
     {
@@ -58,7 +59,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
     {
         for (size_t j = 0; j < graph.nodes[i].match.length; ++j)
         {
-            dfa.states[(graph.nodes[i].match.row + j) * width + graph.nodes[i].match.col + j].match = 1;
+            dfa.states[(graph.nodes[i].match.row + j - offset) * width + graph.nodes[i].match.col + j - offset].match = 1;
         } // for
         for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
         {
@@ -69,7 +70,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
                 &variant);
             for (size_t k = 0; k < count; ++k)
             {
-                dfa_edge(&dfa, width, variant.start + k, variant.end + k, variant.sequence.len, variant.sequence.str - dfa.observed.str + k);
+                dfa_edge(&dfa, width, variant.start + k - offset, variant.end + k - offset, variant.sequence.len, variant.sequence.str - dfa.observed.str + k);
             } // for
         } // for
     } // for
@@ -107,76 +108,12 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
         fprintf(stderr, "{%zu, %zu} (%zu) :: %u %u\n", lhs_idx, rhs_idx, idx,
             fringe.states[idx].included, fringe.states[idx].excluded);
 
-        if (lhs_idx == lhs.size - 1 || rhs_idx == rhs.size - 1)
+        if (lhs_idx == lhs.size - 1 && rhs_idx == rhs.size - 1)
         {
             fprintf(stderr, "%u %zu %zu\n", fringe.states[idx].included, count, array_length(fringe.heap));
             break;
         } // if
 
-        if (lhs.states[lhs_idx].deletion)
-        {
-            if (rhs.states[rhs_idx].deletion)
-            {
-                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx + rhs_width,
-                    fringe.states[idx].included + 1, fringe.states[idx].excluded);
-            } // if
-            if (rhs.states[rhs_idx].insertion)
-            {
-                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 2);
-            } // if
-            if (rhs.states[rhs_idx].match)
-            {
-                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx + rhs_width + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-        } // if
-
-        if (lhs.states[lhs_idx].insertion)
-        {
-            if (rhs.states[rhs_idx].deletion)
-            {
-                priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx + rhs_width,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 2);
-            } // if
-            if (rhs.states[rhs_idx].insertion)
-            {
-                if (lhs.observed.str[lhs_idx % lhs_width] == rhs.observed.str[rhs_idx % rhs_width])
-                {
-                    priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx + 1,
-                        fringe.states[idx].included + 1, fringe.states[idx].excluded);
-                } // if
-                else
-                {
-                    priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx + 1,
-                        fringe.states[idx].included, fringe.states[idx].excluded + 2);
-                } // else
-            } // if
-            if (rhs.states[rhs_idx].match)
-            {
-                priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx + rhs_width + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-        } // if
-
-        if (lhs.states[lhs_idx].match)
-        {
-            if (rhs.states[rhs_idx].deletion)
-            {
-                priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-            if (rhs.states[rhs_idx].insertion)
-            {
-                priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-            if (rhs.states[rhs_idx].match)
-            {
-                priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded);
-            } // if
-        } // if
     } // while
 
     priority_queue_destroy(&fringe);
