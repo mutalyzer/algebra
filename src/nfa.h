@@ -21,6 +21,7 @@ typedef struct
 
 typedef struct
 {
+    size_t     start;
     size_t     size;
     GVA_String observed;
     DFA_State* states;
