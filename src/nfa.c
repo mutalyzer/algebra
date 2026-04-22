@@ -122,20 +122,19 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
         {
             fprintf(stderr, "  LHS behind\n");
 
-            if (lhs.states[lhs_idx].deletion)
-            {
-                fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs.size + rhs_idx);
-                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
             if (lhs.states[lhs_idx].match)
             {
                 fprintf(stderr, "    push (%zu MU) {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx);
                 priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx,
                     fringe.states[idx].included, fringe.states[idx].excluded);
             } // if
-
-            if (lhs.states[lhs_idx].insertion && !lhs.states[lhs_idx].deletion && !lhs.states[lhs_idx].match)
+            else if (lhs.states[lhs_idx].deletion)
+            {
+                fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs.size + rhs_idx);
+                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx,
+                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+            } // if
+            else if (lhs.states[lhs_idx].insertion)
             {
                 fprintf(stderr, "    push (%zu %c) {%zu, %zu} (%zu)\n", lhs_ref, lhs.observed.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs.size + rhs_idx);
                 priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx,
@@ -146,20 +145,19 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
         {
             fprintf(stderr, "  RHS behind\n");
 
-            if (rhs.states[rhs_idx].deletion)
-            {
-                fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs.size + rhs_idx + rhs_width);
-                priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + rhs_width,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
             if (rhs.states[rhs_idx].match)
             {
                 fprintf(stderr, "    push (%zu MU) {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs.size + rhs_idx + rhs_width + 1);
                 priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + rhs_width + 1,
                     fringe.states[idx].included, fringe.states[idx].excluded);
             } // if
-
-            if (rhs.states[rhs_idx].insertion && !rhs.states[rhs_idx].deletion && !rhs.states[rhs_idx].match)
+            else if (rhs.states[rhs_idx].deletion)
+            {
+                fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs.size + rhs_idx + rhs_width);
+                priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + rhs_width,
+                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+            } // if
+            else if (rhs.states[rhs_idx].insertion)
             {
                 fprintf(stderr, "    push (%zu %c) {%zu, %zu} (%zu)\n", rhs_ref, rhs.observed.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs.size + rhs_idx + 1);
                 priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + 1,
