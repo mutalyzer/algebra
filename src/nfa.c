@@ -178,7 +178,7 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
                     priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx + rhs_width,
                         fringe.states[idx].included + 1, fringe.states[idx].excluded);
                 } // if
-                if (rhs.states[rhs_idx].match)
+                else if (rhs.states[rhs_idx].match)
                 {
                     fprintf(stderr, "    push (%zu DELTA vs %zu MU) {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs.size + rhs_idx + rhs_width + 1);
                     priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs.size + rhs_idx + rhs_width + 1,
@@ -186,43 +186,43 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
                 } // if
             } // if
 
-            bool insertion = false;
             if (lhs.states[lhs_idx].insertion && rhs.states[rhs_idx].insertion &&
                 lhs.observed.str[lhs_idx % lhs_width] == rhs.observed.str[rhs_idx % rhs_width])
             {
-                insertion = true;
                 fprintf(stderr, "    push (%zu %c) {%zu, %zu} (%zu)\n", lhs_ref, lhs.observed.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs.size + rhs_idx + 1);
                 priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx + 1,
                     fringe.states[idx].included + 1, fringe.states[idx].excluded);
             } // if
-
-            if (!insertion && lhs.states[lhs_idx].insertion)
+            else
             {
-                fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} (%zu)\n", lhs_ref, lhs.observed.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs.size + rhs_idx);
-                priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
+                if (lhs.states[lhs_idx].insertion)
+                {
+                    fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} (%zu)\n", lhs_ref, lhs.observed.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs.size + rhs_idx);
+                    priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx,
+                        fringe.states[idx].included, fringe.states[idx].excluded + 1);
+                } // if
 
-            if (!insertion && rhs.states[rhs_idx].insertion)
-            {
-                fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} (%zu)\n", rhs_ref, rhs.observed.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs.size + rhs_idx + 1);
-                priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
+                if (rhs.states[rhs_idx].insertion)
+                {
+                    fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} (%zu)\n", rhs_ref, rhs.observed.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs.size + rhs_idx + 1);
+                    priority_queue_push(&fringe, lhs_idx * rhs.size + rhs_idx + 1,
+                        fringe.states[idx].included, fringe.states[idx].excluded + 1);
+                } // if
+            } // else
 
             if (lhs.states[lhs_idx].match)
             {
-                if (rhs.states[rhs_idx].deletion)
-                {
-                    fprintf(stderr, "    push (%zu MU vs %zu DELTA) {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width);
-                    priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width,
-                        fringe.states[idx].included, fringe.states[idx].excluded + 1);
-                } // if
                 if (rhs.states[rhs_idx].match)
                 {
                     fprintf(stderr, "    push (%zu MU) {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width + 1);
                     priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width + 1,
                         fringe.states[idx].included, fringe.states[idx].excluded);
+                } // if
+                else if (rhs.states[rhs_idx].deletion)
+                {
+                    fprintf(stderr, "    push (%zu MU vs %zu DELTA) {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width);
+                    priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width,
+                        fringe.states[idx].included, fringe.states[idx].excluded + 1);
                 } // if
             } // if
         } // else
