@@ -105,20 +105,20 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
         if (lhs.states[lhs_idx].match)
         {
             idx = (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx;
-            fprintf(stderr, "  LHS advance (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, idx);
+            fprintf(stderr, "LHS advance (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, idx);
             lhs_ref += 1;
         } // if
         else if (lhs.states[lhs_idx].deletion)
         {
             idx = (lhs_idx + lhs_width) * rhs.size + rhs_idx;
-            fprintf(stderr, "  LHS advance (%zu DELTA) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, idx);
+            fprintf(stderr, "LHS advance (%zu DELTA) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, idx);
             lhs_ref += 1;
             excluded += 1;
         } // if
         else  // insertion
         {
             idx = (lhs_idx + 1) * rhs.size + rhs_idx;
-            fprintf(stderr, "  LHS advance (%zu %c) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs.observed.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, idx);
+            fprintf(stderr, "LHS advance (%zu %c) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs.observed.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, idx);
             excluded += 1;
         } // else
     } // while
@@ -129,20 +129,20 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
         if (rhs.states[rhs_idx].match)
         {
             idx = lhs_idx * rhs.size + rhs_idx + rhs_width + 1;
-            fprintf(stderr, "  RHS advance (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, idx);
+            fprintf(stderr, "RHS advance (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, idx);
             rhs_ref += 1;
         } // if
         else if (rhs.states[rhs_idx].deletion)
         {
             idx = lhs_idx * rhs.size + rhs_idx + rhs_width;
-            fprintf(stderr, "  RHS advance (%zu DELTA) {%zu, %zu} +0 +0 (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, idx);
+            fprintf(stderr, "RHS advance (%zu DELTA) {%zu, %zu} +0 +0 (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, idx);
             rhs_ref += 1;
             excluded += 1;
         } // if
         else  // insertion
         {
             idx = lhs_idx * rhs.size + rhs_idx + 1;
-            fprintf(stderr, "  RHS advance (%zu %c) {%zu, %zu} +0 +0 (%zu)\n", rhs_ref, rhs.observed.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, idx);
+            fprintf(stderr, "RHS advance (%zu %c) {%zu, %zu} +0 +0 (%zu)\n", rhs_ref, rhs.observed.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, idx);
             excluded += 1;
         } // else
     } // while
@@ -166,7 +166,7 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
 
         if (lhs_idx == lhs.size - 1 || rhs_idx == rhs.size - 1)
         {
-            fprintf(stderr, "%u %zu %zu\n", fringe.states[idx].included, count, array_length(fringe.heap));
+            fprintf(stdout, "%u %zu %zu\n", fringe.states[idx].included, count, array_length(fringe.heap));
             break;
         } // if
 
@@ -189,7 +189,7 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
                 fringe.states[idx].included + 1, fringe.states[idx].excluded);
         } // if
 
-        if (!matched_deletion && !matched_insertion && lhs.states[lhs_idx].match && rhs.states[rhs_idx].match)
+        if (lhs.states[lhs_idx].match && rhs.states[rhs_idx].match)
         {
             fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width + 1);
             priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs.size + rhs_idx + rhs_width + 1,
@@ -240,7 +240,7 @@ void
 dfa_dot(DFA const self)
 {
     size_t const width = self.observed.len + 1;
-    fprintf(stderr, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,label=\"\",shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->0\n");
+    fprintf(stderr, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->0\n");
     for (size_t i = 0; i < self.size; ++i)
     {
         if (self.states[i].deletion)
