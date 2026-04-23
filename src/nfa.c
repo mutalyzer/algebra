@@ -120,7 +120,6 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
 
         if (lhs_idx == 0 && rhs_ref < lhs_ref)
         {
-            fprintf(stderr, "lhs_ref < rhs_ref: %zu, %zu\n", lhs_ref, rhs_ref);
             if (rhs.states[rhs_idx].deletion)
             {
                 fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs.size + rhs_idx + rhs_width);
@@ -146,7 +145,6 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
 
         if (rhs_idx == 0 && lhs_ref < rhs_ref)
         {
-            fprintf(stderr, "rhs_ref < lhs_ref: %zu, %zu\n", rhs_ref, lhs_ref);
             if (lhs.states[lhs_idx].deletion)
             {
                 fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs.size + rhs_idx);
@@ -164,14 +162,11 @@ dfa_max_overlap(GVA_Allocator const allocator, DFA const lhs, DFA const rhs)
             if (lhs.states[lhs_idx].insertion)
             {
                 fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs.observed.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs.size + rhs_idx);
-
                 priority_queue_push(&fringe, (lhs_idx + 1) * rhs.size + rhs_idx,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
             continue;
         } // if
-
-        fprintf(stderr, "SYNCed @ %zu\n", idx);
 
         if (lhs.states[lhs_idx].deletion)
         {
