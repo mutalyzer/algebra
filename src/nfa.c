@@ -13,6 +13,117 @@
 
 
 static inline void
+set(uint8_t dfa[static 1], size_t const idx, uint8_t const value)
+{
+    dfa[idx / 4] |= value << (2 * (idx % 4));
+} // set
+
+
+static inline uint8_t
+get(uint8_t const dfa[static 1], size_t const idx)
+{
+    return (dfa[idx / 4] >> (2 * (idx % 4)) & 0x3);
+} // get
+
+
+static inline void
+edge(uint8_t dfa[static 1], size_t const width,
+    size_t const start, size_t const end,
+    size_t const len, size_t const offset)
+{
+    for (size_t i = start; i <= end; ++i)
+    {
+        for (size_t j = 0; j <= len; ++j)
+        {
+            set(dfa, i * width + offset + j,
+                (i < end) * DFA2_DELETION | (j < len) * DFA2_INSERTION);
+        } // for
+    } // for
+} // edge
+
+
+uint8_t*
+dfa2_from_lcs_graph(GVA_Allocator const allocator,
+    uint8_t* dfa, GVA_LCS_Graph const graph)
+{
+    GVA_Variant const supremal = gva_lcs_graph_supremal(graph);
+    size_t const width = supremal.sequence.len + 1;
+    size_t const size = (supremal.end - supremal.start + 1) * width;
+    dfa = array_ensure(allocator, dfa, 1, (size + 1) / 4);
+    if (dfa == NULL)
+    {
+        return NULL;  // OOM
+    } // if
+
+    array_header(dfa)->length += (size + 1) / 4;
+    memset(dfa, 0, array_length(dfa));
+
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            GVA_Variant variant = {0};
+            size_t const count = gva_edges(graph.observed.str,
+                graph.nodes[i].match, graph.nodes[graph.edges[j].tail].match,
+                i == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                &variant);
+            for (size_t k = 0; k < count; ++k)
+            {
+                edge(dfa, width, variant.start + k - supremal.start, variant.end + k - supremal.start,
+                    variant.sequence.len, variant.sequence.str - graph.observed.str + k);
+            } // for
+        } // for
+    } // for
+
+    return dfa;
+} // dfa2_from_lcs_graph
+
+
+void
+dfa2_dot_traverse(size_t const len, char const reference[static len],
+    GVA_Variant const supremal, uint8_t const dfa[static 1], size_t const idx)
+{
+    size_t const width = supremal.sequence.len + 1;
+    size_t const size = (supremal.end - supremal.start + 1) * width;
+
+    if (idx == size - 1)
+    {
+        return;
+    } // if
+
+    uint8_t const value = get(dfa, idx);
+    if (value & DFA2_DELETION)
+    {
+        fprintf(stderr, "%zu->%zu[label=\"%zu &Delta;\"]\n", idx, idx + width, supremal.start + idx / width);
+        dfa2_dot_traverse(len, reference, supremal, dfa, idx + width);
+    } // if
+    if (value & DFA2_INSERTION)
+    {
+        fprintf(stderr, "%zu->%zu[label=\"%zu %c\"]\n", idx, idx + 1, supremal.start + idx / width, supremal.sequence.str[idx % width]);
+        dfa2_dot_traverse(len, reference, supremal, dfa, idx + 1);
+    } // if
+    if (reference[idx / width] == supremal.sequence.str[idx % width])
+    {
+        fprintf(stderr, "%zu->%zu[label=\"%zu &Mu;\"]\n", idx, idx + width + 1, supremal.start + idx / width);
+        dfa2_dot_traverse(len, reference, supremal, dfa, idx + width + 1);
+    } // if
+} // dfa2_dot_traverse
+
+
+void
+dfa2_dot(size_t const len, char const reference[static len],
+    GVA_Variant const supremal, uint8_t const dfa[static 1])
+{
+    size_t const width = supremal.sequence.len + 1;
+    size_t const size = (supremal.end - supremal.start + 1) * width;
+
+    fprintf(stderr, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->0\n");
+    dfa2_dot_traverse(len, reference, supremal, dfa, 0);
+    fprintf(stderr, "%zu[peripheries=2]\n}\n", size - 1);
+} // dfa2_dot
+
+
+static inline void
 dfa_edge(DFA self[static 1], size_t const width,
     size_t const start, size_t const end,
     size_t const len, size_t const offset)
@@ -75,7 +186,6 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
             } // for
         } // for
     } // for
-
     return dfa;
 } // dfa_from_lcs_graph
 

@@ -8,7 +8,26 @@
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph
 #include "../include/string.h"      // GVA_String
+#include "../include/variant.h"     // GVA_Variant
 #include "../include/types.h"       // gva_uint
+
+
+enum
+{
+    DFA2_FINAL,
+    DFA2_DELETION,
+    DFA2_INSERTION,
+};
+
+
+uint8_t*
+dfa2_from_lcs_graph(GVA_Allocator const allocator,
+    uint8_t* dfa, GVA_LCS_Graph const graph);
+
+
+void
+dfa2_dot(size_t const len, char const reference[static len],
+    GVA_Variant const supremal, uint8_t const dfa[static 1]);
 
 
 typedef struct

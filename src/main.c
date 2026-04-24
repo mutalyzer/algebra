@@ -32,170 +32,6 @@
 #define REFERENCE_ID "NC_000001.11"
 
 
-static inline bool
-variant_disjoint(size_t const lhs_count, GVA_Variant const lhs,
-    size_t const rhs_count, GVA_Variant const rhs)
-{
-    if (rhs.start > lhs.end + lhs_count - 1 ||
-        lhs.start > rhs.end + rhs_count - 1)
-    {
-        return true;
-    } // if
-
-    size_t lhs_offset = 0;
-    size_t rhs_offset = 0;
-    if (rhs.start > lhs.start)
-    {
-        lhs_offset = MIN(rhs.start - lhs.start, lhs_count - 1);
-    } // if
-    else if (lhs.start > rhs.start)
-    {
-        rhs_offset = MIN(lhs.start - rhs.start, rhs_count - 1);
-    } // if
-
-    size_t const start = MAX(lhs.start + lhs_offset, rhs.start + rhs_offset);
-    size_t const end = MIN(lhs.end + lhs_offset, rhs.end + rhs_offset);
-
-    if (end > start)
-    {
-        return false;
-    } // if
-
-    unsigned __int128 lhs_seq = 0;
-    for (size_t i = 0; i < lhs.sequence.len; ++i)
-    {
-        lhs_seq |= 1 << (lhs.sequence.str[lhs_offset + i] & 0x7f);
-    } // for
-    unsigned __int128 rhs_seq = 0;
-    for (size_t i = 0; i < rhs.sequence.len; ++i)
-    {
-        rhs_seq |= 1 << (rhs.sequence.str[rhs_offset + i] & 0x7f);
-    } // for
-
-    return (lhs_seq & rhs_seq) == 0;
-} // variant_disjoint
-
-
-static bool
-is_disjoint(GVA_Allocator const allocator,
-    GVA_LCS_Graph const lhs, GVA_LCS_Graph const rhs)
-{
-    size_t const rhs_nodes = array_length(rhs.nodes);
-    size_t const length = array_length(lhs.nodes) * rhs_nodes;
-    struct
-    {
-        gva_uint seen;
-        gva_uint next;
-    }* queue = allocator.allocate(allocator.context, NULL, 0, length * sizeof(*queue));
-    if (queue == NULL)
-    {
-        return true;  // FIXME: OOM
-    } // if
-
-    for (size_t i = 0; i < length; ++i)
-    {
-        queue[i].seen = false;
-        queue[i].next = GVA_NULL;
-    } // for
-
-    gva_uint tail = lhs.source * rhs_nodes + rhs.source;
-    for (gva_uint head = tail; head != GVA_NULL; head = queue[head].next)
-    {
-        size_t const lhs_idx = head / rhs_nodes;
-        size_t const rhs_idx = head % rhs_nodes;
-
-        fprintf(stderr, "{%zu, %zu}\n", lhs_idx, rhs_idx);
-
-        for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
-        {
-            GVA_Variant lhs_variant = {0};
-            size_t const lhs_count = gva_edges(lhs.observed.str,
-                lhs.nodes[lhs_idx].match, lhs.nodes[lhs.edges[i].tail].match,
-                lhs_idx == lhs.source, lhs.nodes[lhs.edges[i].tail].edges == GVA_NULL,
-                &lhs_variant);
-
-            for (gva_uint j = rhs.nodes[rhs_idx].edges; j != GVA_NULL; j = rhs.edges[j].next)
-            {
-                GVA_Variant rhs_variant = {0};
-                size_t const rhs_count = gva_edges(rhs.observed.str,
-                    rhs.nodes[rhs_idx].match, rhs.nodes[rhs.edges[j].tail].match,
-                    rhs_idx == rhs.source, rhs.nodes[rhs.edges[j].tail].edges == GVA_NULL,
-                    &rhs_variant);
-
-                //fprintf(stderr, "    " GVA_VARIANT_FMT " x %zu  vs  " GVA_VARIANT_FMT " x %zu\n",
-                //    GVA_VARIANT_PRINT(lhs_variant), lhs_count, GVA_VARIANT_PRINT(rhs_variant), rhs_count);
-
-                if (!variant_disjoint(lhs_count, lhs_variant, rhs_count, rhs_variant))
-                {
-                    queue = allocator.allocate(allocator.context, queue, length * sizeof(*queue), 0);
-                    return false;
-                } // if
-
-                size_t const next = lhs.edges[i].tail * rhs_nodes + rhs.edges[j].tail;
-                if (lhs.nodes[lhs.edges[i].tail].edges != GVA_NULL &&
-                    rhs.nodes[rhs.edges[j].tail].edges != GVA_NULL &&
-                    !queue[next].seen)
-                {
-                    queue[tail].next = next;
-                    tail = next;
-                    queue[next].seen = true;
-                } // if
-            } // for
-        } // for
-
-        if (lhs.nodes[lhs_idx].lambda != GVA_NULL)
-        {
-            size_t const next = lhs.nodes[lhs_idx].lambda * rhs_nodes + rhs_idx;
-            if (!queue[next].seen)
-            {
-                //fprintf(stderr, "  lambda lhs: {%u, %zu}\n", lhs.nodes[lhs_idx].lambda, rhs_idx);
-                queue[tail].next = next;
-                tail = next;
-                queue[next].seen = true;
-            } // if
-        } // if
-        if (rhs.nodes[rhs_idx].lambda != GVA_NULL)
-        {
-            size_t const next = lhs_idx * rhs_nodes + rhs.nodes[rhs_idx].lambda;
-            if (!queue[next].seen)
-            {
-                //fprintf(stderr, "  lambda rhs: {%zu, %u}\n", lhs_idx, rhs.nodes[rhs_idx].lambda);
-                queue[tail].next = next;
-                tail = next;
-                queue[next].seen = true;
-            } // if
-        } // if
-
-        for (gva_uint i = lhs.nodes[lhs_idx].edges; i != GVA_NULL; i = lhs.edges[i].next)
-        {
-            size_t const next = lhs.edges[i].tail * rhs_nodes + rhs_idx;
-            if (lhs.nodes[lhs.edges[i].tail].edges != GVA_NULL && !queue[next].seen)
-            {
-                //fprintf(stderr, "  advance lhs: {%u, %zu}\n", lhs.edges[i].tail, rhs_idx);
-                queue[tail].next = next;
-                tail = next;
-                queue[next].seen = true;
-            } // if
-        } // for
-        for (gva_uint i = rhs.nodes[rhs_idx].edges; i != GVA_NULL; i = rhs.edges[i].next)
-        {
-            size_t const next = lhs_idx * rhs_nodes + rhs.edges[i].tail;
-            if (rhs.nodes[rhs.edges[i].tail].edges != GVA_NULL && !queue[next].seen)
-            {
-                //fprintf(stderr, "  advance rhs: {%zu, %u}\n", lhs_idx, rhs.edges[i].tail);
-                queue[tail].next = next;
-                tail = next;
-                queue[next].seen = true;
-            } // if
-        } // for
-
-    } // for
-
-    queue = allocator.allocate(allocator.context, queue, length * sizeof(*queue), 0);
-    return true;
-} // is_disjoint
-
-
 // line: alphanumeric_id SPDI [distance]
 static bool
 parse_line(char const line[static restrict LINE_SIZE],
@@ -992,21 +828,6 @@ all_main(int argc, char* argv[static argc])
                 rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
                 rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
 
-                fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n",
-                    GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
-                    GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
-                bool const disjoint = is_disjoint(gva_std_allocator, lhs_graph, rhs_graph);
-
-                if (disjoint == overlap)
-                {
-                    fprintf(stderr, "ERROR: %d\n", disjoint);
-                    fprintf(stderr, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %zu\n",
-                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
-                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)),
-                        (entries[i].distance + entries[j].distance - distance) / 2);
-                        return EXIT_FAILURE;
-                } // if
-
                 gva_lcs_graph_destroy(gva_std_allocator, rhs_graph, false);
 
                 if (overlap)
@@ -1047,8 +868,28 @@ all_main(int argc, char* argv[static argc])
 int
 main(int argc, char* argv[static argc])
 {
+    (void) argv;
+    char const* const reference = "TCTGGC";
+    size_t const len_ref = strlen(reference);
+    char const* const observed = "TTTGTCAGGC";
+    size_t const len_obs = strlen(observed);
+
+    GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref, reference, len_obs, observed, 0);
+    uint8_t* dfa = dfa2_from_lcs_graph(gva_std_allocator, NULL, graph);
+
+    DFA old = dfa_from_lcs_graph(gva_std_allocator, graph);
+
+    dfa_dot(old);
+
+    dfa2_dot(len_ref, reference, gva_lcs_graph_supremal(graph), dfa);
+
+    dfa_destroy(gva_std_allocator, &old);
+
+    dfa = ARRAY_DESTROY(gva_std_allocator, dfa);
+    gva_lcs_graph_destroy(gva_std_allocator, graph, false);
+
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
-    return overlap_main(argc, argv);
+    // return overlap_main(argc, argv);
     // return all_main(argc, argv);
 } // main
