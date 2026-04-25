@@ -276,9 +276,10 @@ dfa_max_overlap(GVA_Allocator const allocator,
 } // dfa_max_overlap
 
 
-void
-dfa_dot_traverse(size_t const len, char const reference[static len],
-    GVA_Variant const supremal, uint8_t const dfa[static 1], size_t const idx)
+// FIXME: DEBUG only; very inefficient
+static void
+dfa_dot_traverse(size_t const len, char const reference[static restrict len],
+    GVA_Variant const supremal, uint8_t const dfa[static restrict 1], size_t const idx)
 {
     size_t const width = supremal.sequence.len + 1;
     size_t const size = (supremal.end - supremal.start + 1) * width;
