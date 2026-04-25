@@ -1,6 +1,7 @@
 #include <errno.h>      // errno
 #include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
+#include <stdint.h>     // uint8_t
 #include <stdio.h>      // FILE, stderr, stdout, fclose, fopen, fprintf
 #include <stdlib.h>     // EXIT_*, atoll, qsort
 #include <string.h>     // strerror, strlen
@@ -18,7 +19,7 @@
 #include "array.h"          // ARRAY_*, array_length
 #include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
-#include "nfa.h"            // DFA, dfa_*
+#include "dfa.h"            // dfa_*
 #include "trie.h"           // Trie, trie_*
 
 
@@ -476,6 +477,8 @@ supremal_main(int argc, char* argv[static argc])
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
+    uint8_t* dfas = NULL;
+
     size_t line_count = 0;
     static char line[LINE_SIZE] = {0};
     while (fgets(line, sizeof(line), stdin) != NULL)
@@ -490,26 +493,15 @@ supremal_main(int argc, char* argv[static argc])
             continue;
         } // if
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
-
-        GVA_Variant supremal = gva_lcs_graph_supremal(graph);
-
-        fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
-            GVA_STRING_PRINT(id),
-            GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, supremal),
-            gva_lcs_graph_distance(graph));
-
-        /*
-        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
-        {
-            fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %u\n",
-                GVA_STRING_PRINT(id),
-                GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_local_supremal(graph, i, i + 1)),
-                graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
-        } // for
-        */
-
+        //size_t const start = array_length(dfas);
+        dfas = dfa_from_lcs_graph(gva_std_allocator, dfas, graph);
+        //dfa_dot(reference.len, reference.str, gva_lcs_graph_supremal(graph), dfas + start);
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
+
+    fprintf(stderr, "#variants: %zu\n", line_count);
+    fprintf(stderr, "%zu bytes\n", array_length(dfas));
+    dfas = ARRAY_DESTROY(gva_std_allocator, dfas);
 
     gva_string_destroy(gva_std_allocator, reference);
 
@@ -556,36 +548,24 @@ overlap_main(int argc, char* argv[static argc])
         GVA_LCS_Graph lhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &lhs_variant);
         GVA_LCS_Graph rhs = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
 
-        DFA lhs_dfa = dfa_from_lcs_graph(gva_std_allocator, lhs);
-        DFA rhs_dfa = dfa_from_lcs_graph(gva_std_allocator, rhs);
-        dfa_dot(lhs_dfa);
-        dfa_dot(rhs_dfa);
+        uint8_t* lhs_dfa = dfa_from_lcs_graph(gva_std_allocator, NULL, lhs);
+        uint8_t* rhs_dfa = dfa_from_lcs_graph(gva_std_allocator, NULL, rhs);
 
-        fprintf(stderr, "OVERLAP: %zu\n", dfa_max_overlap(gva_std_allocator, lhs_dfa, rhs_dfa));
+        GVA_Variant const lhs_supremal = gva_lcs_graph_supremal(lhs);
+        GVA_Variant const rhs_supremal = gva_lcs_graph_supremal(rhs);
 
-        dfa_destroy(gva_std_allocator, &rhs_dfa);
-        dfa_destroy(gva_std_allocator, &lhs_dfa);
+        //dfa_dot(reference.len, reference.str, lhs_supremal, lhs_dfa);
+        //dfa_dot(reference.len, reference.str, rhs_supremal, rhs_dfa);
 
-        fprintf(stderr, "%s\n", GVA_RELATION_LABELS[gva_compare_graphs(gva_std_allocator, reference.len, reference.str, lhs, rhs)]);
+        size_t const overlap = dfa_max_overlap(gva_std_allocator,
+            reference.len, reference.str,
+            lhs_supremal, lhs_dfa,
+            rhs_supremal, rhs_dfa);
 
-        static char filename[128] = {0};
-        snprintf(filename, 128, "overlap/graph_%zu.dot", line_count);
-        FILE* stream = fopen(filename, "w");
-        gva_lcs_graph_dot(stream, lhs);
-        gva_lcs_graph_dot(stream, rhs);
-        fclose(stream);
+        fprintf(stderr, "OVERLAP: %zu\n", overlap);
 
-        fprintf(stderr, "%sdistances lhs: %zu rhs: %zu :: ", line, gva_lcs_graph_distance(lhs), gva_lcs_graph_distance(rhs));
-        {
-            size_t const distance = gva_edit_distance(gva_std_allocator,
-                lhs_variant.sequence.len, lhs_variant.sequence.str,
-                rhs_variant.sequence.len, rhs_variant.sequence.str);
-            fprintf(stderr, "%zu\n", distance);
-        }
-        fprintf(stderr, "#nodes lhs: %zu rhs %zu :: %zu\n", array_length(lhs.nodes), array_length(rhs.nodes), array_length(lhs.nodes) * array_length(rhs.nodes));
-        fprintf(stderr, "#edges lhs: %zu rhs %zu :: %zu\n", array_length(lhs.edges), array_length(rhs.edges), array_length(lhs.edges) * array_length(rhs.edges));
-
-        //fprintf(stderr, "disjoint: %d\n", is_disjoint(gva_std_allocator, lhs, rhs));
+        rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
+        lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
 
         gva_lcs_graph_destroy(gva_std_allocator, rhs, true);
         gva_lcs_graph_destroy(gva_std_allocator, lhs, true);
@@ -868,28 +848,9 @@ all_main(int argc, char* argv[static argc])
 int
 main(int argc, char* argv[static argc])
 {
-    (void) argv;
-    char const* const reference = "TCTGGC";
-    size_t const len_ref = strlen(reference);
-    char const* const observed = "TTTGTCAGGC";
-    size_t const len_obs = strlen(observed);
-
-    GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, len_ref, reference, len_obs, observed, 0);
-    uint8_t* dfa = dfa2_from_lcs_graph(gva_std_allocator, NULL, graph);
-
-    DFA old = dfa_from_lcs_graph(gva_std_allocator, graph);
-
-    dfa_dot(old);
-
-    dfa2_dot(len_ref, reference, gva_lcs_graph_supremal(graph), dfa);
-
-    dfa_destroy(gva_std_allocator, &old);
-
-    dfa = ARRAY_DESTROY(gva_std_allocator, dfa);
-    gva_lcs_graph_destroy(gva_std_allocator, graph, false);
-
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
-    // return overlap_main(argc, argv);
+    // return supremal_main(argc, argv);
+    return overlap_main(argc, argv);
     // return all_main(argc, argv);
 } // main
