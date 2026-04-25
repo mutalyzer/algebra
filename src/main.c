@@ -501,8 +501,8 @@ supremal_main(int argc, char* argv[static argc])
 
     fprintf(stderr, "#variants: %zu\n", line_count);
     fprintf(stderr, "%zu bytes\n", array_length(dfas));
-    dfas = ARRAY_DESTROY(gva_std_allocator, dfas);
 
+    dfas = ARRAY_DESTROY(gva_std_allocator, dfas);
     gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;

@@ -1,3 +1,4 @@
+#include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint8_t
 #include <string.h>     // memset
@@ -123,151 +124,131 @@ dfa_max_overlap(GVA_Allocator const allocator,
 
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
-            uint8_t const value = get(rhs_dfa, rhs_idx);
+            uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
+            bool const rhs_deletion = rhs_value & DFA_DELETION;
+            bool const rhs_insertion = rhs_value & DFA_INSERTION;
+            bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
+                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width];
 
-            if (value & DFA_DELETION)
+            if (rhs_deletion)
             {
                 fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
                 priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + rhs_width,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
 
-            if (rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
+            if (rhs_match)
             {
                 fprintf(stderr, "    push (. vs %zu MU) +0 +0 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
                 priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + rhs_width + 1,
                     fringe.states[idx].included, fringe.states[idx].excluded);
             } // if
 
-            if (value & DFA_INSERTION)
+            if (rhs_insertion)
             {
                 fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + 1,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
-            continue;
         } // if
-
-        if ((rhs_idx == 0 && lhs_ref < rhs_ref) || rhs_idx == rhs_size - 1)
+        else if ((rhs_idx == 0 && lhs_ref < rhs_ref) || rhs_idx == rhs_size - 1)
         {
-            uint8_t const value = get(lhs_dfa, lhs_idx);
+            uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
+            bool const lhs_deletion = lhs_value & DFA_DELETION;
+            bool const lhs_insertion = lhs_value & DFA_INSERTION;
+            bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
+                reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width];
 
-            if (value & DFA_DELETION)
+            if (lhs_deletion)
             {
                 fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
                 priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs_size + rhs_idx,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
 
-            if (lhs_idx % lhs_width < lhs_width - 1 &&
-                reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width])
+            if (lhs_match)
             {
                 fprintf(stderr, "    push (%zu MU vs .) +0 +0 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
                 priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx,
                     fringe.states[idx].included, fringe.states[idx].excluded);
             } // if
 
-            if (value & DFA_INSERTION)
+            if (lhs_insertion)
             {
                 fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
-            continue;
         } // if
-
-        uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
-        uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
-
-        if (lhs_value & DFA_DELETION)
+        else
         {
-            if (rhs_value & DFA_DELETION)
+            uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
+            uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
+            bool const lhs_deletion = lhs_value & DFA_DELETION;
+            bool const rhs_deletion = rhs_value & DFA_DELETION;
+            bool const lhs_insertion = lhs_value & DFA_INSERTION;
+            bool const rhs_insertion = rhs_value & DFA_INSERTION;
+            bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
+                reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width];
+            bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
+                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width];
+
+            if (lhs_deletion && rhs_deletion)
             {
+                // DD
                 fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
                 priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width,
                     fringe.states[idx].included + 1, fringe.states[idx].excluded);
             } // if
 
-            if (rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
+            if (lhs_insertion && rhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
             {
-                fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
-                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+                // II
+                fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
+                priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx + 1,
+                    fringe.states[idx].included + 1, fringe.states[idx].excluded);
             } // if
 
-            if (rhs_value & DFA_INSERTION)
+            if (lhs_match && rhs_match)
             {
-                fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
-                priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + 1,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-        } // if
-
-        if (lhs_idx % lhs_width < lhs_width - 1 &&
-            reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width])
-        {
-            if (rhs_value & DFA_DELETION)
-            {
-                fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
-                priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-
-            if (rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
-            {
+                // ..
                 fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
                 priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1,
                     fringe.states[idx].included, fringe.states[idx].excluded);
             } // if
 
-            if (rhs_value & DFA_INSERTION)
+            if (lhs_deletion && rhs_match)
             {
+                // D.
+                fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
+                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1,
+                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+            } // if
+
+            if (lhs_match && rhs_deletion)
+            {
+                // .D
+                fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
+                priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width,
+                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+            } // if
+
+            if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
+            {
+                // I.
+                fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
+                priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx,
+                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+            } // if
+
+            if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
+            {
+                // .I
                 fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + 1,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
-        } // if
-
-        if (lhs_value & DFA_INSERTION)
-        {
-            if (rhs_value & DFA_DELETION)
-            {
-                fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
-                priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-
-            if (rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
-            {
-                fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
-                priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-
-            if (rhs_value & DFA_INSERTION)
-            {
-                if (lhs_supremal.sequence.str[lhs_idx % lhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
-                {
-                    fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
-                    priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx + 1,
-                        fringe.states[idx].included + 1, fringe.states[idx].excluded);
-                } // if
-                else
-                {
-                    fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
-                    priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx,
-                        fringe.states[idx].included, fringe.states[idx].excluded + 1);
-
-                    fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
-                    priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + 1,
-                        fringe.states[idx].included, fringe.states[idx].excluded + 1);
-                } // else
-            } // if
-        } // if
+        } // else
     } // while
 
     priority_queue_destroy(&fringe);
