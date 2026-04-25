@@ -24,8 +24,8 @@ dfa_max_overlap(GVA_Allocator const allocator,
 
 // FIXME: DEBUG
 void
-dfa_dot(size_t const len, char const reference[static len],
-    GVA_Variant const supremal, uint8_t const dfa[static 1]);
+dfa_dot(size_t const len, char const reference[static restrict len],
+    GVA_Variant const supremal, uint8_t const dfa[static restrict 1]);
 
 
 #endif  // GVA_DFA_H
