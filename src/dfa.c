@@ -1,3 +1,4 @@
+#include <limits.h>     // CHAR_BIT
 #include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint8_t
@@ -19,18 +20,18 @@ static uint8_t const DFA_DELETION  = 0x1;
 static uint8_t const DFA_INSERTION = 0x2;
 
 
+static inline uint8_t
+get(uint8_t const dfa[static 1], size_t const idx)
+{
+    return dfa[idx / 4] >> (2 * (idx % 4));
+} // get
+
+
 static inline void
 set(uint8_t dfa[static 1], size_t const idx, uint8_t const value)
 {
     dfa[idx / 4] |= value << (2 * (idx % 4));
 } // set
-
-
-static inline uint8_t
-get(uint8_t const dfa[static 1], size_t const idx)
-{
-    return (dfa[idx / 4] >> (2 * (idx % 4)) & 0x3);
-} // get
 
 
 static inline void
@@ -130,22 +131,25 @@ dfa_max_overlap(GVA_Allocator const allocator,
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
                 reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width];
 
-            if (rhs_deletion)
-            {
-                fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
-                priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + rhs_width,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-
             if (rhs_match)
             {
+                // ..
                 fprintf(stderr, "    push (. vs %zu MU) +0 +0 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
                 priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + rhs_width + 1,
                     fringe.states[idx].included, fringe.states[idx].excluded);
             } // if
 
+            if (rhs_deletion)
+            {
+                // .D
+                fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
+                priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + rhs_width,
+                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+            } // if
+
             if (rhs_insertion)
             {
+                // .I
                 fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 priority_queue_push(&fringe, lhs_idx * rhs_size + rhs_idx + 1,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
@@ -159,22 +163,25 @@ dfa_max_overlap(GVA_Allocator const allocator,
             bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
                 reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width];
 
-            if (lhs_deletion)
-            {
-                fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
-                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs_size + rhs_idx,
-                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
-            } // if
-
             if (lhs_match)
             {
+                // ..
                 fprintf(stderr, "    push (%zu MU vs .) +0 +0 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
                 priority_queue_push(&fringe, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx,
                     fringe.states[idx].included, fringe.states[idx].excluded);
             } // if
 
+            if (lhs_deletion)
+            {
+                // D.
+                fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
+                priority_queue_push(&fringe, (lhs_idx + lhs_width) * rhs_size + rhs_idx,
+                    fringe.states[idx].included, fringe.states[idx].excluded + 1);
+            } // if
+
             if (lhs_insertion)
             {
+                // I.
                 fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 priority_queue_push(&fringe, (lhs_idx + 1) * rhs_size + rhs_idx,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
@@ -183,13 +190,14 @@ dfa_max_overlap(GVA_Allocator const allocator,
         else
         {
             uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
-            uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
             bool const lhs_deletion = lhs_value & DFA_DELETION;
-            bool const rhs_deletion = rhs_value & DFA_DELETION;
             bool const lhs_insertion = lhs_value & DFA_INSERTION;
-            bool const rhs_insertion = rhs_value & DFA_INSERTION;
             bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
                 reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width];
+
+            uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
+            bool const rhs_deletion = rhs_value & DFA_DELETION;
+            bool const rhs_insertion = rhs_value & DFA_INSERTION;
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
                 reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width];
 
@@ -233,7 +241,8 @@ dfa_max_overlap(GVA_Allocator const allocator,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
 
-            if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
+            if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
+                lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
             {
                 // I.
                 fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
@@ -241,7 +250,8 @@ dfa_max_overlap(GVA_Allocator const allocator,
                     fringe.states[idx].included, fringe.states[idx].excluded + 1);
             } // if
 
-            if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
+            if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
+                lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
             {
                 // .I
                 fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
