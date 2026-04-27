@@ -99,7 +99,6 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
         sink = (LCS_Node) {.match = {len_ref + offset, len_obs}};
         tail_idx = GVA_NULL;
     } // else
-
     for (gva_uint i = lcs.index[lcs.length - 1].head; i != tail_idx; i = lcs.nodes[i].next)
     {
         edge(dfas + start, width,
@@ -178,12 +177,9 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
             continue;
         } // if
 
-        if (source.match.length == 0)
-        {
-            edge(dfas + start, width,
-                source.match.row - offset, lcs.nodes[i].match.row - offset,
-                lcs.nodes[i].match.col - source.match.col, 0);
-        } // if
+        edge(dfas + start, width,
+            source.match.row - offset, lcs.nodes[i].match.row - offset,
+            lcs.nodes[i].match.col - source.match.col, 0);
     } // for
 
     lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
