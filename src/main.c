@@ -477,7 +477,7 @@ supremal_main(int argc, char* argv[static argc])
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
-    uint8_t* dfas = NULL;
+    Trie dfas = trie_init(gva_std_allocator);
 
     size_t line_count = 0;
     static char line[LINE_SIZE] = {0};
@@ -492,23 +492,17 @@ supremal_main(int argc, char* argv[static argc])
             fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
             continue;
         } // if
-        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
-        size_t const start = array_length(dfas);
-        dfas = dfa_from_lcs_graph(gva_std_allocator, dfas, graph);
-        dfa_dot(reference.len, reference.str, gva_lcs_graph_supremal(graph), dfas + start);
-        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
 
-        uint8_t* dir = dfa_from_alignment(gva_std_allocator, NULL, variant.end - variant.start, reference.str + variant.start, variant.sequence.len, variant.sequence.str, variant.start);
-
-        dfa_dot(reference.len, reference.str, variant, dir);
-
-        dir = ARRAY_DESTROY(gva_std_allocator, dir);
+        uint8_t* dfa = dfa_from_alignment(gva_std_allocator, NULL, variant.end - variant.start, reference.str + variant.start, variant.sequence.len, variant.sequence.str, variant.start);
+        trie_insert(&dfas, array_length(dfa), (char*) dfa);
+        dfa = ARRAY_DESTROY(gva_std_allocator, dfa);
     } // while
-
     fprintf(stderr, "#variants: %zu\n", line_count);
-    fprintf(stderr, "%zu bytes\n", array_length(dfas));
+    fprintf(stderr, "string len: %zu\n", array_length(dfas.strings));
+    fprintf(stderr, "#nodes: %zu\n", array_length(dfas.nodes));
 
-    dfas = ARRAY_DESTROY(gva_std_allocator, dfas);
+    trie_destroy(&dfas);
+
     gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;

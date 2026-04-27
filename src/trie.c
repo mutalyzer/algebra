@@ -37,7 +37,7 @@ concat(Trie self[static restrict 1],
     self->strings = array_ensure(self->allocator, self->strings, sizeof(*self->strings), len);
     if (self->strings == NULL)
     {
-        return start;
+        return start;  // OOM
     } // if
     memcpy(self->strings + start, key, len);
     array_header(self->strings)->length += len;

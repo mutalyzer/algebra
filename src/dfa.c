@@ -240,9 +240,9 @@ typedef struct
 typedef struct
 {
     Queue_Entry* entries;
-    size_t   size;
-    gva_uint head;
-    gva_uint tail;
+    size_t       size;
+    gva_uint     head;
+    gva_uint     tail;
 } Queue;
 
 
