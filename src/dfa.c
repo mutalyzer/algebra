@@ -8,6 +8,7 @@
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "../include/variant.h"     // GVA_Variant
+#include "align.h"              // LCS_Alignment, lcs_align
 #include "array.h"              // ARRAY_*, array_*
 #include "dfa.h"                // dfa*
 
@@ -50,6 +51,149 @@ edge(uint8_t dfa[static 1], size_t const width,
 
 
 uint8_t*
+dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const len_obs, char const observed[static restrict len_obs],
+    size_t const offset)
+{
+    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, offset);
+    size_t const distance = len_ref + len_obs - 2 * lcs.length;
+
+    if (distance == 0)
+    {
+        return dfas;
+    } // if
+
+    size_t const width = len_obs + 1;
+    size_t const size = (len_ref + 1) * width;
+    size_t const len = (size + 3) / 4;
+
+    dfas = array_ensure(allocator, dfas, 1, len);
+    if (dfas == NULL)
+    {
+        lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
+        lcs.nodes = ARRAY_DESTROY(allocator, lcs.nodes);
+        return NULL;  // OOM
+    } // if
+
+    size_t const start = array_length(dfas);
+    memset(dfas + start, 0, len);
+    array_header(dfas)->length += len;
+
+    if (lcs.nodes == NULL)
+    {
+        edge(dfas + start, width, 0, len_ref, len_obs, 0);
+        return dfas;
+    } // if
+
+    gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
+    LCS_Node sink = lcs.nodes[tail_idx];
+    if (sink.match.row + sink.match.length == len_ref + offset &&
+        sink.match.col + sink.match.length == len_obs)
+    {
+        lcs.nodes[tail_idx].moved = true;
+        sink = lcs.nodes[tail_idx];
+    } // if
+    else
+    {
+        sink = (LCS_Node) {.match = {len_ref + offset, len_obs}};
+        tail_idx = GVA_NULL;
+    } // else
+
+    for (gva_uint i = lcs.index[lcs.length - 1].head; i != tail_idx; i = lcs.nodes[i].next)
+    {
+        edge(dfas + start, width,
+            lcs.nodes[i].match.row + lcs.nodes[i].match.length - offset,
+            sink.match.row + sink.match.length - offset,
+            sink.match.col + sink.match.length - (lcs.nodes[i].match.col + lcs.nodes[i].match.length),
+            lcs.nodes[i].match.col + lcs.nodes[i].match.length);
+        lcs.nodes[i].moved = true;
+    } // for
+
+    for (gva_uint i = lcs.length - 1; i >= 1; --i)
+    {
+        gva_uint next = GVA_NULL;
+        for (gva_uint j = lcs.index[i].head; j != GVA_NULL; j = next)
+        {
+            LCS_Node* const restrict tail = &lcs.nodes[j];
+            next = tail->next;
+            if (!tail->moved)
+            {
+                continue;
+            } // if
+
+            gva_uint here = GVA_NULL;
+            for (gva_uint k = lcs.index[i - 1].head; k != GVA_NULL; k = lcs.nodes[k].next)
+            {
+                LCS_Node* const restrict head = &lcs.nodes[k];
+
+                if (k >= j ||
+                    head->match.row + head->match.length >= tail->match.row + tail->match.length ||
+                    head->match.col + head->match.length >= tail->match.col + tail->match.length)
+                {
+                    continue;
+                } // if
+
+                edge(dfas + start, width,
+                    head->match.row + head->match.length - offset,
+                    tail->match.row + tail->match.length - offset - 1,
+                    tail->match.col + tail->match.length - (head->match.col + head->match.length) - 1,
+                    head->match.col + head->match.length);
+                head->moved = true;
+
+                here = k;
+            } // for
+
+            if (tail->match.length > 1)
+            {
+                tail->match.length -= 1;
+                if (here != GVA_NULL)
+                {
+                    tail->next = lcs.nodes[here].next;
+                    lcs.nodes[here].next = j;
+                } // if
+                else
+                {
+                    tail->next = lcs.index[i - 1].head;
+                    lcs.index[i - 1].head = j;
+                } // else
+            } // if
+        } // for
+    } // for
+
+    gva_uint head_idx = lcs.index[0].head;
+    LCS_Node source = lcs.nodes[head_idx];
+    if (source.match.row == offset && source.match.col == 0)
+    {
+        head_idx = source.next;
+    } // if
+    else
+    {
+        source = (LCS_Node) {.match.row = offset};
+    } // else
+    for (gva_uint i = head_idx; i != GVA_NULL; i = lcs.nodes[i].next)
+    {
+        if (!lcs.nodes[i].moved)
+        {
+            continue;
+        } // if
+
+        if (source.match.length == 0)
+        {
+            edge(dfas + start, width,
+                source.match.row - offset, lcs.nodes[i].match.row - offset,
+                lcs.nodes[i].match.col - source.match.col, 0);
+        } // if
+    } // for
+
+    lcs.index = allocator.allocate(allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
+    lcs.nodes = ARRAY_DESTROY(allocator, lcs.nodes);
+
+    return dfas;
+} // dfa_from_alignment
+
+
+uint8_t*
 dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
     GVA_LCS_Graph const graph)
 {
@@ -64,7 +208,10 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
         return NULL;  // OOM
     } // if
 
-    memset(dfas + array_length(dfas), 0, len);
+    size_t const start = array_length(dfas);
+    memset(dfas + start, 0, len);
+    array_header(dfas)->length += len;
+
     for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
         for (gva_uint j = graph.nodes[i].edges; j != GVA_NULL; j = graph.edges[j].next)
@@ -76,12 +223,11 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
                 &variant);
             for (size_t k = 0; k < count; ++k)
             {
-                edge(dfas + array_length(dfas), width, variant.start + k - supremal.start, variant.end + k - supremal.start,
+                edge(dfas + start, width, variant.start + k - supremal.start, variant.end + k - supremal.start,
                     variant.sequence.len, variant.sequence.str - supremal.sequence.str + k);
             } // for
         } // for
     } // for
-    array_header(dfas)->length += len;
 
     return dfas;
 } // dfa_from_lcs_graph
@@ -195,18 +341,6 @@ queue_push_front(Queue self[static 1], gva_uint const idx, gva_uint const includ
     } // if
     self->head = idx;
 } // queue_push_front
-
-
-static inline void
-queue_print(Queue const self[static 1])
-{
-    gva_uint idx = self->head;
-    while (idx != GVA_NULL)
-    {
-        fprintf(stderr, "%u: %d %d\n", idx, self->entries[idx].seen, self->entries[idx].next);
-        idx = self->entries[idx].next;
-    } // if
-} // queue_print
 
 
 size_t
@@ -371,9 +505,6 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, queue.entries[idx].included);
             } // if
         } // else
-
-        //queue_print(&queue);
-
     } // while
 
     queue_destroy(allocator, &queue);

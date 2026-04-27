@@ -493,10 +493,16 @@ supremal_main(int argc, char* argv[static argc])
             continue;
         } // if
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
-        //size_t const start = array_length(dfas);
+        size_t const start = array_length(dfas);
         dfas = dfa_from_lcs_graph(gva_std_allocator, dfas, graph);
-        //dfa_dot(reference.len, reference.str, gva_lcs_graph_supremal(graph), dfas + start);
+        dfa_dot(reference.len, reference.str, gva_lcs_graph_supremal(graph), dfas + start);
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+
+        uint8_t* dir = dfa_from_alignment(gva_std_allocator, NULL, variant.end - variant.start, reference.str + variant.start, variant.sequence.len, variant.sequence.str, variant.start);
+
+        dfa_dot(reference.len, reference.str, variant, dir);
+
+        dir = ARRAY_DESTROY(gva_std_allocator, dir);
     } // while
 
     fprintf(stderr, "#variants: %zu\n", line_count);
@@ -850,7 +856,7 @@ main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
-    // return supremal_main(argc, argv);
-    return overlap_main(argc, argv);
+    return supremal_main(argc, argv);
+    // return overlap_main(argc, argv);
     // return all_main(argc, argv);
 } // main

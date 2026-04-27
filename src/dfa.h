@@ -11,6 +11,13 @@
 
 
 uint8_t*
+dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const len_obs, char const observed[static restrict len_obs],
+    size_t const offset);
+
+
+uint8_t*
 dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
     GVA_LCS_Graph const graph);
 
