@@ -548,8 +548,8 @@ overlap_main(int argc, char* argv[static argc])
         uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs_variant.end - lhs_variant.start, reference.str + lhs_variant.start, lhs_variant.sequence.len, lhs_variant.sequence.str);
         uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs_variant.end - rhs_variant.start, reference.str + rhs_variant.start, rhs_variant.sequence.len, rhs_variant.sequence.str);
 
-        //dfa_dot(reference.len, reference.str, lhs_variant, lhs_dfa);
-        //dfa_dot(reference.len, reference.str, rhs_variant, rhs_dfa);
+        //dfa_dot(gva_std_allocator, reference.len, reference.str, lhs_variant, lhs_dfa);
+        //dfa_dot(gva_std_allocator, reference.len, reference.str, rhs_variant, rhs_dfa);
 
         size_t const overlap = dfa_max_overlap(gva_std_allocator,
             reference.len, reference.str,
@@ -624,6 +624,30 @@ all_main(int argc, char* argv[static argc])
     fclose(stream);
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    char const* const lhs_obs = "TAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAACCCTAACCCTAACCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAACCCTC";
+    char const* const rhs_obs = "TAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAACCCTAACCCTC";
+
+    GVA_Variant const lhs = {10000, 10469, {strlen(lhs_obs), lhs_obs}};
+    GVA_Variant const rhs = {10000, 10469, {strlen(rhs_obs), rhs_obs}};
+
+    uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str);
+    //uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str);
+
+    fprintf(stderr, "lhs size: %zu\n", array_length(lhs_dfa));
+    //fprintf(stderr, "rhs size: %zu\n", array_length(rhs_dfa));
+
+    dfa_dot(gva_std_allocator, stdout, reference.len, reference.str, lhs, lhs_dfa);
+
+
+
+    //size_t const o = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa);
+    //fprintf(stderr, "overlap: %zu\n", o);
+
+
+
+    return EXIT_SUCCESS;
+
 
     errno = 0;
     stream = fopen(argv[2], "r");
@@ -780,6 +804,7 @@ all_main(int argc, char* argv[static argc])
 
                 if (lhs_dfa == NULL)
                 {
+                    fprintf(stderr, "NEW LHS\n");
                     lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str);
                 } // if
 
@@ -795,6 +820,9 @@ all_main(int argc, char* argv[static argc])
 
                 gva_lcs_graph_uniq_atomics(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
 
+                fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n",
+                    GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
+                    GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
                 fprintf(stderr, GVA_VARIANT_FMT " vs " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs), GVA_VARIANT_PRINT(rhs));
                 fprintf(stderr, "%zu x %zu\n", array_length(lhs_dfa), array_length(rhs_dfa));
                 size_t const dfa_overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa);
@@ -859,9 +887,10 @@ all_main(int argc, char* argv[static argc])
 int
 main(int argc, char* argv[static argc])
 {
+
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return supremal_main(argc, argv);
-    return overlap_main(argc, argv);
-    //return all_main(argc, argv);
+    // return overlap_main(argc, argv);
+    return all_main(argc, argv);
 } // main

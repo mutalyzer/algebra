@@ -1,4 +1,4 @@
-#include <stdbool.h>    // bool
+#include <stdbool.h>    // bool, true
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint8_t
 #include <string.h>     // memset
@@ -345,7 +345,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
     GVA_Variant const lhs_supremal, uint8_t const lhs_dfa[static restrict 1],
     GVA_Variant const rhs_supremal, uint8_t const rhs_dfa[static restrict 1])
 {
-    static size_t const INITIAL_SIZE = 40;
+    static size_t const INITIAL_SIZE = 2048;
 
     size_t const lhs_width = lhs_supremal.sequence.len + 1;
     size_t const rhs_width = rhs_supremal.sequence.len + 1;
@@ -364,6 +364,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
         size_t const idx = queue_pop(&queue);
         if (idx == lhs_size * rhs_size - 1)
         {
+            fprintf(stderr, "BREAK\n");
             break;
         } // if
 
@@ -373,7 +374,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
         size_t const rhs_ref = rhs_idx / rhs_width + rhs_supremal.start;
         size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
-        // fprintf(stderr, "{%zu, %zu} (%zu): %u\n", lhs_idx, rhs_idx, idx, queue.entries[idx].included);
+        fprintf(stderr, "{%zu, %zu} (%zu): %zu\n", lhs_idx, rhs_idx, idx, included);
 
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
@@ -507,46 +508,74 @@ dfa_max_overlap(GVA_Allocator const allocator,
 } // dfa_max_overlap
 
 
-// FIXME: DEBUG only; very inefficient
-static void
-dfa_dot_traverse(size_t const len, char const reference[static restrict len],
-    GVA_Variant const supremal, uint8_t const dfa[static restrict 1], size_t const idx)
-{
-    size_t const width = supremal.sequence.len + 1;
-    size_t const size = (supremal.end - supremal.start + 1) * width;
-
-    if (idx == size - 1)
-    {
-        return;
-    } // if
-
-    uint8_t const value = get(dfa, idx);
-    if (value & DFA_DELETION)
-    {
-        fprintf(stderr, "%zu->%zu[label=\"%zu &Delta;\"]\n", idx, idx + width, supremal.start + idx / width);
-        dfa_dot_traverse(len, reference, supremal, dfa, idx + width);
-    } // if
-    if (value & DFA_INSERTION)
-    {
-        fprintf(stderr, "%zu->%zu[label=\"%zu %c\"]\n", idx, idx + 1, supremal.start + idx / width, supremal.sequence.str[idx % width]);
-        dfa_dot_traverse(len, reference, supremal, dfa, idx + 1);
-    } // if
-    if (reference[supremal.start + idx / width] == supremal.sequence.str[idx % width])
-    {
-        fprintf(stderr, "%zu->%zu[label=\"%zu &Mu;\"]\n", idx, idx + width + 1, supremal.start + idx / width);
-        dfa_dot_traverse(len, reference, supremal, dfa, idx + width + 1);
-    } // if
-} // dfa_dot_traverse
-
-
+// FIXME: DEBUG
 void
-dfa_dot(size_t const len, char const reference[static restrict len],
+dfa_dot(GVA_Allocator const allocator, FILE* const stream,
+    size_t const len, char const reference[static restrict len],
     GVA_Variant const supremal, uint8_t const dfa[static restrict 1])
 {
     size_t const width = supremal.sequence.len + 1;
     size_t const size = (supremal.end - supremal.start + 1) * width;
 
-    fprintf(stderr, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->0\n");
-    dfa_dot_traverse(len, reference, supremal, dfa, 0);
-    fprintf(stderr, "%zu[peripheries=2]\n}\n", size - 1);
+    struct
+    {
+        char     seen;
+        gva_uint next;
+    }* queue = allocator.allocate(allocator.context, NULL, 0, sizeof(*queue) * size);
+    if (queue == NULL)
+    {
+        return;  // OOM
+    } // if
+
+    memset(queue, 0, sizeof(*queue) * size);
+
+    fprintf(stream, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->0\n");
+
+    gva_uint head = 0;
+    gva_uint tail = head;
+    queue[head].seen = true;
+    queue[head].next = GVA_NULL;
+    while (head != GVA_NULL)
+    {
+        uint8_t const value = get(dfa, head);
+        if (value & DFA_DELETION)
+        {
+            fprintf(stream, "%u->%zu[label=\"%zu &Delta;\"]\n", head, head + width, supremal.start + head / width);
+            if (!queue[head + width].seen)
+            {
+                queue[head + width].seen = true;
+                queue[head + width].next = GVA_NULL;
+                queue[tail].next = head + width;
+                tail = head + width;
+            } // if
+        } // if
+        if (value & DFA_INSERTION)
+        {
+            fprintf(stream, "%u->%u[label=\"%zu %c\"]\n", head, head + 1, supremal.start + head / width, supremal.sequence.str[head % width]);
+            if (!queue[head + 1].seen)
+            {
+                queue[head + 1].seen = true;
+                queue[head + 1].next = GVA_NULL;
+                queue[tail].next = head + 1;
+                tail = head + 1;
+            } // if
+        } // if
+        if (head % width < width - 1 &&
+            reference[supremal.start + head / width] == supremal.sequence.str[head % width])
+        {
+            fprintf(stream, "%u->%zu[label=\"%zu &Mu;\"]\n", head, head + width + 1, supremal.start + head / width);
+            if (!queue[head + width + 1].seen)
+            {
+                queue[head + width + 1].seen = true;
+                queue[head + width + 1].next = GVA_NULL;
+                queue[tail].next = head + width + 1;
+                tail = head + width + 1;
+            } // if
+        } // if
+        head = queue[head].next;
+    } // while
+
+    queue = allocator.allocate(allocator.context, queue, sizeof(*queue) * size, 0);
+
+    fprintf(stream, "%zu[peripheries=2]\n}\n", size - 1);
 } // dfa_dot

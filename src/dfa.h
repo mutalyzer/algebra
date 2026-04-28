@@ -10,6 +10,9 @@
 #include "../include/variant.h"     // GVA_Variant
 
 
+#include <stdio.h>      // FIXME: DEBUG
+
+
 uint8_t*
 dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
     size_t const len_ref, char const reference[static restrict len_ref],
@@ -30,7 +33,8 @@ dfa_max_overlap(GVA_Allocator const allocator,
 
 // FIXME: DEBUG
 void
-dfa_dot(size_t const len, char const reference[static restrict len],
+dfa_dot(GVA_Allocator const allocator, FILE* const stream,
+    size_t const len, char const reference[static restrict len],
     GVA_Variant const supremal, uint8_t const dfa[static restrict 1]);
 
 
