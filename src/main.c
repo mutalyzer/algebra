@@ -688,6 +688,8 @@ all_main(int argc, char* argv[static argc])
             size_t* lhs_gs = NULL;
             size_t* lhs_ts = NULL;
 
+            uint8_t* lhs_dfa = NULL;
+
             for (size_t j = i + 1; j < array_length(entries); ++j)
             {
                 if (entries[i].end < entries[j].start)
@@ -776,7 +778,13 @@ all_main(int argc, char* argv[static argc])
                     gva_lcs_graph_uniq_atomics(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
                 } // if
 
+                if (lhs_dfa == NULL)
+                {
+                    lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str);
+                } // if
+
                 GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
+                uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str);
 
                 size_t const len = end - start + 1;
                 size_t* rhs_dels = bitset_init(gva_std_allocator, len);
@@ -786,6 +794,10 @@ all_main(int argc, char* argv[static argc])
                 size_t* rhs_ts = bitset_init(gva_std_allocator, len);
 
                 gva_lcs_graph_uniq_atomics(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
+
+                fprintf(stderr, GVA_VARIANT_FMT " vs " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs), GVA_VARIANT_PRINT(rhs));
+                fprintf(stderr, "%zu x %zu\n", array_length(lhs_dfa), array_length(rhs_dfa));
+                size_t const dfa_overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa);
 
                 bool const overlap = bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
                     bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
@@ -800,6 +812,13 @@ all_main(int argc, char* argv[static argc])
                 rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
 
                 gva_lcs_graph_destroy(gva_std_allocator, rhs_graph, false);
+                rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
+
+                if (overlap != (dfa_overlap > 0))
+                {
+                    fprintf(stderr, "ERROR: %zu\n", dfa_overlap);
+                    return EXIT_FAILURE;
+                } // if
 
                 if (overlap)
                 {
@@ -821,6 +840,7 @@ all_main(int argc, char* argv[static argc])
             lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
             lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
             gva_lcs_graph_destroy(gva_std_allocator, lhs_graph, false);
+            lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
         } // for
 
         fprintf(stderr, "#combos: %zu\n", count);
@@ -843,5 +863,5 @@ main(int argc, char* argv[static argc])
     // return index_main(argc, argv);
     // return supremal_main(argc, argv);
     return overlap_main(argc, argv);
-    // return all_main(argc, argv);
+    //return all_main(argc, argv);
 } // main

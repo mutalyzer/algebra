@@ -1,4 +1,3 @@
-#include <limits.h>     // CHAR_BIT
 #include <stdbool.h>    // bool
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint8_t
@@ -11,6 +10,7 @@
 #include "align.h"              // LCS_Alignment, lcs_align
 #include "array.h"              // ARRAY_*, array_*
 #include "dfa.h"                // dfa*
+#include "hash_table.h"         // HASH_TABLE_*, hash_table_*
 
 
 #include <stdio.h>      // DEBUG
@@ -227,41 +227,38 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
 
 typedef struct
 {
-    gva_uint seen     : 1;
-    gva_uint included : sizeof(gva_uint) * CHAR_BIT - 1;
+    HASH_TABLE_KEY;
+    gva_uint included;
     gva_uint next;
-} Queue_Entry;
+} Entry;
 
 
 typedef struct
 {
-    Queue_Entry* entries;
-    size_t       size;
-    gva_uint     head;
-    gva_uint     tail;
+    Entry*        entries;
+    GVA_Allocator allocator;
+    gva_uint      head;
+    gva_uint      tail;
 } Queue;
 
 
 static inline Queue
-queue_init(GVA_Allocator const allocator, size_t const size)
+queue_init(GVA_Allocator const allocator, size_t const capacity)
 {
-    Queue queue =
+    return (Queue)
     {
-        .entries = allocator.allocate(allocator.context, NULL, 0, sizeof(*queue.entries) * size),
-        .size = size,
+        .entries = hash_table_init(allocator, capacity, sizeof(Entry)),
+        .allocator = allocator,
         .head = GVA_NULL,
         .tail = GVA_NULL,
     };
-
-    memset(queue.entries, 0, sizeof(*queue.entries) * size);
-    return queue;
 } // queue_init
 
 
 static inline void
-queue_destroy(GVA_Allocator const allocator, Queue self[static 1])
+queue_destroy(Queue self[static 1])
 {
-    self->entries = allocator.allocate(allocator.context, self->entries, sizeof(*self->entries) * self->size, 0);
+    self->entries = HASH_TABLE_DESTROY(self->allocator, self->entries);
     self->head = GVA_NULL;
     self->tail = GVA_NULL;
 } // queue_destroy
@@ -277,8 +274,9 @@ queue_empty(Queue const self[static 1])
 static inline gva_uint
 queue_pop(Queue self[static 1])
 {
-    gva_uint const idx = self->head;
-    self->head = self->entries[idx].next;
+    size_t const hash_idx = HASH_TABLE_INDEX(self->entries, self->head);
+    gva_uint const idx = self->entries[hash_idx].gva_key;
+    self->head = self->entries[hash_idx].next;
     if (self->head == GVA_NULL)
     {
         self->tail = GVA_NULL;
@@ -290,24 +288,27 @@ queue_pop(Queue self[static 1])
 static inline void
 queue_push_back(Queue self[static 1], gva_uint const idx, gva_uint const included)
 {
-    if (self->entries[idx].seen)
+    size_t const hash_idx = HASH_TABLE_INDEX(self->entries, idx);
+    if (self->entries[hash_idx].gva_key == idx)
     {
         return;
     } // if
 
-    self->entries[idx] = (Queue_Entry)
-    {
-        .seen = true,
-        .included = included,
-        .next = GVA_NULL,
-    };
+    HASH_TABLE_SET(self->allocator, self->entries, idx,
+        ((Entry)
+        {
+            .gva_key = idx,
+            .included = included,
+            .next = GVA_NULL,
+        }));
+
     if (self->tail == GVA_NULL)
     {
         self->head = idx;
     } // if
     else
     {
-        self->entries[self->tail].next = idx;
+        self->entries[HASH_TABLE_INDEX(self->entries, self->tail)].next = idx;
     } // else
     self->tail = idx;
 } // queue_push_back
@@ -316,17 +317,20 @@ queue_push_back(Queue self[static 1], gva_uint const idx, gva_uint const include
 static inline void
 queue_push_front(Queue self[static 1], gva_uint const idx, gva_uint const included)
 {
-    if (self->entries[idx].seen)
+    size_t const hash_idx = HASH_TABLE_INDEX(self->entries, idx);
+    if (self->entries[hash_idx].gva_key == idx)
     {
         return;
     } // if
 
-    self->entries[idx] = (Queue_Entry)
-    {
-        .seen = true,
-        .included = included,
-        .next = self->head,
-    };
+    HASH_TABLE_SET(self->allocator, self->entries, idx,
+        ((Entry)
+        {
+            .gva_key = idx,
+            .included = included,
+            .next = self->head,
+        }));
+
     if (self->head == GVA_NULL)
     {
         self->tail = idx;
@@ -341,12 +345,14 @@ dfa_max_overlap(GVA_Allocator const allocator,
     GVA_Variant const lhs_supremal, uint8_t const lhs_dfa[static restrict 1],
     GVA_Variant const rhs_supremal, uint8_t const rhs_dfa[static restrict 1])
 {
+    static size_t const INITIAL_SIZE = 40;
+
     size_t const lhs_width = lhs_supremal.sequence.len + 1;
     size_t const rhs_width = rhs_supremal.sequence.len + 1;
     size_t const lhs_size = (lhs_supremal.end - lhs_supremal.start + 1) * lhs_width;
     size_t const rhs_size = (rhs_supremal.end - rhs_supremal.start + 1) * rhs_width;
 
-    Queue queue = queue_init(allocator, lhs_size * rhs_size);
+    Queue queue = queue_init(allocator, INITIAL_SIZE);
     if (queue.entries == NULL)
     {
         return 0;  // OOM
@@ -365,6 +371,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
         size_t const rhs_idx = idx % rhs_size;
         size_t const lhs_ref = lhs_idx / lhs_width + lhs_supremal.start;
         size_t const rhs_ref = rhs_idx / rhs_width + rhs_supremal.start;
+        size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
         // fprintf(stderr, "{%zu, %zu} (%zu): %u\n", lhs_idx, rhs_idx, idx, queue.entries[idx].included);
 
@@ -380,21 +387,21 @@ dfa_max_overlap(GVA_Allocator const allocator,
             {
                 // ..
                 // fprintf(stderr, "    push (. vs %zu MU) +0 +0 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
-                queue_push_front(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width + 1, queue.entries[idx].included);
+                queue_push_front(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width + 1, included);
             } // if
 
             if (rhs_deletion)
             {
                 // .D
                 // fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
-                queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width, queue.entries[idx].included);
+                queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width, included);
             } // if
 
             if (rhs_insertion)
             {
                 // .I
                 // fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
-                queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, queue.entries[idx].included);
+                queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
             } // if
         } // if
         else if ((rhs_idx == 0 && lhs_ref < rhs_ref) || rhs_idx == rhs_size - 1)
@@ -409,21 +416,21 @@ dfa_max_overlap(GVA_Allocator const allocator,
             {
                 // ..
                 // fprintf(stderr, "    push (%zu MU vs .) +0 +0 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
-                queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx, queue.entries[idx].included);
+                queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx, included);
             } // if
 
             if (lhs_deletion)
             {
                 // D.
                 // fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
-                queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx, queue.entries[idx].included);
+                queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx, included);
             } // if
 
             if (lhs_insertion)
             {
                 // I.
                 // fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
-                queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, queue.entries[idx].included);
+                queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
             } // if
         } // if
         else
@@ -444,35 +451,35 @@ dfa_max_overlap(GVA_Allocator const allocator,
             {
                 // ..
                 // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
-                queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, queue.entries[idx].included);
+                queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
             } // if
 
             if (lhs_deletion && rhs_deletion)
             {
                 // DD
                 // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
-                queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, queue.entries[idx].included + 1);
+                queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
             } // if
 
             if (lhs_insertion && rhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
             {
                 // II
                 // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
-                queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, queue.entries[idx].included + 1);
+                queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
             } // if
 
             if (lhs_deletion && rhs_match)
             {
                 // D.
                 // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
-                queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, queue.entries[idx].included);
+                queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
             } // if
 
             if (lhs_match && rhs_deletion)
             {
                 // .D
                 // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
-                queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, queue.entries[idx].included);
+                queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
             } // if
 
             if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
@@ -480,7 +487,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
             {
                 // I.
                 // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
-                queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, queue.entries[idx].included);
+                queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
             } // if
 
             if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
@@ -488,13 +495,13 @@ dfa_max_overlap(GVA_Allocator const allocator,
             {
                 // .I
                 // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
-                queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, queue.entries[idx].included);
+                queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
             } // if
         } // else
     } // while
-    size_t const included = queue.entries[lhs_size * rhs_size - 1].included;
+    size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1)].included;
 
-    queue_destroy(allocator, &queue);
+    queue_destroy(&queue);
 
     return included;
 } // dfa_max_overlap
