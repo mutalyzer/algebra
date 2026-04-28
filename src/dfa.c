@@ -53,10 +53,9 @@ edge(uint8_t dfa[static 1], size_t const width,
 uint8_t*
 dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
     size_t const len_ref, char const reference[static restrict len_ref],
-    size_t const len_obs, char const observed[static restrict len_obs],
-    size_t const offset)
+    size_t const len_obs, char const observed[static restrict len_obs])
 {
-    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, offset);
+    LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, 0);
     size_t const distance = len_ref + len_obs - 2 * lcs.length;
 
     if (distance == 0)
@@ -88,7 +87,7 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
 
     gva_uint tail_idx = lcs.index[lcs.length - 1].tail;
     LCS_Node sink = lcs.nodes[tail_idx];
-    if (sink.match.row + sink.match.length == len_ref + offset &&
+    if (sink.match.row + sink.match.length == len_ref &&
         sink.match.col + sink.match.length == len_obs)
     {
         lcs.nodes[tail_idx].moved = true;
@@ -96,14 +95,13 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
     } // if
     else
     {
-        sink = (LCS_Node) {.match = {len_ref + offset, len_obs}};
+        sink = (LCS_Node) {.match = {len_ref, len_obs}};
         tail_idx = GVA_NULL;
     } // else
     for (gva_uint i = lcs.index[lcs.length - 1].head; i != tail_idx; i = lcs.nodes[i].next)
     {
         edge(dfas + start, width,
-            lcs.nodes[i].match.row + lcs.nodes[i].match.length - offset,
-            sink.match.row + sink.match.length - offset,
+            lcs.nodes[i].match.row + lcs.nodes[i].match.length, sink.match.row + sink.match.length,
             sink.match.col + sink.match.length - (lcs.nodes[i].match.col + lcs.nodes[i].match.length),
             lcs.nodes[i].match.col + lcs.nodes[i].match.length);
         lcs.nodes[i].moved = true;
@@ -134,8 +132,7 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
                 } // if
 
                 edge(dfas + start, width,
-                    head->match.row + head->match.length - offset,
-                    tail->match.row + tail->match.length - offset - 1,
+                    head->match.row + head->match.length, tail->match.row + tail->match.length - 1,
                     tail->match.col + tail->match.length - (head->match.col + head->match.length) - 1,
                     head->match.col + head->match.length);
                 head->moved = true;
@@ -162,13 +159,13 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
 
     gva_uint head_idx = lcs.index[0].head;
     LCS_Node source = lcs.nodes[head_idx];
-    if (source.match.row == offset && source.match.col == 0)
+    if (source.match.row == 0 && source.match.col == 0)
     {
         head_idx = source.next;
     } // if
     else
     {
-        source = (LCS_Node) {.match.row = offset};
+        source = (LCS_Node) {0};
     } // else
     for (gva_uint i = head_idx; i != GVA_NULL; i = lcs.nodes[i].next)
     {
@@ -177,8 +174,7 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
             continue;
         } // if
 
-        edge(dfas + start, width,
-            source.match.row - offset, lcs.nodes[i].match.row - offset,
+        edge(dfas + start, width, source.match.row, lcs.nodes[i].match.row,
             lcs.nodes[i].match.col - source.match.col, 0);
     } // for
 
@@ -357,26 +353,20 @@ dfa_max_overlap(GVA_Allocator const allocator,
     } // if
 
     queue_push_front(&queue, 0, 0);
-
-    size_t count = 0;
     while (!queue_empty(&queue))
     {
-        count += 1;
-
         size_t const idx = queue_pop(&queue);
-        size_t const lhs_idx = idx / rhs_size;
-        size_t const rhs_idx = idx % rhs_size;
-
-        fprintf(stderr, "{%zu, %zu} (%zu): %u\n", lhs_idx, rhs_idx, idx, queue.entries[idx].included);
-
-        if (lhs_idx == lhs_size - 1 && rhs_idx == rhs_size - 1)
+        if (idx == lhs_size * rhs_size - 1)
         {
-            fprintf(stdout, "%u %zu\n", queue.entries[idx].included, count);
             break;
         } // if
 
+        size_t const lhs_idx = idx / rhs_size;
+        size_t const rhs_idx = idx % rhs_size;
         size_t const lhs_ref = lhs_idx / lhs_width + lhs_supremal.start;
         size_t const rhs_ref = rhs_idx / rhs_width + rhs_supremal.start;
+
+        // fprintf(stderr, "{%zu, %zu} (%zu): %u\n", lhs_idx, rhs_idx, idx, queue.entries[idx].included);
 
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
@@ -389,21 +379,21 @@ dfa_max_overlap(GVA_Allocator const allocator,
             if (rhs_match)
             {
                 // ..
-                fprintf(stderr, "    push (. vs %zu MU) +0 +0 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
+                // fprintf(stderr, "    push (. vs %zu MU) +0 +0 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
                 queue_push_front(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width + 1, queue.entries[idx].included);
             } // if
 
             if (rhs_deletion)
             {
                 // .D
-                fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
+                // fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width, queue.entries[idx].included);
             } // if
 
             if (rhs_insertion)
             {
                 // .I
-                fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
+                // fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, queue.entries[idx].included);
             } // if
         } // if
@@ -418,21 +408,21 @@ dfa_max_overlap(GVA_Allocator const allocator,
             if (lhs_match)
             {
                 // ..
-                fprintf(stderr, "    push (%zu MU vs .) +0 +0 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
+                // fprintf(stderr, "    push (%zu MU vs .) +0 +0 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx, queue.entries[idx].included);
             } // if
 
             if (lhs_deletion)
             {
                 // D.
-                fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
+                // fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx, queue.entries[idx].included);
             } // if
 
             if (lhs_insertion)
             {
                 // I.
-                fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
+                // fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, queue.entries[idx].included);
             } // if
         } // if
@@ -453,35 +443,35 @@ dfa_max_overlap(GVA_Allocator const allocator,
             if (lhs_match && rhs_match)
             {
                 // ..
-                fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
+                // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, queue.entries[idx].included);
             } // if
 
             if (lhs_deletion && rhs_deletion)
             {
                 // DD
-                fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
+                // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
                 queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, queue.entries[idx].included + 1);
             } // if
 
             if (lhs_insertion && rhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
             {
                 // II
-                fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
+                // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
                 queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, queue.entries[idx].included + 1);
             } // if
 
             if (lhs_deletion && rhs_match)
             {
                 // D.
-                fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
+                // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
                 queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, queue.entries[idx].included);
             } // if
 
             if (lhs_match && rhs_deletion)
             {
                 // .D
-                fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
+                // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
                 queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, queue.entries[idx].included);
             } // if
 
@@ -489,7 +479,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
             {
                 // I.
-                fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
+                // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, queue.entries[idx].included);
             } // if
 
@@ -497,15 +487,16 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
             {
                 // .I
-                fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
+                // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, queue.entries[idx].included);
             } // if
         } // else
     } // while
+    size_t const included = queue.entries[lhs_size * rhs_size - 1].included;
 
     queue_destroy(allocator, &queue);
 
-    return 0;
+    return included;
 } // dfa_max_overlap
 
 
