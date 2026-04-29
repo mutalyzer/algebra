@@ -425,7 +425,7 @@ gva_index_query(GVA_Allocator const allocator,
     // Phase 2
     for (size_t idx = 0; idx < array_header(entries)->capacity; ++idx)
     {
-        if (entries[idx].gva_key == GVA_NULL)
+        if (entries[idx].gva_key == HASH_TABLE_NOT_FOUND)
         {
             continue;
         } // if

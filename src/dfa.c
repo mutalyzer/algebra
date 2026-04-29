@@ -1,6 +1,6 @@
 #include <stdbool.h>    // bool, true
 #include <stddef.h>     // NULL, size_t
-#include <stdint.h>     // uint8_t
+#include <stdint.h>     // uint8_t, SIZE_MAX
 #include <string.h>     // memset
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -229,7 +229,7 @@ typedef struct
 {
     HASH_TABLE_KEY;
     gva_uint included;
-    gva_uint next;
+    size_t   next;
 } Entry;
 
 
@@ -237,8 +237,8 @@ typedef struct
 {
     Entry*        entries;
     GVA_Allocator allocator;
-    gva_uint      head;
-    gva_uint      tail;
+    size_t        head;
+    size_t        tail;
 } Queue;
 
 
@@ -249,8 +249,8 @@ queue_init(GVA_Allocator const allocator, size_t const capacity)
     {
         .entries = hash_table_init(allocator, capacity, sizeof(Entry)),
         .allocator = allocator,
-        .head = GVA_NULL,
-        .tail = GVA_NULL,
+        .head = SIZE_MAX,
+        .tail = SIZE_MAX,
     };
 } // queue_init
 
@@ -259,34 +259,34 @@ static inline void
 queue_destroy(Queue self[static 1])
 {
     self->entries = HASH_TABLE_DESTROY(self->allocator, self->entries);
-    self->head = GVA_NULL;
-    self->tail = GVA_NULL;
+    self->head = SIZE_MAX;
+    self->tail = SIZE_MAX;
 } // queue_destroy
 
 
 static inline bool
 queue_empty(Queue const self[static 1])
 {
-    return self->head == GVA_NULL;
+    return self->head == SIZE_MAX;
 } // queue_empty
 
 
-static inline gva_uint
+static inline size_t
 queue_pop(Queue self[static 1])
 {
     size_t const hash_idx = HASH_TABLE_INDEX(self->entries, self->head);
-    gva_uint const idx = self->entries[hash_idx].gva_key;
+    size_t const idx = self->entries[hash_idx].gva_key;
     self->head = self->entries[hash_idx].next;
-    if (self->head == GVA_NULL)
+    if (self->head == SIZE_MAX)
     {
-        self->tail = GVA_NULL;
+        self->tail = SIZE_MAX;
     } // if
     return idx;
 } // queue_pop
 
 
 static inline void
-queue_push_back(Queue self[static 1], gva_uint const idx, gva_uint const included)
+queue_push_back(Queue self[static 1], size_t const idx, size_t const included)
 {
     size_t const hash_idx = HASH_TABLE_INDEX(self->entries, idx);
     if (self->entries[hash_idx].gva_key == idx)
@@ -299,10 +299,10 @@ queue_push_back(Queue self[static 1], gva_uint const idx, gva_uint const include
         {
             .gva_key = idx,
             .included = included,
-            .next = GVA_NULL,
+            .next = SIZE_MAX,
         }));
 
-    if (self->tail == GVA_NULL)
+    if (self->tail == SIZE_MAX)
     {
         self->head = idx;
     } // if
@@ -315,7 +315,7 @@ queue_push_back(Queue self[static 1], gva_uint const idx, gva_uint const include
 
 
 static inline void
-queue_push_front(Queue self[static 1], gva_uint const idx, gva_uint const included)
+queue_push_front(Queue self[static 1], size_t const idx, size_t const included)
 {
     size_t const hash_idx = HASH_TABLE_INDEX(self->entries, idx);
     if (self->entries[hash_idx].gva_key == idx)
@@ -331,7 +331,7 @@ queue_push_front(Queue self[static 1], gva_uint const idx, gva_uint const includ
             .next = self->head,
         }));
 
-    if (self->head == GVA_NULL)
+    if (self->head == SIZE_MAX)
     {
         self->tail = idx;
     } // if
@@ -345,7 +345,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
     GVA_Variant const lhs_supremal, uint8_t const lhs_dfa[static restrict 1],
     GVA_Variant const rhs_supremal, uint8_t const rhs_dfa[static restrict 1])
 {
-    static size_t const INITIAL_SIZE = 2048;
+    static size_t const INITIAL_SIZE = 4096;
 
     size_t const lhs_width = lhs_supremal.sequence.len + 1;
     size_t const rhs_width = rhs_supremal.sequence.len + 1;
@@ -362,9 +362,8 @@ dfa_max_overlap(GVA_Allocator const allocator,
     while (!queue_empty(&queue))
     {
         size_t const idx = queue_pop(&queue);
-        if (idx == lhs_size * rhs_size - 1)
+        if (idx == lhs_size * rhs_size - 1)  // OVERFLOW
         {
-            fprintf(stderr, "BREAK\n");
             break;
         } // if
 
@@ -374,7 +373,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
         size_t const rhs_ref = rhs_idx / rhs_width + rhs_supremal.start;
         size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
-        fprintf(stderr, "{%zu, %zu} (%zu): %zu\n", lhs_idx, rhs_idx, idx, included);
+        //fprintf(stderr, "{%zu, %zu} (%zu): %zu\n", lhs_idx, rhs_idx, idx, included);
 
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
@@ -531,8 +530,8 @@ dfa_dot(GVA_Allocator const allocator, FILE* const stream,
 
     fprintf(stream, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->0\n");
 
-    gva_uint head = 0;
-    gva_uint tail = head;
+    size_t head = 0;
+    size_t tail = head;
     queue[head].seen = true;
     queue[head].next = GVA_NULL;
     while (head != GVA_NULL)
@@ -540,7 +539,7 @@ dfa_dot(GVA_Allocator const allocator, FILE* const stream,
         uint8_t const value = get(dfa, head);
         if (value & DFA_DELETION)
         {
-            fprintf(stream, "%u->%zu[label=\"%zu &Delta;\"]\n", head, head + width, supremal.start + head / width);
+            fprintf(stream, "%zu->%zu[label=\"%zu &Delta;\"]\n", head, head + width, supremal.start + head / width);
             if (!queue[head + width].seen)
             {
                 queue[head + width].seen = true;
@@ -551,7 +550,7 @@ dfa_dot(GVA_Allocator const allocator, FILE* const stream,
         } // if
         if (value & DFA_INSERTION)
         {
-            fprintf(stream, "%u->%u[label=\"%zu %c\"]\n", head, head + 1, supremal.start + head / width, supremal.sequence.str[head % width]);
+            fprintf(stream, "%zu->%zu[label=\"%zu %c\"]\n", head, head + 1, supremal.start + head / width, supremal.sequence.str[head % width]);
             if (!queue[head + 1].seen)
             {
                 queue[head + 1].seen = true;
@@ -563,7 +562,7 @@ dfa_dot(GVA_Allocator const allocator, FILE* const stream,
         if (head % width < width - 1 &&
             reference[supremal.start + head / width] == supremal.sequence.str[head % width])
         {
-            fprintf(stream, "%u->%zu[label=\"%zu &Mu;\"]\n", head, head + width + 1, supremal.start + head / width);
+            fprintf(stream, "%zu->%zu[label=\"%zu &Mu;\"]\n", head, head + width + 1, supremal.start + head / width);
             if (!queue[head + width + 1].seen)
             {
                 queue[head + width + 1].seen = true;
