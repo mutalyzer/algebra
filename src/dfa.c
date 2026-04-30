@@ -1,4 +1,4 @@
-#include <stdbool.h>    // bool, true
+#include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
 #include <stdint.h>     // uint8_t, uint64_t, SIZE_MAX, UINT64_C
 #include <string.h>     // memset
@@ -698,21 +698,21 @@ dfa_svg(FILE* restrict const stream,
         uint8_t value = 0;
         while (j <= end || value & DFA_INSERTION)
         {
-            fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"25\" />\n", j * 100 + 50, i * 100 + 50);
-            fprintf(stream, "<text x=\"%zu\" y=\"%zu\">%zu</text>\n", j * 100 + 50, i * 100 + 50, i * width + j);
-
             value = get(dfa, i * width + j);
 
+            bool edge = false;
             if (value & DFA_DELETION)
             {
                 fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50, i * 100 + 50 + 25, j * 100 + 50, i * 100 + 100 + 16);
                 start = MIN(start, j);
+                edge = true;
             } // if
 
             if (value & DFA_INSERTION)
             {
                 fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50 + 25, i * 100 + 50, j * 100 + 100 + 16, i * 100 + 50);
                 next_end = MAX(next_end, j);
+                edge = true;
             } // if
 
             if (reference[variant.start + i] == variant.sequence.str[j])
@@ -720,6 +720,13 @@ dfa_svg(FILE* restrict const stream,
                 fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50 + 17, i * 100 + 50 + 17, j * 100 + 100 + 50 - 24, i * 100 + 100 + 50 - 24);
                 start = MIN(start, j + 1);
                 next_end = MAX(next_end, j + 1);
+                edge = true;
+            } // if
+
+            if (edge)
+            {
+                fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"25\" />\n", j * 100 + 50, i * 100 + 50);
+                fprintf(stream, "<text x=\"%zu\" y=\"%zu\">%zu</text>\n", j * 100 + 50, i * 100 + 50, i * width + j);
             } // if
 
             j += 1;
@@ -729,6 +736,8 @@ dfa_svg(FILE* restrict const stream,
     } // for
 
     fprintf(stream, "<line x1=\"0\" y1=\"50\" x2=\"16\" y2=\"50\" />\n");
+    fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"25\" />\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50);
     fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"23\" />\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50);
+                fprintf(stream, "<text x=\"%zu\" y=\"%zu\">%zu</text>\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50, size - 1);
     fprintf(stream, "</svg>\n");
 } // dfa_svg
