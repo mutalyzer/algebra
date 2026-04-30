@@ -1,6 +1,6 @@
 #include <stdbool.h>    // bool, true
 #include <stddef.h>     // NULL, size_t
-#include <stdint.h>     // uint8_t, SIZE_MAX
+#include <stdint.h>     // uint8_t, uint64_t, SIZE_MAX, UINT64_C
 #include <string.h>     // memset
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -9,11 +9,13 @@
 #include "../include/variant.h"     // GVA_Variant
 #include "align.h"              // LCS_Alignment, lcs_align
 #include "array.h"              // ARRAY_*, array_*
+#include "common.h"             // MAX, MIN
 #include "dfa.h"                // dfa*
 #include "hash_table.h"         // HASH_TABLE_*, hash_table_*
 
 
-#include <stdio.h>      // DEBUG
+// FIXME: DEBUG
+#include <stdio.h>
 
 
 static uint8_t const DFA_DELETION  = 0x1;
@@ -342,15 +344,16 @@ queue_push_front(Queue self[static 1], size_t const idx, size_t const included)
 size_t
 dfa_max_overlap(GVA_Allocator const allocator,
     size_t const len, char const reference[static restrict len],
-    GVA_Variant const lhs_supremal, uint8_t const lhs_dfa[static restrict 1],
-    GVA_Variant const rhs_supremal, uint8_t const rhs_dfa[static restrict 1])
+    GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
+    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1],
+    size_t const limit)
 {
     static size_t const INITIAL_SIZE = 4096;
 
-    size_t const lhs_width = lhs_supremal.sequence.len + 1;
-    size_t const rhs_width = rhs_supremal.sequence.len + 1;
-    size_t const lhs_size = (lhs_supremal.end - lhs_supremal.start + 1) * lhs_width;
-    size_t const rhs_size = (rhs_supremal.end - rhs_supremal.start + 1) * rhs_width;
+    size_t const lhs_width = lhs_variant.sequence.len + 1;
+    size_t const rhs_width = rhs_variant.sequence.len + 1;
+    size_t const lhs_size = (lhs_variant.end - lhs_variant.start + 1) * lhs_width;
+    size_t const rhs_size = (rhs_variant.end - rhs_variant.start + 1) * rhs_width;
 
     Queue queue = queue_init(allocator, INITIAL_SIZE);
     if (queue.entries == NULL)
@@ -369,8 +372,8 @@ dfa_max_overlap(GVA_Allocator const allocator,
 
         size_t const lhs_idx = idx / rhs_size;
         size_t const rhs_idx = idx % rhs_size;
-        size_t const lhs_ref = lhs_idx / lhs_width + lhs_supremal.start;
-        size_t const rhs_ref = rhs_idx / rhs_width + rhs_supremal.start;
+        size_t const lhs_ref = lhs_idx / lhs_width + lhs_variant.start;
+        size_t const rhs_ref = rhs_idx / rhs_width + rhs_variant.start;
         size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
         //fprintf(stderr, "{%zu, %zu} (%zu): %zu\n", lhs_idx, rhs_idx, idx, included);
@@ -381,7 +384,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
             bool const rhs_deletion = rhs_value & DFA_DELETION;
             bool const rhs_insertion = rhs_value & DFA_INSERTION;
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width];
+                reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
 
             if (rhs_match)
             {
@@ -400,7 +403,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
             if (rhs_insertion)
             {
                 // .I
-                // fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
+                // fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
             } // if
         } // if
@@ -410,7 +413,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
             bool const lhs_deletion = lhs_value & DFA_DELETION;
             bool const lhs_insertion = lhs_value & DFA_INSERTION;
             bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
-                reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width];
+                reference[lhs_variant.start + lhs_idx / lhs_width] == lhs_variant.sequence.str[lhs_idx % lhs_width];
 
             if (lhs_match)
             {
@@ -429,7 +432,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
             if (lhs_insertion)
             {
                 // I.
-                // fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
+                // fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
             } // if
         } // if
@@ -439,13 +442,13 @@ dfa_max_overlap(GVA_Allocator const allocator,
             bool const lhs_deletion = lhs_value & DFA_DELETION;
             bool const lhs_insertion = lhs_value & DFA_INSERTION;
             bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
-                reference[lhs_supremal.start + lhs_idx / lhs_width] == lhs_supremal.sequence.str[lhs_idx % lhs_width];
+                reference[lhs_variant.start + lhs_idx / lhs_width] == lhs_variant.sequence.str[lhs_idx % lhs_width];
 
             uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
             bool const rhs_deletion = rhs_value & DFA_DELETION;
             bool const rhs_insertion = rhs_value & DFA_INSERTION;
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_supremal.start + rhs_idx / rhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width];
+                reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
 
             if (lhs_match && rhs_match)
             {
@@ -458,13 +461,21 @@ dfa_max_overlap(GVA_Allocator const allocator,
             {
                 // DD
                 // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
+                if (limit > 0 && included + 1 >= limit)
+                {
+                    break;
+                } // if
                 queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
             } // if
 
-            if (lhs_insertion && rhs_insertion && lhs_supremal.sequence.str[lhs_idx % lhs_width] == rhs_supremal.sequence.str[rhs_idx % rhs_width])
+            if (lhs_insertion && rhs_insertion && lhs_variant.sequence.str[lhs_idx % lhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width])
             {
                 // II
-                // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
+                // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
+                if (limit > 0 && included + 1 >= limit)
+                {
+                    break;
+                } // if
                 queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
             } // if
 
@@ -483,23 +494,29 @@ dfa_max_overlap(GVA_Allocator const allocator,
             } // if
 
             if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
-                lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
+                lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
             {
                 // I.
-                // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_supremal.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
+                // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
             } // if
 
             if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
-                lhs_supremal.sequence.str[lhs_idx % lhs_width] != rhs_supremal.sequence.str[rhs_idx % rhs_width])))
+                lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
             {
                 // .I
-                // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_supremal.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
+                // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
             } // if
         } // else
     } // while
-    size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1)].included;
+
+    size_t included = limit;
+    size_t const idx = HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1);
+    if (queue.entries[idx].gva_key == lhs_size * rhs_size - 1)
+    {
+        included = queue.entries[idx].included;
+    } // if
 
     queue_destroy(&queue);
 
@@ -507,74 +524,211 @@ dfa_max_overlap(GVA_Allocator const allocator,
 } // dfa_max_overlap
 
 
-// FIXME: DEBUG
-void
-dfa_dot(GVA_Allocator const allocator, FILE* const stream,
+static uint64_t*
+uniq_atomics(GVA_Allocator const allocator,
+    size_t const start, size_t const end,
     size_t const len, char const reference[static restrict len],
-    GVA_Variant const supremal, uint8_t const dfa[static restrict 1])
+    GVA_Variant const variant, uint8_t const dfa[static restrict 1])
 {
-    size_t const width = supremal.sequence.len + 1;
-    size_t const size = (supremal.end - supremal.start + 1) * width;
+    size_t const width = variant.sequence.len + 1;
 
-    struct
+    uint64_t* restrict atomics = allocator.allocate(allocator.context, NULL, 0, sizeof(*atomics) * (end - start));
+    if (atomics == NULL)
     {
-        char     seen;
-        gva_uint next;
-    }* queue = allocator.allocate(allocator.context, NULL, 0, sizeof(*queue) * size);
-    if (queue == NULL)
-    {
-        return;  // OOM
+        return NULL;  // OOM
     } // if
 
-    memset(queue, 0, sizeof(*queue) * size);
+    memset(atomics, 0, sizeof(*atomics) * (end - start));
+
+    size_t row_end = 0;
+    size_t j = 0;
+    for (size_t i = 0; i <= variant.end - variant.start; ++i)
+    {
+        size_t row_start = width;
+        size_t next_end = row_end;
+        uint8_t value = 0;
+        while (j <= row_end || value & DFA_INSERTION)
+        {
+            value = get(dfa, i * width + j);
+
+            if (value & DFA_DELETION)
+            {
+                if (variant.start + i >= start && variant.start + i < end)
+                {
+                    atomics[i - (start - variant.start)] |= UINT64_C(1) << 63;
+                } // if
+                row_start = MIN(row_start, j);
+            } // if
+
+            if (value & DFA_INSERTION)
+            {
+                if (variant.start + i >= start && variant.start + i < end)
+                {
+                    atomics[i - (start - variant.start)] |= UINT64_C(1) << (variant.sequence.str[j] % 64);
+                } // if
+                next_end = MAX(next_end, j);
+            } // if
+
+            if (reference[variant.start + i] == variant.sequence.str[j])
+            {
+                row_start = MIN(row_start, j + 1);
+                next_end = MAX(next_end, j + 1);
+            } // if
+
+            j += 1;
+        } // while
+        row_end = next_end;
+        j = row_start;
+    } // for
+
+    return atomics;
+} // uniq_atomics
+
+
+bool
+dfa_disjoint(GVA_Allocator const allocator,
+    size_t const len, char const reference[static restrict len],
+    GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
+    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1])
+{
+    size_t const start = MAX(lhs_variant.start, rhs_variant.start);
+    size_t const end = MIN(lhs_variant.end, rhs_variant.end);
+
+    uint64_t* restrict lhs_atomics = uniq_atomics(allocator, start, end, len, reference, lhs_variant, lhs_dfa);
+    uint64_t* restrict rhs_atomics = uniq_atomics(allocator, start, end, len, reference, rhs_variant, rhs_dfa);
+    if (lhs_atomics == NULL || rhs_atomics == NULL)
+    {
+        rhs_atomics = allocator.allocate(allocator.context, rhs_atomics, sizeof(*rhs_atomics) * (end - start), 0);
+        lhs_atomics = allocator.allocate(allocator.context, lhs_atomics, sizeof(*lhs_atomics) * (end - start), 0);
+        return true;  // OOM
+    } // if
+
+    bool disjoint = true;
+    for (size_t i = 0; i < (end - start); ++i)
+    {
+        if (lhs_atomics[i] & rhs_atomics[i])
+        {
+            disjoint = false;
+            break;
+        } // if
+    } // for
+
+    rhs_atomics = allocator.allocate(allocator.context, rhs_atomics, sizeof(*rhs_atomics) * (end - start), 0);
+    lhs_atomics = allocator.allocate(allocator.context, lhs_atomics, sizeof(*lhs_atomics) * (end - start), 0);
+    return disjoint;
+} // dfa_disjoint
+
+
+// FIXME: DEBUG
+void
+dfa_dot(FILE* restrict const stream,
+    size_t const len, char const reference[static restrict len],
+    GVA_Variant const variant, uint8_t const dfa[static restrict 1])
+{
+    size_t const width = variant.sequence.len + 1;
+    size_t const size = (variant.end - variant.start + 1) * width;
 
     fprintf(stream, "strict digraph{\nrankdir=LR\nnode[fixedsize=true,shape=circle,width=1]\ni[label=\"\",shape=none,width=0]\ni->0\n");
 
-    size_t head = 0;
-    size_t tail = head;
-    queue[head].seen = true;
-    queue[head].next = GVA_NULL;
-    while (head != GVA_NULL)
+    size_t end = 0;
+    size_t j = 0;
+    for (size_t i = 0; i <= variant.end - variant.start; ++i)
     {
-        uint8_t const value = get(dfa, head);
-        if (value & DFA_DELETION)
+        size_t start = width;
+        size_t next_end = end;
+        uint8_t value = 0;
+        while (j <= end || value & DFA_INSERTION)
         {
-            fprintf(stream, "%zu->%zu[label=\"%zu &Delta;\"]\n", head, head + width, supremal.start + head / width);
-            if (!queue[head + width].seen)
-            {
-                queue[head + width].seen = true;
-                queue[head + width].next = GVA_NULL;
-                queue[tail].next = head + width;
-                tail = head + width;
-            } // if
-        } // if
-        if (value & DFA_INSERTION)
-        {
-            fprintf(stream, "%zu->%zu[label=\"%zu %c\"]\n", head, head + 1, supremal.start + head / width, supremal.sequence.str[head % width]);
-            if (!queue[head + 1].seen)
-            {
-                queue[head + 1].seen = true;
-                queue[head + 1].next = GVA_NULL;
-                queue[tail].next = head + 1;
-                tail = head + 1;
-            } // if
-        } // if
-        if (head % width < width - 1 &&
-            reference[supremal.start + head / width] == supremal.sequence.str[head % width])
-        {
-            fprintf(stream, "%zu->%zu[label=\"%zu &Mu;\"]\n", head, head + width + 1, supremal.start + head / width);
-            if (!queue[head + width + 1].seen)
-            {
-                queue[head + width + 1].seen = true;
-                queue[head + width + 1].next = GVA_NULL;
-                queue[tail].next = head + width + 1;
-                tail = head + width + 1;
-            } // if
-        } // if
-        head = queue[head].next;
-    } // while
+            value = get(dfa, i * width + j);
 
-    queue = allocator.allocate(allocator.context, queue, sizeof(*queue) * size, 0);
+            if (value & DFA_DELETION)
+            {
+                fprintf(stream, "%zu->%zu[label=\"%zu &Delta;\"]\n", i * width + j, i * width + j + width, variant.start + i);
+                start = MIN(start, j);
+            } // if
+
+            if (value & DFA_INSERTION)
+            {
+                fprintf(stream, "%zu->%zu[label=\"%zu %c\"]\n", i * width + j, i * width + j + 1, variant.start + i, variant.sequence.str[j]);
+                next_end = MAX(next_end, j);
+            } // if
+
+            if (reference[variant.start + i] == variant.sequence.str[j])
+            {
+                fprintf(stream, "%zu->%zu[label=\"%zu &Mu;\"]\n", i * width + j, i * width + j + width + 1, variant.start + i);
+                start = MIN(start, j + 1);
+                next_end = MAX(next_end, j + 1);
+            } // if
+
+            j += 1;
+        } // while
+        end = next_end;
+        j = start;
+    } // for
 
     fprintf(stream, "%zu[peripheries=2]\n}\n", size - 1);
 } // dfa_dot
+
+
+void
+dfa_svg(FILE* restrict const stream,
+    size_t const len, char const reference[static restrict len],
+    GVA_Variant const variant, uint8_t const dfa[static restrict 1])
+{
+    size_t const width = variant.sequence.len + 1;
+    size_t const size = (variant.end - variant.start + 1) * width;
+
+    fprintf(stream, "<svg xmlns=\"http://www.w3.org/2000/svg\">\n");
+    fprintf(stream, "<defs>\n<marker id=\"a\" markerHeight=\"8\" markerWidth=\"10\" orient=\"auto\" refX=\"2\" refY=\"4\">\n<path fill=\"context-stroke\" d=\"m0 0 2 4-2 4 10-4Z\"/>\n</marker>\n</defs>\n");
+    fprintf(stream, "<style>\n:root{--c:#1f2328;}\ntext{dominant-baseline:middle;fill:var(--c);font-size:smaller;text-anchor:middle;}\ncircle{fill:none;stroke:var(--c);}\nline{marker-end:url(#a);stroke:var(--c);}\n</style>\n");
+    fprintf(stream, "<g font-size=\"larger\">\n");
+    fprintf(stream, "<text x=\"7\" y=\"12\">%u</text>\n", variant.start);
+    for (size_t i = 0; i < width - 1; ++i)
+    {
+        fprintf(stream, "<text x=\"%zu\" y=\"12\">%c</text>\n", (i + 1) * 100, variant.sequence.str[i]);
+    } // for
+    fprintf(stream, "</g>\n");
+
+    size_t end = 0;
+    size_t j = 0;
+    for (size_t i = 0; i <= variant.end - variant.start; ++i)
+    {
+        size_t start = width;
+        size_t next_end = end;
+        uint8_t value = 0;
+        while (j <= end || value & DFA_INSERTION)
+        {
+            fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"25\" />\n", j * 100 + 50, i * 100 + 50);
+            fprintf(stream, "<text x=\"%zu\" y=\"%zu\">%zu</text>\n", j * 100 + 50, i * 100 + 50, i * width + j);
+
+            value = get(dfa, i * width + j);
+
+            if (value & DFA_DELETION)
+            {
+                fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50, i * 100 + 50 + 25, j * 100 + 50, i * 100 + 100 + 16);
+                start = MIN(start, j);
+            } // if
+
+            if (value & DFA_INSERTION)
+            {
+                fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50 + 25, i * 100 + 50, j * 100 + 100 + 16, i * 100 + 50);
+                next_end = MAX(next_end, j);
+            } // if
+
+            if (reference[variant.start + i] == variant.sequence.str[j])
+            {
+                fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50 + 17, i * 100 + 50 + 17, j * 100 + 100 + 50 - 24, i * 100 + 100 + 50 - 24);
+                start = MIN(start, j + 1);
+                next_end = MAX(next_end, j + 1);
+            } // if
+
+            j += 1;
+        } // while
+        end = next_end;
+        j = start;
+    } // for
+
+    fprintf(stream, "<line x1=\"0\" y1=\"50\" x2=\"16\" y2=\"50\" />\n");
+    fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"23\" />\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50);
+    fprintf(stream, "</svg>\n");
+} // dfa_svg

@@ -2,6 +2,7 @@
 #define GVA_DFA_H
 
 
+#include <stdbool.h>    // bool
 #include <stddef.h>     // size_t
 #include <stdint.h>     // uint8_t
 
@@ -27,15 +28,29 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
 size_t
 dfa_max_overlap(GVA_Allocator const allocator,
     size_t const len, char const reference[static restrict len],
-    GVA_Variant const lhs_supremal, uint8_t const lhs_dfa[static restrict 1],
-    GVA_Variant const rhs_supremal, uint8_t const rhs_dfa[static restrict 1]);
+    GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
+    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1],
+    size_t const limit);
+
+
+bool
+dfa_disjoint(GVA_Allocator const allocator,
+    size_t const len, char const reference[static restrict len],
+    GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
+    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1]);
 
 
 // FIXME: DEBUG
 void
-dfa_dot(GVA_Allocator const allocator, FILE* const stream,
+dfa_dot(FILE* restrict const stream,
     size_t const len, char const reference[static restrict len],
-    GVA_Variant const supremal, uint8_t const dfa[static restrict 1]);
+    GVA_Variant const variant, uint8_t const dfa[static restrict 1]);
+
+
+void
+dfa_svg(FILE* restrict const stream,
+    size_t const len, char const reference[static restrict len],
+    GVA_Variant const variant, uint8_t const dfa[static restrict 1]);
 
 
 #endif  // GVA_DFA_H
