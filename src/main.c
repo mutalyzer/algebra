@@ -548,25 +548,17 @@ overlap_main(int argc, char* argv[static argc])
         uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs_variant.end - lhs_variant.start, reference.str + lhs_variant.start, lhs_variant.sequence.len, lhs_variant.sequence.str);
         uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs_variant.end - rhs_variant.start, reference.str + rhs_variant.start, rhs_variant.sequence.len, rhs_variant.sequence.str);
 
-        //dfa_dot(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
-        //dfa_svg(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
+        dfa_dot(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
+        dfa_dot(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
+        dfa_svg(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
+        dfa_svg(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
 
         fprintf(stderr, "disjoint: %d\n", dfa_disjoint(gva_std_allocator, reference.len, reference.str, lhs_variant, lhs_dfa, rhs_variant, rhs_dfa));
-
-/*
-        dfa_dot(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
-        // dfa_dot(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
-
-        //dfa_svg(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
-        //dfa_svg(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
-
-        size_t const overlap = dfa_max_overlap(gva_std_allocator,
+        fprintf(stderr, "max_overlap: %zu\n", dfa_max_overlap(gva_std_allocator,
             reference.len, reference.str,
             lhs_variant, lhs_dfa,
-            rhs_variant, rhs_dfa, 0);
+            rhs_variant, rhs_dfa, 0));
 
-        fprintf(stdout, "%zu\n", overlap);
-*/
         rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
         lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
     } // while

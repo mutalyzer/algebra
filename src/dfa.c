@@ -10,7 +10,7 @@
 #include "align.h"              // LCS_Alignment, lcs_align
 #include "array.h"              // ARRAY_*, array_*
 #include "common.h"             // MAX, MIN
-#include "dfa.h"                // dfa*
+#include "dfa.h"                // dfa_*
 #include "hash_table.h"         // HASH_TABLE_*, hash_table_*
 
 
@@ -653,7 +653,8 @@ dfa_dot(FILE* restrict const stream,
                 next_end = MAX(next_end, j);
             } // if
 
-            if (reference[variant.start + i] == variant.sequence.str[j])
+            if (i < variant.end - variant.start &&
+                reference[variant.start + i] == variant.sequence.str[j])
             {
                 fprintf(stream, "%zu->%zu[label=\"%zu &Mu;\"]\n", i * width + j, i * width + j + width + 1, variant.start + i);
                 start = MIN(start, j + 1);
@@ -678,7 +679,7 @@ dfa_svg(FILE* restrict const stream,
     size_t const width = variant.sequence.len + 1;
     size_t const size = (variant.end - variant.start + 1) * width;
 
-    fprintf(stream, "<svg xmlns=\"http://www.w3.org/2000/svg\">\n");
+    fprintf(stream, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %zu %u\">\n", width * 100, (variant.end - variant.start + 1) * 100);
     fprintf(stream, "<defs>\n<marker id=\"a\" markerHeight=\"8\" markerWidth=\"10\" orient=\"auto\" refX=\"2\" refY=\"4\">\n<path fill=\"context-stroke\" d=\"m0 0 2 4-2 4 10-4Z\"/>\n</marker>\n</defs>\n");
     fprintf(stream, "<style>\n:root{--c:#1f2328;}\ntext{dominant-baseline:middle;fill:var(--c);font-size:smaller;text-anchor:middle;}\ncircle{fill:none;stroke:var(--c);}\nline{marker-end:url(#a);stroke:var(--c);}\n</style>\n");
     fprintf(stream, "<g font-size=\"larger\">\n");
@@ -715,7 +716,8 @@ dfa_svg(FILE* restrict const stream,
                 edge = true;
             } // if
 
-            if (reference[variant.start + i] == variant.sequence.str[j])
+            if (i < variant.end - variant.start &&
+                reference[variant.start + i] == variant.sequence.str[j])
             {
                 fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50 + 17, i * 100 + 50 + 17, j * 100 + 100 + 50 - 24, i * 100 + 100 + 50 - 24);
                 start = MIN(start, j + 1);
