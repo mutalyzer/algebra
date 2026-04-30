@@ -569,7 +569,8 @@ uniq_atomics(GVA_Allocator const allocator,
                 next_end = MAX(next_end, j);
             } // if
 
-            if (reference[variant.start + i] == variant.sequence.str[j])
+            if (i < variant.end - variant.start &&
+                reference[variant.start + i] == variant.sequence.str[j])
             {
                 row_start = MIN(row_start, j + 1);
                 next_end = MAX(next_end, j + 1);
