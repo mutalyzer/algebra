@@ -569,7 +569,7 @@ uniq_atomics(GVA_Allocator const allocator,
                 next_end = MAX(next_end, j);
             } // if
 
-            if (i < variant.end - variant.start &&
+            if (i < variant.end - variant.start && j < variant.sequence.len &&
                 reference[variant.start + i] == variant.sequence.str[j])
             {
                 row_start = MIN(row_start, j + 1);
@@ -593,7 +593,11 @@ dfa_disjoint(GVA_Allocator const allocator,
     GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1])
 {
     size_t const start = MAX(lhs_variant.start, rhs_variant.start);
-    size_t const end = MIN(lhs_variant.end, rhs_variant.end);
+    size_t const end = MIN(lhs_variant.end + 1, rhs_variant.end + 1);
+    if (end <= start)
+    {
+        return true;
+    } // if
 
     uint64_t* restrict lhs_atomics = uniq_atomics(allocator, start, end, len, reference, lhs_variant, lhs_dfa);
     uint64_t* restrict rhs_atomics = uniq_atomics(allocator, start, end, len, reference, rhs_variant, rhs_dfa);
@@ -720,7 +724,7 @@ dfa_svg(FILE* restrict const stream,
             if (i < variant.end - variant.start &&
                 reference[variant.start + i] == variant.sequence.str[j])
             {
-                fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50 + 17, i * 100 + 50 + 17, j * 100 + 100 + 50 - 24, i * 100 + 100 + 50 - 24);
+                fprintf(stream, "<line x1=\"%zu\" y1=\"%zu\" x2=\"%zu\" y2=\"%zu\" />\n", j * 100 + 50 + 18, i * 100 + 50 + 18, j * 100 + 100 + 50 - 24, i * 100 + 100 + 50 - 24);
                 start = MIN(start, j + 1);
                 next_end = MAX(next_end, j + 1);
                 edge = true;
@@ -740,7 +744,7 @@ dfa_svg(FILE* restrict const stream,
 
     fprintf(stream, "<line x1=\"0\" y1=\"50\" x2=\"16\" y2=\"50\" />\n");
     fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"25\" />\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50);
-    fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"23\" />\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50);
+    fprintf(stream, "<circle cx=\"%zu\" cy=\"%zu\" r=\"22\" />\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50);
                 fprintf(stream, "<text x=\"%zu\" y=\"%zu\">%zu</text>\n", ((size - 1) % width) * 100 + 50, ((size - 1) / width) * 100 + 50, size - 1);
     fprintf(stream, "</svg>\n");
 } // dfa_svg

@@ -796,7 +796,8 @@ all_main(int argc, char* argv[static argc])
 
                 gva_lcs_graph_uniq_atomics(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
 
-                size_t const dfa_overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa, 1);
+                //size_t const dfa_overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa, 1);
+                bool const disjoint = dfa_disjoint(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa);
 
                 bool const overlap = bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
                     bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
@@ -813,12 +814,12 @@ all_main(int argc, char* argv[static argc])
                 gva_lcs_graph_destroy(gva_std_allocator, rhs_graph, false);
                 rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
 
-                if (overlap != (dfa_overlap > 0))
+                if (overlap == disjoint)
                 {
                     fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
                         GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
-                    fprintf(stderr, "ERROR: %zu\n", dfa_overlap);
+                    fprintf(stderr, "ERROR\n");
                     return EXIT_FAILURE;
                 } // if
 
@@ -864,6 +865,6 @@ main(int argc, char* argv[static argc])
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return supremal_main(argc, argv);
-    return overlap_main(argc, argv);
-    // return all_main(argc, argv);
+    // return overlap_main(argc, argv);
+    return all_main(argc, argv);
 } // main
