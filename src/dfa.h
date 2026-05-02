@@ -34,9 +34,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
 
 
 bool
-dfa_disjoint(GVA_Allocator const allocator,
-    size_t const len, char const reference[static restrict len],
-    GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
+dfa_disjoint(GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
     GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1]);
 
 

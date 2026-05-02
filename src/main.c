@@ -553,7 +553,7 @@ overlap_main(int argc, char* argv[static argc])
         dfa_svg(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
         dfa_svg(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
 
-        fprintf(stderr, "disjoint: %d\n", dfa_disjoint(gva_std_allocator, reference.len, reference.str, lhs_variant, lhs_dfa, rhs_variant, rhs_dfa));
+        fprintf(stderr, "disjoint: %d\n", dfa_disjoint(lhs_variant, lhs_dfa, rhs_variant, rhs_dfa));
         fprintf(stderr, "max_overlap: %zu\n", dfa_max_overlap(gva_std_allocator,
             reference.len, reference.str,
             lhs_variant, lhs_dfa,
@@ -625,6 +625,26 @@ all_main(int argc, char* argv[static argc])
     fclose(stream);
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
+
+/*
+    GVA_Variant const lhs = {6100895, 6100898, {3, "GGG"}};
+    GVA_Variant const rhs = {6100897, 6100899, {2, "CC"}};
+
+    uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str);
+    uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str);
+
+    dfa_dot(stderr, reference.len, reference.str, lhs, lhs_dfa);
+    dfa_dot(stderr, reference.len, reference.str, rhs, rhs_dfa);
+
+    fprintf(stderr, "disjoint: %d\n", dfa_disjoint(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa));
+
+    rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
+    lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+*/
 
     errno = 0;
     stream = fopen(argv[2], "r");
@@ -797,7 +817,7 @@ all_main(int argc, char* argv[static argc])
                 gva_lcs_graph_uniq_atomics(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
 
                 //size_t const dfa_overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa, 1);
-                bool const disjoint = dfa_disjoint(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa);
+                bool const disjoint = dfa_disjoint(lhs, lhs_dfa, rhs, rhs_dfa);
 
                 bool const overlap = bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
                     bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||

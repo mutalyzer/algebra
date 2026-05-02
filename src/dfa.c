@@ -1,6 +1,6 @@
 #include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
-#include <stdint.h>     // uint8_t, uint64_t, SIZE_MAX, UINT64_C
+#include <stdint.h>     // uint8_t, SIZE_MAX
 #include <string.h>     // memset
 
 #include "../include/allocator.h"   // GVA_Allocator
@@ -524,103 +524,45 @@ dfa_max_overlap(GVA_Allocator const allocator,
 } // dfa_max_overlap
 
 
-static uint64_t*
-uniq_atomics(GVA_Allocator const allocator,
-    size_t const start, size_t const end,
-    size_t const len, char const reference[static restrict len],
-    GVA_Variant const variant, uint8_t const dfa[static restrict 1])
-{
-    size_t const width = variant.sequence.len + 1;
-
-    uint64_t* restrict atomics = allocator.allocate(allocator.context, NULL, 0, sizeof(*atomics) * (end - start));
-    if (atomics == NULL)
-    {
-        return NULL;  // OOM
-    } // if
-
-    memset(atomics, 0, sizeof(*atomics) * (end - start));
-
-    size_t row_end = 0;
-    size_t j = 0;
-    for (size_t i = 0; i <= variant.end - variant.start; ++i)
-    {
-        size_t row_start = width;
-        size_t next_end = row_end;
-        uint8_t value = 0;
-        while (j <= row_end || value & DFA_INSERTION)
-        {
-            value = get(dfa, i * width + j);
-
-            if (value & DFA_DELETION)
-            {
-                if (variant.start + i >= start && variant.start + i < end)
-                {
-                    atomics[i - (start - variant.start)] |= UINT64_C(1) << 63;
-                } // if
-                row_start = MIN(row_start, j);
-            } // if
-
-            if (value & DFA_INSERTION)
-            {
-                if (variant.start + i >= start && variant.start + i < end)
-                {
-                    atomics[i - (start - variant.start)] |= UINT64_C(1) << (variant.sequence.str[j] % 64);
-                } // if
-                next_end = MAX(next_end, j);
-            } // if
-
-            if (i < variant.end - variant.start && j < variant.sequence.len &&
-                reference[variant.start + i] == variant.sequence.str[j])
-            {
-                row_start = MIN(row_start, j + 1);
-                next_end = MAX(next_end, j + 1);
-            } // if
-
-            j += 1;
-        } // while
-        row_end = next_end;
-        j = row_start;
-    } // for
-
-    return atomics;
-} // uniq_atomics
-
-
 bool
-dfa_disjoint(GVA_Allocator const allocator,
-    size_t const len, char const reference[static restrict len],
-    GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
+dfa_disjoint(GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
     GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1])
 {
+    size_t const lhs_width = lhs_variant.sequence.len + 1;
+    size_t const rhs_width = rhs_variant.sequence.len + 1;
+
     size_t const start = MAX(lhs_variant.start, rhs_variant.start);
     size_t const end = MIN(lhs_variant.end + 1, rhs_variant.end + 1);
-    if (end <= start)
-    {
-        return true;
-    } // if
 
-    uint64_t* restrict lhs_atomics = uniq_atomics(allocator, start, end, len, reference, lhs_variant, lhs_dfa);
-    uint64_t* restrict rhs_atomics = uniq_atomics(allocator, start, end, len, reference, rhs_variant, rhs_dfa);
-    if (lhs_atomics == NULL || rhs_atomics == NULL)
+    for (size_t i = start; i < end; ++i)
     {
-        rhs_atomics = allocator.allocate(allocator.context, rhs_atomics, sizeof(*rhs_atomics) * (end - start), 0);
-        lhs_atomics = allocator.allocate(allocator.context, lhs_atomics, sizeof(*lhs_atomics) * (end - start), 0);
-        return true;  // OOM
-    } // if
-
-    bool disjoint = true;
-    for (size_t i = 0; i < (end - start); ++i)
-    {
-        if (lhs_atomics[i] & rhs_atomics[i])
+        for (size_t j = 0; j < lhs_width; ++j)
         {
-            disjoint = false;
-            break;
-        } // if
+            uint8_t const lhs_value = get(lhs_dfa, (i - lhs_variant.start) * lhs_width + j) & 0x3;
+            if (lhs_value == 0)
+            {
+                continue;
+            } // if
+
+            for (size_t k = 0; k < rhs_width; ++k)
+            {
+                uint8_t const rhs_value = get(rhs_dfa, (i - rhs_variant.start) * rhs_width + k) & 0x3;
+                if (rhs_value == 0)
+                {
+                    continue;
+                } // if
+
+                if ((lhs_value & DFA_DELETION && rhs_value & DFA_DELETION) ||
+                    (lhs_value & DFA_INSERTION && rhs_value & DFA_INSERTION &&
+                    lhs_variant.sequence.str[j] == rhs_variant.sequence.str[k]))
+                {
+                    return false;
+                } // if
+            } // for
+        } // for
     } // for
 
-    rhs_atomics = allocator.allocate(allocator.context, rhs_atomics, sizeof(*rhs_atomics) * (end - start), 0);
-    lhs_atomics = allocator.allocate(allocator.context, lhs_atomics, sizeof(*lhs_atomics) * (end - start), 0);
-    return disjoint;
+    return true;
 } // dfa_disjoint
 
 
