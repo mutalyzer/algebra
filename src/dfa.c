@@ -538,19 +538,11 @@ dfa_disjoint(GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restric
     {
         for (size_t j = 0; j < lhs_width; ++j)
         {
-            uint8_t const lhs_value = get(lhs_dfa, (i - lhs_variant.start) * lhs_width + j) & 0x3;
-            if (lhs_value == 0)
-            {
-                continue;
-            } // if
+            uint8_t const lhs_value = get(lhs_dfa, (i - lhs_variant.start) * lhs_width + j);
 
             for (size_t k = 0; k < rhs_width; ++k)
             {
-                uint8_t const rhs_value = get(rhs_dfa, (i - rhs_variant.start) * rhs_width + k) & 0x3;
-                if (rhs_value == 0)
-                {
-                    continue;
-                } // if
+                uint8_t const rhs_value = get(rhs_dfa, (i - rhs_variant.start) * rhs_width + k);
 
                 if ((lhs_value & DFA_DELETION && rhs_value & DFA_DELETION) ||
                     (lhs_value & DFA_INSERTION && rhs_value & DFA_INSERTION &&

@@ -627,16 +627,18 @@ all_main(int argc, char* argv[static argc])
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
 /*
-    GVA_Variant const lhs = {6100895, 6100898, {3, "GGG"}};
-    GVA_Variant const rhs = {6100897, 6100899, {2, "CC"}};
+    // 1505253:29:AGAGAGGGAGGGAGAGAGAGAGA
+    // 1505254:3:GGG
+    GVA_Variant const lhs = {1505253, 1505282, {23, "AGAGAGGGAGGGAGAGAGAGAGA"}};
+    GVA_Variant const rhs = {1505254, 1505257, {3, "GGG"}};
 
     uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str);
     uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str);
 
-    dfa_dot(stderr, reference.len, reference.str, lhs, lhs_dfa);
-    dfa_dot(stderr, reference.len, reference.str, rhs, rhs_dfa);
+    dfa_svg(stderr, reference.len, reference.str, lhs, lhs_dfa);
+    dfa_svg(stderr, reference.len, reference.str, rhs, rhs_dfa);
 
-    fprintf(stderr, "disjoint: %d\n", dfa_disjoint(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa));
+    fprintf(stderr, "disjoint: %d\n", dfa_disjoint(lhs, lhs_dfa, rhs, rhs_dfa));
 
     rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
     lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
