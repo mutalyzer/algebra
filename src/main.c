@@ -836,6 +836,7 @@ all_main(int argc, char* argv[static argc])
                 gva_lcs_graph_destroy(gva_std_allocator, rhs_graph, false);
                 rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
 
+                //if (overlap != (dfa_overlap > 0))
                 if (overlap == disjoint)
                 {
                     fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n",
