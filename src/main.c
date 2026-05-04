@@ -26,7 +26,7 @@
 #include <assert.h>
 
 
-#define LINE_SIZE 8194
+#define LINE_SIZE 4096
 
 // #define REFERENCE_ID "NC_000022.11"
 // #define REFERENCE_ID "NC_000006.12"
