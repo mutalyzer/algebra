@@ -361,6 +361,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
         return 0;  // OOM
     } // if
 
+    size_t count = 0;
     queue_push_front(&queue, 0, 0);
     while (!queue_empty(&queue))
     {
@@ -376,7 +377,8 @@ dfa_max_overlap(GVA_Allocator const allocator,
         size_t const rhs_ref = rhs_idx / rhs_width + rhs_variant.start;
         size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
-        //fprintf(stderr, "{%zu, %zu} (%zu): %zu\n", lhs_idx, rhs_idx, idx, included);
+        count += 1;
+        // fprintf(stderr, "{%zu, %zu} (%zu): %zu\n", lhs_idx, rhs_idx, idx, included);
 
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
@@ -450,10 +452,15 @@ dfa_max_overlap(GVA_Allocator const allocator,
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
                 reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
 
+            bool match = false;
+            bool deletion = false;
+            bool insertion = false;
+
             if (lhs_match && rhs_match)
             {
                 // ..
                 // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
+                match = true;
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
             } // if
 
@@ -465,6 +472,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 {
                     break;
                 } // if
+                deletion = true;
                 queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
             } // if
 
@@ -476,40 +484,49 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 {
                     break;
                 } // if
+                insertion = true;
                 queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
             } // if
 
-            if (lhs_deletion && rhs_match)
+            if (!deletion || !match)
             {
-                // D.
-                // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
-                queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
+                if (lhs_deletion && rhs_match)
+                {
+                    // D.
+                    // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
+                    queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
+                } // if
+
+                if (lhs_match && rhs_deletion)
+                {
+                    // .D
+                    // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
+                    queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
+                } // if
             } // if
 
-            if (lhs_match && rhs_deletion)
+            if (!insertion || !match)
             {
-                // .D
-                // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
-                queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
-            } // if
+                if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
+                    lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
+                {
+                    // I.
+                    // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
+                    queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
+                } // if
 
-            if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
-                lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
-            {
-                // I.
-                // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
-                queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
-            } // if
-
-            if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
-                lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
-            {
-                // .I
-                // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
-                queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
+                if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
+                    lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
+                {
+                    // .I
+                    // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
+                    queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
+                } // if
             } // if
         } // else
     } // while
+
+    // fprintf(stderr, "count: %zu\n", count);
 
     size_t included = limit;
     size_t const idx = HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1);
