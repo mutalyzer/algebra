@@ -452,15 +452,10 @@ dfa_max_overlap(GVA_Allocator const allocator,
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
                 reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
 
-            bool match = false;
-            bool deletion = false;
-            bool insertion = false;
-
             if (lhs_match && rhs_match)
             {
                 // ..
                 // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
-                match = true;
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
             } // if
 
@@ -472,7 +467,6 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 {
                     break;
                 } // if
-                deletion = true;
                 queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
             } // if
 
@@ -484,11 +478,10 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 {
                     break;
                 } // if
-                insertion = true;
                 queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
             } // if
 
-            if (!deletion || !match)
+            if (!(lhs_match && rhs_match))
             {
                 if (lhs_deletion && rhs_match)
                 {
@@ -503,10 +496,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
                     // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
                     queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
                 } // if
-            } // if
 
-            if (!insertion || !match)
-            {
                 if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
                     lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
                 {
@@ -526,7 +516,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
         } // else
     } // while
 
-    // fprintf(stderr, "count: %zu\n", count);
+    fprintf(stderr, "count: %zu\n", count);
 
     size_t included = limit;
     size_t const idx = HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1);
