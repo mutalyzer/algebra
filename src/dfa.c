@@ -458,30 +458,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
             } // if
-
-            if (lhs_deletion && rhs_deletion)
-            {
-                // DD
-                // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
-                if (limit > 0 && included + 1 >= limit)
-                {
-                    break;
-                } // if
-                queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
-            } // if
-
-            if (lhs_insertion && rhs_insertion && lhs_variant.sequence.str[lhs_idx % lhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width])
-            {
-                // II
-                // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
-                if (limit > 0 && included + 1 >= limit)
-                {
-                    break;
-                } // if
-                queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
-            } // if
-
-            if (!(lhs_match && rhs_match))
+            else
             {
                 if (lhs_deletion && rhs_match)
                 {
@@ -489,8 +466,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
                     // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
                     queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
                 } // if
-
-                if (lhs_match && rhs_deletion)
+                else if (lhs_match && rhs_deletion)
                 {
                     // .D
                     // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
@@ -512,6 +488,28 @@ dfa_max_overlap(GVA_Allocator const allocator,
                     // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                     queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
                 } // if
+            } // else
+
+            if (lhs_deletion && rhs_deletion)
+            {
+                // DD
+                // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
+                if (limit > 0 && included + 1 >= limit)
+                {
+                    break;
+                } // if
+                queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
+            } // if
+
+            if (lhs_insertion && rhs_insertion && lhs_variant.sequence.str[lhs_idx % lhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width])
+            {
+                // II
+                // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
+                if (limit > 0 && included + 1 >= limit)
+                {
+                    break;
+                } // if
+                queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
             } // if
         } // else
     } // while
