@@ -14,7 +14,7 @@
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/utils.h"       // gva_fasta_sequence*, gva_lcs_graph_dot
-#include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_variant_*
+#include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_patch, gva_variant_*
 #include "align.h"          // LCS_Matches, lcs_align_one
 #include "array.h"          // ARRAY_*, array_length
 #include "bitset.h"         // bitset_*
@@ -580,6 +580,7 @@ typedef struct
     gva_uint inserted;
     gva_uint distance;
     gva_uint label;
+    gva_uint dfa;
 } Entry;
 
 
@@ -665,6 +666,7 @@ all_main(int argc, char* argv[static argc])
 
     Trie labels = trie_init(gva_std_allocator);
     Trie sequences = trie_init(gva_std_allocator);
+    Trie dfas = trie_init(gva_std_allocator);
     Entry* entries = NULL;
 
     size_t line_count = 0;
@@ -684,7 +686,10 @@ all_main(int argc, char* argv[static argc])
         if (distance == 0)
         {
             fprintf(stderr, "ERROR: DISTANCE\n");
+            continue;
         } // if
+
+        uint8_t* dfa = dfa_from_alignment(gva_std_allocator, NULL, variant.end - variant.start, reference.str + variant.start, variant.sequence.len, variant.sequence.str);
 
         ARRAY_APPEND(gva_std_allocator, entries,
             ((Entry)
@@ -694,7 +699,10 @@ all_main(int argc, char* argv[static argc])
                 .inserted = trie_insert(&sequences, variant.sequence.len, variant.sequence.str),
                 .distance = distance,
                 .label = trie_insert(&labels, id.len, id.str),
+                .dfa = trie_insert(&dfas, array_length(dfa), (char*) dfa),
             }));
+
+        dfa = ARRAY_DESTROY(gva_std_allocator, dfa);
     } // while
     fclose(stream);
 
@@ -709,15 +717,6 @@ all_main(int argc, char* argv[static argc])
         for (size_t i = 0; i < array_length(entries); ++i)
         {
             GVA_Variant const lhs = { entries[i].start, entries[i].end, trie_string(sequences, entries[i].inserted) };
-
-            GVA_LCS_Graph lhs_graph = {NULL};
-            size_t* lhs_dels = NULL;
-            size_t* lhs_as = NULL;
-            size_t* lhs_cs = NULL;
-            size_t* lhs_gs = NULL;
-            size_t* lhs_ts = NULL;
-
-            uint8_t* lhs_dfa = NULL;
 
             for (size_t j = i + 1; j < array_length(entries); ++j)
             {
@@ -754,21 +753,8 @@ all_main(int argc, char* argv[static argc])
                 } // if
                 else
                 {
-                    GVA_String observed_lhs = gva_string_init(gva_std_allocator, len_lhs);
-                    GVA_String observed_rhs = gva_string_init(gva_std_allocator, len_rhs);
-                    if (observed_lhs.str == NULL || observed_rhs.str == NULL)
-                    {
-                        return EXIT_FAILURE;  // FIXME: OOM
-                    } // if
-
-                    memcpy((char*) observed_lhs.str, reference.str + start, lhs.start - start);
-                    memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-                    memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference.str + lhs.end, end - lhs.end);
-
-                    memcpy((char*) observed_rhs.str, reference.str + start, rhs.start - start);
-                    memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-                    memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference.str + rhs.end, end - rhs.end);
-
+                    GVA_String observed_lhs = gva_patch(gva_std_allocator, end - start, reference.str + start, 1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
+                    GVA_String observed_rhs = gva_patch(gva_std_allocator, end - start, reference.str + start, 1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
                     distance = gva_edit_distance(gva_std_allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
                     gva_string_destroy(gva_std_allocator, observed_rhs);
                     gva_string_destroy(gva_std_allocator, observed_lhs);
@@ -795,90 +781,33 @@ all_main(int argc, char* argv[static argc])
                     continue;  // is_contained
                 } // if
 
-                if (lhs_graph.nodes == NULL)
+                GVA_String lhs_dfa = trie_string(dfas, entries[i].dfa);
+                GVA_String rhs_dfa = trie_string(dfas, entries[j].dfa);
+
+                //size_t const overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str, 0);
+                bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
+
+                if (disjoint)
                 {
-                    lhs_graph = gva_lcs_graph_init(gva_std_allocator, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str, lhs.start);
-                    size_t const len = end - start + 1;
-                    lhs_dels = bitset_init(gva_std_allocator, len);
-                    lhs_as = bitset_init(gva_std_allocator, len);
-                    lhs_cs = bitset_init(gva_std_allocator, len);
-                    lhs_gs = bitset_init(gva_std_allocator, len);
-                    lhs_ts = bitset_init(gva_std_allocator, len);
-                    gva_lcs_graph_uniq_atomics(lhs_graph, lhs.start, lhs.start, lhs.end, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
-                } // if
-
-                if (lhs_dfa == NULL)
-                {
-                    lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str);
-                } // if
-
-                GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(gva_std_allocator, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str, rhs.start);
-                uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str);
-
-                size_t const len = end - start + 1;
-                size_t* rhs_dels = bitset_init(gva_std_allocator, len);
-                size_t* rhs_as = bitset_init(gva_std_allocator, len);
-                size_t* rhs_cs = bitset_init(gva_std_allocator, len);
-                size_t* rhs_gs = bitset_init(gva_std_allocator, len);
-                size_t* rhs_ts = bitset_init(gva_std_allocator, len);
-
-                gva_lcs_graph_uniq_atomics(rhs_graph, lhs.start, rhs.start, rhs.end, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
-
-                //size_t const dfa_overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, lhs_dfa, rhs, rhs_dfa, 1);
-                bool const disjoint = dfa_disjoint(lhs, lhs_dfa, rhs, rhs_dfa);
-
-                bool const overlap = bitset_intersection_cnt(lhs_dels, rhs_dels) > 0 ||
-                    bitset_intersection_cnt(lhs_as, rhs_as) > 0 ||
-                    bitset_intersection_cnt(lhs_cs, rhs_cs) > 0 ||
-                    bitset_intersection_cnt(lhs_gs, rhs_gs) > 0 ||
-                    bitset_intersection_cnt(lhs_ts, rhs_ts) > 0;
-
-                rhs_ts = bitset_destroy(gva_std_allocator, rhs_ts);
-                rhs_gs = bitset_destroy(gva_std_allocator, rhs_gs);
-                rhs_cs = bitset_destroy(gva_std_allocator, rhs_cs);
-                rhs_as = bitset_destroy(gva_std_allocator, rhs_as);
-                rhs_dels = bitset_destroy(gva_std_allocator, rhs_dels);
-
-                gva_lcs_graph_destroy(gva_std_allocator, rhs_graph, false);
-                rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
-
-                //if (overlap != (dfa_overlap > 0))
-                if (overlap == disjoint)
-                {
-                    fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n",
+                    fprintf(stdout, GVA_STRING_FMT " disjoint " GVA_STRING_FMT "\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
                         GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
-                    fprintf(stderr, "ERROR\n");
-                    return EXIT_FAILURE;
                 } // if
-
-                if (overlap)
+                else
                 {
                     fprintf(stdout, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %zu\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
                         GVA_STRING_PRINT(trie_string(labels, entries[j].label)),
                         (entries[i].distance + entries[j].distance - distance) / 2);
-                } // if
-                else
-                {
-                    fprintf(stdout, GVA_STRING_FMT " disjoint " GVA_STRING_FMT "\n",
-                        GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
-                        GVA_STRING_PRINT(trie_string(labels, entries[j].label)));
                 } // else
             } // for
-            lhs_ts = bitset_destroy(gva_std_allocator, lhs_ts);
-            lhs_gs = bitset_destroy(gva_std_allocator, lhs_gs);
-            lhs_cs = bitset_destroy(gva_std_allocator, lhs_cs);
-            lhs_as = bitset_destroy(gva_std_allocator, lhs_as);
-            lhs_dels = bitset_destroy(gva_std_allocator, lhs_dels);
-            gva_lcs_graph_destroy(gva_std_allocator, lhs_graph, false);
-            lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
         } // for
 
         fprintf(stderr, "#combos: %zu\n", count);
     } // if
 
     entries = ARRAY_DESTROY(gva_std_allocator, entries);
+    trie_destroy(&dfas);
     trie_destroy(&labels);
     trie_destroy(&sequences);
 
@@ -894,6 +823,6 @@ main(int argc, char* argv[static argc])
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return supremal_main(argc, argv);
-    return overlap_main(argc, argv);
-    // return all_main(argc, argv);
+    // return overlap_main(argc, argv);
+    return all_main(argc, argv);
 } // main
