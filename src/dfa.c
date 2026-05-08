@@ -383,8 +383,6 @@ dfa_max_overlap(GVA_Allocator const allocator,
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
             uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
-            bool const rhs_deletion = rhs_value & DFA_DELETION;
-            bool const rhs_insertion = rhs_value & DFA_INSERTION;
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
                 reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
 
@@ -393,7 +391,11 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 // ..
                 // fprintf(stderr, "    push (. vs %zu MU) +0 +0 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
                 queue_push_front(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width + 1, included);
+                continue;
             } // if
+
+            bool const rhs_deletion = rhs_value & DFA_DELETION;
+            bool const rhs_insertion = rhs_value & DFA_INSERTION;
 
             if (rhs_deletion)
             {
@@ -401,19 +403,18 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 // fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width, included);
             } // if
-
             if (rhs_insertion)
             {
                 // .I
                 // fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
             } // if
+            continue;
         } // if
-        else if ((rhs_idx == 0 && lhs_ref < rhs_ref) || rhs_idx == rhs_size - 1)
+
+        if ((rhs_idx == 0 && lhs_ref < rhs_ref) || rhs_idx == rhs_size - 1)
         {
             uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
-            bool const lhs_deletion = lhs_value & DFA_DELETION;
-            bool const lhs_insertion = lhs_value & DFA_INSERTION;
             bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
                 reference[lhs_variant.start + lhs_idx / lhs_width] == lhs_variant.sequence.str[lhs_idx % lhs_width];
 
@@ -422,7 +423,11 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 // ..
                 // fprintf(stderr, "    push (%zu MU vs .) +0 +0 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx, included);
+                continue;
             } // if
+
+            bool const lhs_deletion = lhs_value & DFA_DELETION;
+            bool const lhs_insertion = lhs_value & DFA_INSERTION;
 
             if (lhs_deletion)
             {
@@ -430,88 +435,85 @@ dfa_max_overlap(GVA_Allocator const allocator,
                 // fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx, included);
             } // if
-
             if (lhs_insertion)
             {
                 // I.
                 // fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
             } // if
+            continue;
         } // if
-        else
+
+        uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
+        bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
+            reference[lhs_variant.start + lhs_idx / lhs_width] == lhs_variant.sequence.str[lhs_idx % lhs_width];
+        uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
+        bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
+            reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
+
+        if (lhs_match && rhs_match)
         {
-            uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
-            bool const lhs_deletion = lhs_value & DFA_DELETION;
-            bool const lhs_insertion = lhs_value & DFA_INSERTION;
-            bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
-                reference[lhs_variant.start + lhs_idx / lhs_width] == lhs_variant.sequence.str[lhs_idx % lhs_width];
+            // ..
+            // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
+            queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
+            continue;
+        } // if
 
-            uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
-            bool const rhs_deletion = rhs_value & DFA_DELETION;
-            bool const rhs_insertion = rhs_value & DFA_INSERTION;
-            bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
+        bool const lhs_deletion = lhs_value & DFA_DELETION;
+        bool const lhs_insertion = lhs_value & DFA_INSERTION;
+        bool const rhs_deletion = rhs_value & DFA_DELETION;
+        bool const rhs_insertion = rhs_value & DFA_INSERTION;
 
-            if (lhs_match && rhs_match)
+        if (lhs_deletion && rhs_deletion)
+        {
+            // DD
+            // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
+            if (limit > 0 && included + 1 >= limit)
             {
-                // ..
-                // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
-                queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
+                break;
             } // if
-            else
+            queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
+        } // if
+
+        if (lhs_insertion && rhs_insertion && lhs_variant.sequence.str[lhs_idx % lhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width])
+        {
+            // II
+            // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
+            if (limit > 0 && included + 1 >= limit)
             {
-                if (lhs_deletion && rhs_match)
-                {
-                    // D.
-                    // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
-                    queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
-                } // if
-                else if (lhs_match && rhs_deletion)
-                {
-                    // .D
-                    // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
-                    queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
-                } // if
-
-                if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
-                    lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
-                {
-                    // I.
-                    // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
-                    queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
-                } // if
-
-                if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
-                    lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
-                {
-                    // .I
-                    // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
-                    queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
-                } // if
-            } // else
-
-            if (lhs_deletion && rhs_deletion)
-            {
-                // DD
-                // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
-                if (limit > 0 && included + 1 >= limit)
-                {
-                    break;
-                } // if
-                queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
+                break;
             } // if
+            queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
+        } // if
 
-            if (lhs_insertion && rhs_insertion && lhs_variant.sequence.str[lhs_idx % lhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width])
-            {
-                // II
-                // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
-                if (limit > 0 && included + 1 >= limit)
-                {
-                    break;
-                } // if
-                queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
-            } // if
-        } // else
+        if (lhs_deletion && rhs_match)
+        {
+            // D.
+            // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
+            queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
+        } // if
+        else if (lhs_match && rhs_deletion)
+        {
+            // .D
+            // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
+            queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
+        } // if
+
+        if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
+            lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
+        {
+            // I.
+            // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
+            queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
+        } // if
+
+        if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
+            lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
+        {
+            // .I
+            // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
+            queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
+        } // if
     } // while
 
     fprintf(stderr, "count: %zu\n", count);
