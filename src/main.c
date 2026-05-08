@@ -17,7 +17,6 @@
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_patch, gva_variant_*
 #include "align.h"          // LCS_Matches, lcs_align_one
 #include "array.h"          // ARRAY_*, array_length
-#include "bitset.h"         // bitset_*
 #include "common.h"         // MAX, MIN
 #include "dfa.h"            // dfa_*
 #include "trie.h"           // Trie, trie_*
@@ -784,10 +783,10 @@ all_main(int argc, char* argv[static argc])
                 GVA_String lhs_dfa = trie_string(dfas, entries[i].dfa);
                 GVA_String rhs_dfa = trie_string(dfas, entries[j].dfa);
 
-                //size_t const overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str, 0);
-                bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
+                size_t const overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str, 0);
+                //bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
 
-                if (disjoint)
+                if (overlap == 0)
                 {
                     fprintf(stdout, GVA_STRING_FMT " disjoint " GVA_STRING_FMT "\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
