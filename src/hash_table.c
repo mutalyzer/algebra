@@ -10,7 +10,12 @@
 void*
 hash_table_init(GVA_Allocator const allocator, size_t const capacity, size_t const item_size)
 {
-    void* hash_table = array_init(allocator, capacity, item_size);
+    void* const hash_table = array_init(allocator, capacity, item_size);
+    if (hash_table == NULL)
+    {
+        return NULL;  // OOM
+    } // if
+
     for (size_t i = 0; i < capacity; ++i)
     {
         *(uint64_t*) ((uintmax_t) hash_table + i * item_size) = HASH_TABLE_NOT_FOUND;

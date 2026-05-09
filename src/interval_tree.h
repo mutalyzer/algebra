@@ -23,6 +23,7 @@ typedef struct
     gva_uint inserted : sizeof(gva_uint) * CHAR_BIT - BALANCE_BITS;
     gva_uint alleles;
     gva_uint distance;
+    gva_uint dfa;
 } Interval_Tree_Node;
 
 

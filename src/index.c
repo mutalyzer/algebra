@@ -1,6 +1,5 @@
 #include <stddef.h>     // NULL, size_t
-#include <stdint.h>     // intmax_t
-#include <string.h>     // memcpy
+#include <stdint.h>     // intmax_t, uint8_t
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/edit.h"        // gva_edit_distance
@@ -11,10 +10,11 @@
                                     // GVA_IS_CONTAINED
 #include "../include/string.h"      // GVA_String
 #include "../include/types.h"       // GVA_NULL, GVA_Interval, gva_uint
-#include "../include/variant.h"     // GVA_Variant, gva_variant_dup
+#include "../include/variant.h"     // GVA_Variant, gva_patch, gva_variant_dup
 #include "array.h"              // ARRAY_*, array_length
 #include "bitset.h"             // bitset_*
 #include "common.h"             // ABS, MAX, MIN
+#include "dfa.h"                // dfa_*
 #include "hash_table.h"         // HASH_TABLE_*, hash_table_*
 #include "interval_tree.h"      // Interval_Tree, interval_tree_*
 #include "trie.h"               // Trie, trie_*
@@ -41,6 +41,7 @@ struct GVA_Index
     GVA_String    reference;
     Interval_Tree intervals;
     Trie          inserted;
+    Trie          dfas;
     Trie          ids;
     Allele*       alleles;
     Join*         join;
@@ -81,7 +82,7 @@ variant_from_index(GVA_Index const self[static 1], size_t const idx)
 } // variant_from_index
 
 
-static size_t
+static inline size_t
 variants_distance(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
     GVA_Variant const lhs, GVA_Variant const rhs)
@@ -101,31 +102,9 @@ variants_distance(GVA_Allocator const allocator,
         return len_lhs;
     } // if
 
-    GVA_String observed_lhs = gva_string_init(allocator, len_lhs);
-    GVA_String observed_rhs = gva_string_init(allocator, len_rhs);
-    if (observed_lhs.str == NULL || observed_rhs.str == NULL)
-    {
-        gva_string_destroy(allocator, observed_rhs);
-        gva_string_destroy(allocator, observed_lhs);
-        return -1;  // FIXME: OOM
-    } // if
-
-    memcpy((char*) observed_lhs.str, reference + start, lhs.start - start);
-    if (lhs.sequence.str != NULL)
-    {
-        memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-    } // if
-    memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
-
-    memcpy((char*) observed_rhs.str, reference + start, rhs.start - start);
-    if (rhs.sequence.str != NULL)
-    {
-        memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-    } // if
-    memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
-
+    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
+    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
     size_t const distance = gva_edit_distance(allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
-
     gva_string_destroy(allocator, observed_rhs);
     gva_string_destroy(allocator, observed_lhs);
 
@@ -142,23 +121,9 @@ variants_included(GVA_Allocator const allocator,
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
 
-    GVA_String observed_lhs = gva_string_init(allocator, (lhs.start - start) + lhs.sequence.len + (end - lhs.end));
-    GVA_String observed_rhs = gva_string_init(allocator, (rhs.start - start) + rhs.sequence.len + (end - rhs.end));
 
-    memcpy((char*) observed_lhs.str, reference + start, lhs.start - start);
-    if (lhs.sequence.str != NULL)
-    {
-        memcpy((char*) observed_lhs.str + lhs.start - start, lhs.sequence.str, lhs.sequence.len);
-    } // if
-    memcpy((char*) observed_lhs.str + lhs.start - start + lhs.sequence.len, reference + lhs.end, end - lhs.end);
-
-    memcpy((char*) observed_rhs.str, reference + start, rhs.start - start);
-    if (rhs.sequence.str != NULL)
-    {
-        memcpy((char*) observed_rhs.str + rhs.start - start, rhs.sequence.str, rhs.sequence.len);
-    } // if
-    memcpy((char*) observed_rhs.str + rhs.start - start + rhs.sequence.len, reference + rhs.end, end - rhs.end);
-
+    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
+    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
     GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_lhs.len, observed_lhs.str, start);
     GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_rhs.len, observed_rhs.str, start);
 
@@ -264,6 +229,7 @@ gva_index_init(GVA_Allocator const allocator,
 
     index->intervals = interval_tree_init(allocator);
     index->inserted = trie_init(allocator);
+    index->dfas = trie_init(allocator);
 
     index->ids = trie_init(allocator);
 
@@ -284,6 +250,7 @@ gva_index_destroy(GVA_Index* const self)
 
     interval_tree_destroy(&self->intervals);
     trie_destroy(&self->inserted);
+    trie_destroy(&self->dfas);
     trie_destroy(&self->ids);
     self->alleles = ARRAY_DESTROY(self->allocator, self->alleles);
     self->join = ARRAY_DESTROY(self->allocator, self->join);
@@ -332,6 +299,14 @@ gva_index_insert(GVA_Index* restrict const self,
     {
         array_header(self->intervals.nodes)->length -= 1;
     } // if
+    else
+    {
+        uint8_t* dfa = dfa_from_alignment(self->allocator, NULL,
+            variant.end - variant.start, self->reference.str + variant.start,
+            variant.sequence.len, variant.sequence.str);
+        self->intervals.nodes[node_idx].dfa = trie_insert(&self->dfas, array_length(dfa), (char*) dfa);
+        dfa = ARRAY_DESTROY(self->allocator, dfa);
+    } // else
     self->intervals.nodes[node_idx].alleles = ARRAY_APPEND(self->allocator, self->join,
         ((Join)
         {
@@ -358,6 +333,10 @@ gva_index_query(GVA_Allocator const allocator,
         gva_uint head;      // singly linked list in hits
         gva_uint tail;
     }* entries = hash_table_init(allocator, INITIAL_SIZE, sizeof(*entries));
+    if (entries == NULL)
+    {
+        return (GVA_Query_Result) {NULL};  // OOM
+    } // if
 
     struct Hit
     {
