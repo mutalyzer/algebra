@@ -53,6 +53,65 @@ edge(uint8_t dfa[static 1], size_t const width,
 
 
 uint8_t*
+dfa_concat(GVA_Allocator const allocator, size_t const n,
+    GVA_Variant const variants[static restrict n],
+    uint8_t* const dfas[static restrict n])
+{
+    if (n == 0)
+    {
+        return NULL;
+    } // if
+    if (n == 1)
+    {
+        return dfas[0];
+    } // if
+
+    size_t const start = variants[0].start;
+    size_t const end = variants[n - 1].end;
+
+    size_t width = 1;
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (i > 0)
+        {
+            width += variants[i].start - variants[i - 1].end;
+        } // if
+        width += variants[i].sequence.len;
+    } // for
+    size_t const size = (end - start + 1) * width;
+    size_t const len = (size + 3) / 4;
+
+    uint8_t* dfa = allocator.allocate(allocator.context, NULL, 0, len);
+    if (dfa == NULL)
+    {
+        return NULL;  // OOM
+    } // if
+    memset(dfa, 0, len);
+
+    size_t offset_col = 0;
+    for (size_t i = 0; i < n; ++i)
+    {
+        size_t const offset_row = variants[i].start - start;
+        if (i > 0)
+        {
+            offset_col += variants[i - 1].sequence.len + variants[i].start - variants[i - 1].end;
+        } // if
+        for (size_t j = 0; j <= variants[i].end - variants[i].start; ++j)
+        {
+            for (size_t k = 0; k <= variants[i].sequence.len; ++k)
+            {
+                fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + offset_row, k + offset_col);
+                set(dfa, (j + offset_row) * width + k + offset_col,
+                    get(dfas[i], j * (variants[i].sequence.len + 1) + k));
+            } // for
+        } // for
+    } // for
+
+    return dfa;
+} // dfa_concat
+
+
+uint8_t*
 dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs])

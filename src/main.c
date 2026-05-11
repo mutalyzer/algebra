@@ -508,75 +508,6 @@ supremal_main(int argc, char* argv[static argc])
 } // supremal_main
 
 
-static inline uint8_t
-get(uint8_t const dfa[static 1], size_t const idx)
-{
-    return dfa[idx / 4] >> (2 * (idx % 4));
-} // get
-
-
-static inline void
-set(uint8_t dfa[static 1], size_t const idx, uint8_t const value)
-{
-    dfa[idx / 4] |= value << (2 * (idx % 4));
-} // set
-
-
-uint8_t*
-dfa_concat(GVA_Allocator const allocator, size_t const len, GVA_Variant const variants[static restrict len], uint8_t const* const dfas[static restrict len])
-{
-
-    size_t const start = variants[0].start;
-    size_t const end = variants[len - 1].end;
-
-    fprintf(stderr, "%zu\n", end - start + 1);
-
-    size_t width = 1;
-    for (size_t i = 0; i < len; ++i)
-    {
-        if (i > 0)
-        {
-            width += variants[i].start - variants[i - 1].end;
-        } // if
-        width += variants[i].sequence.len;
-    } // for
-    size_t const size = (end - start + 1) * width;
-
-    fprintf(stderr, "width: %zu\n", width);
-    size_t const bytes = (size + 3) / 4;
-
-    uint8_t* dfa = allocator.allocate(allocator.context, NULL, 0, bytes);
-    if (dfa == NULL)
-    {
-        return NULL;  // OOM
-    } // if
-    memset(dfa, 0, bytes);
-
-    size_t offset_col = 0;
-    for (size_t i = 0; i < len; ++i)
-    {
-        size_t const offset_row = variants[i].start - variants[0].start;
-        if (i > 0)
-        {
-            offset_col += variants[i - 1].sequence.len + variants[i].start - variants[i - 1].end;
-        }
-        fprintf(stderr, "offsets %zu, %zu\n", offset_row, offset_col);
-        for (size_t j = 0; j <= variants[i].end - variants[i].start; ++j)
-        {
-            for (size_t k = 0; k <= variants[i].sequence.len; ++k)
-            {
-                fprintf(stderr, "j: %zu, k: %zu\n", j, k);
-                uint8_t const value = get(dfas[i], j * (variants[i].sequence.len + 1) + k);
-                set(dfa, (j + offset_row) * width + k + offset_col, value);
-                fprintf(stderr, "set @ %zu, %zu\n", j + offset_row, k + offset_col);
-            } // for
-
-        } // for
-    }
-
-    return dfa;
-}
-
 int
 overlap_main(int argc, char* argv[static argc])
 {
@@ -613,19 +544,27 @@ overlap_main(int argc, char* argv[static argc])
             continue;
         } // if
 
-        uint8_t* vec[2] = {NULL};
-        GVA_Variant vars[2];
+        GVA_Variant variants[2];
+        uint8_t* dfas[2] = {NULL};
+
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
         for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
-            vars[i] = gva_variant_dup(gva_std_allocator, gva_lcs_graph_local_supremal(graph, i, i + 1));
+            variants[i] = gva_variant_dup(gva_std_allocator, gva_lcs_graph_local_supremal(graph, i, i + 1));
             fprintf(stdout, GVA_VARIANT_FMT_SPDI " %u\n",
-                GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, vars[i]),
+                GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variants[i]),
                 graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
-            vec[i] = dfa_from_alignment(gva_std_allocator, NULL, vars[i].end - vars[i].start, reference.str + vars[i].start, vars[i].sequence.len, vars[i].sequence.str);
+            dfas[i] = dfa_from_alignment(gva_std_allocator, NULL, variants[i].end - variants[i].start, reference.str + variants[i].start, variants[i].sequence.len, variants[i].sequence.str);
         } // for
-        uint8_t* dfa = dfa_concat(gva_std_allocator, 2, vars, vec);
+        uint8_t* dfa = dfa_concat(gva_std_allocator, 2, variants, dfas);
         dfa_dot(stdout, reference.len, reference.str, rhs_variant, dfa);
+
+        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
+        {
+            gva_string_destroy(gva_std_allocator, variants[i].sequence);
+            dfas[i] = ARRAY_DESTROY(gva_std_allocator, dfas[i]);
+        } // for
+        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
 
         dfa = gva_std_allocator.allocate(gva_std_allocator.context, dfa, 0, 0);
 

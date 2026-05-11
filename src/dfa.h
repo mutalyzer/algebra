@@ -15,6 +15,12 @@
 
 
 uint8_t*
+dfa_concat(GVA_Allocator const allocator, size_t const n,
+    GVA_Variant const variants[static restrict n],
+    uint8_t* const dfas[static restrict n]);
+
+
+uint8_t*
 dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs]);
