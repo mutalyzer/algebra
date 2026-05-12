@@ -112,7 +112,7 @@ dfa_concat(GVA_Allocator const allocator, size_t const n,
 
 
 uint8_t*
-dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
+dfa_from_alignment(GVA_Allocator const allocator, uint8_t* restrict dfas,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs])
 {
@@ -256,7 +256,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator,
     size_t const size = (end_dfa - start_dfa + 1) * width;
     size_t const len = (size + 3) / 4;
 
-    uint8_t* dfa = allocator.allocate(allocator.context, NULL, 0, len);
+    uint8_t* restrict dfa = allocator.allocate(allocator.context, NULL, 0, len);
     if (dfa == NULL)
     {
         return NULL;  // OOM
@@ -266,7 +266,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator,
 
     fprintf(stderr, "DFA: %zu x %zu\n", end_dfa - start_dfa + 1, width);
 
-    gva_uint* queue = allocator.allocate(allocator.context, NULL, 0, sizeof(*queue) * array_length(graph.nodes));
+    gva_uint* restrict queue = allocator.allocate(allocator.context, NULL, 0, sizeof(*queue) * array_length(graph.nodes));
     if (queue == NULL)
     {
         dfa = allocator.allocate(allocator.context, dfa, len, 0);
