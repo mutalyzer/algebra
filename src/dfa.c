@@ -45,7 +45,6 @@ edge(uint8_t dfa[static 1], size_t const width,
     {
         for (size_t j = 0; j <= len; ++j)
         {
-            fprintf(stderr, "%zu, %zu\n", i, j);
             set(dfa, i * width + offset + j,
                 (i < end) * DFA_DELETION | (j < len) * DFA_INSERTION);
         } // for
@@ -267,31 +266,29 @@ dfa_from_lcs_graph(GVA_Allocator const allocator,
 
     fprintf(stderr, "DFA: %zu x %zu\n", end_dfa - start_dfa + 1, width);
 
-    struct Entry
-    {
-        gva_uint seen;
-        gva_uint next;
-    }* queue = allocator.allocate(allocator.context, NULL, 0, sizeof(*queue) * array_length(graph.nodes));
+    gva_uint* queue = allocator.allocate(allocator.context, NULL, 0, sizeof(*queue) * array_length(graph.nodes));
     if (queue == NULL)
     {
         dfa = allocator.allocate(allocator.context, dfa, len, 0);
         return NULL;  // OOM
     } // if
 
-    memset(queue, 0, sizeof(*queue) * array_length(graph.nodes));
+    for (size_t i = 0; i < array_length(graph.nodes); ++i)
+    {
+        queue[i] = GVA_NULL;
+    } // for
 
     GVA_Variant const supremal = gva_lcs_graph_supremal(graph);
 
     gva_uint head = graph.dom_nodes[start].link;
     gva_uint tail = head;
-    queue[head] = (struct Entry) {true, GVA_NULL};
     while (head != GVA_NULL)
     {
         fprintf(stderr, "POP %u\n", head);
 
         if (head == graph.dom_nodes[end].link)
         {
-            head = queue[head].next;
+            head = queue[head];
             continue;
         } // if
 
@@ -303,7 +300,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator,
                 head == graph.source, graph.nodes[graph.edges[i].tail].edges == GVA_NULL,
                 &variant);
 
-            fprintf(stderr, GVA_VARIANT_FMT " x %zu\n", GVA_VARIANT_PRINT(variant), count);
+            fprintf(stderr, "  " GVA_VARIANT_FMT " x %zu\n", GVA_VARIANT_PRINT(variant), count);
 
             for (size_t j = 0; j < count; ++j)
             {
@@ -311,16 +308,15 @@ dfa_from_lcs_graph(GVA_Allocator const allocator,
                     variant.sequence.len, variant.sequence.str - supremal.sequence.str + j);
             } // for
 
-            if (!queue[graph.edges[i].tail].seen)
+            if (queue[graph.edges[i].tail] == GVA_NULL)
             {
-                fprintf(stderr, "PUSH %u\n", graph.edges[i].tail);
-                queue[graph.edges[i].tail] = (struct Entry) {true, GVA_NULL};
-                queue[tail].next = graph.edges[i].tail;
+                fprintf(stderr, "  PUSH %u\n", graph.edges[i].tail);
+                queue[tail] = graph.edges[i].tail;
                 tail = graph.edges[i].tail;
             } // if
         } // for
 
-        head = queue[head].next;
+        head = queue[head];
     } // while
 
     queue = allocator.allocate(allocator.context, queue, sizeof(*queue) * array_length(graph.nodes), 0);
