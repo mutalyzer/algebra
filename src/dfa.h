@@ -27,8 +27,8 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* dfas,
 
 
 uint8_t*
-dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
-    GVA_LCS_Graph const graph);
+dfa_from_lcs_graph(GVA_Allocator const allocator,
+    GVA_LCS_Graph const graph, size_t const start, size_t const end);
 
 
 size_t
