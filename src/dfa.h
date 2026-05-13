@@ -14,6 +14,14 @@
 #include <stdio.h>      // FIXME: DEBUG
 
 
+typedef struct
+{
+    size_t             len;
+    gva_uint* restrict starts;
+    uint8_t* restrict  data;
+} DFAs;
+
+
 uint8_t*
 dfa_concat(GVA_Allocator const allocator, size_t const n,
     GVA_Variant const variants[static restrict n],
@@ -26,12 +34,7 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* restrict dfas,
     size_t const len_obs, char const observed[static restrict len_obs]);
 
 
-uint8_t*
-dfa_from_lcs_graph(GVA_Allocator const allocator,
-    GVA_LCS_Graph const graph, size_t const start, size_t const end);
-
-
-uint8_t*
+DFAs
 dfas_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
 
 
