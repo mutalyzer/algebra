@@ -548,6 +548,9 @@ overlap_main(int argc, char* argv[static argc])
         uint8_t* dfas[2] = {NULL};
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
+
+        dfas_from_lcs_graph(gva_std_allocator, graph);
+
         for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
         {
             variants[i] = gva_lcs_graph_local_supremal(graph, i, i + 1);

@@ -31,6 +31,10 @@ dfa_from_lcs_graph(GVA_Allocator const allocator,
     GVA_LCS_Graph const graph, size_t const start, size_t const end);
 
 
+uint8_t*
+dfas_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph);
+
+
 size_t
 dfa_max_overlap(GVA_Allocator const allocator,
     size_t const len, char const reference[static restrict len],
