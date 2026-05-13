@@ -121,7 +121,6 @@ variants_included(GVA_Allocator const allocator,
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
 
-
     GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
     GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
     GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_lhs.len, observed_lhs.str, start);
