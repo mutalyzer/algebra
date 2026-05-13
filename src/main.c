@@ -544,34 +544,15 @@ overlap_main(int argc, char* argv[static argc])
             continue;
         } // if
 
-        GVA_Variant variants[2];
-        uint8_t* dfas[2] = {NULL};
-
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
 
-        dfas_from_lcs_graph(gva_std_allocator, graph);
+        DFAs dfas = dfas_from_lcs_graph(gva_std_allocator, graph);
 
-        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
-        {
-            variants[i] = gva_lcs_graph_local_supremal(graph, i, i + 1);
-            fprintf(stdout, GVA_VARIANT_FMT_SPDI " %u\n",
-                GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, variants[i]),
-                graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance);
-            //dfas[i] = dfa_from_alignment(gva_std_allocator, NULL, variants[i].end - variants[i].start, reference.str + variants[i].start, variants[i].sequence.len, variants[i].sequence.str);
-        } // for
-
-        for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
-        {
-            //dfas[i] = ARRAY_DESTROY(gva_std_allocator, dfas[i]);
-        } // for
-
-        uint8_t* gdfa = dfa_from_lcs_graph(gva_std_allocator, graph, 0, 2);
-
-        dfa_dot(stdout, reference.len, reference.str, rhs_variant, gdfa);
-
-        gdfa = gva_std_allocator.allocate(gva_std_allocator.context, gdfa, 0, 0);
+        dfas.data = gva_std_allocator.allocate(gva_std_allocator.context, dfas.data, dfas.starts[dfas.len - 1], 0);
+        dfas.starts = gva_std_allocator.allocate(gva_std_allocator.context, dfas.starts, sizeof(*dfas.starts) * dfas.len, 0);
 
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+
 
         //uint8_t* dfa = dfa_concat(gva_std_allocator, 2, variants, dfas);
         //dfa_dot(stdout, reference.len, reference.str, rhs_variant, dfa);

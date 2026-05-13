@@ -102,9 +102,12 @@ variants_distance(GVA_Allocator const allocator,
         return len_lhs;
     } // if
 
-    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
-    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
-    size_t const distance = gva_edit_distance(allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
+    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start,
+        1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
+    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start,
+        1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
+    size_t const distance = gva_edit_distance(allocator,
+        observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
     gva_string_destroy(allocator, observed_rhs);
     gva_string_destroy(allocator, observed_lhs);
 
@@ -121,8 +124,10 @@ variants_included(GVA_Allocator const allocator,
     size_t const start = MIN(lhs.start, rhs.start);
     size_t const end = MAX(lhs.end, rhs.end);
 
-    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
-    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start, 1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
+    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start,
+        1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
+    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start,
+        1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
     GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_lhs.len, observed_lhs.str, start);
     GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_rhs.len, observed_rhs.str, start);
 
@@ -293,18 +298,18 @@ gva_index_insert(GVA_Index* restrict const self,
             .distance = distance,
         }));
     gva_uint const node_idx = interval_tree_insert(&self->intervals, tmp_idx);
-    // undo append: interval already in the tree
-    if (node_idx != tmp_idx)
-    {
-        array_header(self->intervals.nodes)->length -= 1;
-    } // if
-    else
+    if (node_idx == tmp_idx)
     {
         uint8_t* dfa = dfa_from_alignment(self->allocator, NULL,
             variant.end - variant.start, self->reference.str + variant.start,
             variant.sequence.len, variant.sequence.str);
         self->intervals.nodes[node_idx].dfa = trie_insert(&self->dfas, array_length(dfa), (char*) dfa);
         dfa = ARRAY_DESTROY(self->allocator, dfa);
+    } // if
+    else
+    {
+        // undo append: interval already in the tree
+        array_header(self->intervals.nodes)->length -= 1;
     } // else
     self->intervals.nodes[node_idx].alleles = ARRAY_APPEND(self->allocator, self->join,
         ((Join)
