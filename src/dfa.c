@@ -257,7 +257,7 @@ dfas_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
         bytes += ((local.end - local.start + 1) * (local.sequence.len + 1) + 3) / 4;
     } // for
 
-    DFAs dfas = 
+    DFAs dfas =
     {
         .len = array_length(graph.dom_nodes),
         .starts = allocator.allocate(allocator.context, NULL, 0, sizeof(*dfas.starts) * array_length(graph.dom_nodes)),
@@ -451,11 +451,10 @@ queue_push_front(Queue self[static 1], size_t const idx, size_t const included)
 
 
 size_t
-dfa_max_overlap(GVA_Allocator const allocator,
+dfa_overlap(GVA_Allocator const allocator,
     size_t const len, char const reference[static restrict len],
     GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
-    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1],
-    size_t const limit)
+    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1])
 {
     static size_t const INITIAL_SIZE = 4096;
 
@@ -577,10 +576,6 @@ dfa_max_overlap(GVA_Allocator const allocator,
         {
             // DD
             // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
-            if (limit > 0 && included + 1 >= limit)
-            {
-                break;
-            } // if
             queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
         } // if
 
@@ -588,10 +583,6 @@ dfa_max_overlap(GVA_Allocator const allocator,
         {
             // II
             // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
-            if (limit > 0 && included + 1 >= limit)
-            {
-                break;
-            } // if
             queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
         } // if
 
@@ -627,7 +618,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
 
     //fprintf(stderr, "count: %zu\n", count);
 
-    size_t included = limit;
+    size_t included = 0;
     size_t const idx = HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1);
     if (queue.entries[idx].gva_key == lhs_size * rhs_size - 1)
     {
@@ -637,7 +628,7 @@ dfa_max_overlap(GVA_Allocator const allocator,
     queue_destroy(&queue);
 
     return included;
-} // dfa_max_overlap
+} // dfa_overlap
 
 
 bool

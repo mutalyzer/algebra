@@ -6,23 +6,21 @@
 #include <stdlib.h>     // EXIT_*, atoll, qsort
 #include <string.h>     // strerror, strlen
 
-#include "../include/compare.h"     // gva_compare_graphs
-#include "../include/edit.h"        // gva_edit_distance
+#include "../include/compare.h"     // gva_compare_distance
 #include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Query_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/relations.h"   // GVA_RELATION_LABELS
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // GVA_String, gva_string_destroy
-#include "../include/utils.h"       // gva_fasta_sequence*, gva_lcs_graph_dot
+#include "../include/utils.h"       // gva_fasta_sequence*
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_patch, gva_variant_*
-#include "align.h"          // LCS_Matches, lcs_align_one
 #include "array.h"          // ARRAY_*, array_length
 #include "common.h"         // MAX, MIN
 #include "dfa.h"            // dfa_*
 #include "trie.h"           // Trie, trie_*
 
 
-#include <assert.h>
+#include <assert.h>     // DEBUG
 
 
 #define LINE_SIZE 4096
@@ -743,29 +741,7 @@ all_main(int argc, char* argv[static argc])
 
                 GVA_Variant const rhs = { entries[j].start, entries[j].end, trie_string(sequences, entries[j].inserted) };
 
-                size_t const start = MIN(lhs.start, rhs.start);
-                size_t const end = MAX(lhs.end, rhs.end);
-
-                size_t const len_lhs = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
-                size_t const len_rhs = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
-
-                size_t distance = 0;
-                if (len_lhs == 0)
-                {
-                    distance = len_rhs;
-                } // if
-                else if (len_rhs == 0)
-                {
-                    distance = len_lhs;
-                } // if
-                else
-                {
-                    GVA_String observed_lhs = gva_patch(gva_std_allocator, end - start, reference.str + start, 1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
-                    GVA_String observed_rhs = gva_patch(gva_std_allocator, end - start, reference.str + start, 1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
-                    distance = gva_edit_distance(gva_std_allocator, observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
-                    gva_string_destroy(gva_std_allocator, observed_rhs);
-                    gva_string_destroy(gva_std_allocator, observed_lhs);
-                } // else
+                size_t const distance = gva_compare_distance(gva_std_allocator, reference.len, reference.str, lhs, rhs);
 
                 if (entries[i].distance + entries[j].distance == distance)
                 {
@@ -791,10 +767,11 @@ all_main(int argc, char* argv[static argc])
                 GVA_String lhs_dfa = trie_string(dfas, entries[i].dfa);
                 GVA_String rhs_dfa = trie_string(dfas, entries[j].dfa);
 
-                size_t const overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str, 0);
-                //bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
+                //size_t const overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str, 0);
+                bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
 
-                if (overlap == 0)
+                if (disjoint)
+                // if (overlap == 0)
                 {
                     fprintf(stdout, GVA_STRING_FMT " disjoint " GVA_STRING_FMT "\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
@@ -802,10 +779,10 @@ all_main(int argc, char* argv[static argc])
                 } // if
                 else
                 {
-                    fprintf(stdout, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %zu\n",
+                    fprintf(stdout, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %d\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
                         GVA_STRING_PRINT(trie_string(labels, entries[j].label)),
-                        (entries[i].distance + entries[j].distance - distance) / 2);
+                        1);
                 } // else
             } // for
         } // for
@@ -830,6 +807,6 @@ main(int argc, char* argv[static argc])
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return supremal_main(argc, argv);
-    return overlap_main(argc, argv);
-    // return all_main(argc, argv);
+    // return overlap_main(argc, argv);
+    return all_main(argc, argv);
 } // main
