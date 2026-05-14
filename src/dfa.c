@@ -453,15 +453,15 @@ queue_push_front(Queue self[static 1], size_t const idx, size_t const included)
 size_t
 dfa_overlap(GVA_Allocator const allocator,
     size_t const len, char const reference[static restrict len],
-    GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
-    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1])
+    GVA_Variant const lhs, uint8_t const lhs_dfa[static restrict 1],
+    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1])
 {
     static size_t const INITIAL_SIZE = 4096;
 
-    size_t const lhs_width = lhs_variant.sequence.len + 1;
-    size_t const rhs_width = rhs_variant.sequence.len + 1;
-    size_t const lhs_size = (lhs_variant.end - lhs_variant.start + 1) * lhs_width;
-    size_t const rhs_size = (rhs_variant.end - rhs_variant.start + 1) * rhs_width;
+    size_t const lhs_width = lhs.sequence.len + 1;
+    size_t const rhs_width = rhs.sequence.len + 1;
+    size_t const lhs_size = (lhs.end - lhs.start + 1) * lhs_width;
+    size_t const rhs_size = (rhs.end - rhs.start + 1) * rhs_width;
 
     Queue queue = queue_init(allocator, INITIAL_SIZE);
     if (queue.entries == NULL)
@@ -481,8 +481,8 @@ dfa_overlap(GVA_Allocator const allocator,
 
         size_t const lhs_idx = idx / rhs_size;
         size_t const rhs_idx = idx % rhs_size;
-        size_t const lhs_ref = lhs_idx / lhs_width + lhs_variant.start;
-        size_t const rhs_ref = rhs_idx / rhs_width + rhs_variant.start;
+        size_t const lhs_ref = lhs_idx / lhs_width + lhs.start;
+        size_t const rhs_ref = rhs_idx / rhs_width + rhs.start;
         size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
         //count += 1;
@@ -492,7 +492,7 @@ dfa_overlap(GVA_Allocator const allocator,
         {
             uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
             bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
-                reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
+                reference[rhs.start + rhs_idx / rhs_width] == rhs.sequence.str[rhs_idx % rhs_width];
 
             if (rhs_match)
             {
@@ -524,7 +524,7 @@ dfa_overlap(GVA_Allocator const allocator,
         {
             uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
             bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
-                reference[lhs_variant.start + lhs_idx / lhs_width] == lhs_variant.sequence.str[lhs_idx % lhs_width];
+                reference[lhs.start + lhs_idx / lhs_width] == lhs.sequence.str[lhs_idx % lhs_width];
 
             if (lhs_match)
             {
@@ -554,10 +554,10 @@ dfa_overlap(GVA_Allocator const allocator,
 
         uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
         bool const lhs_match = lhs_idx % lhs_width < lhs_width - 1 &&
-            reference[lhs_variant.start + lhs_idx / lhs_width] == lhs_variant.sequence.str[lhs_idx % lhs_width];
+            reference[lhs.start + lhs_idx / lhs_width] == lhs.sequence.str[lhs_idx % lhs_width];
         uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
         bool const rhs_match = rhs_idx % rhs_width < rhs_width - 1 &&
-            reference[rhs_variant.start + rhs_idx / rhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width];
+            reference[rhs.start + rhs_idx / rhs_width] == rhs.sequence.str[rhs_idx % rhs_width];
 
         if (lhs_match && rhs_match)
         {
@@ -579,7 +579,7 @@ dfa_overlap(GVA_Allocator const allocator,
             queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
         } // if
 
-        if (lhs_insertion && rhs_insertion && lhs_variant.sequence.str[lhs_idx % lhs_width] == rhs_variant.sequence.str[rhs_idx % rhs_width])
+        if (lhs_insertion && rhs_insertion && lhs.sequence.str[lhs_idx % lhs_width] == rhs.sequence.str[rhs_idx % rhs_width])
         {
             // II
             // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
@@ -600,7 +600,7 @@ dfa_overlap(GVA_Allocator const allocator,
         } // if
 
         if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
-            lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
+            lhs.sequence.str[lhs_idx % lhs_width] != rhs.sequence.str[rhs_idx % rhs_width])))
         {
             // I.
             // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
@@ -608,7 +608,7 @@ dfa_overlap(GVA_Allocator const allocator,
         } // if
 
         if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
-            lhs_variant.sequence.str[lhs_idx % lhs_width] != rhs_variant.sequence.str[rhs_idx % rhs_width])))
+            lhs.sequence.str[lhs_idx % lhs_width] != rhs.sequence.str[rhs_idx % rhs_width])))
         {
             // .I
             // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
@@ -632,28 +632,28 @@ dfa_overlap(GVA_Allocator const allocator,
 
 
 bool
-dfa_disjoint(GVA_Variant const lhs_variant, uint8_t const lhs_dfa[static restrict 1],
-    GVA_Variant const rhs_variant, uint8_t const rhs_dfa[static restrict 1])
+dfa_disjoint(GVA_Variant const lhs, uint8_t const lhs_dfa[static restrict 1],
+    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1])
 {
-    size_t const lhs_width = lhs_variant.sequence.len + 1;
-    size_t const rhs_width = rhs_variant.sequence.len + 1;
+    size_t const lhs_width = lhs.sequence.len + 1;
+    size_t const rhs_width = rhs.sequence.len + 1;
 
-    size_t const start = MAX(lhs_variant.start, rhs_variant.start);
-    size_t const end = MIN(lhs_variant.end + 1, rhs_variant.end + 1);
+    size_t const start = MAX(lhs.start, rhs.start);
+    size_t const end = MIN(lhs.end + 1, rhs.end + 1);
 
     for (size_t i = start; i < end; ++i)
     {
         for (size_t j = 0; j < lhs_width; ++j)
         {
-            uint8_t const lhs_value = get(lhs_dfa, (i - lhs_variant.start) * lhs_width + j);
+            uint8_t const lhs_value = get(lhs_dfa, (i - lhs.start) * lhs_width + j);
 
             for (size_t k = 0; k < rhs_width; ++k)
             {
-                uint8_t const rhs_value = get(rhs_dfa, (i - rhs_variant.start) * rhs_width + k);
+                uint8_t const rhs_value = get(rhs_dfa, (i - rhs.start) * rhs_width + k);
 
                 if ((lhs_value & DFA_DELETION && rhs_value & DFA_DELETION) ||
                     (lhs_value & DFA_INSERTION && rhs_value & DFA_INSERTION &&
-                    lhs_variant.sequence.str[j] == rhs_variant.sequence.str[k]))
+                    lhs.sequence.str[j] == rhs.sequence.str[k]))
                 {
                     return false;
                 } // if
