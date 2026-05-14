@@ -544,13 +544,7 @@ overlap_main(int argc, char* argv[static argc])
 
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
 
-        DFAs dfas = dfas_from_lcs_graph(gva_std_allocator, graph);
-
-        dfas.data = gva_std_allocator.allocate(gva_std_allocator.context, dfas.data, dfas.starts[dfas.len - 1], 0);
-        dfas.starts = gva_std_allocator.allocate(gva_std_allocator.context, dfas.starts, sizeof(*dfas.starts) * dfas.len, 0);
-
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
-
 
         //uint8_t* dfa = dfa_concat(gva_std_allocator, 2, variants, dfas);
         //dfa_dot(stdout, reference.len, reference.str, rhs_variant, dfa);
@@ -767,7 +761,7 @@ all_main(int argc, char* argv[static argc])
                 GVA_String lhs_dfa = trie_string(dfas, entries[i].dfa);
                 GVA_String rhs_dfa = trie_string(dfas, entries[j].dfa);
 
-                //size_t const overlap = dfa_max_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str, 0);
+                //size_t const overlap = dfa_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
                 bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
 
                 if (disjoint)

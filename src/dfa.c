@@ -247,93 +247,75 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* restrict dfas,
 } // dfa_from_alignment
 
 
-DFAs
-dfas_from_lcs_graph(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
+uint8_t*
+dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
+    GVA_LCS_Graph const graph, size_t const idx)
 {
-    size_t bytes = 0;
-    for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
-    {
-        GVA_Variant const local = gva_lcs_graph_local_supremal(graph, i, i + 1);
-        bytes += ((local.end - local.start + 1) * (local.sequence.len + 1) + 3) / 4;
-    } // for
+    GVA_Variant const supremal = gva_lcs_graph_local_supremal(graph, idx, idx + 1);
+    size_t const width = supremal.sequence.len + 1;
+    size_t const bytes = ((supremal.end - supremal.start + 1) * width + 3) / 4;
 
-    DFAs dfas =
+    dfas = array_ensure(allocator, dfas, 1, bytes);
+    if (dfas == NULL)
     {
-        .len = array_length(graph.dom_nodes),
-        .starts = allocator.allocate(allocator.context, NULL, 0, sizeof(*dfas.starts) * array_length(graph.dom_nodes)),
-        .data = allocator.allocate(allocator.context, NULL, 0, bytes),
-    };
-
-    gva_uint* restrict next = allocator.allocate(allocator.context, NULL, 0, sizeof(*next) * array_length(graph.nodes));
-
-    if (dfas.starts == NULL || dfas.data == NULL || next == NULL)
-    {
-        next = allocator.allocate(allocator.context, next, sizeof(*next) * array_length(graph.nodes), 0);
-        dfas.data = allocator.allocate(allocator.context, dfas.data, bytes, 0);
-        dfas.starts = allocator.allocate(allocator.context, dfas.starts, sizeof(*dfas.starts) * array_length(graph.dom_nodes), 0);
-        return (DFAs) {0};  // OOM
+        return NULL;  // OOM
     } // if
 
-    memset(dfas.data, 0, bytes);
+    gva_uint* next = allocator.allocate(allocator.context, NULL, 0, sizeof(*next) * array_length(graph.nodes));
+    if (next == NULL)
+    {
+        return dfas;  // OOM
+    } // if
+
     for (size_t i = 0; i < array_length(graph.nodes); ++i)
     {
         next[i] = GVA_NULL;
     } // for
 
-    fprintf(stderr, "%zu bytes\n", bytes);
+    size_t const start = array_length(dfas);
+    memset(dfas + start, 0, bytes);
+    array_header(dfas)->length += bytes;
 
-    size_t start = 0;
-    for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
+    gva_uint head = graph.dom_nodes[idx].link;
+    gva_uint tail = head;
+    while (head != GVA_NULL)
     {
-        GVA_Variant const local = gva_lcs_graph_local_supremal(graph, i, i + 1);
-        size_t const width = local.sequence.len + 1;
+        fprintf(stderr, "POP %u\n", head);
 
-        fprintf(stderr, "DFA %u x %zu @ %zu\n", local.end - local.start + 1, width, start);
-
-        gva_uint head = graph.dom_nodes[i].link;
-        gva_uint tail = head;
-        while (head != GVA_NULL)
+        if (head == graph.dom_nodes[idx + 1].link)
         {
-            fprintf(stderr, "POP %u\n", head);
+            head = next[head];
+            continue;
+        } // if
 
-            if (head == graph.dom_nodes[i + 1].link)
+        for (gva_uint j = graph.nodes[head].edges; j != GVA_NULL; j = graph.edges[j].next)
+        {
+            GVA_Variant variant = {0};
+            size_t const count = gva_edges(graph.observed.str,
+                graph.nodes[head].match, graph.nodes[graph.edges[j].tail].match,
+                head == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
+                &variant);
+            for (size_t k = 0; k < count; ++k)
             {
-                head = next[head];
-                continue;
-            } // if
-
-            for (gva_uint j = graph.nodes[head].edges; j != GVA_NULL; j = graph.edges[j].next)
-            {
-                GVA_Variant variant = {0};
-                size_t const count = gva_edges(graph.observed.str,
-                    graph.nodes[head].match, graph.nodes[graph.edges[j].tail].match,
-                    head == graph.source, graph.nodes[graph.edges[j].tail].edges == GVA_NULL,
-                    &variant);
-                for (size_t k = 0; k < count; ++k)
-                {
-                    edge(dfas.data + start, width, variant.start + k - local.start, variant.end + k - local.start,
-                        variant.sequence.len, variant.sequence.str - local.sequence.str + k);
-                } // for
-
-                if (next[graph.edges[j].tail] == GVA_NULL)
-                {
-                    fprintf(stderr, "  PUSH %u\n", graph.edges[j].tail);
-                    next[tail] = graph.edges[j].tail;
-                    tail = graph.edges[j].tail;
-                } // if
+                edge(dfas + start, width, variant.start + k - supremal.start, variant.end + k - supremal.start,
+                    variant.sequence.len, variant.sequence.str - supremal.sequence.str + k);
             } // for
 
-            head = next[head];
-        } // while
-        dfas.starts[i] = start;
-        start += ((local.end - local.start + 1) * width + 3) / 4;
-    } // for
-    dfas.starts[array_length(graph.dom_nodes) - 1] = bytes;
+            if (next[graph.edges[j].tail] == GVA_NULL)
+            {
+                fprintf(stderr, "  PUSH %u\n", graph.edges[j].tail);
+                next[tail] = graph.edges[j].tail;
+                tail = graph.edges[j].tail;
+            } // if
+        } // for
+
+        head = next[head];
+    } // while
 
     next = allocator.allocate(allocator.context, next, sizeof(*next) * array_length(graph.nodes), 0);
 
     return dfas;
-} // dfas_from_lcs_graph
+} // dfa_from_lcs_graph
 
 
 typedef struct

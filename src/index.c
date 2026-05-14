@@ -298,12 +298,24 @@ gva_index_query(GVA_Allocator const allocator,
         gva_uint next;
     }* hits = NULL;
 
+    gva_uint* restrict starts = allocator.allocate(allocator.context, NULL, 0, sizeof(*starts) * (array_length(graph.dom_nodes) - 1));
+    if (starts == NULL)
+    {
+        entries = HASH_TABLE_DESTROY(allocator, entries);
+        return (GVA_Query_Result) {NULL};  // OOM
+    } // if
+
+    uint8_t* restrict dfas = NULL;
+
     // Phase 1: for every local supremal part:
     //          - find candidates based on interval query
     //          - calculate the distance with the candidates,
     //            and discard disjoint candidates early based on distance
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
+        starts[i] = array_length(dfas);
+        dfas = dfa_from_lcs_graph(allocator, dfas, graph, i);
+
         GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, i, i + 1);
 
         gva_uint* intervals = interval_tree_intersection(allocator, self->intervals, variant.start, variant.end);
@@ -484,15 +496,12 @@ gva_index_query(GVA_Allocator const allocator,
             // non-distance based
             if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - (intmax_t) distance) != hits[i].distance)
             {
-                size_t excluded = 0;
-                size_t included = variants_included(allocator, self->reference.len, self->reference.str,
-                    variant_from_index(self, node_idx),
-                    gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1),
-                    &excluded);
+                size_t const included = dfa_overlap(allocator, self->reference.len, self->reference.str,
+                    variant_from_index(self, node_idx), (uint8_t*) trie_string(self->dfas, self->intervals.nodes[node_idx].dfa).str,
+                    gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1), dfas + starts[hits[i].query]);
 
                 if (included > 0)
                 {
-                    included = MAX(1, (double) (2 * included - 1) / excluded * MIN(self->intervals.nodes[node_idx].distance, distance));
                     ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                         {
                             .relation = GVA_OVERLAP,
@@ -549,6 +558,8 @@ gva_index_query(GVA_Allocator const allocator,
 
     hits = ARRAY_DESTROY(allocator, hits);
     entries = HASH_TABLE_DESTROY(allocator, entries);
+    dfas = ARRAY_DESTROY(allocator, dfas);
+    starts = allocator.allocate(allocator.context, starts, sizeof(*starts) * (array_length(graph.dom_nodes) - 1), 0);
 
     return result;
 } // gva_index_query
