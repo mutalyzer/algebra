@@ -57,8 +57,7 @@ dfa_concat(GVA_Allocator const allocator,
     GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1])
 {
     size_t const width = lhs.sequence.len + rhs.sequence.len + rhs.start - lhs.end + 1;
-    size_t const size = (rhs.end - lhs.start + 1) * width;
-    size_t const bytes = (size + 3) / 4;
+    size_t const bytes = ((rhs.end - lhs.start + 1) * width + 3) / 4;
 
     lhs_dfa = array_ensure(allocator, lhs_dfa, 1, bytes);
     if (lhs_dfa == NULL)
@@ -99,8 +98,7 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* restrict dfas,
     } // if
 
     size_t const width = len_obs + 1;
-    size_t const size = (len_ref + 1) * width;
-    size_t const bytes = (size + 3) / 4;
+    size_t const bytes = ((len_ref + 1) * width + 3) / 4;
 
     dfas = array_ensure(allocator, dfas, 1, bytes);
     if (dfas == NULL)
