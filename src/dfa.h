@@ -15,9 +15,9 @@
 
 
 uint8_t*
-dfa_concat(GVA_Allocator const allocator, size_t const n,
-    GVA_Variant const variants[static restrict n],
-    uint8_t* const dfas[static restrict n]);
+dfa_concat(GVA_Allocator const allocator,
+    GVA_Variant const lhs, uint8_t* restrict lhs_dfa,
+    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1]);
 
 
 uint8_t*

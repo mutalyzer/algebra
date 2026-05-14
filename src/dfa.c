@@ -14,8 +14,7 @@
 #include "hash_table.h"         // HASH_TABLE_*, hash_table_*
 
 
-// FIXME: DEBUG
-#include <stdio.h>
+#include <stdio.h>      // FIXME: DEBUG
 
 
 static uint8_t const DFA_DELETION  = 0x1;
@@ -53,62 +52,36 @@ edge(uint8_t dfa[static 1], size_t const width,
 
 
 uint8_t*
-dfa_concat(GVA_Allocator const allocator, size_t const n,
-    GVA_Variant const variants[static restrict n],
-    uint8_t* const dfas[static restrict n])
+dfa_concat(GVA_Allocator const allocator,
+    GVA_Variant const lhs, uint8_t* restrict lhs_dfa,
+    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1])
 {
-    if (n == 0)
-    {
-        return NULL;
-    } // if
-    if (n == 1)
-    {
-        return dfas[0];
-    } // if
-
-    size_t const start = variants[0].start;
-    size_t const end = variants[n - 1].end;
-
-    size_t width = 1;
-    for (size_t i = 0; i < n; ++i)
-    {
-        if (i > 0)
-        {
-            width += variants[i].start - variants[i - 1].end;
-        } // if
-        width += variants[i].sequence.len;
-    } // for
-    size_t const size = (end - start + 1) * width;
+    size_t const width = lhs.sequence.len + rhs.sequence.len + rhs.start - lhs.end + 1;
+    size_t const size = (rhs.end - lhs.start + 1) * width;
     size_t const bytes = (size + 3) / 4;
 
-    uint8_t* const restrict dfa = allocator.allocate(allocator.context, NULL, 0, bytes);
-    if (dfa == NULL)
+    lhs_dfa = array_ensure(allocator, lhs_dfa, 1, bytes);
+    if (lhs_dfa == NULL)
     {
         return NULL;  // OOM
     } // if
 
-    memset(dfa, 0, bytes);
+    size_t const start = array_length(lhs_dfa);
+    memset(lhs_dfa + start, 0, bytes);
+    array_header(lhs_dfa)->length += bytes;
 
-    size_t offset_col = 0;
-    for (size_t i = 0; i < n; ++i)
+    size_t const offset_row = rhs.start - lhs.start;
+    for (size_t j = 0; j <= rhs.end - rhs.start; ++j)
     {
-        size_t const offset_row = variants[i].start - start;
-        if (i > 0)
+        for (size_t k = 0; k <= rhs.sequence.len; ++k)
         {
-            offset_col += variants[i - 1].sequence.len + variants[i].start - variants[i - 1].end;
-        } // if
-        for (size_t j = 0; j <= variants[i].end - variants[i].start; ++j)
-        {
-            for (size_t k = 0; k <= variants[i].sequence.len; ++k)
-            {
-                fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + offset_row, k + offset_col);
-                set(dfa, (j + offset_row) * width + k + offset_col,
-                    get(dfas[i], j * (variants[i].sequence.len + 1) + k));
-            } // for
+            fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + offset_row, k);
+            set(lhs_dfa, (j + offset_row) * width + k,
+                get(rhs_dfa, j * (rhs.sequence.len + 1) + k));
         } // for
     } // for
 
-    return dfa;
+    return lhs_dfa;
 } // dfa_concat
 
 
