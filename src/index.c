@@ -2,6 +2,7 @@
 #include <stdint.h>     // intmax_t, uint8_t
 
 #include "../include/allocator.h"   // GVA_Allocator
+#include "../include/compare.h"     // gva_compare_*
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, GVA_Query_Result, gva_index_*
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
@@ -48,28 +49,6 @@ struct GVA_Index
 };
 
 
-static inline GVA_Relation
-relation_from_included(size_t const included,
-    size_t const lhs_distance, size_t const rhs_distance,
-    size_t excluded[static 1])
-{
-    *excluded = lhs_distance + rhs_distance - 2 * included;
-    if (*excluded == 0)
-    {
-        return GVA_EQUIVALENT;
-    } // if
-    if (lhs_distance == included)
-    {
-        return GVA_IS_CONTAINED;
-    } // if
-    if (rhs_distance == included)
-    {
-         return GVA_CONTAINS;
-    } // if
-    return GVA_OVERLAP;
-} // relation_from_included
-
-
 static inline GVA_Variant
 variant_from_index(GVA_Index const self[static 1], size_t const idx)
 {
@@ -82,39 +61,7 @@ variant_from_index(GVA_Index const self[static 1], size_t const idx)
 } // variant_from_index
 
 
-static inline size_t
-variants_distance(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    GVA_Variant const lhs, GVA_Variant const rhs)
-{
-    size_t const start = MIN(lhs.start, rhs.start);
-    size_t const end = MAX(lhs.end, rhs.end);
-
-    size_t const len_lhs = (lhs.start - start) + lhs.sequence.len + (end - lhs.end);
-    size_t const len_rhs = (rhs.start - start) + rhs.sequence.len + (end - rhs.end);
-
-    if (len_lhs == 0)
-    {
-        return len_rhs;
-    } // if
-    if (len_rhs == 0)
-    {
-        return len_lhs;
-    } // if
-
-    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start,
-        1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
-    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start,
-        1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
-    size_t const distance = gva_edit_distance(allocator,
-        observed_lhs.len, observed_lhs.str, observed_rhs.len, observed_rhs.str);
-    gva_string_destroy(allocator, observed_rhs);
-    gva_string_destroy(allocator, observed_lhs);
-
-    return distance;
-} // variants_distance
-
-
+// FIXME: gva_compare_included
 static size_t
 variants_included(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static len_ref],
@@ -191,13 +138,14 @@ variants_included(GVA_Allocator const allocator,
 } // variants_included
 
 
+// FIXME: gva_compare_included
 static inline size_t
 variants_with_distance(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
+    size_t const len, char const reference[static len],
     GVA_Variant const lhs, size_t const distance_lhs,
     GVA_Variant const rhs, size_t const distance_rhs)
 {
-    size_t const distance = variants_distance(allocator, len_ref, reference, lhs, rhs);
+    size_t const distance = gva_compare_distance(allocator, len, reference, lhs, rhs);
 
     if (distance == 0 || distance_rhs - distance_lhs == distance)
     {
@@ -209,7 +157,7 @@ variants_with_distance(GVA_Allocator const allocator,
     } // if
 
     size_t excluded = 0;
-    size_t const included = variants_included(allocator, len_ref, reference, lhs, rhs, &excluded);
+    size_t const included = variants_included(allocator, len, reference, lhs, rhs, &excluded);
     if (included == 0)
     {
         return 0;  // disjoint
@@ -220,7 +168,7 @@ variants_with_distance(GVA_Allocator const allocator,
 
 inline GVA_Index*
 gva_index_init(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref])
+    size_t const len, char const reference[static len])
 {
     GVA_Index* index = allocator.allocate(allocator.context, NULL, 0, sizeof(*index));
     if (index == NULL)
@@ -229,7 +177,7 @@ gva_index_init(GVA_Allocator const allocator,
     } // if
 
     index->allocator = allocator;
-    index->reference = (GVA_String) {len_ref, reference};
+    index->reference = (GVA_String) {len, reference};
 
     index->intervals = interval_tree_init(allocator);
     index->inserted = trie_init(allocator);
@@ -265,10 +213,10 @@ gva_index_destroy(GVA_Index* const self)
 
 void
 gva_index_insert(GVA_Index* restrict const self,
-    size_t const len_id, char const id[static restrict len_id],
+    size_t const len, char const id[static restrict len],
     GVA_Variant const variant, size_t const distance)
 {
-    size_t const id_idx = trie_insert(&self->ids, len_id, id);
+    size_t const id_idx = trie_insert(&self->ids, len, id);
     size_t allele_idx = array_length(self->alleles) - 1;
 
     // new allele
@@ -363,7 +311,7 @@ gva_index_query(GVA_Allocator const allocator,
         {
             gva_uint const node_idx = intervals[j];
 
-            size_t const distance = variants_distance(allocator, self->reference.len, self->reference.str,
+            size_t const distance = gva_compare_distance(allocator, self->reference.len, self->reference.str,
                 variant_from_index(self, node_idx), variant);
             if (self->intervals.nodes[node_idx].distance + graph.dom_nodes[i + 1].distance - graph.dom_nodes[i].distance <= distance)
             {
@@ -473,7 +421,7 @@ gva_index_query(GVA_Allocator const allocator,
                 gva_string_destroy(allocator, supremal.sequence);
 
                 size_t excluded = 0;
-                GVA_Relation const relation = relation_from_included(included, self->intervals.nodes[node_idx].distance, distance, &excluded);
+                GVA_Relation const relation = gva_compare_relation_from_included(included, self->intervals.nodes[node_idx].distance, distance, &excluded);
                 ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                     {
                         .relation = relation,
@@ -515,7 +463,7 @@ gva_index_query(GVA_Allocator const allocator,
                 gva_string_destroy(allocator, supremal.sequence);
 
                 size_t excluded = 0;
-                GVA_Relation const relation = relation_from_included(included, distance, graph.dom_nodes[hits[i].query + 1].distance - graph.dom_nodes[hits[i].query].distance, &excluded);
+                GVA_Relation const relation = gva_compare_relation_from_included(included, distance, graph.dom_nodes[hits[i].query + 1].distance - graph.dom_nodes[hits[i].query].distance, &excluded);
 
                 ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                     {
@@ -567,7 +515,7 @@ gva_index_query(GVA_Allocator const allocator,
             } // if
 
             size_t excluded = 0;
-            GVA_Relation const relation = relation_from_included(included, self->intervals.nodes[node_idx].distance, distance, &excluded);
+            GVA_Relation const relation = gva_compare_relation_from_included(included, self->intervals.nodes[node_idx].distance, distance, &excluded);
 
             ARRAY_APPEND(allocator, result.hits, ((GVA_Query_Hit)
                 {
@@ -587,7 +535,7 @@ gva_index_query(GVA_Allocator const allocator,
         } // if
 
         size_t excluded = 0;
-        GVA_Relation const relation = relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
+        GVA_Relation const relation = gva_compare_relation_from_included(entries[idx].included, self->alleles[entries[idx].gva_key].distance, gva_lcs_graph_distance(graph), &excluded);
 
         ARRAY_APPEND(allocator, result.alleles, ((GVA_Query_Allele)
             {
