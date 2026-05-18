@@ -56,6 +56,22 @@ dfa_concat(GVA_Allocator const allocator,
     GVA_Variant const lhs, uint8_t* restrict lhs_dfa,
     GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1])
 {
+    fprintf(stderr, "CONCAT: " GVA_VARIANT_FMT " " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs), GVA_VARIANT_PRINT(rhs));
+
+    if (lhs_dfa == NULL)
+    {
+        size_t const len = array_length(rhs_dfa);
+        lhs_dfa = array_init(allocator, len, 1);
+        if (lhs_dfa == NULL)
+        {
+            return NULL;  // OOM
+        } // if
+
+        memcpy(lhs_dfa, rhs_dfa, len);
+        array_header(lhs_dfa)->length = len;
+        return lhs_dfa;
+    } // if
+
     size_t const width = lhs.sequence.len + rhs.sequence.len + rhs.start - lhs.end + 1;
     size_t const bytes = ((rhs.end - lhs.start + 1) * width + 3) / 4;
 
@@ -70,12 +86,13 @@ dfa_concat(GVA_Allocator const allocator,
     array_header(lhs_dfa)->length += bytes;
 
     size_t const offset_row = rhs.start - lhs.start;
+    size_t const offset_col = lhs.sequence.len + rhs.start - lhs.end;
     for (size_t j = 0; j <= rhs.end - rhs.start; ++j)
     {
         for (size_t k = 0; k <= rhs.sequence.len; ++k)
         {
-            fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + offset_row, k);
-            set(lhs_dfa, (j + offset_row) * width + k,
+            fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + offset_row, k + offset_col);
+            set(lhs_dfa, (j + offset_row) * width + k + offset_col,
                 get(rhs_dfa, j * (rhs.sequence.len + 1) + k));
         } // for
     } // for
@@ -251,7 +268,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
     gva_uint tail = head;
     while (head != GVA_NULL)
     {
-        fprintf(stderr, "POP %u\n", head);
+        //fprintf(stderr, "POP %u\n", head);
 
         if (head == graph.dom_nodes[idx + 1].link)
         {
@@ -274,7 +291,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
 
             if (next[graph.edges[j].tail] == GVA_NULL && tail != graph.edges[j].tail)
             {
-                fprintf(stderr, "  PUSH %u\n", graph.edges[j].tail);
+                //fprintf(stderr, "  PUSH %u\n", graph.edges[j].tail);
                 next[tail] = graph.edges[j].tail;
                 tail = graph.edges[j].tail;
             } // if
@@ -652,7 +669,7 @@ dfa_dot(FILE* restrict const stream,
                 next_end = MAX(next_end, j);
             } // if
 
-            if (i < variant.end - variant.start &&
+            if (i < variant.end - variant.start && j < width - 1 &&
                 reference[variant.start + i] == variant.sequence.str[j])
             {
                 fprintf(stream, "%zu->%zu[label=\"%zu &Mu;\"]\n", i * width + j, i * width + j + width + 1, variant.start + i);

@@ -61,6 +61,13 @@ variant_from_index(GVA_Index const self[static 1], size_t const idx)
 } // variant_from_index
 
 
+static inline uint8_t*
+dfa_from_index(GVA_Index const self[static 1], size_t const idx)
+{
+    return (uint8_t*) trie_string(self->dfas, self->intervals.nodes[idx].dfa).str;
+} // dfa_from_index
+
+
 // FIXME: gva_compare_included
 static size_t
 variants_included(GVA_Allocator const allocator,
@@ -251,7 +258,9 @@ gva_index_insert(GVA_Index* restrict const self,
         uint8_t* dfa = dfa_from_alignment(self->allocator, NULL,
             variant.end - variant.start, self->reference.str + variant.start,
             variant.sequence.len, variant.sequence.str);
+
         self->intervals.nodes[node_idx].dfa = trie_insert(&self->dfas, array_length(dfa), (char*) dfa);
+
         dfa = ARRAY_DESTROY(self->allocator, dfa);
     } // if
     else
@@ -373,6 +382,8 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
+        uint8_t* restrict dfa = NULL;
+
         size_t const start_hits = array_length(result.hits);
         for (gva_uint i = entries[idx].head; i != GVA_NULL; i = hits[i].next)
         {
@@ -397,6 +408,7 @@ gva_index_query(GVA_Allocator const allocator,
                     GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, start, end);
                     if (distance == 0)
                     {
+                        //dfa = dfa_concat(allocator, supremal, dfa, variant, 
                         supremal = gva_variant_dup(allocator, variant);
                     } // if
                     else
@@ -444,6 +456,9 @@ gva_index_query(GVA_Allocator const allocator,
                     }));
 
                 entries[idx].included += included;
+
+                dfa = ARRAY_DESTROY(allocator, dfa);
+
                 continue;
             } // if
 
@@ -454,24 +469,43 @@ gva_index_query(GVA_Allocator const allocator,
                 {
                     ARRAY_APPEND(allocator, result.parts, hits[i].join);
                     gva_uint const node_idx = self->join[hits[i].join].link ^ entries[idx].gva_key;
+
                     supremal = gva_variant_dup(allocator, variant_from_index(self, node_idx));
+
+                    dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa_from_index(self, node_idx));
+
+
+                    dfa = dfa_concat(allocator, (GVA_Variant) {0}, dfa, supremal, dfa_from_index(self, node_idx));
+                    dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
+
+
                     distance = self->intervals.nodes[node_idx].distance;
                 } // if
                 i = hits[i].next;
                 ARRAY_APPEND(allocator, result.parts, hits[i].join);
                 gva_uint const node_idx = self->join[hits[i].join].link ^ entries[idx].gva_key;
                 GVA_Variant const variant = variant_from_index(self, node_idx);
+
+                dfa_dot(stderr, self->reference.len, self->reference.str, variant, dfa_from_index(self, node_idx));
+
+                dfa = dfa_concat(allocator, supremal, dfa, variant, dfa_from_index(self, node_idx));
+
                 supremal.sequence = gva_string_concat(allocator, supremal.sequence,
                     (GVA_String) {variant.start - supremal.end, self->reference.str + supremal.end});
                 supremal.sequence = gva_string_concat(allocator, supremal.sequence, variant.sequence);
                 supremal.end = variant.end;
+
+                dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
+
                 distance += self->intervals.nodes[node_idx].distance;
             } // while
             if (start_parts < array_length(result.parts))
             {
-                size_t const included = variants_with_distance(allocator, self->reference.len, self->reference.str,
-                    supremal, distance,
-                    gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1), graph.dom_nodes[hits[i].query + 1].distance - graph.dom_nodes[hits[i].query].distance);
+                fprintf(stderr, "HIER!!!\n");
+                dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
+                size_t const included = gva_compare_included(allocator, self->reference.len, self->reference.str,
+                    supremal, distance, dfa,
+                    gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1), graph.dom_nodes[hits[i].query + 1].distance - graph.dom_nodes[hits[i].query].distance, dfas + starts[hits[i].query]);
                 gva_string_destroy(allocator, supremal.sequence);
 
                 size_t excluded = 0;
@@ -487,6 +521,9 @@ gva_index_query(GVA_Allocator const allocator,
                     }));
 
                 entries[idx].included += included;
+
+                dfa = ARRAY_DESTROY(allocator, dfa);
+
                 continue;
             } // if
 
@@ -497,7 +534,7 @@ gva_index_query(GVA_Allocator const allocator,
             if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - (intmax_t) distance) != hits[i].distance)
             {
                 size_t const included = dfa_overlap(allocator, self->reference.len, self->reference.str,
-                    variant_from_index(self, node_idx), (uint8_t*) trie_string(self->dfas, self->intervals.nodes[node_idx].dfa).str,
+                    variant_from_index(self, node_idx), dfa_from_index(self, node_idx),
                     gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1), dfas + starts[hits[i].query]);
 
                 if (included > 0)
