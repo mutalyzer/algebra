@@ -53,37 +53,31 @@ edge(uint8_t dfa[static 1], size_t const width,
 
 uint8_t*
 dfa_concat(GVA_Allocator const allocator,
-    GVA_Variant const lhs, uint8_t* restrict lhs_dfa,
+    GVA_Variant const lhs, uint8_t const lhs_dfa[static restrict 1],
     GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1])
 {
     fprintf(stderr, "CONCAT: " GVA_VARIANT_FMT " " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs), GVA_VARIANT_PRINT(rhs));
 
-    if (lhs_dfa == NULL)
-    {
-        size_t const len = array_length(rhs_dfa);
-        lhs_dfa = array_init(allocator, len, 1);
-        if (lhs_dfa == NULL)
-        {
-            return NULL;  // OOM
-        } // if
-
-        memcpy(lhs_dfa, rhs_dfa, len);
-        array_header(lhs_dfa)->length = len;
-        return lhs_dfa;
-    } // if
-
     size_t const width = lhs.sequence.len + rhs.sequence.len + rhs.start - lhs.end + 1;
     size_t const bytes = ((rhs.end - lhs.start + 1) * width + 3) / 4;
 
-    lhs_dfa = array_ensure(allocator, lhs_dfa, 1, bytes);
-    if (lhs_dfa == NULL)
+    fprintf(stderr, "DFA %zu x %u\n", width, rhs.end - lhs.start + 1);
+
+    uint8_t* const restrict dfa = array_init(allocator, bytes, 1);
+    if (dfa == NULL)
     {
         return NULL;  // OOM
     } // if
 
-    size_t const start = array_length(lhs_dfa);
-    memset(lhs_dfa + start, 0, bytes);
-    array_header(lhs_dfa)->length += bytes;
+    memset(dfa, 0, bytes);
+
+    for (size_t j = 0; j <= lhs.end - lhs.start; ++j)
+    {
+        for (size_t k = 0; k <= lhs.sequence.len; ++k)
+        {
+            set(dfa, j * width + k, get(lhs_dfa, j * (lhs.sequence.len + 1) + k));
+        } // for
+    } // for
 
     size_t const offset_row = rhs.start - lhs.start;
     size_t const offset_col = lhs.sequence.len + rhs.start - lhs.end;
@@ -92,13 +86,26 @@ dfa_concat(GVA_Allocator const allocator,
         for (size_t k = 0; k <= rhs.sequence.len; ++k)
         {
             fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + offset_row, k + offset_col);
-            set(lhs_dfa, (j + offset_row) * width + k + offset_col,
+            set(dfa, (j + offset_row) * width + k + offset_col,
                 get(rhs_dfa, j * (rhs.sequence.len + 1) + k));
         } // for
     } // for
 
-    return lhs_dfa;
+    return dfa;
 } // dfa_concat
+
+
+inline uint8_t*
+dfa_dup(GVA_Allocator const allocator, uint8_t const self[static restrict 1])
+{
+    uint8_t* const restrict dfa = array_init(allocator, array_length(self), 1);
+    if (dfa == NULL)
+    {
+        return NULL;  // OOM;
+    } // if
+
+    return memcpy(dfa, self, array_length(self));
+} // dfa_dup
 
 
 uint8_t*
@@ -237,11 +244,17 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* restrict dfas,
 
 uint8_t*
 dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
-    GVA_LCS_Graph const graph, size_t const idx)
+    GVA_LCS_Graph const graph, size_t const start, size_t const end)
 {
-    GVA_Variant const supremal = gva_lcs_graph_local_supremal(graph, idx, idx + 1);
-    size_t const width = supremal.sequence.len + 1;
-    size_t const bytes = ((supremal.end - supremal.start + 1) * width + 3) / 4;
+    if (end < start || end > array_length(graph.dom_nodes))
+    {
+        return dfas;
+    } // if
+
+    size_t const start_dfa = graph.dom_nodes[start].match.row + graph.dom_nodes[start].match.length;
+    size_t const end_dfa = graph.dom_nodes[end].match.row;
+    size_t const width = graph.dom_nodes[end].match.col - (graph.dom_nodes[start].match.col + graph.dom_nodes[start].match.length) + 1;
+    size_t const bytes = ((end_dfa - start_dfa + 1) * width + 3) / 4;
 
     dfas = array_ensure(allocator, dfas, 1, bytes);
     if (dfas == NULL)
@@ -260,17 +273,19 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
         next[i] = GVA_NULL;
     } // for
 
-    size_t const start = array_length(dfas);
-    memset(dfas + start, 0, bytes);
+    size_t const offset = array_length(dfas);
+    memset(dfas + offset, 0, bytes);
     array_header(dfas)->length += bytes;
 
-    gva_uint head = graph.dom_nodes[idx].link;
+    GVA_Variant const supremal = gva_lcs_graph_local_supremal(graph, start, end);
+
+    gva_uint head = graph.dom_nodes[start].link;
     gva_uint tail = head;
     while (head != GVA_NULL)
     {
         //fprintf(stderr, "POP %u\n", head);
 
-        if (head == graph.dom_nodes[idx + 1].link)
+        if (head == graph.dom_nodes[end].link)
         {
             head = next[head];
             continue;
@@ -285,7 +300,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
                 &variant);
             for (size_t k = 0; k < count; ++k)
             {
-                edge(dfas + start, width, variant.start + k - supremal.start, variant.end + k - supremal.start,
+                edge(dfas + offset, width, variant.start + k - supremal.start, variant.end + k - supremal.start,
                     variant.sequence.len, variant.sequence.str - supremal.sequence.str + k);
             } // for
 
@@ -685,6 +700,22 @@ dfa_dot(FILE* restrict const stream,
 
     fprintf(stream, "%zu[peripheries=2]\n}\n", size - 1);
 } // dfa_dot
+
+
+void
+dfa_raw(FILE* restrict const stream,
+    size_t const height, size_t const width, uint8_t const dfa[static restrict height * width])
+{
+    for (size_t i = 0; i < height; ++i)
+    {
+        for (size_t j = 0; j < width; ++j)
+        {
+            uint8_t const value = get(dfa, i * width + j) & 0x3;
+            fprintf(stream, "%x ", value);
+        } // for
+        fprintf(stream, "\n");
+    } // for
+} // dfa_raw
 
 
 void

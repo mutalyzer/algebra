@@ -323,7 +323,7 @@ gva_index_query(GVA_Allocator const allocator,
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
     {
         starts[i] = array_length(dfas);
-        dfas = dfa_from_lcs_graph(allocator, dfas, graph, i);
+        dfas = dfa_from_lcs_graph(allocator, dfas, graph, i, i + 1);
 
         GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, i, i + 1);
 
@@ -467,18 +467,11 @@ gva_index_query(GVA_Allocator const allocator,
             {
                 if (distance == 0)
                 {
+                    fprintf(stderr, "START w DUP\n");
                     ARRAY_APPEND(allocator, result.parts, hits[i].join);
                     gva_uint const node_idx = self->join[hits[i].join].link ^ entries[idx].gva_key;
-
                     supremal = gva_variant_dup(allocator, variant_from_index(self, node_idx));
-
-                    dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa_from_index(self, node_idx));
-
-
-                    dfa = dfa_concat(allocator, (GVA_Variant) {0}, dfa, supremal, dfa_from_index(self, node_idx));
-                    dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
-
-
+                    dfa = dfa_dup(allocator, dfa_from_index(self, node_idx));
                     distance = self->intervals.nodes[node_idx].distance;
                 } // if
                 i = hits[i].next;
@@ -488,12 +481,16 @@ gva_index_query(GVA_Allocator const allocator,
 
                 dfa_dot(stderr, self->reference.len, self->reference.str, variant, dfa_from_index(self, node_idx));
 
-                dfa = dfa_concat(allocator, supremal, dfa, variant, dfa_from_index(self, node_idx));
+                uint8_t* concat = dfa_concat(allocator, supremal, dfa, variant, dfa_from_index(self, node_idx));
+                ARRAY_DESTROY(allocator, dfa);
+                dfa = concat;
 
                 supremal.sequence = gva_string_concat(allocator, supremal.sequence,
                     (GVA_String) {variant.start - supremal.end, self->reference.str + supremal.end});
                 supremal.sequence = gva_string_concat(allocator, supremal.sequence, variant.sequence);
                 supremal.end = variant.end;
+
+                fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
 
                 dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
 

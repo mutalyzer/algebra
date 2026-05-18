@@ -16,8 +16,12 @@
 
 uint8_t*
 dfa_concat(GVA_Allocator const allocator,
-    GVA_Variant const lhs, uint8_t* restrict lhs_dfa,
+    GVA_Variant const lhs, uint8_t const lhs_dfa[static restrict 1],
     GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1]);
+
+
+uint8_t*
+dfa_dup(GVA_Allocator const allocator, uint8_t const self[static restrict 1]);
 
 
 uint8_t*
@@ -28,7 +32,7 @@ dfa_from_alignment(GVA_Allocator const allocator, uint8_t* restrict dfas,
 
 uint8_t*
 dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
-    GVA_LCS_Graph const graph, size_t const idx);
+    GVA_LCS_Graph const graph, size_t const start, size_t const end);
 
 
 size_t
@@ -48,6 +52,11 @@ void
 dfa_dot(FILE* restrict const stream,
     size_t const len, char const reference[static restrict len],
     GVA_Variant const variant, uint8_t const dfa[static restrict 1]);
+
+
+void
+dfa_raw(FILE* restrict const stream,
+    size_t const height, size_t const width, uint8_t const dfa[static restrict height * width]);
 
 
 void
