@@ -272,7 +272,7 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
                     variant.sequence.len, variant.sequence.str - supremal.sequence.str + k);
             } // for
 
-            if (next[graph.edges[j].tail] == GVA_NULL)
+            if (next[graph.edges[j].tail] == GVA_NULL && tail != graph.edges[j].tail)
             {
                 fprintf(stderr, "  PUSH %u\n", graph.edges[j].tail);
                 next[tail] = graph.edges[j].tail;

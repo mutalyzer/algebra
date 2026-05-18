@@ -782,8 +782,8 @@ int
 main(int argc, char* argv[static argc])
 {
     // return allele_main(argc, argv);
-    // return index_main(argc, argv);
+    return index_main(argc, argv);
     // return supremal_main(argc, argv);
     // return overlap_main(argc, argv);
-    return all_main(argc, argv);
+    // return all_main(argc, argv);
 } // main
