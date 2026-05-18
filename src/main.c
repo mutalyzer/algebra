@@ -78,28 +78,11 @@ report_query_result(GVA_Index const* const index, GVA_LCS_Graph const graph, GVA
 
     for (size_t i = 0; i < array_length(result.alleles); ++i)
     {
-
-        if (result.alleles[i].relation == GVA_OVERLAP &&
-            result.alleles[i].hits.end - result.alleles[i].hits.start > 1)
-        {
-            bool overlap = false;
-            for (size_t j = result.alleles[i].hits.start; j < result.alleles[i].hits.end; ++j)
-            {
-                if (result.hits[j].relation == GVA_OVERLAP)
-                {
-                    overlap = true;
-                    break;
-                } // if
-            } // for
-            if (!overlap)
-            {
         fprintf(stdout, GVA_STRING_FMT " %s " GVA_STRING_FMT " %u %u %zu\n",
             GVA_STRING_PRINT(gva_index_allele_id(index, result.alleles[i].idx)),
             GVA_RELATION_LABELS[result.alleles[i].relation],
             GVA_STRING_PRINT(id),
             result.alleles[i].included, result.alleles[i].excluded, array_length(graph.dom_nodes) - 1);
-            } // if
-        } // if
 
         if (hits)
         {
