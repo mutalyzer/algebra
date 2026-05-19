@@ -77,17 +77,6 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
     size_t const n, GVA_Variant const variants[static restrict n]);
 
 
-void
-gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
-    size_t const offset,
-    size_t const start, size_t const end,
-    size_t dels[static restrict 1],
-    size_t as[static restrict 1],
-    size_t cs[static restrict 1],
-    size_t gs[static restrict 1],
-    size_t ts[static restrict 1]);
-
-
 size_t
 gva_lcs_graph_distance(GVA_LCS_Graph const self);
 

@@ -678,22 +678,6 @@ dfa_dot(FILE* restrict const stream,
 
 
 void
-dfa_raw(FILE* restrict const stream,
-    size_t const height, size_t const width, uint8_t const dfa[static restrict height * width])
-{
-    for (size_t i = 0; i < height; ++i)
-    {
-        for (size_t j = 0; j < width; ++j)
-        {
-            uint8_t const value = get(dfa, i * width + j) & 0x3;
-            fprintf(stream, "%x ", value);
-        } // for
-        fprintf(stream, "\n");
-    } // for
-} // dfa_raw
-
-
-void
 dfa_svg(FILE* restrict const stream,
     size_t const len, char const reference[static restrict len],
     GVA_Variant const variant, uint8_t const dfa[static restrict 1])

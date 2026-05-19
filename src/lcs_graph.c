@@ -11,7 +11,6 @@
 #include "../include/variant.h"     // GVA_Variant, gva_variant_length
 #include "align.h"      // LCS_Alignment, LCS_Matches, lcs_align*
 #include "array.h"      // ARRAY_*, array_length
-#include "bitset.h"     // bitset_add
 #include "common.h"     // GVA_NULL, MAX, MIN, gva_uint
 
 
@@ -525,90 +524,6 @@ gva_lcs_graph_from_variants(GVA_Allocator const allocator,
         offset *= 2;  // OVERFLOW
     } // while
 } // gva_lcs_graph_from_variants
-
-
-static uint8_t const NUC_A = 0x1;
-static uint8_t const NUC_C = 0x2;
-static uint8_t const NUC_G = 0x4;
-static uint8_t const NUC_T = 0x8;
-
-
-inline static uint8_t
-nucleotides(size_t const len, char const sequence[static len])
-{
-    static uint8_t const MASK[256] =
-    {
-        ['A'] = NUC_A,
-        ['C'] = NUC_C,
-        ['G'] = NUC_G,
-        ['T'] = NUC_T,
-    };
-    static uint8_t const UNIVERSE = 0xF;
-
-    uint8_t mask = 0x0;
-    for (size_t i = 0; mask < UNIVERSE && i < len; ++i)
-    {
-        mask |= MASK[(size_t) sequence[i]];
-    } // for
-    return mask;
-} // nucleotides
-
-
-void
-gva_lcs_graph_uniq_atomics(GVA_LCS_Graph const self,
-    size_t const offset,
-    size_t const start, size_t const end,
-    size_t dels[static restrict 1],
-    size_t as[static restrict 1],
-    size_t cs[static restrict 1],
-    size_t gs[static restrict 1],
-    size_t ts[static restrict 1])
-{
-    for (size_t i = 0; i < array_length(self.nodes); ++i)
-    {
-        if (self.nodes[i].match.row > end)
-        {
-            continue;
-        } // if
-
-        for (gva_uint j = self.nodes[i].edges; j != GVA_NULL; j = self.edges[j].next)
-        {
-            if (self.nodes[self.edges[j].tail].match.row + self.nodes[self.edges[j].tail].match.length < start)
-            {
-                continue;
-            } // if
-
-            GVA_Variant variant;
-            gva_uint const count = gva_edges(self.observed.str,
-                                             self.nodes[i].match, self.nodes[self.edges[j].tail].match,
-                                             i == self.source, self.nodes[self.edges[j].tail].edges == GVA_NULL,
-                                             &variant);
-
-            if (variant.end > variant.start)
-            {
-                bitset_add(dels, variant.start - offset, variant.end + count - 1 - offset);
-            } // if
-
-            uint8_t const mask = nucleotides(variant.sequence.len, variant.sequence.str);
-            if ((mask & NUC_A) == NUC_A)
-            {
-                bitset_add(as, variant.start - offset, variant.end + count - offset);
-            } // if
-            if ((mask & NUC_C) == NUC_C)
-            {
-                bitset_add(cs, variant.start - offset, variant.end + count - offset);
-            } // if
-            if ((mask & NUC_G) == NUC_G)
-            {
-                bitset_add(gs, variant.start - offset, variant.end + count - offset);
-            } // if
-            if ((mask & NUC_T) == NUC_T)
-            {
-                bitset_add(ts, variant.start - offset, variant.end + count - offset);
-            } // if
-        } // for
-    } // for
-} // gva_lcs_graph_uniq_atomics
 
 
 inline size_t

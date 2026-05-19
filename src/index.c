@@ -13,7 +13,6 @@
 #include "../include/types.h"       // GVA_NULL, GVA_Interval, gva_uint
 #include "../include/variant.h"     // GVA_Variant, gva_patch, gva_variant_dup
 #include "array.h"              // ARRAY_*, array_length
-#include "bitset.h"             // bitset_*
 #include "common.h"             // ABS, MAX, MIN
 #include "dfa.h"                // dfa_*
 #include "hash_table.h"         // HASH_TABLE_*, hash_table_*
@@ -66,111 +65,6 @@ dfa_from_index(GVA_Index const self[static 1], size_t const idx)
 {
     return (uint8_t*) trie_string(self->dfas, self->intervals.nodes[idx].dfa).str;
 } // dfa_from_index
-
-
-// FIXME: gva_compare_included
-static size_t
-variants_included(GVA_Allocator const allocator,
-    size_t const len_ref, char const reference[static len_ref],
-    GVA_Variant const lhs, GVA_Variant const rhs,
-    size_t excluded[static 1])
-{
-    size_t const start = MIN(lhs.start, rhs.start);
-    size_t const end = MAX(lhs.end, rhs.end);
-
-    GVA_String observed_lhs = gva_patch(allocator, end - start, reference + start,
-        1, &(GVA_Variant const) {lhs.start - start, lhs.end - start, lhs.sequence});
-    GVA_String observed_rhs = gva_patch(allocator, end - start, reference + start,
-        1, &(GVA_Variant const) {rhs.start - start, rhs.end - start, rhs.sequence});
-    GVA_LCS_Graph lhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_lhs.len, observed_lhs.str, start);
-    GVA_LCS_Graph rhs_graph = gva_lcs_graph_init(allocator, end - start, reference + start, observed_rhs.len, observed_rhs.str, start);
-
-    gva_uint const len = end - start + 1;
-    size_t* lhs_dels = bitset_init(allocator, len);
-    size_t* lhs_as = bitset_init(allocator, len);
-    size_t* lhs_cs = bitset_init(allocator, len);
-    size_t* lhs_gs = bitset_init(allocator, len);
-    size_t* lhs_ts = bitset_init(allocator, len);
-
-    size_t* rhs_dels = bitset_init(allocator, len);
-    size_t* rhs_as = bitset_init(allocator, len);
-    size_t* rhs_cs = bitset_init(allocator, len);
-    size_t* rhs_gs = bitset_init(allocator, len);
-    size_t* rhs_ts = bitset_init(allocator, len);
-
-    size_t const start_intersection = MAX(lhs.start, rhs.start);
-    size_t const end_intersection = MIN(lhs.end, rhs.end);
-
-    gva_lcs_graph_uniq_atomics(lhs_graph, start, start_intersection, end_intersection, lhs_dels, lhs_as, lhs_cs, lhs_gs, lhs_ts);
-    gva_lcs_graph_destroy(allocator, lhs_graph, false);
-
-    gva_lcs_graph_uniq_atomics(rhs_graph, start, start_intersection, end_intersection, rhs_dels, rhs_as, rhs_cs, rhs_gs, rhs_ts);
-    gva_lcs_graph_destroy(allocator, rhs_graph, false);
-
-    size_t const included =
-        bitset_intersection_cnt(lhs_dels, rhs_dels) +
-        bitset_intersection_cnt(lhs_as, rhs_as) +
-        bitset_intersection_cnt(lhs_cs, rhs_cs) +
-        bitset_intersection_cnt(lhs_gs, rhs_gs) +
-        bitset_intersection_cnt(lhs_ts, rhs_ts);
-
-    *excluded =
-        bitset_intersection_cnt(lhs_dels, lhs_dels) +
-        bitset_intersection_cnt(rhs_dels, rhs_dels) +
-        bitset_intersection_cnt(lhs_as, lhs_as) +
-        bitset_intersection_cnt(rhs_as, rhs_as) +
-        bitset_intersection_cnt(lhs_cs, lhs_cs) +
-        bitset_intersection_cnt(rhs_cs, rhs_cs) +
-        bitset_intersection_cnt(lhs_gs, lhs_gs) +
-        bitset_intersection_cnt(rhs_gs, rhs_gs) +
-        bitset_intersection_cnt(lhs_ts, lhs_ts) +
-        bitset_intersection_cnt(rhs_ts, rhs_ts);
-
-    rhs_ts = bitset_destroy(allocator, rhs_ts);
-    rhs_gs = bitset_destroy(allocator, rhs_gs);
-    rhs_cs = bitset_destroy(allocator, rhs_cs);
-    rhs_as = bitset_destroy(allocator, rhs_as);
-    rhs_dels = bitset_destroy(allocator, rhs_dels);
-
-    lhs_ts = bitset_destroy(allocator, lhs_ts);
-    lhs_gs = bitset_destroy(allocator, lhs_gs);
-    lhs_cs = bitset_destroy(allocator, lhs_cs);
-    lhs_as = bitset_destroy(allocator, lhs_as);
-    lhs_dels = bitset_destroy(allocator, lhs_dels);
-
-    gva_string_destroy(allocator, observed_rhs);
-    gva_string_destroy(allocator, observed_lhs);
-
-    return included;
-} // variants_included
-
-
-// FIXME: gva_compare_included
-static inline size_t
-variants_with_distance(GVA_Allocator const allocator,
-    size_t const len, char const reference[static len],
-    GVA_Variant const lhs, size_t const distance_lhs,
-    GVA_Variant const rhs, size_t const distance_rhs)
-{
-    size_t const distance = gva_compare_distance(allocator, len, reference, lhs, rhs);
-
-    if (distance == 0 || distance_rhs - distance_lhs == distance)
-    {
-        return distance_lhs;
-    } // if
-    if (distance_lhs - distance_rhs == distance)
-    {
-        return distance_rhs;
-    } // if
-
-    size_t excluded = 0;
-    size_t const included = variants_included(allocator, len, reference, lhs, rhs, &excluded);
-    if (included == 0)
-    {
-        return 0;  // disjoint
-    } // if
-    return MAX(1, (double) (2 * included - 1) / excluded * MIN(distance_lhs, distance_rhs));
-} // variants_with_distance
 
 
 inline GVA_Index*
@@ -400,9 +294,11 @@ gva_index_query(GVA_Allocator const allocator,
                     ARRAY_APPEND(allocator, result.parts, hits[i].query);
                 } // if
                 i = hits[i].next;
+                fprintf(stderr, "%u\n", hits[i].query);
                 ARRAY_APPEND(allocator, result.parts, hits[i].query);
                 if (hits[i].query > end)
                 {
+                    fprintf(stderr, "HIER!\n");
                     GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, start, end);
                     if (distance == 0)
                     {
@@ -436,9 +332,28 @@ gva_index_query(GVA_Allocator const allocator,
                 } // else
                 distance += graph.dom_nodes[end].distance - graph.dom_nodes[start].distance;
                 gva_uint const node_idx = self->join[hits[i].join].link ^ entries[idx].gva_key;
-                size_t const included = variants_with_distance(allocator, self->reference.len, self->reference.str,
-                    variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance,
-                    supremal, distance);
+
+                fprintf(stderr, "NU2: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
+                uint8_t* restrict dfa = dfa_init(allocator, supremal.end - supremal.start + 1, supremal.sequence.len + 1);
+                size_t offset = 0;
+                GVA_Variant prev = {0};
+
+                for (size_t j = start_parts; j < array_length(result.parts); ++j)
+                {
+                    GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, result.parts[j], result.parts[j] + 1);
+                    if (j > start_parts)
+                    {
+                        offset += prev.sequence.len + variant.start - prev.end;
+                    } // if
+                    dfa = dfa_concat(supremal, dfa, variant, dfas + starts[result.parts[j]], offset);
+                    prev = variant;
+                } // for
+
+                dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
+
+                size_t const included = gva_compare_included(allocator, self->reference.len, self->reference.str,
+                    variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance, dfa_from_index(self, node_idx),
+                    supremal, distance, dfa);
                 gva_string_destroy(allocator, supremal.sequence);
 
                 size_t excluded = 0;
@@ -453,6 +368,8 @@ gva_index_query(GVA_Allocator const allocator,
                     }));
 
                 entries[idx].included += included;
+
+                dfa = ARRAY_DESTROY(allocator, dfa);
 
                 continue;
             } // if

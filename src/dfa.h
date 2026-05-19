@@ -56,11 +56,6 @@ dfa_dot(FILE* restrict const stream,
 
 
 void
-dfa_raw(FILE* restrict const stream,
-    size_t const height, size_t const width, uint8_t const dfa[static restrict height * width]);
-
-
-void
 dfa_svg(FILE* restrict const stream,
     size_t const len, char const reference[static restrict len],
     GVA_Variant const variant, uint8_t const dfa[static restrict 1]);
