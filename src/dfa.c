@@ -51,61 +51,36 @@ edge(uint8_t dfa[static 1], size_t const width,
 } // edge
 
 
-uint8_t*
-dfa_concat(GVA_Allocator const allocator,
-    GVA_Variant const lhs, uint8_t const lhs_dfa[static restrict 1],
-    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1])
-{
-    fprintf(stderr, "CONCAT: " GVA_VARIANT_FMT " " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(lhs), GVA_VARIANT_PRINT(rhs));
-
-    size_t const width = lhs.sequence.len + rhs.sequence.len + rhs.start - lhs.end + 1;
-    size_t const bytes = ((rhs.end - lhs.start + 1) * width + 3) / 4;
-
-    fprintf(stderr, "DFA %zu x %u\n", width, rhs.end - lhs.start + 1);
-
-    uint8_t* const restrict dfa = array_init(allocator, bytes, 1);
-    if (dfa == NULL)
-    {
-        return NULL;  // OOM
-    } // if
-
-    memset(dfa, 0, bytes);
-
-    for (size_t j = 0; j <= lhs.end - lhs.start; ++j)
-    {
-        for (size_t k = 0; k <= lhs.sequence.len; ++k)
-        {
-            set(dfa, j * width + k, get(lhs_dfa, j * (lhs.sequence.len + 1) + k));
-        } // for
-    } // for
-
-    size_t const offset_row = rhs.start - lhs.start;
-    size_t const offset_col = lhs.sequence.len + rhs.start - lhs.end;
-    for (size_t j = 0; j <= rhs.end - rhs.start; ++j)
-    {
-        for (size_t k = 0; k <= rhs.sequence.len; ++k)
-        {
-            fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + offset_row, k + offset_col);
-            set(dfa, (j + offset_row) * width + k + offset_col,
-                get(rhs_dfa, j * (rhs.sequence.len + 1) + k));
-        } // for
-    } // for
-
-    return dfa;
-} // dfa_concat
-
-
 inline uint8_t*
-dfa_dup(GVA_Allocator const allocator, uint8_t const self[static restrict 1])
+dfa_init(GVA_Allocator const allocator,
+    size_t const height, size_t const width)
 {
-    uint8_t* const restrict dfa = array_init(allocator, array_length(self), 1);
+    size_t const bytes = (height * width + 3) / 4;
+    uint8_t* const dfa = array_init(allocator, bytes, 1);
     if (dfa == NULL)
     {
         return NULL;  // OOM;
     } // if
+    return memset(dfa, 0, bytes);
+} // dfa_init
 
-    return memcpy(dfa, self, array_length(self));
-} // dfa_dup
+
+uint8_t*
+dfa_concat(GVA_Variant const lhs, uint8_t lhs_dfa[static restrict 1],
+    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1],
+    size_t const offset)
+{
+    for (size_t j = 0; j <= rhs.end - rhs.start; ++j)
+    {
+        for (size_t k = 0; k <= rhs.sequence.len; ++k)
+        {
+            fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + rhs.start - lhs.start, k + offset);
+            set(lhs_dfa, (j + rhs.start - lhs.start) * (lhs.sequence.len + 1) + k + offset,
+                get(rhs_dfa, j * (rhs.sequence.len + 1) + k));
+        } // for
+    } // for
+    return lhs_dfa;
+} // dfa_concat
 
 
 uint8_t*

@@ -15,13 +15,14 @@
 
 
 uint8_t*
-dfa_concat(GVA_Allocator const allocator,
-    GVA_Variant const lhs, uint8_t const lhs_dfa[static restrict 1],
-    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1]);
+dfa_init(GVA_Allocator const allocator,
+    size_t const height, size_t const width);
 
 
 uint8_t*
-dfa_dup(GVA_Allocator const allocator, uint8_t const self[static restrict 1]);
+dfa_concat(GVA_Variant const lhs, uint8_t lhs_dfa[static restrict 1],
+    GVA_Variant const rhs, uint8_t const rhs_dfa[static restrict 1],
+    size_t const offset);
 
 
 uint8_t*

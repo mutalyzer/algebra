@@ -382,8 +382,6 @@ gva_index_query(GVA_Allocator const allocator,
             continue;
         } // if
 
-        uint8_t* restrict dfa = NULL;
-
         size_t const start_hits = array_length(result.hits);
         for (gva_uint i = entries[idx].head; i != GVA_NULL; i = hits[i].next)
         {
@@ -408,7 +406,6 @@ gva_index_query(GVA_Allocator const allocator,
                     GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, start, end);
                     if (distance == 0)
                     {
-                        //dfa = dfa_concat(allocator, supremal, dfa, variant, 
                         supremal = gva_variant_dup(allocator, variant);
                     } // if
                     else
@@ -457,8 +454,6 @@ gva_index_query(GVA_Allocator const allocator,
 
                 entries[idx].included += included;
 
-                dfa = ARRAY_DESTROY(allocator, dfa);
-
                 continue;
             } // if
 
@@ -467,39 +462,42 @@ gva_index_query(GVA_Allocator const allocator,
             {
                 if (distance == 0)
                 {
-                    fprintf(stderr, "START w DUP\n");
                     ARRAY_APPEND(allocator, result.parts, hits[i].join);
                     gva_uint const node_idx = self->join[hits[i].join].link ^ entries[idx].gva_key;
                     supremal = gva_variant_dup(allocator, variant_from_index(self, node_idx));
-                    dfa = dfa_dup(allocator, dfa_from_index(self, node_idx));
                     distance = self->intervals.nodes[node_idx].distance;
                 } // if
                 i = hits[i].next;
                 ARRAY_APPEND(allocator, result.parts, hits[i].join);
                 gva_uint const node_idx = self->join[hits[i].join].link ^ entries[idx].gva_key;
                 GVA_Variant const variant = variant_from_index(self, node_idx);
-
-                dfa_dot(stderr, self->reference.len, self->reference.str, variant, dfa_from_index(self, node_idx));
-
-                uint8_t* concat = dfa_concat(allocator, supremal, dfa, variant, dfa_from_index(self, node_idx));
-                ARRAY_DESTROY(allocator, dfa);
-                dfa = concat;
-
                 supremal.sequence = gva_string_concat(allocator, supremal.sequence,
                     (GVA_String) {variant.start - supremal.end, self->reference.str + supremal.end});
                 supremal.sequence = gva_string_concat(allocator, supremal.sequence, variant.sequence);
                 supremal.end = variant.end;
 
-                fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
-
-                dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
-
                 distance += self->intervals.nodes[node_idx].distance;
             } // while
             if (start_parts < array_length(result.parts))
             {
-                fprintf(stderr, "HIER!!!\n");
+                fprintf(stderr, "NU: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
+                uint8_t* restrict dfa = dfa_init(allocator, supremal.end - supremal.start + 1, supremal.sequence.len + 1);
+                size_t offset = 0;
+                GVA_Variant prev = {0};
+                for (size_t j = start_parts; j < array_length(result.parts); ++j)
+                {
+                    gva_uint const node_idx = self->join[result.parts[j]].link ^ entries[idx].gva_key;
+                    GVA_Variant const variant = variant_from_index(self, node_idx);
+                    if (j > start_parts)
+                    {
+                        offset += prev.sequence.len + variant.start - prev.end;
+                    } // if
+                    dfa = dfa_concat(supremal, dfa, variant, dfa_from_index(self, node_idx), offset);
+                    prev = variant;
+                } // for
+
                 dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
+
                 size_t const included = gva_compare_included(allocator, self->reference.len, self->reference.str,
                     supremal, distance, dfa,
                     gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1), graph.dom_nodes[hits[i].query + 1].distance - graph.dom_nodes[hits[i].query].distance, dfas + starts[hits[i].query]);
