@@ -63,6 +63,7 @@ gva_compare_included(GVA_Allocator const allocator,
         return rhs_distance;
     } // if
 
+    //return !dfa_disjoint(lhs, lhs_dfa, rhs, rhs_dfa);
     return dfa_overlap(allocator, len, reference, lhs, lhs_dfa, rhs, rhs_dfa);
 } // gva_compare_included
 

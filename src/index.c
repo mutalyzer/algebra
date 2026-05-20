@@ -436,6 +436,8 @@ gva_index_query(GVA_Allocator const allocator,
             // non-distance based
             if (ABS((intmax_t) self->intervals.nodes[node_idx].distance - (intmax_t) distance) != hits[i].distance)
             {
+                //size_t const included = !dfa_disjoint(variant_from_index(self, node_idx), dfa_from_index(self, node_idx),
+                //    gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1), dfas + starts[hits[i].query]);
                 size_t const included = dfa_overlap(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx), dfa_from_index(self, node_idx),
                     gva_lcs_graph_local_supremal(graph, hits[i].query, hits[i].query + 1), dfas + starts[hits[i].query]);
