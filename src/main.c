@@ -10,10 +10,11 @@
 #include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Query_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
 #include "../include/relations.h"   // GVA_RELATION_LABELS
+#include "../include/parser.h"      // gva_parse_spdi
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/utils.h"       // gva_fasta_sequence*
-#include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_parse_spdi, gva_patch, gva_variant_*
+#include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_patch, gva_variant_*
 #include "array.h"          // ARRAY_*, array_length
 #include "common.h"         // MAX, MIN
 #include "dfa.h"            // dfa_*

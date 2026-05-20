@@ -46,7 +46,7 @@ gva_compare_distance(GVA_Allocator const allocator,
 } // gva_compare_distance
 
 
-size_t
+inline size_t
 gva_compare_included(GVA_Allocator const allocator,
     size_t const len, char const reference[static restrict len],
     GVA_Variant const lhs, size_t const lhs_distance, uint8_t lhs_dfa[static restrict 1],

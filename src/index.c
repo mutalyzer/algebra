@@ -294,11 +294,9 @@ gva_index_query(GVA_Allocator const allocator,
                     ARRAY_APPEND(allocator, result.parts, hits[i].query);
                 } // if
                 i = hits[i].next;
-                fprintf(stderr, "%u\n", hits[i].query);
                 ARRAY_APPEND(allocator, result.parts, hits[i].query);
                 if (hits[i].query > end)
                 {
-                    fprintf(stderr, "HIER!\n");
                     GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, start, end);
                     if (distance == 0)
                     {
@@ -333,11 +331,9 @@ gva_index_query(GVA_Allocator const allocator,
                 distance += graph.dom_nodes[end].distance - graph.dom_nodes[start].distance;
                 gva_uint const node_idx = self->join[hits[i].join].link ^ entries[idx].gva_key;
 
-                fprintf(stderr, "NU2: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
                 uint8_t* restrict dfa = dfa_init(allocator, supremal.end - supremal.start + 1, supremal.sequence.len + 1);
                 size_t offset = 0;
                 GVA_Variant prev = {0};
-
                 for (size_t j = start_parts; j < array_length(result.parts); ++j)
                 {
                     GVA_Variant const variant = gva_lcs_graph_local_supremal(graph, result.parts[j], result.parts[j] + 1);
@@ -348,8 +344,6 @@ gva_index_query(GVA_Allocator const allocator,
                     dfa = dfa_concat(supremal, dfa, variant, dfas + starts[result.parts[j]], offset);
                     prev = variant;
                 } // for
-
-                dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
 
                 size_t const included = gva_compare_included(allocator, self->reference.len, self->reference.str,
                     variant_from_index(self, node_idx), self->intervals.nodes[node_idx].distance, dfa_from_index(self, node_idx),
@@ -397,7 +391,6 @@ gva_index_query(GVA_Allocator const allocator,
             } // while
             if (start_parts < array_length(result.parts))
             {
-                fprintf(stderr, "NU: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(supremal));
                 uint8_t* restrict dfa = dfa_init(allocator, supremal.end - supremal.start + 1, supremal.sequence.len + 1);
                 size_t offset = 0;
                 GVA_Variant prev = {0};
@@ -412,8 +405,6 @@ gva_index_query(GVA_Allocator const allocator,
                     dfa = dfa_concat(supremal, dfa, variant, dfa_from_index(self, node_idx), offset);
                     prev = variant;
                 } // for
-
-                dfa_dot(stderr, self->reference.len, self->reference.str, supremal, dfa);
 
                 size_t const included = gva_compare_included(allocator, self->reference.len, self->reference.str,
                     supremal, distance, dfa,

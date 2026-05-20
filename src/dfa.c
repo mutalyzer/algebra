@@ -74,7 +74,6 @@ dfa_concat(GVA_Variant const lhs, uint8_t lhs_dfa[static restrict 1],
     {
         for (size_t k = 0; k <= rhs.sequence.len; ++k)
         {
-            fprintf(stderr, "cpy %zu, %zu -> %zu, %zu\n", j, k, j + rhs.start - lhs.start, k + offset);
             set(lhs_dfa, (j + rhs.start - lhs.start) * (lhs.sequence.len + 1) + k + offset,
                 get(rhs_dfa, j * (rhs.sequence.len + 1) + k));
         } // for
@@ -258,8 +257,6 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
     gva_uint tail = head;
     while (head != GVA_NULL)
     {
-        //fprintf(stderr, "POP %u\n", head);
-
         if (head == graph.dom_nodes[end].link)
         {
             head = next[head];
@@ -281,7 +278,6 @@ dfa_from_lcs_graph(GVA_Allocator const allocator, uint8_t* dfas,
 
             if (next[graph.edges[j].tail] == GVA_NULL && tail != graph.edges[j].tail)
             {
-                //fprintf(stderr, "  PUSH %u\n", graph.edges[j].tail);
                 next[tail] = graph.edges[j].tail;
                 tail = graph.edges[j].tail;
             } // if
@@ -429,7 +425,6 @@ dfa_overlap(GVA_Allocator const allocator,
         return 0;  // OOM
     } // if
 
-    //size_t count = 0;
     queue_push_front(&queue, 0, 0);
     while (!queue_empty(&queue))
     {
@@ -445,9 +440,6 @@ dfa_overlap(GVA_Allocator const allocator,
         size_t const rhs_ref = rhs_idx / rhs_width + rhs.start;
         size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
-        //count += 1;
-        // fprintf(stderr, "{%zu, %zu} (%zu): %zu\n", lhs_idx, rhs_idx, idx, included);
-
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
             uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
@@ -456,8 +448,6 @@ dfa_overlap(GVA_Allocator const allocator,
 
             if (rhs_match)
             {
-                // ..
-                // fprintf(stderr, "    push (. vs %zu MU) +0 +0 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width + 1, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
                 queue_push_front(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width + 1, included);
                 continue;
             } // if
@@ -467,14 +457,10 @@ dfa_overlap(GVA_Allocator const allocator,
 
             if (rhs_deletion)
             {
-                // .D
-                // fprintf(stderr, "    push (. vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, lhs_idx, rhs_idx + rhs_width, lhs_idx * rhs_size + rhs_idx + rhs_width);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width, included);
             } // if
             if (rhs_insertion)
             {
-                // .I
-                // fprintf(stderr, "    push (. vs %zu %c) +0 +1 {%zu, %zu} (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
             } // if
             continue;
@@ -488,8 +474,6 @@ dfa_overlap(GVA_Allocator const allocator,
 
             if (lhs_match)
             {
-                // ..
-                // fprintf(stderr, "    push (%zu MU vs .) +0 +0 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx, included);
                 continue;
             } // if
@@ -499,14 +483,10 @@ dfa_overlap(GVA_Allocator const allocator,
 
             if (lhs_deletion)
             {
-                // D.
-                // fprintf(stderr, "    push (%zu DELTA vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx, included);
             } // if
             if (lhs_insertion)
             {
-                // I.
-                // fprintf(stderr, "    push (%zu %c vs .) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
             } // if
             continue;
@@ -521,8 +501,6 @@ dfa_overlap(GVA_Allocator const allocator,
 
         if (lhs_match && rhs_match)
         {
-            // ..
-            // fprintf(stderr, "    push (%zu MU) {%zu, %zu} +0 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
             queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
             continue;
         } // if
@@ -534,49 +512,35 @@ dfa_overlap(GVA_Allocator const allocator,
 
         if (lhs_deletion && rhs_deletion)
         {
-            // DD
-            // fprintf(stderr, "    push (%zu DELTA) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
             queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
         } // if
 
         if (lhs_insertion && rhs_insertion && lhs.sequence.str[lhs_idx % lhs_width] == rhs.sequence.str[rhs_idx % rhs_width])
         {
-            // II
-            // fprintf(stderr, "    push (%zu %c) {%zu, %zu} +1 +0 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx + 1, (lhs_idx + 1) * rhs_size + rhs_idx + 1);
             queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
         } // if
 
         if (lhs_deletion && rhs_match)
         {
-            // D.
-            // fprintf(stderr, "    push (%zu DELTA vs %zu MU) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width, rhs_idx + rhs_width + 1, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
             queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
         } // if
         else if (lhs_match && rhs_deletion)
         {
-            // .D
-            // fprintf(stderr, "    push (%zu MU vs %zu DELTA) +0 +1 {%zu, %zu} (%zu)\n", lhs_ref, rhs_ref, lhs_idx + lhs_width + 1, rhs_idx + rhs_width, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
             queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
         } // if
 
         if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
             lhs.sequence.str[lhs_idx % lhs_width] != rhs.sequence.str[rhs_idx % rhs_width])))
         {
-            // I.
-            // fprintf(stderr, "    push (%zu %c vs .) {%zu, %zu} +0 +1 (%zu)\n", lhs_ref, lhs_variant.sequence.str[lhs_idx % lhs_width], lhs_idx + 1, rhs_idx, (lhs_idx + 1) * rhs_size + rhs_idx);
             queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
         } // if
 
         if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
             lhs.sequence.str[lhs_idx % lhs_width] != rhs.sequence.str[rhs_idx % rhs_width])))
         {
-            // .I
-            // fprintf(stderr, "    push (. vs %zu %c) {%zu, %zu} +0 +1 (%zu)\n", rhs_ref, rhs_variant.sequence.str[rhs_idx % rhs_width], lhs_idx, rhs_idx + 1, lhs_idx * rhs_size + rhs_idx + 1);
             queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
         } // if
     } // while
-
-    //fprintf(stderr, "count: %zu\n", count);
 
     size_t included = 0;
     size_t const idx = HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1);

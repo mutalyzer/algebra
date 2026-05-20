@@ -28,11 +28,6 @@ typedef struct
 } GVA_Variant;
 
 
-size_t
-gva_parse_spdi(size_t const len, char const expression[static restrict len],
-    GVA_Variant variants[static restrict 1]);
-
-
 bool
 gva_variant_eq(GVA_Variant const lhs, GVA_Variant const rhs);
 
