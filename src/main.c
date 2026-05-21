@@ -811,13 +811,13 @@ hgvs_main(int argc, char* argv[static argc])
 
         if (!allele.interpretable)
         {
-            fprintf(stderr, "%zu: ERROR\n", line_count);
+            fprintf(stdout, "%zu: ERROR: %s", line_count, line);
             continue;
         } // if
 
         for (size_t i = 0; i < array_length(allele.variants); ++i)
         {
-            fprintf(stdout, "%zu: " GVA_VARIANT_FMT "\n", line_count, GVA_VARIANT_PRINT(allele.variants[i]));
+            // fprintf(stdout, "%zu: " GVA_VARIANT_FMT "\n", line_count, GVA_VARIANT_PRINT(allele.variants[i]));
         } // for
 
         ARRAY_DESTROY(gva_std_allocator, allele.variants);

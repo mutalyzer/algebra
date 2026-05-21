@@ -110,7 +110,7 @@ match_location(size_t const len, char const expression[static restrict len],
 
     if (!(tok = match_number(len - idx, expression + idx, start)))
     {
-        fprintf(stderr, "expected number\n");
+        //fprintf(stderr, "expected number\n");
         return 0;
     } // if
     idx += tok;
@@ -126,12 +126,12 @@ match_location(size_t const len, char const expression[static restrict len],
         *end = 0;
         if (!(tok = match_number(len - idx, expression + idx, end)))
         {
-            fprintf(stderr, "expected number\n");
+            //fprintf(stderr, "expected number\n");
             return 0;
         } // if
         if (*end < *start)
         {
-            fprintf(stderr, "invalid range\n");
+            //fprintf(stderr, "invalid range\n");
             return 0;
         } // if
         idx += tok;
@@ -150,7 +150,7 @@ match_inserted_part(GVA_Allocator const allocator,
 
     if (!(tok = match_sequence(len - idx, expression + idx)))
     {
-        fprintf(stderr, "expected sequence\n");
+        //fprintf(stderr, "expected sequence\n");
         return 0;  // expected sequence
     } // if
     GVA_String const sequence = {tok, expression + idx};
@@ -163,7 +163,7 @@ match_inserted_part(GVA_Allocator const allocator,
 
         if (!(tok = match_number(len - idx, expression + idx, &count)))
         {
-            fprintf(stderr, "expected number\n");
+            //fprintf(stderr, "expected number\n");
             return 0;  // expected number
         } // if
         idx += tok;
@@ -184,7 +184,7 @@ match_inserted_part(GVA_Allocator const allocator,
             return idx;
         } // if
 
-        fprintf(stderr, "expected ']'\n");
+        //fprintf(stderr, "expected ']'\n");
         return 0;  // expected ']'
     } // if
 
@@ -211,7 +211,7 @@ match_insertion(GVA_Allocator const allocator,
         {
             if (!(tok = match_inserted_part(allocator, allele, len - idx, expression + idx)))
             {
-                fprintf(stderr, "expected inserted part\n");
+                //fprintf(stderr, "expected inserted part\n");
                 return 0;  // expected inserted part
             } // if
             idx += tok;
@@ -229,13 +229,13 @@ match_insertion(GVA_Allocator const allocator,
             return idx;
         } // if
 
-        fprintf(stderr, "expected ']'\n");
+        //fprintf(stderr, "expected ']'\n");
         return 0;  // expected ']'
     } // if
 
     if (!(tok = match_inserted_part(allocator, allele, len - idx, expression + idx)))
     {
-        fprintf(stderr, "expected inserted part\n");
+        //fprintf(stderr, "expected inserted part\n");
         return 0;  // expected inserted part
     } // if
     idx += tok;
@@ -255,13 +255,13 @@ match_variant(GVA_Allocator const allocator,
 
     if (!(tok = match_location(len - idx, expression + idx, &variant->start, &variant->end)))
     {
-        fprintf(stderr, "expected location\n");
+        //fprintf(stderr, "expected location\n");
         return 0;  // expected location
     } // if
 
     if (variant->end >= len_ref)
     {
-        fprintf(stderr, "invalid location in reference\n");
+        //fprintf(stderr, "invalid location in reference\n");
         return 0;  // invalid location in reference
     } // if
     idx += tok;
@@ -271,22 +271,33 @@ match_variant(GVA_Allocator const allocator,
     {
         if (variant->start == variant->end)
         {
-            fprintf(stderr, "invalid deleted range\n");
+            //fprintf(stderr, "invalid deleted range\n");
             return 0;  // invalid deleted range
         } // if
         idx += tok;
 
+        // optional number
+        gva_uint count = 0;
+        if ((tok = match_number(len - idx, expression + idx, &count)))
+        {
+            idx += tok;
+            if (count != variant->end - variant->start)
+            {
+                //fprintf(stderr, "inconsistent deleted length\n");
+                return 0;  // inconsistent deleted length
+            } // if
+        } // if
         // optional sequence
-        if ((tok = match_sequence(len - idx, expression + idx)))
+        else if ((tok = match_sequence(len - idx, expression + idx)))
         {
             if (variant->end - variant->start != tok)
             {
-                fprintf(stderr, "inconsistent deleted length\n");
+                //fprintf(stderr, "inconsistent deleted length\n");
                 return 0;  // inconsistent deleted length
             } // if
             if (memcmp(reference + variant->start, expression + idx, tok))
             {
-                fprintf(stderr, "sequence not found in reference\n");
+                //fprintf(stderr, "sequence not found in reference\n");
                 return 0;  // sequence not found in reference
             } // if
             idx += tok;
@@ -300,9 +311,10 @@ match_variant(GVA_Allocator const allocator,
             if ((tok = match_insertion(allocator, allele, len - idx, expression + idx)))
             {
                 idx += tok;
-                variant->sequence = (GVA_String) {array_length(allele->inserted) - start, allele->inserted + start};
+                variant->sequence = (GVA_String) {array_length(allele->inserted) - start, (void*) start};
             } // if
         } // if
+
         return idx;
     } // if
 
@@ -311,7 +323,7 @@ match_variant(GVA_Allocator const allocator,
     {
         if (variant->start == variant->end)
         {
-            fprintf(stderr, "invalid duplicated range\n");
+            //fprintf(stderr, "invalid duplicated range\n");
             return 0;  // invalid duplicated range
         } // if
         idx += tok;
@@ -321,12 +333,12 @@ match_variant(GVA_Allocator const allocator,
         {
             if (variant->end - variant->start != tok)
             {
-                fprintf(stderr, "inconsistent duplicated length\n");
+                //fprintf(stderr, "inconsistent duplicated length\n");
                 return 0;  // inconsistent duplicated length
             } // if
             if (memcmp(reference + variant->start, expression + idx, tok))
             {
-                fprintf(stderr, "sequence not found in reference\n");
+                //fprintf(stderr, "sequence not found in reference\n");
                 return 0;  // sequence not found in reference
             } // if
             idx += tok;
@@ -336,7 +348,7 @@ match_variant(GVA_Allocator const allocator,
         size_t const start = array_length(allele->inserted);
         allele->inserted = array_ensure(allocator, allele->inserted, 1, length);
         memcpy(allele->inserted + start, reference + variant->start, length);
-        variant->sequence = (GVA_String) {length, allele->inserted + start};
+        variant->sequence = (GVA_String) {length, (void*) start};
         return idx;
     } // if
 
@@ -345,7 +357,7 @@ match_variant(GVA_Allocator const allocator,
     {
         if (variant->start == variant->end)
         {
-            fprintf(stderr, "invalid inverted range\n");
+            //fprintf(stderr, "invalid inverted range\n");
             return 0;  // invalid inverted range
         } // if
         idx += tok;
@@ -355,7 +367,7 @@ match_variant(GVA_Allocator const allocator,
         {
             if (variant->end - variant->start != tok)
             {
-                fprintf(stderr, "inconsistent inverted length\n");
+                //fprintf(stderr, "inconsistent inverted length\n");
                 return 0;  // inconsistent inverted length
             } // if
 
@@ -363,7 +375,7 @@ match_variant(GVA_Allocator const allocator,
             {
                 if (reference[variant->end - i - 1] != gva_complement(expression[idx + i]))
                 {
-                    fprintf(stderr, "complement not found in reference\n");
+                    //fprintf(stderr, "complement not found in reference\n");
                     return 0;  // complement not found in reference
                 } // if
             } // for
@@ -378,7 +390,7 @@ match_variant(GVA_Allocator const allocator,
         {
             allele->inserted[start + i] = gva_complement(reference[variant->end - i - 1]);
         } // for
-        variant->sequence = (GVA_String) {length, allele->inserted + start};
+        variant->sequence = (GVA_String) {length, (void*) start};
         return idx;
     } // if
 
@@ -387,7 +399,7 @@ match_variant(GVA_Allocator const allocator,
     {
         if (variant->end - variant->start > 2)
         {
-            fprintf(stderr, "invalid range for insertion\n");
+            //fprintf(stderr, "invalid range for insertion\n");
             return 0;  // invalid range for insertion
         } // if
         idx += tok;
@@ -397,7 +409,7 @@ match_variant(GVA_Allocator const allocator,
         if ((tok = match_insertion(allocator, allele, len - idx, expression + idx)))
         {
             idx += tok;
-            variant->sequence = (GVA_String) {array_length(allele->inserted) - start, allele->inserted + start};
+            variant->sequence = (GVA_String) {array_length(allele->inserted) - start, (void*) start};
         } // if
         return idx;
     } // if
@@ -419,12 +431,12 @@ match_variant(GVA_Allocator const allocator,
         {
             if (sequence.len != variant->end - variant->start)
             {
-                fprintf(stderr, "inconsistent sequence length\n");
+                //fprintf(stderr, "inconsistent sequence length\n");
                 return 0;  // inconsistent sequence length
             } // if
             if (memcmp(reference + variant->start, sequence.str, sequence.len))
             {
-                fprintf(stderr, "sequence not found in reference\n");
+                //fprintf(stderr, "sequence not found in reference\n");
                 return 0;  // sequence not found in reference
             } // if
         } // if
@@ -432,11 +444,11 @@ match_variant(GVA_Allocator const allocator,
         size_t const start = array_length(allele->inserted);
         if (!(tok = match_inserted_part(allocator, allele, len - idx, expression + idx)))
         {
-            fprintf(stderr, "expected inserted part\n");
+            //fprintf(stderr, "expected inserted part\n");
             return 0;  // expected inserted part
         } // if
         idx += tok;
-        variant->sequence = (GVA_String) {array_length(allele->inserted) - start, allele->inserted + start};
+        variant->sequence = (GVA_String) {array_length(allele->inserted) - start, (void*) start};
         return idx;
     } // if
 
@@ -448,7 +460,7 @@ match_variant(GVA_Allocator const allocator,
         size_t const start = array_length(allele->inserted);
         allele->inserted = array_ensure(allocator, allele->inserted, 1, length);
         memcpy(allele->inserted + start, reference + variant->start, length);
-        variant->sequence = (GVA_String) {length, allele->inserted + start};
+        variant->sequence = (GVA_String) {length, (void*) start};
         return idx;
     } // if
 
@@ -460,14 +472,14 @@ match_variant(GVA_Allocator const allocator,
         variant->end -= 1;
         if (sequence.len == 0)
         {
-            fprintf(stderr, "expected sequence\n");
+            //fprintf(stderr, "expected sequence\n");
             return 0;  // expected sequence
         } // if
 
         gva_uint count = 0;
         if (!(tok = match_number(len - idx, expression + idx, &count)))
         {
-            fprintf(stderr, "expected number\n");
+            //fprintf(stderr, "expected number\n");
             return 0;  // expected number
         } // if
         idx += tok;
@@ -485,7 +497,7 @@ match_variant(GVA_Allocator const allocator,
                 } // while
                 if (found == 0)
                 {
-                    fprintf(stderr, "sequence not found in reference\n");
+                    //fprintf(stderr, "sequence not found in reference\n");
                     return 0;  // sequence not found in reference
                 } // if
                 variant->end = variant->start + found * sequence.len;
@@ -500,7 +512,7 @@ match_variant(GVA_Allocator const allocator,
                     } // for
                     array_header(allele->inserted)->length += sequence.len * count;
                 } // if
-                variant->sequence = (GVA_String) {sequence.len * count, allele->inserted + start};
+                variant->sequence = (GVA_String) {sequence.len * count, (void*) start};
                 return idx;
             } // if
 
@@ -514,15 +526,15 @@ match_variant(GVA_Allocator const allocator,
                 } // for
                 array_header(allele->inserted)->length += sequence.len * count;
             } // if
-            variant->sequence = (GVA_String) {sequence.len * count, allele->inserted + start};
+            variant->sequence = (GVA_String) {sequence.len * count, (void*) start};
             return idx;
         } // if
 
-        fprintf(stderr, "expected ']'\n");
+        //fprintf(stderr, "expected ']'\n");
         return 0;  // expected ']'
     } // if
 
-    fprintf(stderr, "unsupported variant\n");
+    //fprintf(stderr, "unsupported variant\n");
     return 0;  // unsupported variant
 } // match_variant
 
@@ -553,7 +565,7 @@ gva_parse_hgvs(GVA_Allocator const allocator,
             return (GVA_HGVS_Allele) {.interpretable = true};
         } // if
 
-        fprintf(stderr, "expected end of expression\n");
+        //fprintf(stderr, "expected end of expression\n");
         return (GVA_HGVS_Allele) {NULL};
     } // if
 
@@ -585,19 +597,23 @@ gva_parse_hgvs(GVA_Allocator const allocator,
             idx += 1;  // ']'
             if (idx == len)
             {
+                for (size_t i = 0; i < array_length(allele.variants); ++i)
+                {
+                    allele.variants[i].sequence.str = allele.inserted + (size_t) allele.variants[i].sequence.str;
+                } // for
                 allele.interpretable = true;
                 return allele;
             } // if
 
             allele.variants = ARRAY_DESTROY(allocator, allele.variants);
             allele.inserted = ARRAY_DESTROY(allocator, allele.inserted);
-            fprintf(stderr, "expected end of expression\n");
+            //fprintf(stderr, "expected end of expression\n");
             return (GVA_HGVS_Allele) {NULL};  // expected end of expression
         } // if
 
         allele.variants = ARRAY_DESTROY(allocator, allele.variants);
         allele.inserted = ARRAY_DESTROY(allocator, allele.inserted);
-        fprintf(stderr, "expected ']'\n");
+        //fprintf(stderr, "expected ']'\n");
         return (GVA_HGVS_Allele) {NULL};  // expected ']'
     } // if
 
@@ -608,16 +624,18 @@ gva_parse_hgvs(GVA_Allocator const allocator,
         idx += tok;
         if (idx == len)
         {
+            variant.sequence.str = allele.inserted + (size_t) variant.sequence.str;
             ARRAY_APPEND(allocator, allele.variants, variant);
             allele.interpretable = true;
             return allele;
         } // if
 
-        fprintf(stderr, "expected end of expression\n");
+        allele.inserted = ARRAY_DESTROY(allocator, allele.inserted);
+        //fprintf(stderr, "expected end of expression\n");
         return (GVA_HGVS_Allele) {NULL};
     } // if
 
-    fprintf(stderr, "expected variant\n");
+    //fprintf(stderr, "expected variant\n");
     return (GVA_HGVS_Allele) {NULL};  // expected variant
 } // gva_parse_hgvs
 
