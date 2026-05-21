@@ -780,10 +780,62 @@ all_main(int argc, char* argv[static argc])
 
 
 int
+hgvs_main(int argc, char* argv[static argc])
+{
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage %s reference.blob\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0};
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        line_count += 1;
+        GVA_HGVS_Allele allele = gva_parse_hgvs(gva_std_allocator, reference.len, reference.str, strlen(line) - 1, line);
+
+        if (!allele.interpretable)
+        {
+            fprintf(stderr, "%zu: ERROR\n", line_count);
+            continue;
+        } // if
+
+        for (size_t i = 0; i < array_length(allele.variants); ++i)
+        {
+            fprintf(stdout, "%zu: " GVA_VARIANT_FMT "\n", line_count, GVA_VARIANT_PRINT(allele.variants[i]));
+        } // for
+
+        ARRAY_DESTROY(gva_std_allocator, allele.variants);
+        ARRAY_DESTROY(gva_std_allocator, allele.inserted);
+    } //while
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+} // hgvs_main
+
+
+int
 main(int argc, char* argv[static argc])
 {
+    return hgvs_main(argc, argv);
     // return allele_main(argc, argv);
-    return index_main(argc, argv);
+    // return index_main(argc, argv);
     // return supremal_main(argc, argv);
     // return overlap_main(argc, argv);
     // return all_main(argc, argv);
