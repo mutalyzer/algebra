@@ -495,11 +495,6 @@ match_variant(GVA_Allocator const allocator,
                 {
                     found += 1;
                 } // while
-                if (found == 0)
-                {
-                    //fprintf(stderr, "sequence not found in reference\n");
-                    return 0;  // sequence not found in reference
-                } // if
                 variant->end = variant->start + found * sequence.len;
 
                 size_t const start = array_length(allele->inserted);
