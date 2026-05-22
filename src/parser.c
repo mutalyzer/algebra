@@ -111,7 +111,7 @@ match_location(size_t const len, char const expression[static restrict len],
     if (!(tok = match_number(len - idx, expression + idx, start)))
     {
         //fprintf(stderr, "expected number\n");
-        return 0;
+        return 0;  // expected number
     } // if
     idx += tok;
 
@@ -127,12 +127,12 @@ match_location(size_t const len, char const expression[static restrict len],
         if (!(tok = match_number(len - idx, expression + idx, end)))
         {
             //fprintf(stderr, "expected number\n");
-            return 0;
+            return 0;  // expected number
         } // if
         if (*end < *start)
         {
             //fprintf(stderr, "invalid range\n");
-            return 0;
+            return 0;  // invalid range
         } // if
         idx += tok;
     } // if
@@ -600,14 +600,14 @@ gva_parse_hgvs(GVA_Allocator const allocator,
                 return allele;
             } // if
 
-            allele.variants = ARRAY_DESTROY(allocator, allele.variants);
             allele.inserted = ARRAY_DESTROY(allocator, allele.inserted);
+            allele.variants = ARRAY_DESTROY(allocator, allele.variants);
             //fprintf(stderr, "expected end of expression\n");
             return (GVA_HGVS_Allele) {NULL};  // expected end of expression
         } // if
 
-        allele.variants = ARRAY_DESTROY(allocator, allele.variants);
         allele.inserted = ARRAY_DESTROY(allocator, allele.inserted);
+        allele.variants = ARRAY_DESTROY(allocator, allele.variants);
         //fprintf(stderr, "expected ']'\n");
         return (GVA_HGVS_Allele) {NULL};  // expected ']'
     } // if
@@ -637,23 +637,44 @@ gva_parse_hgvs(GVA_Allocator const allocator,
 
 size_t
 gva_parse_spdi(size_t const len, char const expression[static restrict len],
-    GVA_Variant variants[static restrict 1])
+    GVA_Variant variant[static restrict 1])
 {
-    variants[0] = (GVA_Variant) {0};
-    // reference sequence identifier
-    size_t idx = match_until(len, expression, ':');
-    if (idx >= len)
+    size_t idx = 0;
+    size_t tok = 0;
+
+    // optional reference sequence identifier
+    if ((tok = match_until(len - idx, expression + idx, ':')))
+    {
+        idx += tok + 1;  // ':';
+    } // if
+
+    *variant = (GVA_Variant) {0};
+
+    // start position
+    if (!(tok = match_number(len - idx, expression + idx, &variant->start)))
+    {
+        return 0;  // expected number
+    } // if
+    idx += tok;
+
+    if (idx >= len || expression[idx] != ':')
     {
         return 0;  // expected ':'
     } // if
     idx += 1;  // ':'
 
-    size_t tok = match_number(len - idx, expression + idx, &variants[0].start);
-    if (tok == 0)
+    // optional deleted length
+    if ((tok = match_number(len - idx, expression + idx, &variant->end)))
     {
-        return 0;  // expected number (location)
+        idx += tok;
     } // if
-    idx += tok;
+    // optional deleted sequence
+    else if ((tok = match_sequence(len - idx, expression + idx)))
+    {
+        idx += tok;
+        variant->end = tok;  // OVERFLOW
+    } // if
+    variant->end += variant->start;  // OVERFLOW
 
     if (idx >= len || expression[idx] != ':')
     {
@@ -661,25 +682,13 @@ gva_parse_spdi(size_t const len, char const expression[static restrict len],
     } // if
     idx += 1;
 
-    tok = match_number(len - idx, expression + idx, &variants[0].end);
-    if (tok == 0)
+    // optional inserted sequence
+    if ((tok = match_sequence(len - idx, expression + idx)))
     {
-        tok = match_sequence(len - idx, expression + idx);
-        variants[0].end = tok;  // OVERFLOW
+        variant->sequence.str = expression + idx;
+        variant->sequence.len = tok;
+        idx += tok;
     } // if
-    idx += tok;
-    variants[0].end += variants[0].start;
 
-    if (idx >= len || expression[idx] != ':')
-    {
-        return 0;  // expected ':'
-    } // if
-    idx += 1;
-
-    variants[0].sequence.str = expression + idx;
-    tok = match_sequence(len - idx, expression + idx);
-    variants[0].sequence.len = tok;
-    idx += tok;
-
-    return idx == len;
+    return idx == len ? idx : 0;
 } // gva_parse_spdi

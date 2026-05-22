@@ -807,21 +807,33 @@ hgvs_main(int argc, char* argv[static argc])
     while (fgets(line, sizeof(line), stdin) != NULL)
     {
         line_count += 1;
-        GVA_HGVS_Allele allele = gva_parse_hgvs(gva_std_allocator, reference.len, reference.str, strlen(line) - 1, line);
 
-        if (!allele.interpretable)
+        size_t idx = 0;
+        size_t tok = 0;
+
+        tok = strcspn(line + idx, "\t ");
+        idx += tok + 1;  // ignore identifier
+
+        tok = strcspn(line + idx, "\t ");
+        GVA_Variant variant = {0};
+        if (gva_parse_spdi(tok, line + idx, &variant) == 0)
         {
-            fprintf(stdout, "%zu: ERROR: %s", line_count, line);
+            fprintf(stderr, "%zu: ERROR SPDI: %s", line_count, line);
             continue;
         } // if
+        idx += tok + 1;
 
-        for (size_t i = 0; i < array_length(allele.variants); ++i)
+        tok = strcspn(line + idx, "\n\t ");
+        GVA_HGVS_Allele allele = gva_parse_hgvs(gva_std_allocator, reference.len, reference.str, tok, line + idx );
+        if (!allele.interpretable)
         {
-            // fprintf(stdout, "%zu: " GVA_VARIANT_FMT "\n", line_count, GVA_VARIANT_PRINT(allele.variants[i]));
-        } // for
+            fprintf(stderr, "%zu: ERROR HGVS: %s", line_count, line);
+            continue;
+        } // if
+        idx += tok + 1;
 
-        ARRAY_DESTROY(gva_std_allocator, allele.variants);
         ARRAY_DESTROY(gva_std_allocator, allele.inserted);
+        ARRAY_DESTROY(gva_std_allocator, allele.variants);
     } //while
 
     gva_string_destroy(gva_std_allocator, reference);

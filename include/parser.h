@@ -29,7 +29,7 @@ gva_parse_hgvs(GVA_Allocator const allocator,
 
 size_t
 gva_parse_spdi(size_t const len, char const expression[static restrict len],
-    GVA_Variant variants[static restrict 1]);
+    GVA_Variant variant[static restrict 1]);
 
 
 #endif  // GVA_PARSER_H
