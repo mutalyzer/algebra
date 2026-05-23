@@ -31,6 +31,88 @@
 #define REFERENCE_ID "NC_000001.11"
 
 
+static inline size_t
+hgvs_location(size_t const len, char buffer[static len],
+    size_t const start, size_t const end)
+{
+    if (end - start == 0)
+    {
+        return snprintf(buffer, len, "%zu_%zu", start, start + 1);
+    } // if
+    if (end - start == 1)
+    {
+        return snprintf(buffer, len, "%zu", start + 1);
+    } // if
+    return snprintf(buffer, len, "%zu_%zu", start + 1, end);
+} // hgvs_location
+
+
+static size_t
+hgvs_variant(size_t const len, char buffer[static len],
+    size_t const len_ref, char const reference[static restrict len_ref],
+    GVA_Variant const variant)
+{
+    size_t idx = hgvs_location(len, buffer, variant.start, variant.end);
+
+    if (variant.end - variant.start == 0)
+    {
+        if (variant.sequence.len == 0)
+        {
+            return idx + snprintf(buffer + idx, len - idx, "=");
+        } // if
+        return idx + snprintf(buffer + idx, len - idx, "ins" GVA_STRING_FMT, GVA_STRING_PRINT(variant.sequence));
+    } // if
+
+    if (variant.end - variant.start == 1)
+    {
+        if (variant.sequence.len == 0)
+        {
+            return idx + snprintf(buffer + idx, len - idx, "del");
+        } // if
+        if (variant.sequence.len == 1)
+        {
+            return idx + snprintf(buffer + idx, len - idx, "%c>" GVA_STRING_FMT, reference[variant.start], GVA_STRING_PRINT(variant.sequence));
+        } // if
+        return idx + snprintf(buffer + idx, len - idx, "delins" GVA_STRING_FMT, GVA_STRING_PRINT(variant.sequence));
+    } // if
+
+    if (variant.sequence.len == 0)
+    {
+        return idx + snprintf(buffer + idx, len - idx, "del");
+    } // if
+
+    return idx + snprintf(buffer + idx, len - idx, "delins" GVA_STRING_FMT, GVA_STRING_PRINT(variant.sequence));
+} // hgvs_variant
+
+
+static size_t
+to_hgvs(size_t const len, char buffer[static len],
+    size_t const len_ref, char const reference[static restrict len_ref],
+    size_t const n, GVA_Variant const variants[static restrict n])
+{
+    if (n == 0)
+    {
+        return snprintf(buffer, len, "=");
+    } // if
+
+    if (n == 1)
+    {
+        return hgvs_variant(len, buffer, len_ref, reference, variants[0]);
+    } // if
+
+    size_t idx = snprintf(buffer, len, "[");
+    for (size_t i = 0; i < n; ++i)
+    {
+        idx += hgvs_variant(len - idx, buffer + idx, len_ref, reference, variants[i]);
+        if (i < n - 1)
+        {
+            idx += snprintf(buffer + idx, len - idx, ";");
+        } // if
+    } // for
+    return idx + snprintf(buffer + idx, len - idx, "]");
+} // to_hgvs
+
+
 // line: alphanumeric_id SPDI [distance]
 static bool
 parse_line(char const line[static restrict LINE_SIZE],
