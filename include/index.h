@@ -16,6 +16,13 @@ typedef struct GVA_Index GVA_Index;  // opaque
 
 typedef struct
 {
+    gva_uint start;
+    gva_uint end;
+} GVA_Interval;
+
+
+typedef struct
+{
     gva_uint     idx;
     GVA_Relation relation;
     gva_uint     included;

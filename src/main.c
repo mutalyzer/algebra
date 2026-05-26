@@ -32,6 +32,43 @@
 
 
 static inline size_t
+repeats(GVA_Allocator const allocator,
+    size_t const len, char const word[static len])
+{
+    size_t* lps = allocator.allocate(allocator.context, NULL, 0, len * sizeof(*lps));
+    if (lps == NULL)
+    {
+        return 0;  // OOM
+    } // if
+
+    lps[0] = 0;
+    size_t length = 0;
+    size_t idx = 1;
+    while (idx < len)
+    {
+        if (word[idx] == word[length])
+        {
+            length += 1;
+            lps[idx] = length;
+            idx += 1;
+        } // if
+        else if (length > 0)
+        {
+            length = lps[length - 1];
+        } // if
+        else
+        {
+            lps[idx] = 0;
+            idx += 1;
+        } // else
+    } // while
+
+    lps = allocator.allocate(allocator.context, lps, len * sizeof(*lps), 0);
+    return len - length;
+} // repeats
+
+
+static inline size_t
 hgvs_location(size_t const len, char buffer[static len],
     size_t const start, size_t const end)
 {
@@ -52,6 +89,12 @@ hgvs_variant(size_t const len, char buffer[static len],
     size_t const len_ref, char const reference[static restrict len_ref],
     GVA_Variant const variant)
 {
+    size_t const inserted = repeats(gva_std_allocator, variant.sequence.len, variant.sequence.str);
+    size_t const deleted = repeats(gva_std_allocator, variant.end - variant.start, reference + variant.start);
+
+    fprintf(stderr, "%zu vs %zu\n", inserted, deleted);
+
+
     size_t idx = hgvs_location(len, buffer, variant.start, variant.end);
 
     if (variant.end - variant.start == 0)
@@ -864,6 +907,16 @@ all_main(int argc, char* argv[static argc])
 int
 hgvs_main(int argc, char* argv[static argc])
 {
+    static char buffer[1024] = {'\0'};
+    GVA_String const ref = {10, "AAATAATATAATAATTTAT"};
+    GVA_Variant const variant = {2, 13, {6, "ATAATA"}};
+    fprintf(stderr, "%zu\n", to_hgvs(1024, buffer, ref.len, ref.str, 1, &variant));
+
+    fprintf(stderr, "%s\n", buffer);
+
+    return EXIT_SUCCESS;
+
+
     if (argc < 2)
     {
         fprintf(stderr, "usage %s reference.blob\n", argv[0]);

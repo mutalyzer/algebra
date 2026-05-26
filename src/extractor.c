@@ -2,7 +2,7 @@
 
 #include "../include/extractor.h"   // gva_canonical
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_edges
-#include "../include/types.h"       // GVA_NULL, GVA_Match, gva_uint
+#include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"      // ARRAY_APPEND, array_length
 #include "common.h"     // MAX, MIN
 
@@ -20,7 +20,7 @@ typedef struct
 
 
 static inline gva_uint
-lca(gva_uint* const start,
+lca(gva_uint start[static 1],
     gva_uint lhs, gva_uint rhs,
     size_t const length, LCA_Table const visited[static length])
 {
@@ -51,20 +51,30 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
     LCA_Table* visited = allocator.allocate(allocator.context, NULL, 0, sizeof(*visited) * length);
     if (visited == NULL)
     {
-        return NULL;
+        return NULL;  // OOM
     } // if
 
-    for (gva_uint i = 0; i < length; ++i)
+    for (size_t i = 0; i < length; ++i)
     {
         visited[i].depth = GVA_NULL;
     } // for
 
     gva_uint sink = GVA_NULL;
-    visited[graph.source] = (LCA_Table) {GVA_NULL, 0, 0, GVA_NULL, GVA_NULL, GVA_NULL, GVA_NULL};
+    visited[graph.source] = (LCA_Table)
+    {
+        .lca = GVA_NULL,
+        .rank = 0,
+        .depth = 0,
+        .start = GVA_NULL,
+        .end = GVA_NULL,
+        .prev = GVA_NULL,
+        .next = GVA_NULL,
+    };
     gva_uint rank = 1;
     // main loop over a queue
     for (gva_uint head = graph.source, tail = graph.source; head != GVA_NULL; head = visited[head].next)
     {
+        // sink
         if (graph.nodes[head].edges == GVA_NULL)
         {
             sink = head;
@@ -78,7 +88,16 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
             {
                 // add lambda in stack order
                 visited[visited[head].next].prev = lambda;
-                visited[lambda] = (LCA_Table) {head, rank, visited[head].depth, GVA_NULL, GVA_NULL, head, visited[head].next};
+                visited[lambda] = (LCA_Table)
+                {
+                    .lca = head,
+                    .rank = rank,
+                    .depth = visited[head].depth,
+                    .start = GVA_NULL,
+                    .end = GVA_NULL,
+                    .prev = head,
+                    .next = visited[head].next,
+                };
                 rank += 1;
                 visited[head].next = lambda;
             } // if
@@ -88,7 +107,16 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
             } // if
             else if (visited[head].next == lambda)
             {
-                visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, GVA_NULL, GVA_NULL, visited[lambda].prev, visited[lambda].next};
+                visited[lambda] = (LCA_Table)
+                {
+                    .lca = head,
+                    .rank = visited[lambda].rank,
+                    .depth = visited[head].depth,
+                    .start = GVA_NULL,
+                    .end = GVA_NULL,
+                    .prev = visited[lambda].prev,
+                    .next = visited[lambda].next,
+                };
             } // if
             else
             {
@@ -102,7 +130,16 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
                 } // else
                 visited[visited[head].next].prev = lambda;
                 visited[visited[lambda].prev].next = visited[lambda].next;
-                visited[lambda] = (LCA_Table) {head, visited[lambda].rank, visited[head].depth, GVA_NULL, GVA_NULL, head, visited[head].next};
+                visited[lambda] = (LCA_Table)
+                {
+                    .lca = head,
+                    .rank = visited[lambda].rank,
+                    .depth = visited[head].depth,
+                    .start = GVA_NULL,
+                    .end = GVA_NULL,
+                    .prev = head,
+                    .next = visited[head].next,
+                };
                 visited[head].next = lambda;
             } // else
         } // if
@@ -116,9 +153,18 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
                 GVA_Variant variant;
                 gva_uint const count = gva_edges(graph.observed.str,
                     graph.nodes[head].match, graph.nodes[edge_tail].match,
-                    head == graph.source, edge_tail == 0,
+                    head == graph.source, graph.nodes[edge_tail].edges == GVA_NULL,
                     &variant);
-                visited[edge_tail] = (LCA_Table) {head, rank, visited[head].depth + 1, variant.start, variant.end + count - 1, tail, GVA_NULL};
+                visited[edge_tail] = (LCA_Table)
+                {
+                    .lca = head,
+                    .rank = rank,
+                    .depth = visited[head].depth + 1,
+                    .start = variant.start,
+                    .end = variant.end + count - 1,
+                    .prev = tail,
+                    .next = GVA_NULL,
+                };
                 rank += 1;
                 visited[tail].next = edge_tail;
                 tail = edge_tail;
@@ -128,7 +174,7 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
                 GVA_Variant variant;
                 gva_uint const count = gva_edges(graph.observed.str,
                     graph.nodes[head].match, graph.nodes[edge_tail].match,
-                    head == graph.source, edge_tail == 0,
+                    head == graph.source, graph.nodes[edge_tail].edges == GVA_NULL,
                     &variant);
                 visited[edge_tail].start = MIN(visited[edge_tail].start, variant.start);
                 visited[edge_tail].lca = lca(&visited[edge_tail].start, visited[edge_tail].lca, head, length, visited);
@@ -143,23 +189,24 @@ gva_canonical(GVA_Allocator const allocator, GVA_LCS_Graph const graph)
         gva_uint const head = visited[tail].lca;
         if (head != GVA_NULL && visited[tail].start != GVA_NULL)
         {
-            // we need to skip lambda edges: start && end == -1
+            // skip lambda edges: start && end == GVA_NULL
             gva_uint const start_offset = visited[tail].start - graph.nodes[head].match.row;
             gva_uint const end_offset = visited[tail].end - graph.nodes[tail].match.row;
-            GVA_Variant const variant =
-            {
-                visited[tail].start, visited[tail].end,
-                {
-                    (graph.nodes[tail].match.col + end_offset) - (graph.nodes[head].match.col + start_offset),
-                    graph.observed.str + graph.nodes[head].match.col + start_offset,
-                },
-            };
-            ARRAY_APPEND(allocator, canonical, variant);
+            ARRAY_APPEND(allocator, canonical,
+                ((GVA_Variant) {
+                    .start = visited[tail].start,
+                    .end = visited[tail].end,
+                    .sequence =
+                    {
+                        .len = (graph.nodes[tail].match.col + end_offset) - (graph.nodes[head].match.col + start_offset),
+                        .str = graph.observed.str + graph.nodes[head].match.col + start_offset,
+                    },
+                }));
         } // if
     } // for
     if (canonical != NULL)
     {
-        for (gva_uint i = 0; i < array_length(canonical) / 2; ++i)
+        for (size_t i = 0; i < array_length(canonical) / 2; ++i)
         {
             GVA_Variant const temp = canonical[i];
             canonical[i] = canonical[array_length(canonical) - i - 1];
