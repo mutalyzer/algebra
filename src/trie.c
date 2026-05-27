@@ -6,7 +6,7 @@
 #include "../include/string.h"      // GVA_String, gva_prefix_length
 #include "../include/types.h"       // GVA_NULL, gva_uint
 #include "array.h"  // ARRAY_*, array_*
-#include "trie.h"   // Trie, TrieNode, trie_*
+#include "trie.h"   // Trie, Trie_Node, trie_*
 
 
 inline Trie
@@ -53,7 +53,7 @@ trie_insert(Trie self[static restrict 1],
     {
         gva_uint const start = concat(self, len, key);
         self->root = ARRAY_APPEND(self->allocator, self->nodes,
-            ((TrieNode)
+            ((Trie_Node)
             {
                 .link = GVA_NULL,
                 .next = GVA_NULL,
@@ -83,7 +83,7 @@ trie_insert(Trie self[static restrict 1],
             {
                 gva_uint const start = concat(self, len, key);
                 gva_uint const next = ARRAY_APPEND(self->allocator, self->nodes,
-                    ((TrieNode)
+                    ((Trie_Node)
                     {
                         .link = GVA_NULL,
                         .next = GVA_NULL,
@@ -104,7 +104,7 @@ trie_insert(Trie self[static restrict 1],
             {
                 gva_uint const start = concat(self, len, key);
                 gva_uint const link = ARRAY_APPEND(self->allocator, self->nodes,
-                    ((TrieNode)
+                    ((Trie_Node)
                     {
                         .link = GVA_NULL,
                         .next = GVA_NULL,
@@ -126,7 +126,7 @@ trie_insert(Trie self[static restrict 1],
             {
                 gva_uint const start = concat(self, len, key);
                 next = ARRAY_APPEND(self->allocator, self->nodes,
-                    ((TrieNode)
+                    ((Trie_Node)
                     {
                         .link = GVA_NULL,
                         .next = GVA_NULL,
@@ -136,7 +136,7 @@ trie_insert(Trie self[static restrict 1],
                     }));
             } // if
             gva_uint const link = ARRAY_APPEND(self->allocator, self->nodes,
-                ((TrieNode)
+                ((Trie_Node)
                 {
                     .link = idx,
                     .next = self->nodes[idx].next,

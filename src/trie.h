@@ -16,13 +16,13 @@ typedef struct
     gva_uint p_start;
     gva_uint start;
     gva_uint end;
-} TrieNode;
+} Trie_Node;
 
 
 typedef struct
 {
     char* restrict     strings;
-    TrieNode* restrict nodes;
+    Trie_Node* restrict nodes;
     GVA_Allocator      allocator;
     gva_uint           root;
 } Trie;

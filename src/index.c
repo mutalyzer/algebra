@@ -544,15 +544,15 @@ gva_index_stats(GVA_Index* const self)
     fprintf(stderr, "interval nodes: #%zu, %zu\n", array_length(self->intervals.nodes),
         array_length(self->intervals.nodes) * sizeof(Interval_Tree_Node));
     fprintf(stderr, "inserted nodes: #%zu, %zu\n", array_length(self->inserted.nodes),
-        array_length(self->inserted.nodes) * sizeof(TrieNode));
+        array_length(self->inserted.nodes) * sizeof(Trie_Node));
     fprintf(stderr, "inserted strings: #%zu, %zu\n", array_length(self->inserted.strings),
         array_length(self->inserted.strings) * sizeof(char));
     fprintf(stderr, "dfas nodes: #%zu, %zu\n", array_length(self->dfas.nodes),
-        array_length(self->dfas.nodes) * sizeof(TrieNode));
+        array_length(self->dfas.nodes) * sizeof(Trie_Node));
     fprintf(stderr, "dfas strings: #%zu, %zu\n", array_length(self->dfas.strings),
         array_length(self->dfas.strings) * sizeof(char));
     fprintf(stderr, "ids nodes: #%zu, %zu\n", array_length(self->ids.nodes),
-        array_length(self->ids.nodes) * sizeof(TrieNode));
+        array_length(self->ids.nodes) * sizeof(Trie_Node));
     fprintf(stderr, "ids strings: #%zu, %zu\n", array_length(self->ids.strings),
         array_length(self->ids.strings) * sizeof(char));
     fprintf(stderr, "alleles: #%zu, %zu\n", array_length(self->alleles),
