@@ -535,3 +535,28 @@ gva_index_variant_distance(GVA_Index const* const self,
 {
     return self->intervals.nodes[self->join[variant_idx].link ^ allele_idx].distance;
 } // gva_index_variant_distance
+
+
+void
+gva_index_stats(GVA_Index* const self)
+{
+    fprintf(stderr, "reference: #%d, %zu\n", 1, self->reference.len);
+    fprintf(stderr, "interval nodes: #%zu, %zu\n", array_length(self->intervals.nodes),
+        array_length(self->intervals.nodes) * sizeof(Interval_Tree_Node));
+    fprintf(stderr, "inserted nodes: #%zu, %zu\n", array_length(self->inserted.nodes),
+        array_length(self->inserted.nodes) * sizeof(TrieNode));
+    fprintf(stderr, "inserted strings: #%zu, %zu\n", array_length(self->inserted.strings),
+        array_length(self->inserted.strings) * sizeof(char));
+    fprintf(stderr, "dfas nodes: #%zu, %zu\n", array_length(self->dfas.nodes),
+        array_length(self->dfas.nodes) * sizeof(TrieNode));
+    fprintf(stderr, "dfas strings: #%zu, %zu\n", array_length(self->dfas.strings),
+        array_length(self->dfas.strings) * sizeof(char));
+    fprintf(stderr, "ids nodes: #%zu, %zu\n", array_length(self->ids.nodes),
+        array_length(self->ids.nodes) * sizeof(TrieNode));
+    fprintf(stderr, "ids strings: #%zu, %zu\n", array_length(self->ids.strings),
+        array_length(self->ids.strings) * sizeof(char));
+    fprintf(stderr, "alleles: #%zu, %zu\n", array_length(self->alleles),
+        array_length(self->alleles) * sizeof(Allele));
+    fprintf(stderr, "join: #%zu, %zu\n", array_length(self->join), array_length(self->join) * sizeof(Join));
+
+} // gva_index_stats
