@@ -20,6 +20,9 @@
 #include "trie.h"               // Trie, trie_*
 
 
+#include <stdio.h>      // FIXME: DEBUG
+
+
 typedef struct
 {
     gva_uint link;  // X-OR link between interval_idx and allele_idx
@@ -537,26 +540,27 @@ gva_index_variant_distance(GVA_Index const* const self,
 } // gva_index_variant_distance
 
 
-void
-gva_index_stats(GVA_Index* const self)
+// FIXME
+inline void
+gva_index_stats(GVA_Index const* const self)
 {
     fprintf(stderr, "reference: #%d, %zu\n", 1, self->reference.len);
     fprintf(stderr, "interval nodes: #%zu, %zu\n", array_length(self->intervals.nodes),
-        array_length(self->intervals.nodes) * sizeof(Interval_Tree_Node));
+        array_length(self->intervals.nodes) * sizeof(*self->intervals.nodes));
     fprintf(stderr, "inserted nodes: #%zu, %zu\n", array_length(self->inserted.nodes),
-        array_length(self->inserted.nodes) * sizeof(Trie_Node));
+        array_length(self->inserted.nodes) * sizeof(*self->inserted.nodes));
     fprintf(stderr, "inserted strings: #%zu, %zu\n", array_length(self->inserted.strings),
-        array_length(self->inserted.strings) * sizeof(char));
+        array_length(self->inserted.strings));
     fprintf(stderr, "dfas nodes: #%zu, %zu\n", array_length(self->dfas.nodes),
-        array_length(self->dfas.nodes) * sizeof(Trie_Node));
+        array_length(self->dfas.nodes) * sizeof(*self->dfas.nodes));
     fprintf(stderr, "dfas strings: #%zu, %zu\n", array_length(self->dfas.strings),
-        array_length(self->dfas.strings) * sizeof(char));
+        array_length(self->dfas.strings));
     fprintf(stderr, "ids nodes: #%zu, %zu\n", array_length(self->ids.nodes),
-        array_length(self->ids.nodes) * sizeof(Trie_Node));
+        array_length(self->ids.nodes) * sizeof(*self->ids.nodes));
     fprintf(stderr, "ids strings: #%zu, %zu\n", array_length(self->ids.strings),
-        array_length(self->ids.strings) * sizeof(char));
+        array_length(self->ids.strings));
     fprintf(stderr, "alleles: #%zu, %zu\n", array_length(self->alleles),
-        array_length(self->alleles) * sizeof(Allele));
-    fprintf(stderr, "join: #%zu, %zu\n", array_length(self->join), array_length(self->join) * sizeof(Join));
-
+        array_length(self->alleles) * sizeof(*self->alleles));
+    fprintf(stderr, "join: #%zu, %zu\n", array_length(self->join),
+        array_length(self->join) * sizeof(*self->join));
 } // gva_index_stats

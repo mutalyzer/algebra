@@ -88,7 +88,7 @@ gva_index_variant_distance(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx);
 
 void
-gva_index_stats(GVA_Index* const self);
+gva_index_stats(GVA_Index const* const self);
 
 
 #endif // GVA_INDEX_H

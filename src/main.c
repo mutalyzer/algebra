@@ -560,127 +560,6 @@ allele_main(int argc, char* argv[static argc])
 } // allele_main
 
 
-int
-supremal_main(int argc, char* argv[static argc])
-{
-    if (argc < 2)
-    {
-        fprintf(stderr, "usage %s reference.blob\n", argv[0]);
-        return EXIT_FAILURE;
-    } // if
-
-    errno = 0;
-    FILE* stream = fopen(argv[1], "r");
-    if (stream == NULL)
-    {
-        fprintf(stderr, "error: %s\n", strerror(errno));
-        return EXIT_FAILURE;
-    } // if
-
-    GVA_String reference = {0};
-    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
-    fclose(stream);
-
-    fprintf(stderr, "reference length: %zu\n", reference.len);
-
-    Trie dfas = trie_init(gva_std_allocator);
-
-    size_t line_count = 0;
-    static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stdin) != NULL)
-    {
-        line_count += 1;
-        GVA_String id = {0};
-        GVA_Variant variant = {0};
-        size_t distance = 0;
-        if (!parse_line(line, &id, &variant, &distance))
-        {
-            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
-            continue;
-        } // if
-
-        uint8_t* dfa = dfa_from_alignment(gva_std_allocator, NULL, variant.end - variant.start, reference.str + variant.start, variant.sequence.len, variant.sequence.str);
-        trie_insert(&dfas, array_length(dfa), (char*) dfa);
-        dfa = ARRAY_DESTROY(gva_std_allocator, dfa);
-    } // while
-    fprintf(stderr, "#variants: %zu\n", line_count);
-    fprintf(stderr, "string len: %zu\n", array_length(dfas.strings));
-    fprintf(stderr, "#nodes: %zu\n", array_length(dfas.nodes));
-
-    trie_destroy(&dfas);
-
-    gva_string_destroy(gva_std_allocator, reference);
-
-    return EXIT_SUCCESS;
-} // supremal_main
-
-
-int
-overlap_main(int argc, char* argv[static argc])
-{
-    (void) argv;
-
-    size_t line_count = 0;
-    static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stdin) != NULL)
-    {
-        line_count += 1;
-        size_t start = 0;
-        size_t end = 0;
-
-        end = strcspn(line, "\t ");
-        GVA_String reference = {end, line + start};
-
-        start += end + 1;
-        end = strcspn(line + start, "\t ");
-
-        GVA_Variant lhs_variant = {0};
-        if (gva_parse_spdi(end, line + start, &lhs_variant) == 0)
-        {
-            fprintf(stderr, "Error parsing LHS SPDI at line %zu: %s", line_count, line);
-            continue;
-        } // if
-
-        start += end + 1;
-        end = strcspn(line + start, "\n\t ");
-
-        GVA_Variant rhs_variant = {0};
-        if (gva_parse_spdi(end, line + start, &rhs_variant) == 0)
-        {
-            fprintf(stderr, "Error parsing RHS SPDI at line %zu: %s", line_count, line);
-            continue;
-        } // if
-
-        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &rhs_variant);
-
-        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
-
-        //uint8_t* dfa = dfa_concat(gva_std_allocator, 2, variants, dfas);
-        //dfa_dot(stdout, reference.len, reference.str, rhs_variant, dfa);
-        //dfa = gva_std_allocator.allocate(gva_std_allocator.context, dfa, 0, 0);
-
-        //uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs_variant.end - lhs_variant.start, reference.str + lhs_variant.start, lhs_variant.sequence.len, lhs_variant.sequence.str);
-        //uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs_variant.end - rhs_variant.start, reference.str + rhs_variant.start, rhs_variant.sequence.len, rhs_variant.sequence.str);
-
-        // dfa_dot(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
-        //dfa_dot(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
-        // dfa_svg(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
-        // dfa_svg(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
-
-        //fprintf(stderr, "disjoint: %d\n", dfa_disjoint(lhs_variant, lhs_dfa, rhs_variant, rhs_dfa));
-        //fprintf(stdout, "%zu\n", dfa_max_overlap(gva_std_allocator,
-        //    reference.len, reference.str,
-        //    lhs_variant, lhs_dfa,
-        //    rhs_variant, rhs_dfa, 0));
-
-        //rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
-        //lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
-    } // while
-
-    return EXIT_SUCCESS;
-} // overlap_main
-
-
 typedef struct
 {
     gva_uint start;
@@ -740,28 +619,6 @@ all_main(int argc, char* argv[static argc])
     fclose(stream);
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
-
-/*
-    // 1505253:29:AGAGAGGGAGGGAGAGAGAGAGA
-    // 1505254:3:GGG
-    GVA_Variant const lhs = {1505253, 1505282, {23, "AGAGAGGGAGGGAGAGAGAGAGA"}};
-    GVA_Variant const rhs = {1505254, 1505257, {3, "GGG"}};
-
-    uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs.end - lhs.start, reference.str + lhs.start, lhs.sequence.len, lhs.sequence.str);
-    uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs.end - rhs.start, reference.str + rhs.start, rhs.sequence.len, rhs.sequence.str);
-
-    dfa_svg(stderr, reference.len, reference.str, lhs, lhs_dfa);
-    dfa_svg(stderr, reference.len, reference.str, rhs, rhs_dfa);
-
-    fprintf(stderr, "disjoint: %d\n", dfa_disjoint(lhs, lhs_dfa, rhs, rhs_dfa));
-
-    rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
-    lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
-
-    gva_string_destroy(gva_std_allocator, reference);
-
-    return EXIT_SUCCESS;
-*/
 
     errno = 0;
     stream = fopen(argv[2], "r");
@@ -980,10 +837,8 @@ hgvs_main(int argc, char* argv[static argc])
 int
 main(int argc, char* argv[static argc])
 {
-    return hgvs_main(argc, argv);
+    // return hgvs_main(argc, argv);
     // return allele_main(argc, argv);
-    // return index_main(argc, argv);
-    // return supremal_main(argc, argv);
-    // return overlap_main(argc, argv);
+    return index_main(argc, argv);
     // return all_main(argc, argv);
 } // main
