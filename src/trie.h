@@ -21,10 +21,10 @@ typedef struct
 
 typedef struct
 {
-    char* restrict     strings;
+    char* restrict      strings;
     Trie_Node* restrict nodes;
-    GVA_Allocator      allocator;
-    gva_uint           root;
+    GVA_Allocator       allocator;
+    gva_uint            root;
 } Trie;
 
 
