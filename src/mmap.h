@@ -3,6 +3,9 @@
 #define GVA_MMAP_H
 
 
+// FIXME: proper header + source
+
+
 #include <errno.h>      // errno
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // stderr, stdout, fprintf
@@ -120,7 +123,7 @@ mmap_allocator_init(char const path[static 1])
         if (madvise(ctx->addr, ctx->len, MADV_SEQUENTIAL | MADV_WILLNEED))
         {
             // not critical
-            fprintf(stderr, "ERROR: %s\n", strerror(errno));
+            fprintf(stderr, "madvise: %s\n", strerror(errno));
         } // if
     } // if
 
@@ -147,9 +150,15 @@ mmap_allocator_destroy(GVA_Allocator const allocator)
 
 
 static inline void*
-array_load(char* const ptr)
+array_load(void* const ptr)
 {
-    return ptr == NULL ? NULL : ptr + sizeof(Array);
+    if (ptr == NULL)
+    {
+        return NULL;
+    } // if
+
+    MMAP_Context* const ctx = ptr;
+    return ctx->addr;
 } // array_load
 
 #endif  // GVA_MMAP_H

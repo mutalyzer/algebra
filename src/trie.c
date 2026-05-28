@@ -8,12 +8,16 @@
 #include "array.h"  // ARRAY_*, array_*
 #include "trie.h"   // Trie, Trie_Node, trie_*
 
+#include "mmap.h"
+
 
 inline Trie
 trie_init(GVA_Allocator const nodes_allocator, GVA_Allocator const strings_allocator)
 {
     return (Trie)
     {
+        .strings = array_load(strings_allocator.context),
+        .nodes = array_load(nodes_allocator.context),
         .nodes_allocator = nodes_allocator,
         .strings_allocator = strings_allocator,
         .root = GVA_NULL,
