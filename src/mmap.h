@@ -1,3 +1,8 @@
+// NOT FREESTANDING
+#ifndef GVA_MMAP_H
+#define GVA_MMAP_H
+
+
 #include <errno.h>      // errno
 #include <stddef.h>     // NULL, size_t
 #include <stdio.h>      // stderr, stdout, fprintf
@@ -83,6 +88,7 @@ mmap_allocator_init(char const path[static 1])
     if (ctx->fd == -1)
     {
         fprintf(stderr, "open(): %s\n", strerror(errno));
+        free(ctx);
         return (GVA_Allocator) {NULL};
     } // if
 
@@ -92,6 +98,7 @@ mmap_allocator_init(char const path[static 1])
     {
         fprintf(stderr, "fstat(): %s\n", strerror(errno));
         close(ctx->fd);
+        free(ctx);
         return (GVA_Allocator) {NULL};
     } // if
 
@@ -104,6 +111,8 @@ mmap_allocator_init(char const path[static 1])
         if (ctx->addr == MAP_FAILED)
         {
             fprintf(stderr, "mmap(): %s\n", strerror(errno));
+            close(ctx->fd);
+            free(ctx);
             return (GVA_Allocator) {NULL};
         } // if
 
@@ -142,3 +151,5 @@ array_load(char* const ptr)
 {
     return ptr == NULL ? NULL : ptr + sizeof(Array);
 } // array_load
+
+#endif  // GVA_MMAP_H
