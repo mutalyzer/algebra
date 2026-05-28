@@ -158,7 +158,8 @@ array_load(void* const ptr)
     } // if
 
     MMAP_Context* const ctx = ptr;
-    return ctx->addr == NULL ? NULL : ctx->addr + sizeof(Array);
+    return ctx->addr == NULL ? NULL : (char*) ctx->addr + sizeof(Array);
 } // array_load
+
 
 #endif  // GVA_MMAP_H
