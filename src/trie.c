@@ -12,7 +12,9 @@
 
 
 inline Trie
-trie_init(GVA_Allocator const nodes_allocator, GVA_Allocator const strings_allocator)
+trie_init(GVA_Allocator const nodes_allocator,
+    GVA_Allocator const strings_allocator,
+    gva_uint const root)
 {
     return (Trie)
     {
@@ -20,7 +22,7 @@ trie_init(GVA_Allocator const nodes_allocator, GVA_Allocator const strings_alloc
         .nodes = array_load(nodes_allocator.context),
         .nodes_allocator = nodes_allocator,
         .strings_allocator = strings_allocator,
-        .root = GVA_NULL,
+        .root = root,
     };
 } // trie_init
 

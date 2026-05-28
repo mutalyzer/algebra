@@ -30,7 +30,9 @@ typedef struct
 
 
 Trie
-trie_init(GVA_Allocator const nodes_allocator, GVA_Allocator const strings_allocator);
+trie_init(GVA_Allocator const nodes_allocator,
+    GVA_Allocator const strings_allocator,
+    gva_uint const root);
 
 
 void

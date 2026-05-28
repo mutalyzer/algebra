@@ -36,7 +36,7 @@ typedef struct
 
 
 Interval_Tree
-interval_tree_init(GVA_Allocator const allocator);
+interval_tree_init(GVA_Allocator const allocator, gva_uint const root);
 
 
 void

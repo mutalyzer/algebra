@@ -109,12 +109,12 @@ gva_index_init(GVA_Allocator const allocator,
     index->allocators.alleles = mmap_allocator_init("blobs/alleles");
     index->allocators.join = mmap_allocator_init("blobs/join");
 
-    index->intervals = interval_tree_init(index->allocators.intervals);
+    index->intervals = interval_tree_init(index->allocators.intervals, GVA_NULL);
     index->intervals.nodes = array_load(index->allocators.intervals.context);
 
-    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings);
-    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings);
-    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings);
+    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings, GVA_NULL);
+    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings, GVA_NULL);
+    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings, GVA_NULL);
 
     index->alleles = array_load(index->allocators.alleles.context);
     index->join = array_load(index->allocators.join.context);

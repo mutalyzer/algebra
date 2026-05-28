@@ -123,7 +123,7 @@ mmap_allocator_init(char const path[static 1])
         if (madvise(ctx->addr, ctx->len, MADV_SEQUENTIAL | MADV_WILLNEED))
         {
             // not critical
-            fprintf(stderr, "madvise: %s\n", strerror(errno));
+            fprintf(stderr, "madvise(): %s\n", strerror(errno));
         } // if
     } // if
 
