@@ -14,7 +14,7 @@ TEST_COVS  = $(TESTS:.c=.c.gcov)
 TARGET     = a.out
 
 CC         = gcc
-CFLAGS     = -std=c99 -march=native -Wall -Wextra -Wpedantic -fanalyzer
+CFLAGS     = -std=c99 -march=native -Wall -Wextra -Wpedantic -fanalyzer -D_GNU_SOURCE
 
 MEMCHECK   = valgrind -q --leak-check=full --error-exitcode=1
 

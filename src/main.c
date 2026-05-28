@@ -629,9 +629,9 @@ all_main(int argc, char* argv[static argc])
         return EXIT_FAILURE;
     } // if
 
-    Trie labels = trie_init(gva_std_allocator);
-    Trie sequences = trie_init(gva_std_allocator);
-    Trie dfas = trie_init(gva_std_allocator);
+    Trie labels = trie_init(gva_std_allocator, gva_std_allocator);
+    Trie sequences = trie_init(gva_std_allocator, gva_std_allocator);
+    Trie dfas = trie_init(gva_std_allocator, gva_std_allocator);
     Entry* entries = NULL;
 
     size_t line_count = 0;

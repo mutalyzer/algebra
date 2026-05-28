@@ -23,13 +23,14 @@ typedef struct
 {
     char* restrict      strings;
     Trie_Node* restrict nodes;
-    GVA_Allocator       allocator;
+    GVA_Allocator       nodes_allocator;
+    GVA_Allocator       strings_allocator;
     gva_uint            root;
 } Trie;
 
 
 Trie
-trie_init(GVA_Allocator const allocator);
+trie_init(GVA_Allocator const nodes_allocator, GVA_Allocator const strings_allocator);
 
 
 void

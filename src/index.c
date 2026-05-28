@@ -19,6 +19,7 @@
 #include "interval_tree.h"      // Interval_Tree, interval_tree_*
 #include "trie.h"               // Trie, trie_*
 
+#include "mmap.h"
 
 #include <stdio.h>      // FIXME: DEBUG
 
@@ -38,6 +39,20 @@ typedef struct
 } Allele;
 
 
+struct allocators
+{
+    GVA_Allocator intervals;
+    GVA_Allocator inserted_nodes;
+    GVA_Allocator inserted_strings;
+    GVA_Allocator dfas_nodes;
+    GVA_Allocator dfas_strings;
+    GVA_Allocator ids_nodes;
+    GVA_Allocator ids_strings;
+    GVA_Allocator alleles;
+    GVA_Allocator join;
+};
+
+
 struct GVA_Index
 {
     GVA_Allocator allocator;
@@ -48,6 +63,7 @@ struct GVA_Index
     Trie          ids;
     Allele*       alleles;
     Join*         join;
+    struct allocators allocators;
 };
 
 
@@ -83,11 +99,21 @@ gva_index_init(GVA_Allocator const allocator,
     index->allocator = allocator;
     index->reference = (GVA_String) {len, reference};
 
-    index->intervals = interval_tree_init(allocator);
-    index->inserted = trie_init(allocator);
-    index->dfas = trie_init(allocator);
+    index->allocators.intervals = mmap_allocator_init("blobs/intervals");
+    index->allocators.inserted_nodes = mmap_allocator_init("blobs/inserted_nodes");
+    index->allocators.inserted_strings = mmap_allocator_init("blobs/inserted_strings");
+    index->allocators.dfas_nodes = mmap_allocator_init("blobs/dfas_nodes");
+    index->allocators.dfas_strings = mmap_allocator_init("blobs/dfas_strings");
+    index->allocators.ids_nodes = mmap_allocator_init("blobs/ids_nodes");
+    index->allocators.ids_strings = mmap_allocator_init("blobs/ids_strings");
+    index->allocators.alleles = mmap_allocator_init("blobs/alleles");
+    index->allocators.join = mmap_allocator_init("blobs/join");
 
-    index->ids = trie_init(allocator);
+    index->intervals = interval_tree_init(index->allocators.intervals);
+    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings);
+    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings);
+
+    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings);
 
     index->alleles = NULL;
     index->join = NULL;
@@ -108,8 +134,13 @@ gva_index_destroy(GVA_Index* const self)
     trie_destroy(&self->inserted);
     trie_destroy(&self->dfas);
     trie_destroy(&self->ids);
-    self->alleles = ARRAY_DESTROY(self->allocator, self->alleles);
-    self->join = ARRAY_DESTROY(self->allocator, self->join);
+    self->alleles = ARRAY_DESTROY(self->allocators.alleles, self->alleles);
+    self->join = ARRAY_DESTROY(self->allocators.join, self->join);
+
+    mmap_allocator_destroy(self->allocators.alleles);
+    mmap_allocator_destroy(self->allocators.join);
+    mmap_allocator_destroy(self->allocators.intervals);
+
 
     return self->allocator.allocate(self->allocator.context, self, sizeof(*self), 0);
 } // gva_index_destroy
@@ -127,7 +158,7 @@ gva_index_insert(GVA_Index* restrict const self,
     if (array_length(self->alleles) == 0 ||
         self->alleles[allele_idx].id_idx != id_idx)
     {
-        allele_idx = ARRAY_APPEND(self->allocator, self->alleles,
+        allele_idx = ARRAY_APPEND(self->allocators.alleles, self->alleles,
             ((Allele)
             {
                 .id_idx = id_idx,
@@ -138,7 +169,7 @@ gva_index_insert(GVA_Index* restrict const self,
     // add variant
     gva_uint const inserted_idx = trie_insert(&self->inserted,
         variant.sequence.len, variant.sequence.str);
-    gva_uint const tmp_idx = ARRAY_APPEND(self->allocator, self->intervals.nodes,
+    gva_uint const tmp_idx = ARRAY_APPEND(self->allocators.intervals, self->intervals.nodes,
         ((Interval_Tree_Node)
         {
             .child = {GVA_NULL, GVA_NULL},
@@ -165,7 +196,7 @@ gva_index_insert(GVA_Index* restrict const self,
         // undo append: interval already in the tree
         array_header(self->intervals.nodes)->length -= 1;
     } // else
-    self->intervals.nodes[node_idx].alleles = ARRAY_APPEND(self->allocator, self->join,
+    self->intervals.nodes[node_idx].alleles = ARRAY_APPEND(self->allocators.join, self->join,
         ((Join)
         {
             .link = node_idx ^ allele_idx,
