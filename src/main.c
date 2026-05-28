@@ -727,11 +727,11 @@ all_main(int argc, char* argv[static argc])
                 GVA_String lhs_dfa = trie_string(dfas, entries[i].dfa);
                 GVA_String rhs_dfa = trie_string(dfas, entries[j].dfa);
 
-                //size_t const overlap = dfa_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
-                bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
+                size_t const overlap = dfa_overlap(gva_std_allocator, reference.len, reference.str, lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
+                // bool const disjoint = dfa_disjoint(lhs, (uint8_t*) lhs_dfa.str, rhs, (uint8_t*) rhs_dfa.str);
 
-                if (disjoint)
-                // if (overlap == 0)
+                // if (disjoint)
+                if (overlap == 0)
                 {
                     fprintf(stdout, GVA_STRING_FMT " disjoint " GVA_STRING_FMT "\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
@@ -739,10 +739,10 @@ all_main(int argc, char* argv[static argc])
                 } // if
                 else
                 {
-                    fprintf(stdout, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %d\n",
+                    fprintf(stdout, GVA_STRING_FMT " overlap " GVA_STRING_FMT " %zu\n",
                         GVA_STRING_PRINT(trie_string(labels, entries[i].label)),
                         GVA_STRING_PRINT(trie_string(labels, entries[j].label)),
-                        1);
+                        overlap);
                 } // else
             } // for
         } // for
