@@ -162,8 +162,6 @@ gva_index_destroy(GVA_Index* const self)
         return NULL;
     } // if
 
-    fprintf(stderr, "%u\n", self->intervals.root);
-
     self->meta->intervals_root = self->intervals.root;
     self->meta->inserted_root = self->inserted.root;
     self->meta->dfas_root = self->dfas.root;
@@ -176,10 +174,16 @@ gva_index_destroy(GVA_Index* const self)
     self->alleles = ARRAY_DESTROY(self->allocators.alleles, self->alleles);
     self->join = ARRAY_DESTROY(self->allocators.join, self->join);
 
+    mmap_allocator_destroy(self->allocators.meta);
+    mmap_allocator_destroy(self->allocators.intervals);
+    mmap_allocator_destroy(self->allocators.inserted_nodes);
+    mmap_allocator_destroy(self->allocators.inserted_strings);
+    mmap_allocator_destroy(self->allocators.dfas_nodes);
+    mmap_allocator_destroy(self->allocators.dfas_strings);
+    mmap_allocator_destroy(self->allocators.ids_nodes);
+    mmap_allocator_destroy(self->allocators.ids_strings);
     mmap_allocator_destroy(self->allocators.alleles);
     mmap_allocator_destroy(self->allocators.join);
-    mmap_allocator_destroy(self->allocators.intervals);
-    mmap_allocator_destroy(self->allocators.meta);
 
     return self->allocator.allocate(self->allocator.context, self, sizeof(*self), 0);
 } // gva_index_destroy
