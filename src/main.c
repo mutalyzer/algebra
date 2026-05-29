@@ -435,6 +435,7 @@ index_main(int argc, char* argv[static argc])
     fclose(stream);
 
     fprintf(stderr, "Index populated\n");
+    gva_index_stats(index);
 
     line_count = 0;
     while (fgets(line, sizeof(line), stdin) != NULL)

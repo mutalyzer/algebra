@@ -39,8 +39,9 @@ typedef struct
 } Allele;
 
 
-struct allocators
+typedef struct
 {
+    GVA_Allocator meta;
     GVA_Allocator intervals;
     GVA_Allocator inserted_nodes;
     GVA_Allocator inserted_strings;
@@ -50,12 +51,23 @@ struct allocators
     GVA_Allocator ids_strings;
     GVA_Allocator alleles;
     GVA_Allocator join;
-};
+} Allocators;
+
+
+typedef struct
+{
+    gva_uint intervals_root;
+    gva_uint inserted_root;
+    gva_uint dfas_root;
+    gva_uint ids_root;
+} Meta;
 
 
 struct GVA_Index
 {
     GVA_Allocator allocator;
+    Allocators    allocators;
+    Meta*         meta;
     GVA_String    reference;
     Interval_Tree intervals;
     Trie          inserted;
@@ -63,7 +75,6 @@ struct GVA_Index
     Trie          ids;
     Allele*       alleles;
     Join*         join;
-    struct allocators allocators;
 };
 
 
@@ -93,11 +104,31 @@ gva_index_init(GVA_Allocator const allocator,
     GVA_Index* index = allocator.allocate(allocator.context, NULL, 0, sizeof(*index));
     if (index == NULL)
     {
-        return NULL;
+        return NULL;  // OOM
     } // if
 
     index->allocator = allocator;
     index->reference = (GVA_String) {len, reference};
+
+    index->allocators.meta = mmap_allocator_init("blobs/meta");
+    if (index->allocators.meta.context == NULL || ((MMAP_Context*) index->allocators.meta.context)->addr == NULL)
+    {
+        index->meta = index->allocators.meta.allocate(index->allocators.meta.context, NULL, 0, sizeof(*index->meta));
+        if (index->meta == NULL)
+        {
+            index = allocator.allocate(allocator.context, index, sizeof(*index), 0);
+            return NULL;  // error
+        } // if
+        index->meta->intervals_root = GVA_NULL;
+        index->meta->inserted_root = GVA_NULL;
+        index->meta->dfas_root = GVA_NULL;
+        index->meta->ids_root = GVA_NULL;
+    } // if
+    else
+    {
+        // load meta data
+        index->meta = ((MMAP_Context*) index->allocators.meta.context)->addr;
+    } // else
 
     index->allocators.intervals = mmap_allocator_init("blobs/intervals");
     index->allocators.inserted_nodes = mmap_allocator_init("blobs/inserted_nodes");
@@ -109,12 +140,12 @@ gva_index_init(GVA_Allocator const allocator,
     index->allocators.alleles = mmap_allocator_init("blobs/alleles");
     index->allocators.join = mmap_allocator_init("blobs/join");
 
-    index->intervals = interval_tree_init(index->allocators.intervals, GVA_NULL);
+    index->intervals = interval_tree_init(index->allocators.intervals, index->meta->intervals_root);
     index->intervals.nodes = array_load(index->allocators.intervals.context);
 
-    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings, GVA_NULL);
-    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings, GVA_NULL);
-    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings, GVA_NULL);
+    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings, index->meta->inserted_root);
+    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings, index->meta->dfas_root);
+    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings, index->meta->ids_root);
 
     index->alleles = array_load(index->allocators.alleles.context);
     index->join = array_load(index->allocators.join.context);
@@ -131,6 +162,13 @@ gva_index_destroy(GVA_Index* const self)
         return NULL;
     } // if
 
+    fprintf(stderr, "%u\n", self->intervals.root);
+
+    self->meta->intervals_root = self->intervals.root;
+    self->meta->inserted_root = self->inserted.root;
+    self->meta->dfas_root = self->dfas.root;
+    self->meta->ids_root = self->ids.root;
+
     interval_tree_destroy(&self->intervals);
     trie_destroy(&self->inserted);
     trie_destroy(&self->dfas);
@@ -141,7 +179,7 @@ gva_index_destroy(GVA_Index* const self)
     mmap_allocator_destroy(self->allocators.alleles);
     mmap_allocator_destroy(self->allocators.join);
     mmap_allocator_destroy(self->allocators.intervals);
-
+    mmap_allocator_destroy(self->allocators.meta);
 
     return self->allocator.allocate(self->allocator.context, self, sizeof(*self), 0);
 } // gva_index_destroy
