@@ -43,6 +43,11 @@ mmap_allocate(void* const restrict context, void* const restrict ptr, size_t con
         return NULL;
     } // if
 
+    if (ctx->len < 4096)
+    {
+        ctx->len = 4096;
+    } // if
+
     if (ctx->addr == NULL)
     {
         errno = 0;
