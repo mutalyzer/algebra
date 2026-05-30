@@ -6,20 +6,19 @@
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, GVA_Query_Result, gva_index_*
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
+#include "../include/mmap_alloc.h"  // GVA_Mmap_Context, gva_mmap_*
 #include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS,
                                     // GVA_DISJOINT, GVA_EQUIVALENT,
                                     // GVA_IS_CONTAINED
 #include "../include/string.h"      // GVA_String
 #include "../include/types.h"       // GVA_NULL, GVA_Interval, gva_uint
 #include "../include/variant.h"     // GVA_Variant, gva_patch, gva_variant_dup
-#include "array.h"              // ARRAY_*, array_length
+#include "array.h"              // ARRAY_*, array_*
 #include "common.h"             // ABS, MAX, MIN
 #include "dfa.h"                // dfa_*
 #include "hash_table.h"         // HASH_TABLE_*, hash_table_*
 #include "interval_tree.h"      // Interval_Tree, interval_tree_*
 #include "trie.h"               // Trie, trie_*
-
-#include "mmap.h"
 
 #include <stdio.h>      // FIXME: DEBUG
 
@@ -39,35 +38,9 @@ typedef struct
 } Allele;
 
 
-typedef struct
-{
-    GVA_Allocator meta;
-    GVA_Allocator intervals;
-    GVA_Allocator inserted_nodes;
-    GVA_Allocator inserted_strings;
-    GVA_Allocator dfas_nodes;
-    GVA_Allocator dfas_strings;
-    GVA_Allocator ids_nodes;
-    GVA_Allocator ids_strings;
-    GVA_Allocator alleles;
-    GVA_Allocator join;
-} Allocators;
-
-
-typedef struct
-{
-    gva_uint intervals_root;
-    gva_uint inserted_root;
-    gva_uint dfas_root;
-    gva_uint ids_root;
-} Meta;
-
-
 struct GVA_Index
 {
-    GVA_Allocator allocator;
-    Allocators    allocators;
-    Meta*         meta;
+    GVA_Index_Allocators allocators;
     GVA_String    reference;
     Interval_Tree intervals;
     Trie          inserted;
@@ -98,54 +71,24 @@ dfa_from_index(GVA_Index const self[static 1], size_t const idx)
 
 
 inline GVA_Index*
-gva_index_init(GVA_Allocator const allocator,
+gva_index_init(GVA_Index_Allocators const allocators,
     size_t const len, char const reference[static len])
 {
-    GVA_Index* index = allocator.allocate(allocator.context, NULL, 0, sizeof(*index));
+    GVA_Index* index = allocators.heap.allocate(allocators.heap.context, NULL, 0, sizeof(*index));
     if (index == NULL)
     {
         return NULL;  // OOM
     } // if
 
-    index->allocator = allocator;
+    index->allocators = allocators;
     index->reference = (GVA_String) {len, reference};
 
-    index->allocators.meta = mmap_allocator_init("blobs/meta");
-    if (index->allocators.meta.context == NULL || ((MMAP_Context*) index->allocators.meta.context)->addr == NULL)
-    {
-        index->meta = index->allocators.meta.allocate(index->allocators.meta.context, NULL, 0, sizeof(*index->meta));
-        if (index->meta == NULL)
-        {
-            index = allocator.allocate(allocator.context, index, sizeof(*index), 0);
-            return NULL;  // error
-        } // if
-        index->meta->intervals_root = GVA_NULL;
-        index->meta->inserted_root = GVA_NULL;
-        index->meta->dfas_root = GVA_NULL;
-        index->meta->ids_root = GVA_NULL;
-    } // if
-    else
-    {
-        // load meta data
-        index->meta = ((MMAP_Context*) index->allocators.meta.context)->addr;
-    } // else
-
-    index->allocators.intervals = mmap_allocator_init("blobs/intervals");
-    index->allocators.inserted_nodes = mmap_allocator_init("blobs/inserted_nodes");
-    index->allocators.inserted_strings = mmap_allocator_init("blobs/inserted_strings");
-    index->allocators.dfas_nodes = mmap_allocator_init("blobs/dfas_nodes");
-    index->allocators.dfas_strings = mmap_allocator_init("blobs/dfas_strings");
-    index->allocators.ids_nodes = mmap_allocator_init("blobs/ids_nodes");
-    index->allocators.ids_strings = mmap_allocator_init("blobs/ids_strings");
-    index->allocators.alleles = mmap_allocator_init("blobs/alleles");
-    index->allocators.join = mmap_allocator_init("blobs/join");
-
-    index->intervals = interval_tree_init(index->allocators.intervals, index->meta->intervals_root);
+    index->intervals = interval_tree_init(index->allocators.intervals, GVA_NULL);
     index->intervals.nodes = array_load(index->allocators.intervals.context);
 
-    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings, index->meta->inserted_root);
-    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings, index->meta->dfas_root);
-    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings, index->meta->ids_root);
+    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings, GVA_NULL);
+    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings, GVA_NULL);
+    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings, GVA_NULL);
 
     index->alleles = array_load(index->allocators.alleles.context);
     index->join = array_load(index->allocators.join.context);
@@ -162,11 +105,6 @@ gva_index_destroy(GVA_Index* const self)
         return NULL;
     } // if
 
-    self->meta->intervals_root = self->intervals.root;
-    self->meta->inserted_root = self->inserted.root;
-    self->meta->dfas_root = self->dfas.root;
-    self->meta->ids_root = self->ids.root;
-
     interval_tree_destroy(&self->intervals);
     trie_destroy(&self->inserted);
     trie_destroy(&self->dfas);
@@ -174,18 +112,7 @@ gva_index_destroy(GVA_Index* const self)
     self->alleles = ARRAY_DESTROY(self->allocators.alleles, self->alleles);
     self->join = ARRAY_DESTROY(self->allocators.join, self->join);
 
-    mmap_allocator_destroy(self->allocators.meta);
-    mmap_allocator_destroy(self->allocators.intervals);
-    mmap_allocator_destroy(self->allocators.inserted_nodes);
-    mmap_allocator_destroy(self->allocators.inserted_strings);
-    mmap_allocator_destroy(self->allocators.dfas_nodes);
-    mmap_allocator_destroy(self->allocators.dfas_strings);
-    mmap_allocator_destroy(self->allocators.ids_nodes);
-    mmap_allocator_destroy(self->allocators.ids_strings);
-    mmap_allocator_destroy(self->allocators.alleles);
-    mmap_allocator_destroy(self->allocators.join);
-
-    return self->allocator.allocate(self->allocator.context, self, sizeof(*self), 0);
+    return self->allocators.heap.allocate(self->allocators.heap.context, self, sizeof(*self), 0);
 } // gva_index_destroy
 
 
@@ -226,13 +153,13 @@ gva_index_insert(GVA_Index* restrict const self,
     gva_uint const node_idx = interval_tree_insert(&self->intervals, tmp_idx);
     if (node_idx == tmp_idx)
     {
-        uint8_t* dfa = dfa_from_alignment(self->allocator, NULL,
+        uint8_t* dfa = dfa_from_alignment(self->allocators.heap, NULL,
             variant.end - variant.start, self->reference.str + variant.start,
             variant.sequence.len, variant.sequence.str);
 
         self->intervals.nodes[node_idx].dfa = trie_insert(&self->dfas, array_length(dfa), (char*) dfa);
 
-        dfa = ARRAY_DESTROY(self->allocator, dfa);
+        dfa = ARRAY_DESTROY(self->allocators.heap, dfa);
     } // if
     else
     {

@@ -48,6 +48,11 @@ array_ensure(GVA_Allocator const allocator, void* const self,
     size_t const item_size, size_t const extra);
 
 
+// Internal: Returns an array from raw memory.
+void*
+array_load(char* const ptr);
+
+
 // Destroys an array. Does not destroy the elements of the array.
 // Returns `NULL`.
 // Usage:

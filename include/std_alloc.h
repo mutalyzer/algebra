@@ -1,39 +1,19 @@
-// NOT FREESTANDING
 #ifndef GVA_STD_ALLOC_H
 #define GVA_STD_ALLOC_H
 
 
-#include <stddef.h>         // NULL, size_t
-#include <stdlib.h>         // free, realloc
+#include <stddef.h>         // size_t
 
 #include "allocator.h"      // GVA_Allocator
 
 
-// Provides a simple global allocation strategy based on `realloc` from
-// libc.
-static inline void*
-gva_std_allocate(void* const restrict context, void* const restrict ptr, size_t const old_size, size_t const new_size)
-{
-    (void) context;
-    (void) old_size;
-
-    if (new_size == 0)
-    {
-        free(ptr);
-        return NULL;
-    } // if
-
-    void* const new_ptr = realloc(ptr, new_size);
-    if (new_ptr == NULL)
-    {
-        free(ptr);
-        return NULL;  // OOM
-    } // if
-
-    return new_ptr;
-} // gva_std_allocate
+// Provides a simple global allocation strategy based on `realloc` from libc.
+void*
+gva_std_allocate(void* const restrict context, void* const restrict ptr,
+    size_t const old_size, size_t const new_size);
 
 
+// Global general purpose allocator.
 static GVA_Allocator const gva_std_allocator = { .allocate = gva_std_allocate };
 
 

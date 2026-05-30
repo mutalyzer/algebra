@@ -1,7 +1,7 @@
 #include <stddef.h>     // NULL, size_t
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "array.h"       // GVA_Array, gva_array_*
+#include "array.h"       // Array, array_*
 
 
 inline void*
@@ -12,10 +12,7 @@ array_init(GVA_Allocator const allocator, size_t const capacity,
     {
         return NULL;  // Empty array
     } // if
-    Array* const header = allocator.allocate(
-        allocator.context,
-        NULL,
-        0,
+    Array* const header = allocator.allocate(allocator.context, NULL, 0,
         sizeof(*header) + capacity * item_size  // OVERFLOW
     );
     if (header == NULL)
@@ -80,3 +77,10 @@ array_ensure(GVA_Allocator const allocator, void* const self,
     new_header->capacity = new_capacity;
     return new_header + 1;
 } // array_ensure
+
+
+inline void*
+array_load(char* const ptr)
+{
+    return ptr == NULL ? NULL : ptr + sizeof(Array);
+} // array_load

@@ -8,8 +8,6 @@
 #include "array.h"  // ARRAY_*, array_*
 #include "trie.h"   // Trie, Trie_Node, trie_*
 
-#include "mmap.h"
-
 
 inline Trie
 trie_init(GVA_Allocator const nodes_allocator,

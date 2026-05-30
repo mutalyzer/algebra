@@ -49,8 +49,23 @@ typedef struct
 } GVA_Query_Result;
 
 
+typedef struct
+{
+    GVA_Allocator heap;
+    GVA_Allocator intervals;
+    GVA_Allocator inserted_strings;
+    GVA_Allocator inserted_nodes;
+    GVA_Allocator dfas_strings;
+    GVA_Allocator dfas_nodes;
+    GVA_Allocator ids_strings;
+    GVA_Allocator ids_nodes;
+    GVA_Allocator alleles;
+    GVA_Allocator join;
+} GVA_Index_Allocators;
+
+
 GVA_Index*
-gva_index_init(GVA_Allocator const allocator,
+gva_index_init(GVA_Index_Allocators const allocators,
     size_t const len_ref, char const reference[static len_ref]);
 
 
@@ -86,6 +101,7 @@ gva_index_variant(GVA_Index const* const self,
 size_t
 gva_index_variant_distance(GVA_Index const* const self,
     size_t const allele_idx, size_t const variant_idx);
+
 
 void
 gva_index_stats(GVA_Index const* const self);
