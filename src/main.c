@@ -287,25 +287,27 @@ index_main(int argc, char* argv[static argc])
     GVA_Index_Allocators const allocators =
     {
         .heap = gva_std_allocator,
-        //.meta = gva_std_allocator,
+        /*
+        .meta = gva_std_allocator,
+        .intervals = gva_std_allocator,
+        .inserted_strings = gva_std_allocator,
+        .inserted_nodes = gva_std_allocator,
+        .dfas_strings = gva_std_allocator,
+        .dfas_nodes = gva_std_allocator,
+        .ids_strings = gva_std_allocator,
+        .ids_nodes = gva_std_allocator,
+        .alleles = gva_std_allocator,
+        .join = gva_std_allocator,
+        */
         .meta = { .allocate = gva_mmap_allocate, .context = &meta_ctx },
-        //.intervals = gva_std_allocator,
         .intervals = { .allocate = gva_mmap_allocate, .context = &intervals_ctx },
-        //.inserted_strings = gva_std_allocator,
         .inserted_strings = { .allocate = gva_mmap_allocate, .context = &inserted_strings_ctx },
-        //.inserted_nodes = gva_std_allocator,
         .inserted_nodes = { .allocate = gva_mmap_allocate, .context = &inserted_nodes_ctx },
-        //.dfas_strings = gva_std_allocator,
         .dfas_strings = { .allocate = gva_mmap_allocate, .context = &dfas_strings_ctx },
-        //.dfas_nodes = gva_std_allocator,
         .dfas_nodes = { .allocate = gva_mmap_allocate, .context = &dfas_nodes_ctx },
-        //.ids_strings = gva_std_allocator,
         .ids_strings = { .allocate = gva_mmap_allocate, .context = &ids_strings_ctx },
-        //.ids_nodes = gva_std_allocator,
         .ids_nodes = { .allocate = gva_mmap_allocate, .context = &ids_nodes_ctx },
-        //.alleles = gva_std_allocator,
         .alleles = { .allocate = gva_mmap_allocate, .context = &alleles_ctx },
-        //.join = gva_std_allocator,
         .join = { .allocate = gva_mmap_allocate, .context = &join_ctx },
     };
 

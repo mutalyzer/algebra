@@ -98,6 +98,10 @@ gva_index_init(GVA_Index_Allocators const allocators,
         {
             return allocators.heap.allocate(allocators.heap.context, index, sizeof(*index), 0);  // OOM
         } // if
+        index->meta->intervals_root = GVA_NULL;
+        index->meta->inserted_root = GVA_NULL;
+        index->meta->dfas_root = GVA_NULL;
+        index->meta->ids_root = GVA_NULL;
     } // if
     else
     {
@@ -111,6 +115,13 @@ gva_index_init(GVA_Index_Allocators const allocators,
     index->ids = trie_init(index->allocators.ids_strings, index->allocators.ids_nodes, index->meta->ids_root);
     index->alleles = array_load(index->allocators.alleles.context);
     index->join = array_load(index->allocators.join.context);
+
+    fprintf(stderr, "intervals root: %d\n", index->intervals.root);
+    fprintf(stderr, "inserted root: %d\n", index->inserted.root);
+    fprintf(stderr, "dfas root: %d\n", index->dfas.root);
+    fprintf(stderr, "ids root: %d\n", index->ids.root);
+
+    gva_index_stats(index);
 
     return index;
 } // gva_index_init
@@ -128,6 +139,11 @@ gva_index_destroy(GVA_Index* const self)
     self->meta->inserted_root = self->inserted.root;
     self->meta->dfas_root = self->dfas.root;
     self->meta->ids_root = self->ids.root;
+
+    fprintf(stderr, "intervals root: %d\n", self->intervals.root);
+    fprintf(stderr, "inserted root: %d\n", self->inserted.root);
+    fprintf(stderr, "dfas root: %d\n", self->dfas.root);
+    fprintf(stderr, "ids root: %d\n", self->ids.root);
 
     self->meta = self->allocators.meta.allocate(self->allocators.meta.context, self->meta, sizeof(*self->meta), 0);
     interval_tree_destroy(&self->intervals);
@@ -159,6 +175,10 @@ gva_index_insert(GVA_Index* restrict const self,
                 .id_idx = id_idx,
                 .join.start = array_length(self->join),
             }));
+    } // if
+    else if (self->alleles[allele_idx].id_idx > id_idx)
+    {
+        return;  // allele id is already in the index
     } // if
 
     // add variant
