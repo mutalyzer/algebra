@@ -3,7 +3,7 @@
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/types.h"       // GVA_NULL
-#include "array.h"          // ARRAY_DESTROY
+#include "array.h"          // ARRAY_DESTROY, array_*
 #include "common.h"         // MAX
 #include "interval_tree.h"  // Interval_Tree, interval_tree_*
 
@@ -11,11 +11,17 @@
 inline Interval_Tree
 interval_tree_init(GVA_Allocator const allocator, gva_uint const root)
 {
-    return (Interval_Tree)
+    Interval_Tree tree =
     {
+        .nodes = array_load(allocator.context),
         .allocator = allocator,
         .root = root,
     };
+    if (array_length(tree.nodes) == 0)
+    {
+        tree.root = GVA_NULL;
+    } // if
+    return tree;
 } // interval_tree_init
 
 

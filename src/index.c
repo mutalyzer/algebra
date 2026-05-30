@@ -6,7 +6,6 @@
 #include "../include/edit.h"        // gva_edit_distance
 #include "../include/index.h"       // GVA_Index, GVA_Query_Result, gva_index_*
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
-#include "../include/mmap_alloc.h"  // GVA_Mmap_Context, gva_mmap_*
 #include "../include/relations.h"   // GVA_Relation, GVA_CONTAINS,
                                     // GVA_DISJOINT, GVA_EQUIVALENT,
                                     // GVA_IS_CONTAINED
@@ -38,10 +37,19 @@ typedef struct
 } Allele;
 
 
+typedef struct
+{
+    gva_uint intervals_root;
+    gva_uint inserted_root;
+    gva_uint dfas_root;
+    gva_uint ids_root;
+} Meta;
+
 struct GVA_Index
 {
     GVA_Index_Allocators allocators;
     GVA_String    reference;
+    Meta*         meta;
     Interval_Tree intervals;
     Trie          inserted;
     Trie          dfas;
@@ -83,13 +91,24 @@ gva_index_init(GVA_Index_Allocators const allocators,
     index->allocators = allocators;
     index->reference = (GVA_String) {len, reference};
 
-    index->intervals = interval_tree_init(index->allocators.intervals, GVA_NULL);
-    index->intervals.nodes = array_load(index->allocators.intervals.context);
+    if (allocators.meta.context == NULL)
+    {
+        index->meta = allocators.meta.allocate(allocators.meta.context, NULL, 0, sizeof(*index->meta));
+        if (index->meta == NULL)
+        {
+            return allocators.heap.allocate(allocators.heap.context, index, sizeof(*index), 0);  // OOM
+        } // if
+    } // if
+    else
+    {
+        // load meta data
+        index->meta = (Meta*) *(char**) allocators.meta.context;
+    } // else
 
-    index->inserted = trie_init(index->allocators.inserted_nodes, index->allocators.inserted_strings, GVA_NULL);
-    index->dfas = trie_init(index->allocators.dfas_nodes, index->allocators.dfas_strings, GVA_NULL);
-    index->ids = trie_init(index->allocators.ids_nodes, index->allocators.ids_strings, GVA_NULL);
-
+    index->intervals = interval_tree_init(index->allocators.intervals, index->meta->intervals_root);
+    index->inserted = trie_init(index->allocators.inserted_strings, index->allocators.inserted_nodes, index->meta->inserted_root);
+    index->dfas = trie_init(index->allocators.dfas_strings, index->allocators.dfas_nodes, index->meta->dfas_root);
+    index->ids = trie_init(index->allocators.ids_strings, index->allocators.ids_nodes, index->meta->ids_root);
     index->alleles = array_load(index->allocators.alleles.context);
     index->join = array_load(index->allocators.join.context);
 
@@ -105,6 +124,12 @@ gva_index_destroy(GVA_Index* const self)
         return NULL;
     } // if
 
+    self->meta->intervals_root = self->intervals.root;
+    self->meta->inserted_root = self->inserted.root;
+    self->meta->dfas_root = self->dfas.root;
+    self->meta->ids_root = self->ids.root;
+
+    self->meta = self->allocators.meta.allocate(self->allocators.meta.context, self->meta, sizeof(*self->meta), 0);
     interval_tree_destroy(&self->intervals);
     trie_destroy(&self->inserted);
     trie_destroy(&self->dfas);

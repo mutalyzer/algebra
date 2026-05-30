@@ -52,6 +52,7 @@ typedef struct
 typedef struct
 {
     GVA_Allocator heap;
+    GVA_Allocator meta;
     GVA_Allocator intervals;
     GVA_Allocator inserted_strings;
     GVA_Allocator inserted_nodes;

@@ -44,7 +44,7 @@ array_ensure(GVA_Allocator const allocator, void* const self,
     size_t const item_size, size_t const extra)
 {
     // Initial allocation
-    if (self == NULL)
+    if (self == NULL || array_header(self)->capacity == 0)
     {
         return array_init(allocator, extra, item_size);
     } // if
@@ -80,7 +80,8 @@ array_ensure(GVA_Allocator const allocator, void* const self,
 
 
 inline void*
-array_load(char* const ptr)
+array_load(void* const ptr)
 {
-    return ptr == NULL ? NULL : ptr + sizeof(Array);
+    // This assumes that addr is the first field in an allocator context.
+    return ptr == NULL ? NULL : *(char**) ptr + sizeof(Array);
 } // array_load

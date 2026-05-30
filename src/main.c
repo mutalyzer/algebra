@@ -9,6 +9,7 @@
 #include "../include/compare.h"     // gva_compare_distance
 #include "../include/index.h"       // GVA_Index, gva_index_*, GVA_Query_Result
 #include "../include/lcs_graph.h"   // GVA_LCS_Graph, gva_lcs_graph_*
+#include "../include/mmap_alloc.h"  // GVA_Mmap_Context, gva_mmap_*
 #include "../include/relations.h"   // GVA_RELATION_LABELS
 #include "../include/parser.h"      // gva_parse_spdi
 #include "../include/std_alloc.h"   // gva_std_allocator
@@ -272,18 +273,40 @@ index_main(int argc, char* argv[static argc])
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
+    GVA_Mmap_Context meta_ctx = gva_mmap_context_init("blobs/meta.bin", 0);
+    GVA_Mmap_Context intervals_ctx = gva_mmap_context_init("blobs/intervals.bin", 0);
+    GVA_Mmap_Context inserted_strings_ctx = gva_mmap_context_init("blobs/inserted_strings.bin", 0);
+    GVA_Mmap_Context inserted_nodes_ctx = gva_mmap_context_init("blobs/inserted_nodes.bin", 0);
+    GVA_Mmap_Context dfas_strings_ctx = gva_mmap_context_init("blobs/dfas_strings.bin", 0);
+    GVA_Mmap_Context dfas_nodes_ctx = gva_mmap_context_init("blobs/dfas_nodes.bin", 0);
+    GVA_Mmap_Context ids_strings_ctx = gva_mmap_context_init("blobs/ids_strings.bin", 0);
+    GVA_Mmap_Context ids_nodes_ctx = gva_mmap_context_init("blobs/ids_nodes.bin", 0);
+    GVA_Mmap_Context alleles_ctx = gva_mmap_context_init("blobs/alleles.bin", 0);
+    GVA_Mmap_Context join_ctx = gva_mmap_context_init("blobs/join.bin", 0);
+
     GVA_Index_Allocators const allocators =
     {
         .heap = gva_std_allocator,
-        .intervals = gva_std_allocator,
-        .inserted_strings = gva_std_allocator,
-        .inserted_nodes = gva_std_allocator,
-        .dfas_strings = gva_std_allocator,
-        .dfas_nodes = gva_std_allocator,
-        .ids_strings = gva_std_allocator,
-        .ids_nodes = gva_std_allocator,
-        .alleles = gva_std_allocator,
-        .join = gva_std_allocator,
+        //.meta = gva_std_allocator,
+        .meta = { .allocate = gva_mmap_allocate, .context = &meta_ctx },
+        //.intervals = gva_std_allocator,
+        .intervals = { .allocate = gva_mmap_allocate, .context = &intervals_ctx },
+        //.inserted_strings = gva_std_allocator,
+        .inserted_strings = { .allocate = gva_mmap_allocate, .context = &inserted_strings_ctx },
+        //.inserted_nodes = gva_std_allocator,
+        .inserted_nodes = { .allocate = gva_mmap_allocate, .context = &inserted_nodes_ctx },
+        //.dfas_strings = gva_std_allocator,
+        .dfas_strings = { .allocate = gva_mmap_allocate, .context = &dfas_strings_ctx },
+        //.dfas_nodes = gva_std_allocator,
+        .dfas_nodes = { .allocate = gva_mmap_allocate, .context = &dfas_nodes_ctx },
+        //.ids_strings = gva_std_allocator,
+        .ids_strings = { .allocate = gva_mmap_allocate, .context = &ids_strings_ctx },
+        //.ids_nodes = gva_std_allocator,
+        .ids_nodes = { .allocate = gva_mmap_allocate, .context = &ids_nodes_ctx },
+        //.alleles = gva_std_allocator,
+        .alleles = { .allocate = gva_mmap_allocate, .context = &alleles_ctx },
+        //.join = gva_std_allocator,
+        .join = { .allocate = gva_mmap_allocate, .context = &join_ctx },
     };
 
     GVA_Index* index = gva_index_init(allocators, reference.len, reference.str);
@@ -352,6 +375,17 @@ index_main(int argc, char* argv[static argc])
     } // while
 
     index = gva_index_destroy(index);
+    gva_mmap_context_destroy(&meta_ctx);
+    gva_mmap_context_destroy(&intervals_ctx);
+    gva_mmap_context_destroy(&inserted_strings_ctx);
+    gva_mmap_context_destroy(&inserted_nodes_ctx);
+    gva_mmap_context_destroy(&dfas_strings_ctx);
+    gva_mmap_context_destroy(&dfas_nodes_ctx);
+    gva_mmap_context_destroy(&ids_strings_ctx);
+    gva_mmap_context_destroy(&ids_nodes_ctx);
+    gva_mmap_context_destroy(&alleles_ctx);
+    gva_mmap_context_destroy(&join_ctx);
+
     gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
