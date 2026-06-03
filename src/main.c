@@ -482,6 +482,61 @@ allele_main(int argc, char* argv[static argc])
 } // allele_main
 
 
+int
+overlap_main(int argc, char* argv[static argc])
+{
+    (void) argv;
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        line_count += 1;
+        size_t start = 0;
+        size_t end = 0;
+
+        end = strcspn(line, "\t ");
+        GVA_String reference = {end, line + start};
+
+        start += end + 1;
+        end = strcspn(line + start, "\t ");
+
+        GVA_Variant lhs_variant = {0};
+        if (gva_parse_spdi(end, line + start, &lhs_variant) == 0)
+        {
+            fprintf(stderr, "Error parsing LHS SPDI at line %zu: %s", line_count, line);
+            continue;
+        } // if
+
+        start += end + 1;
+        end = strcspn(line + start, "\n\t ");
+
+        GVA_Variant rhs_variant = {0};
+        if (gva_parse_spdi(end, line + start, &rhs_variant) == 0)
+        {
+            fprintf(stderr, "Error parsing RHS SPDI at line %zu: %s", line_count, line);
+            continue;
+        } // if
+
+        uint8_t* lhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, lhs_variant.end - lhs_variant.start, reference.str + lhs_variant.start, lhs_variant.sequence.len, lhs_variant.sequence.str);
+        uint8_t* rhs_dfa = dfa_from_alignment(gva_std_allocator, NULL, rhs_variant.end - rhs_variant.start, reference.str + rhs_variant.start, rhs_variant.sequence.len, rhs_variant.sequence.str);
+
+        ///dfa_dot(stdout, reference.len, reference.str, lhs_variant, lhs_dfa);
+        ///dfa_dot(stdout, reference.len, reference.str, rhs_variant, rhs_dfa);
+
+        fprintf(stdout, "%zu\n", dfa_overlap(gva_std_allocator,
+            reference.len, reference.str,
+            lhs_variant, lhs_dfa,
+            rhs_variant, rhs_dfa));
+
+        rhs_dfa = ARRAY_DESTROY(gva_std_allocator, rhs_dfa);
+        lhs_dfa = ARRAY_DESTROY(gva_std_allocator, lhs_dfa);
+    } // while
+
+    return EXIT_SUCCESS;
+} // overlap_main
+
+
 typedef struct
 {
     gva_uint start;
