@@ -44,7 +44,7 @@ concat(Trie self[static restrict 1],
     size_t const len, char const key[static restrict len])
 {
     size_t const start = array_length(self->strings);
-    self->strings = array_ensure(self->strings_allocator, self->strings, sizeof(*self->strings), len);
+    self->strings = array_ensure(self->strings_allocator, self->strings, 1, len);
     if (self->strings == NULL)
     {
         return start;  // OOM
