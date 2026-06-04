@@ -7,7 +7,7 @@
 
 typedef struct
 {
-    void*  addr;
+    void*  addr;  // this *must* be the first field
     size_t len;
     int    fd;
 } GVA_Mmap_Context;
