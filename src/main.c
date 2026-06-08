@@ -416,9 +416,13 @@ allele_main(int argc, char* argv[static argc])
 
     srand(atoi(argv[1]));
 
-    GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {10, "GGCTGAATAC"});
-    GVA_Variant var = {0, 10, {10, "TAGAACAGCA"}};
+    GVA_String ref = gva_string_init(gva_std_allocator, 10);
+    GVA_Variant var = {0, ref.len, gva_string_init(gva_std_allocator, 10)};
 
+    //GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {10, "GGCTGAATAC"});
+    //GVA_Variant var = {0, ref.len, {10, "TAGAACAGCA"}};
+
+/*
     LCS_Alignment lcs = lcs_align(gva_std_allocator, ref.len, ref.str, var.sequence.len, var.sequence.str, 0);
 
     fprintf(stderr, "%zu\n", lcs.length);
@@ -434,18 +438,25 @@ allele_main(int argc, char* argv[static argc])
 
     lcs.index = gva_std_allocator.allocate(gva_std_allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
     lcs.nodes = ARRAY_DESTROY(gva_std_allocator, lcs.nodes);
-
-    GVA_LCS_Graph g = gva_lcs_graph_from_allele(gva_std_allocator, ref.len, ref.str, 1, &var);
-
-    fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(g)));
-    for (size_t i = 0; i < array_length(g.dom_nodes) - 1; ++i)
+*/
+    for (size_t i = 0; i < 20; ++i)
     {
-        fprintf(stderr, "  " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(g, i, i + 1)));
+        random_string(ref.len, (char*) ref.str);
+        random_string(var.sequence.len, (char*) var.sequence.str);
+
+        GVA_LCS_Graph g = gva_lcs_graph_from_allele(gva_std_allocator, ref.len, ref.str, 1, &var);
+
+        fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(g)));
+        for (size_t i = 0; i < array_length(g.dom_nodes) - 1; ++i)
+        {
+            fprintf(stderr, "  " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(g, i, i + 1)));
+        } // for
+        fprintf(stderr, "\n");
+
+        gva_lcs_graph_destroy(gva_std_allocator, g, true);
     } // for
-    fprintf(stderr, "\n");
 
-    gva_lcs_graph_destroy(gva_std_allocator, g, true);
-
+    gva_string_destroy(gva_std_allocator, var.sequence);
     gva_string_destroy(gva_std_allocator, ref);
 
     return EXIT_SUCCESS;

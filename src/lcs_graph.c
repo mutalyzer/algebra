@@ -115,8 +115,8 @@ local_supremal(GVA_Allocator const allocator,
     {
         size_t const j = forward.max_lcs_pos - i - 1;
 
-        fprintf(stderr, "%zu: (%zu, %zu) %d    (%zu, %zu) %d\n", i,
-            forward.match[i].row + offset_row, forward.match[i].col + offset_col, forward.uniq[i],
+        fprintf(stderr, "%zu: (%u, %u) %d    (%zu, %zu) %d\n", i,
+            forward.match[i].row, forward.match[i].col, forward.uniq[i],
             len_ref - backward.match[j].row - 1, len_obs - backward.match[j].col - 1, backward.uniq[j]);
 
         if (forward.match[i].row == len_ref - backward.match[j].row - 1 &&
@@ -127,12 +127,13 @@ local_supremal(GVA_Allocator const allocator,
             if (distance > 0)
             {
                 sum += distance;
+                fprintf(stderr, "RECURSE %u %u %d %d {\n", forward.match[i].row, forward.match[i].col, forward.uniq[i], backward.uniq[j]);
                 local_supremal(allocator,
                     forward.match[i].row - prev_row - 1, reference + prev_row + 1,
                     forward.match[i].col - prev_col - 1, observed + prev_col + 1,
                     offset_row + prev_row + 1, offset_col + prev_col + 1,
                     graph);
-                fprintf(stderr, "RECURSE %u %u %d %d\n", forward.match[i].row, forward.match[i].col, forward.uniq[i], backward.uniq[j]);
+                fprintf(stderr, "}\n");
             } // if
 
             prev_row = forward.match[i].row;
@@ -144,12 +145,13 @@ local_supremal(GVA_Allocator const allocator,
     {
         if (prev_row != (size_t) -1)
         {
+            fprintf(stderr, "RECURSE {\n");
             local_supremal(allocator,
                 len_ref - prev_row - 1, reference + prev_row + 1,
                 len_obs - prev_col - 1, observed + prev_col + 1,
                 offset_row + prev_row + 1, offset_col + prev_col + 1,
                 graph);
-            fprintf(stderr, "RECURSE last\n");
+            fprintf(stderr, "}\n");
         } // if
         else
         {
