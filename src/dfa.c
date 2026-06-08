@@ -419,6 +419,8 @@ dfa_overlap(GVA_Allocator const allocator,
     size_t const lhs_size = (lhs.end - lhs.start + 1) * lhs_width;
     size_t const rhs_size = (rhs.end - rhs.start + 1) * rhs_width;
 
+    fprintf(stderr, "strict digraph{\nrankdir=LR\nnode[shape=none]\n");
+
     Queue queue = queue_init(allocator, INITIAL_SIZE);
     if (queue.entries == NULL)
     {
@@ -429,10 +431,6 @@ dfa_overlap(GVA_Allocator const allocator,
     while (!queue_empty(&queue))
     {
         size_t const idx = queue_pop(&queue);
-        if (idx == lhs_size * rhs_size - 1)  // OVERFLOW
-        {
-            break;
-        } // if
 
         size_t const included = queue.entries[HASH_TABLE_INDEX(queue.entries, idx)].included;
 
@@ -441,11 +439,19 @@ dfa_overlap(GVA_Allocator const allocator,
         size_t const lhs_ref = lhs_idx / lhs_width + lhs.start;
         size_t const rhs_ref = rhs_idx / rhs_width + rhs.start;
 
+        fprintf(stderr, "%zu[fixedsize=true,label=\"(%zu, %zu)\\n%zu\",shape=circle,width=1]\n", idx, lhs_idx, rhs_idx, included);
+
+        if (idx == lhs_size * rhs_size - 1)  // OVERFLOW
+        {
+            break;
+        } // if
+
         if ((lhs_idx == 0 && rhs_ref < lhs_ref) || lhs_idx == lhs_size - 1)
         {
             if (rhs_idx % rhs_width < rhs_width - 1 &&
                 reference[rhs.start + rhs_idx / rhs_width] == rhs.sequence.str[rhs_idx % rhs_width])
             {
+                fprintf(stderr, "%zu->%zu\n", idx, lhs_idx * rhs_size + rhs_idx + rhs_width + 1);
                 queue_push_front(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width + 1, included);
                 continue;
             } // if
@@ -453,10 +459,12 @@ dfa_overlap(GVA_Allocator const allocator,
             uint8_t const rhs_value = get(rhs_dfa, rhs_idx);
             if (rhs_value & DFA_DELETION)
             {
+                fprintf(stderr, "%zu->%zu\n", idx, lhs_idx * rhs_size + rhs_idx + rhs_width);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + rhs_width, included);
             } // if
             if (rhs_value & DFA_INSERTION)
             {
+                fprintf(stderr, "%zu->%zu\n", idx, lhs_idx * rhs_size + rhs_idx + 1);
                 queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
             } // if
             continue;
@@ -467,6 +475,7 @@ dfa_overlap(GVA_Allocator const allocator,
             if (lhs_idx % lhs_width < lhs_width - 1 &&
                 reference[lhs.start + lhs_idx / lhs_width] == lhs.sequence.str[lhs_idx % lhs_width])
             {
+                fprintf(stderr, "%zu->%zu\n", idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx);
                 queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx, included);
                 continue;
             } // if
@@ -474,10 +483,12 @@ dfa_overlap(GVA_Allocator const allocator,
             uint8_t const lhs_value = get(lhs_dfa, lhs_idx);
             if (lhs_value & DFA_DELETION)
             {
+                fprintf(stderr, "%zu->%zu\n", idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx, included);
             } // if
             if (lhs_value & DFA_INSERTION)
             {
+                fprintf(stderr, "%zu->%zu\n", idx, (lhs_idx + 1) * rhs_size + rhs_idx);
                 queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
             } // if
             continue;
@@ -490,6 +501,7 @@ dfa_overlap(GVA_Allocator const allocator,
 
         if (lhs_match && rhs_match)
         {
+            fprintf(stderr, "%zu->%zu\n", idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1);
             queue_push_front(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width + 1, included);
             continue;
         } // if
@@ -504,35 +516,43 @@ dfa_overlap(GVA_Allocator const allocator,
 
         if (lhs_deletion && rhs_deletion)
         {
+            fprintf(stderr, "%zu->%zu[label=\"&Delta; +1\"]\n", idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width);
             queue_push_front(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width, included + 1);
         } // if
 
         if (lhs_deletion && rhs_match)
         {
+            fprintf(stderr, "%zu->%zu\n", idx, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1);
             queue_push_back(&queue, (lhs_idx + lhs_width) * rhs_size + rhs_idx + rhs_width + 1, included);
         } // if
         else if (lhs_match && rhs_deletion)
         {
+            fprintf(stderr, "%zu->%zu\n", idx, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width);
             queue_push_back(&queue, (lhs_idx + lhs_width + 1) * rhs_size + rhs_idx + rhs_width, included);
         } // if
         else if (lhs_insertion && rhs_insertion &&
             lhs.sequence.str[lhs_idx % lhs_width] == rhs.sequence.str[rhs_idx % rhs_width])
         {
+            fprintf(stderr, "%zu->%zu[label=\"%c +1\"]\n", idx, (lhs_idx + 1) * rhs_size + rhs_idx + 1, lhs.sequence.str[lhs_idx % lhs_width]);
             queue_push_front(&queue, (lhs_idx + 1) * rhs_size + rhs_idx + 1, included + 1);
         } // if
 
         if (lhs_insertion && (rhs_deletion || rhs_match || (rhs_insertion &&
             lhs.sequence.str[lhs_idx % lhs_width] != rhs.sequence.str[rhs_idx % rhs_width])))
         {
+            fprintf(stderr, "%zu->%zu\n", idx, (lhs_idx + 1) * rhs_size + rhs_idx);
             queue_push_back(&queue, (lhs_idx + 1) * rhs_size + rhs_idx, included);
         } // if
 
         if (rhs_insertion && (lhs_deletion || lhs_match || (lhs_insertion &&
             lhs.sequence.str[lhs_idx % lhs_width] != rhs.sequence.str[rhs_idx % rhs_width])))
         {
+            fprintf(stderr, "%zu->%zu\n", idx, lhs_idx * rhs_size + rhs_idx + 1);
             queue_push_back(&queue, lhs_idx * rhs_size + rhs_idx + 1, included);
         } // if
     } // while
+
+    fprintf(stderr, "}\n");
 
     size_t included = 0;
     size_t const idx = HASH_TABLE_INDEX(queue.entries, lhs_size * rhs_size - 1);
