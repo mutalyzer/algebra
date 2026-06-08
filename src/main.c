@@ -16,6 +16,7 @@
 #include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/utils.h"       // gva_fasta_sequence*
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_patch, gva_variant_*
+#include "align.h"
 #include "array.h"          // ARRAY_*, array_length
 #include "common.h"         // MAX, MIN
 #include "dfa.h"            // dfa_*
@@ -24,9 +25,9 @@
 
 #define LINE_SIZE 4096
 
-// #define REFERENCE_ID "NC_000022.11"
+#define REFERENCE_ID "NC_000022.11"
 // #define REFERENCE_ID "NC_000006.12"
-#define REFERENCE_ID "NC_000001.11"
+// #define REFERENCE_ID "NC_000001.11"
 
 
 // line: alphanumeric_id SPDI [distance]
@@ -394,9 +395,62 @@ index_main(int argc, char* argv[static argc])
 } // index_main
 
 
+void
+random_string(size_t const len, char str[static len])
+{
+    for (size_t i = 0; i < len; ++i)
+    {
+        str[i] = "ACGT"[rand() % 4];
+    } // for
+} // random_string
+
+
 int
 allele_main(int argc, char* argv[static argc])
 {
+    if (argc < 2)
+    {
+        fprintf(stderr, "usage: %s seed\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    srand(atoi(argv[1]));
+
+    GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {10, "GGCTGAATAC"});
+    GVA_Variant var = {0, 10, {10, "TAGAACAGCA"}};
+
+    LCS_Alignment lcs = lcs_align(gva_std_allocator, ref.len, ref.str, var.sequence.len, var.sequence.str, 0);
+
+    fprintf(stderr, "%zu\n", lcs.length);
+    for (size_t i = 0; i < lcs.length; ++i)
+    {
+        fprintf(stderr, "%zu: ", i);
+        for (gva_uint j = lcs.index[i].head; j != GVA_NULL; j = lcs.nodes[j].next)
+        {
+            fprintf(stderr, "(%u, %u, %u) ", lcs.nodes[j].match.row, lcs.nodes[j].match.col, lcs.nodes[j].match.length);
+        } // for
+        fprintf(stderr, "\n");
+    } // for
+
+    lcs.index = gva_std_allocator.allocate(gva_std_allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
+    lcs.nodes = ARRAY_DESTROY(gva_std_allocator, lcs.nodes);
+
+    GVA_LCS_Graph g = gva_lcs_graph_from_allele(gva_std_allocator, ref.len, ref.str, 1, &var);
+
+    fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(g)));
+    for (size_t i = 0; i < array_length(g.dom_nodes) - 1; ++i)
+    {
+        fprintf(stderr, "  " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(g, i, i + 1)));
+    } // for
+    fprintf(stderr, "\n");
+
+    gva_lcs_graph_destroy(gva_std_allocator, g, true);
+
+    gva_string_destroy(gva_std_allocator, ref);
+
+    return EXIT_SUCCESS;
+
+
     if (argc < 3)
     {
         fprintf(stderr, "usage: %s reference observed\n", argv[0]);
@@ -741,7 +795,8 @@ all_main(int argc, char* argv[static argc])
 int
 main(int argc, char* argv[static argc])
 {
-    // return allele_main(argc, argv);
-    return index_main(argc, argv);
+    return allele_main(argc, argv);
+    // return index_main(argc, argv);
+    // return overlap_main(argc, argv);
     // return all_main(argc, argv);
 } // main

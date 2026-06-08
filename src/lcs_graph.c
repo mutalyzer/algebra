@@ -14,6 +14,9 @@
 #include "common.h"     // GVA_NULL, MAX, MIN, gva_uint
 
 
+#include <stdio.h>      // FIXME: DEBUG
+
+
 static void
 concat(GVA_Allocator const allocator,
     GVA_LCS_Graph lhs[static 1], GVA_LCS_Graph const rhs,
@@ -86,9 +89,12 @@ local_supremal(GVA_Allocator const allocator,
     size_t const offset_row, size_t const offset_col,
     GVA_LCS_Graph graph[static restrict 1])
 {
+    fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n", GVA_STRING_PRINT(((GVA_String) {len_ref, reference})), GVA_STRING_PRINT(((GVA_String) {len_obs, observed})));
+
     if (len_ref == 0 || len_obs == 0)
     {
         GVA_LCS_Graph local = gva_lcs_graph_init(allocator, len_ref, reference, len_obs, observed, offset_row);
+        fprintf(stderr, "BASE: " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(local)));
         concat(allocator, graph, local, offset_col);
         gva_lcs_graph_destroy(allocator, local, false);
         return;
@@ -108,6 +114,11 @@ local_supremal(GVA_Allocator const allocator,
     for (size_t i = 0; i < forward.max_lcs_pos; ++i)
     {
         size_t const j = forward.max_lcs_pos - i - 1;
+
+        fprintf(stderr, "%zu: (%zu, %zu) %d    (%zu, %zu) %d\n", i,
+            forward.match[i].row + offset_row, forward.match[i].col + offset_col, forward.uniq[i],
+            len_ref - backward.match[j].row - 1, len_obs - backward.match[j].col - 1, backward.uniq[j]);
+
         if (forward.match[i].row == len_ref - backward.match[j].row - 1 &&
             forward.match[i].col == len_obs - backward.match[j].col - 1 &&
             (forward.uniq[i] == 1 || backward.uniq[j] == 1))
@@ -121,6 +132,7 @@ local_supremal(GVA_Allocator const allocator,
                     forward.match[i].col - prev_col - 1, observed + prev_col + 1,
                     offset_row + prev_row + 1, offset_col + prev_col + 1,
                     graph);
+                fprintf(stderr, "RECURSE %u %u %d %d\n", forward.match[i].row, forward.match[i].col, forward.uniq[i], backward.uniq[j]);
             } // if
 
             prev_row = forward.match[i].row;
@@ -130,10 +142,30 @@ local_supremal(GVA_Allocator const allocator,
     size_t const distance = len_ref + len_obs - 2 * forward.max_lcs_pos - sum;
     if (distance > 0)
     {
-        sum += distance;
-        GVA_LCS_Graph local = gva_lcs_graph_init(allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset_row + prev_row + 1);
-        concat(allocator, graph, local, offset_col + prev_col + 1);
-        gva_lcs_graph_destroy(allocator, local, false);
+        if (prev_row != (size_t) -1)
+        {
+            local_supremal(allocator,
+                len_ref - prev_row - 1, reference + prev_row + 1,
+                len_obs - prev_col - 1, observed + prev_col + 1,
+                offset_row + prev_row + 1, offset_col + prev_col + 1,
+                graph);
+            fprintf(stderr, "RECURSE last\n");
+        } // if
+        else
+        {
+            GVA_LCS_Graph local = gva_lcs_graph_init(allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset_row + prev_row + 1);
+            fprintf(stderr, GVA_VARIANT_FMT " %zu\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(local)), gva_variant_length(gva_lcs_graph_supremal(local)));
+            if (array_length(local.dom_nodes) > 2)
+            {
+                fprintf(stderr, "MULTI\n");
+                for (size_t i = 0; i < array_length(local.dom_nodes) - 1; ++i)
+                {
+                    fprintf(stderr, "  " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(local, i, i + 1)));
+                } // for
+            } // if
+            concat(allocator, graph, local, offset_col + prev_col + 1);
+            gva_lcs_graph_destroy(allocator, local, false);
+        } // else
     } // if
 
     backward.match = allocator.allocate(allocator.context, backward.match, MIN(len_ref, len_obs), 0);
