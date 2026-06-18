@@ -1,10 +1,9 @@
 #include <inttypes.h>   // intmax_t
-#include <stdbool.h>    // bool, false, true
 #include <stddef.h>     // NULL, size_t
 
 #include "../include/allocator.h"   // GVA_Allocator
 #include "../include/edit.h"        // gva_edit_distance
-#include "common.h"     // ABS, MAX
+#include "common.h"     // MAX
 
 
 static inline size_t

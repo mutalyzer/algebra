@@ -239,13 +239,11 @@ onp_snake(size_t const m, char const a[static restrict m],
         row += 1;
         col += 1;
         size_t const lcs_pos = (row + col - ABS(delta) - 2 * p + ABS(d_row - d_col)) / 2;
-        fprintf(stderr, "M: (%zu, %zu): %zu\n", row - 1, col - 1, lcs_pos);
+        //fprintf(stderr, "M: (%zu, %zu): %zu\n", row - 1, col - 1, lcs_pos);
         result->uniq[lcs_pos - 1] = 0;
         if (lcs_pos > result->max_lcs_pos)
         {
             result->max_lcs_pos = lcs_pos;
-        }
-            // result->uniq[lcs_pos - 1] = 1;
             if (swapped)
             {
                 result->match[lcs_pos - 1].row = col - 1;
@@ -256,6 +254,27 @@ onp_snake(size_t const m, char const a[static restrict m],
                 result->match[lcs_pos - 1].row = row - 1;
                 result->match[lcs_pos - 1].col = col - 1;
             } // else
+        } // if
+        else
+        {
+            // result->uniq[lcs_pos - 1] = 1;
+            if (swapped)
+            {
+                if (result->match[lcs_pos - 1].col < row - 1 ||
+                    (result->match[lcs_pos - 1].col == row - 1 && result->match[lcs_pos - 1].row > col - 1))
+                result->match[lcs_pos - 1].row = col - 1;
+                result->match[lcs_pos - 1].col = row - 1;
+            } // if
+            else
+            {
+                if (result->match[lcs_pos - 1].row < row - 1 ||
+                    (result->match[lcs_pos - 1].row == row - 1 && result->match[lcs_pos - 1].col > col - 1))
+                {
+                    result->match[lcs_pos - 1].row = row - 1;
+                    result->match[lcs_pos - 1].col = col - 1;
+                } // if
+            } // else
+        } // else
         // } // if
     } // while
 
