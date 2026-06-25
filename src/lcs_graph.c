@@ -87,21 +87,15 @@ int recurse;
 int base;
 */
 
-size_t max_depth;
-
 // FIXME: recursion!
 static void
 local_supremal(GVA_Allocator const allocator,
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const len_obs, char const observed[static restrict len_obs],
     size_t const offset_row, size_t const offset_col,
-    GVA_LCS_Graph graph[static restrict 1],
-    size_t const depth)
+    GVA_LCS_Graph graph[static restrict 1])
 {
-    // fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n", GVA_STRING_PRINT(((GVA_String) {len_ref, reference})), GVA_STRING_PRINT(((GVA_String) {len_obs, observed})));
-
-    max_depth = MAX(max_depth, depth);
-
+    //fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n", GVA_STRING_PRINT(((GVA_String) {len_ref, reference})), GVA_STRING_PRINT(((GVA_String) {len_obs, observed})));
 
     if (len_ref == 0 || len_obs == 0)
     {
@@ -116,14 +110,10 @@ local_supremal(GVA_Allocator const allocator,
     LCS_Matches forward = lcs_align_one(allocator, len_ref, reference, len_obs, observed);
     gva_string_reverse(len_ref, (char*) reference);
     gva_string_reverse(len_obs, (char*) observed);
-    //fprintf(stderr, "F\n");
 
     LCS_Matches backward = lcs_align_one(allocator, len_ref, reference, len_obs, observed);
     gva_string_reverse(len_ref, (char*) reference);
     gva_string_reverse(len_obs, (char*) observed);
-    //fprintf(stderr, "B\n");
-
-    size_t count = 0;
 
     size_t sum = 0;
     size_t prev_row = -1;
@@ -132,41 +122,32 @@ local_supremal(GVA_Allocator const allocator,
     {
         size_t const j = forward.max_lcs_pos - i - 1;
 
-    /*
+        /*
         fprintf(stderr, "%zu: (%u, %u) %d    (%zu, %zu) %d\n", i,
             forward.match[i].row, forward.match[i].col, forward.uniq[i],
             len_ref - backward.match[j].row - 1, len_obs - backward.match[j].col - 1, backward.uniq[j]);
-    */
+        */
 
         if (forward.match[i].row == len_ref - backward.match[j].row - 1 &&
-            forward.match[i].col == len_obs - backward.match[j].col - 1 // &&
-            // (forward.uniq[i] == 1 || backward.uniq[j] == 1)
-           )
+            forward.match[i].col == len_obs - backward.match[j].col - 1 &&
+            (forward.uniq[i] == 1 || backward.uniq[j] == 1))
         {
             size_t const distance = forward.match[i].row + forward.match[i].col - 2 * i - sum;
-            if (distance > 0 && (prev_row == (size_t) -1 || (prev_row < forward.match[i].row && prev_col < forward.match[i].col)))
+            if (distance > 0)
             {
                 //recurse += 1;
                 sum += distance;
-/*
-                fprintf(stderr, "prev: %zd %zd\n", prev_row, prev_col);
-                fprintf(stderr, "RECURSE %u %u %d %d {\n", forward.match[i].row, forward.match[i].col, forward.uniq[i], backward.uniq[j]);
-*/
-
-                count += 1;
+                //fprintf(stderr, "RECURSE %u %u %d %d {\n", forward.match[i].row, forward.match[i].col, forward.uniq[i], backward.uniq[j]);
                 local_supremal(allocator,
                     forward.match[i].row - prev_row - 1, reference + prev_row + 1,
                     forward.match[i].col - prev_col - 1, observed + prev_col + 1,
                     offset_row + prev_row + 1, offset_col + prev_col + 1,
-                    graph, depth + 1);
+                    graph);
                 //fprintf(stderr, "}\n");
             } // if
 
-            if (prev_row == (size_t) -1 || (prev_row < forward.match[i].row && prev_col < forward.match[i].col))
-            {
-                prev_row = forward.match[i].row;
-                prev_col = forward.match[i].col;
-            }
+            prev_row = forward.match[i].row;
+            prev_col = forward.match[i].col;
         } // if
     } // for
     size_t const distance = len_ref + len_obs - 2 * forward.max_lcs_pos - sum;
@@ -174,22 +155,21 @@ local_supremal(GVA_Allocator const allocator,
     {
         if (prev_row != (size_t) -1)
         {
-            count += 1;
             //recurse += 1;
             //fprintf(stderr, "RECURSE {\n");
             local_supremal(allocator,
                 len_ref - prev_row - 1, reference + prev_row + 1,
                 len_obs - prev_col - 1, observed + prev_col + 1,
                 offset_row + prev_row + 1, offset_col + prev_col + 1,
-                graph, depth + 1);
+                graph);
             //fprintf(stderr, "}\n");
         } // if
         else
         {
             GVA_LCS_Graph local = gva_lcs_graph_init(allocator, len_ref - prev_row - 1, reference + prev_row + 1, len_obs - prev_col - 1, observed + prev_col + 1, offset_row + prev_row + 1);
-            //fprintf(stderr, GVA_VARIANT_FMT " %zu\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(local)), gva_variant_length(gva_lcs_graph_supremal(local)));
             /*
-            if (array_length(local.dom_nodes) > 2)
+            fprintf(stderr, GVA_VARIANT_FMT " %zu\n", GVA_VARIANT_PRINT(gva_lcs_graph_supremal(local)), gva_variant_length(gva_lcs_graph_supremal(local)));
+            if (array_length(local.dom_nodes) == 3)
             {
                 multi = 1;
                 fprintf(stderr, "MULTI\n");
@@ -202,12 +182,6 @@ local_supremal(GVA_Allocator const allocator,
             concat(allocator, graph, local, offset_col + prev_col + 1);
             gva_lcs_graph_destroy(allocator, local, false);
         } // else
-    } // if
-
-    if (depth == 0)
-    {
-        fprintf(stderr, "count: %zu\n", count);
-        fprintf(stderr, "max_depth: %zu\n", max_depth);
     } // if
 
     backward.match = allocator.allocate(allocator.context, backward.match, MIN(len_ref, len_obs), 0);
@@ -538,7 +512,7 @@ gva_lcs_graph_from_allele(GVA_Allocator const allocator,
     size_t const n, GVA_Variant const variants[static restrict n])
 {
     GVA_LCS_Graph graph = {.observed = gva_patch(allocator, len_ref, reference, n, variants)};
-    local_supremal(allocator, len_ref, reference, graph.observed.len, graph.observed.str, 0, 0, &graph, 0);
+    local_supremal(allocator, len_ref, reference, graph.observed.len, graph.observed.str, 0, 0, &graph);
     if (graph.nodes == NULL)
     {
         graph = gva_lcs_graph_init(allocator, len_ref, reference, graph.observed.len, graph.observed.str, 0);
