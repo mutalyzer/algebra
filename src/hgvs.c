@@ -1,21 +1,13 @@
 // NOT FREESTANDING
-#include <errno.h>      // errno
 #include <stddef.h>     // NULL, size_t
-#include <stdio.h>      // ...
-#include <stdlib.h>     // ...
-#include <string.h>     // ...
+#include <stdio.h>      // snprintf
+#include <string.h>     // memcmp
 
 #include "../include/allocator.h"   // GVA_Allocator
-#include "../include/parser.h"      // gva_parse_*
 #include "../include/std_alloc.h"   // gva_std_allocator
 #include "../include/string.h"      // GVA_STRING_*
-#include "../include/utils.h"       // gva_fasta_sequence_blob
+#include "../include/types.h"       // GVA_UINT_FMT
 #include "../include/variant.h"     // GVA_Variant
-
-#include "array.h"  // ARRAY_DESTROY
-
-
-#define LINE_SIZE 4096
 
 
 static inline size_t
@@ -55,37 +47,86 @@ repeats(GVA_Allocator const allocator,
 } // repeats
 
 
-static inline size_t
-hgvs_location(size_t const len, char buffer[static len],
-    size_t const start, size_t const end)
-{
-    if (end - start == 0)
-    {
-        return snprintf(buffer, len, "%zu_%zu", start, start + 1);
-    } // if
-    if (end - start == 1)
-    {
-        return snprintf(buffer, len, "%zu", start + 1);
-    } // if
-    return snprintf(buffer, len, "%zu_%zu", start + 1, end);
-} // hgvs_location
-
-
 static size_t
 hgvs_variant(size_t const len, char buffer[static len],
     size_t const len_ref, char const reference[static restrict len_ref],
     GVA_Variant const variant)
 {
-    size_t const inserted = repeats(gva_std_allocator, variant.sequence.len, variant.sequence.str);
-    size_t const deleted = repeats(gva_std_allocator, variant.end - variant.start, reference + variant.start);
+    fprintf(stderr, GVA_STRING_FMT "\n", GVA_STRING_PRINT(((GVA_String) {variant.end - variant.start, reference + variant.start})));
+    fprintf(stderr, GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(variant));
 
-    fprintf(stderr, "%zu vs %zu\n", inserted, deleted);
+    size_t len_inserted = repeats(gva_std_allocator, variant.sequence.len, variant.sequence.str);
+    if (len_inserted > 0)
+    {
+        size_t cnt_inserted = variant.sequence.len / len_inserted;
+        size_t rem_inserted = variant.sequence.len % len_inserted;
+
+        size_t len_deleted = repeats(gva_std_allocator, variant.end - variant.start, reference + variant.start);
+        if (len_deleted > 0)
+        {
+            size_t cnt_deleted = (variant.end - variant.start) / len_deleted;
+            size_t rem_deleted = (variant.end - variant.start) % len_deleted;
+
+            char const* inserted = variant.sequence.str;
+            char const* deleted = reference + variant.start;
+
+            fprintf(stderr, "%zu: " GVA_STRING_FMT " %zu %zu\n", len_inserted,
+                GVA_STRING_PRINT(((GVA_String) {len_inserted, inserted})),
+                cnt_inserted, rem_inserted);
+            fprintf(stderr, "%zu: " GVA_STRING_FMT " %zu %zu\n", len_deleted,
+                GVA_STRING_PRINT(((GVA_String) {len_deleted, deleted})),
+                cnt_deleted, rem_deleted);
+
+            if (len_inserted < len_deleted &&
+                memcmp(deleted, inserted, len_inserted) == 0)
+            {
+                fprintf(stderr, "if\n");
+                len_inserted = len_deleted;
+                cnt_inserted = 1;
+                rem_inserted = rem_deleted;
+            } // if
+            else if (len_deleted < len_inserted &&
+                memcmp(deleted, inserted, len_deleted) == 0)
+            {
+                fprintf(stderr, "else if\n");
+                len_deleted = len_inserted;
+                cnt_deleted = 1;
+                rem_deleted = rem_inserted;
+            } // if
+
+            if (memcmp(deleted, inserted, len_deleted) == 0)
+            {
+                // duplictation
+                if (cnt_deleted == 1 && cnt_inserted == 2)
+                {
+                    if (variant.end - variant.start == 0)
+                    {
+                        return snprintf(buffer, len, "%zudup",
+                            variant.start + rem_deleted + 1);
+                    } // if
+                    return snprintf(buffer, len, "%zu_" GVA_UINT_FMT "dup",
+                        variant.start + rem_deleted + 1, variant.end);
+                } // if
+
+                // repeat
+                return snprintf(buffer, len, "%zu_" GVA_UINT_FMT GVA_STRING_FMT "[%zu]",
+                    variant.start + rem_deleted + 1, variant.end,
+                    GVA_STRING_PRINT(((GVA_String) {len_inserted, inserted + rem_inserted})),
+                    cnt_inserted);
+            } // if
+        } // if
+    } // if
 
 
-    size_t idx = hgvs_location(len, buffer, variant.start, variant.end);
+
+
+
+
+
 
     if (variant.end - variant.start == 0)
     {
+        size_t const idx = snprintf(buffer, len, GVA_UINT_FMT "_" GVA_UINT_FMT, variant.start, variant.start + 1);
         if (variant.sequence.len == 0)
         {
             return idx + snprintf(buffer + idx, len - idx, "=");
@@ -95,6 +136,7 @@ hgvs_variant(size_t const len, char buffer[static len],
 
     if (variant.end - variant.start == 1)
     {
+        size_t const idx = snprintf(buffer, len, GVA_UINT_FMT, variant.start + 1);
         if (variant.sequence.len == 0)
         {
             return idx + snprintf(buffer + idx, len - idx, "del");
@@ -106,6 +148,7 @@ hgvs_variant(size_t const len, char buffer[static len],
         return idx + snprintf(buffer + idx, len - idx, "delins" GVA_STRING_FMT, GVA_STRING_PRINT(variant.sequence));
     } // if
 
+    size_t const idx = snprintf(buffer, len, GVA_UINT_FMT "_" GVA_UINT_FMT, variant.start + 1, variant.end);
     if (variant.sequence.len == 0)
     {
         return idx + snprintf(buffer + idx, len - idx, "del");
@@ -115,8 +158,8 @@ hgvs_variant(size_t const len, char buffer[static len],
 } // hgvs_variant
 
 
-static size_t
-to_hgvs(size_t const len, char buffer[static len],
+size_t
+gva_to_hgvs(size_t const len, char buffer[static restrict len],
     size_t const len_ref, char const reference[static restrict len_ref],
     size_t const n, GVA_Variant const variants[static restrict n])
 {
@@ -140,77 +183,4 @@ to_hgvs(size_t const len, char buffer[static len],
         } // if
     } // for
     return idx + snprintf(buffer + idx, len - idx, "]");
-} // to_hgvs
-
-
-int
-hgvs_main(int argc, char* argv[static argc])
-{
-    static char buffer[1024] = {'\0'};
-    GVA_String const ref = {10, "AAATAATATAATAATTTAT"};
-    GVA_Variant const variant = {2, 13, {6, "ATAATA"}};
-    fprintf(stderr, "%zu\n", to_hgvs(1024, buffer, ref.len, ref.str, 1, &variant));
-
-    fprintf(stderr, "%s\n", buffer);
-
-    return EXIT_SUCCESS;
-
-
-    if (argc < 2)
-    {
-        fprintf(stderr, "usage %s reference.blob\n", argv[0]);
-        return EXIT_FAILURE;
-    } // if
-
-    errno = 0;
-    FILE* stream = fopen(argv[1], "r");
-    if (stream == NULL)
-    {
-        perror("fopen()");
-        return EXIT_FAILURE;
-    } // if
-
-    GVA_String reference = {0};
-    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
-    fclose(stream);
-
-    fprintf(stderr, "reference length: %zu\n", reference.len);
-
-    size_t line_count = 0;
-    static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stdin) != NULL)
-    {
-        line_count += 1;
-
-        size_t idx = 0;
-        size_t tok = 0;
-
-        tok = strcspn(line + idx, "\t ");
-        idx += tok + 1;  // ignore identifier
-
-        tok = strcspn(line + idx, "\t ");
-        GVA_Variant variant = {0};
-        if (gva_parse_spdi(tok, line + idx, &variant) == 0)
-        {
-            fprintf(stderr, "%zu: ERROR SPDI: %s", line_count, line);
-            continue;
-        } // if
-        idx += tok + 1;
-
-        tok = strcspn(line + idx, "\n\t ");
-        GVA_HGVS_Allele allele = gva_parse_hgvs(gva_std_allocator, reference.len, reference.str, tok, line + idx );
-        if (!allele.interpretable)
-        {
-            fprintf(stderr, "%zu: ERROR HGVS: %s", line_count, line);
-            continue;
-        } // if
-        idx += tok + 1;
-
-        ARRAY_DESTROY(gva_std_allocator, allele.inserted);
-        ARRAY_DESTROY(gva_std_allocator, allele.variants);
-    } //while
-
-    gva_string_destroy(gva_std_allocator, reference);
-
-    return EXIT_SUCCESS;
-} // hgvs_main
+} // gva_to_hgvs
