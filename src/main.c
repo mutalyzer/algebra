@@ -475,8 +475,6 @@ onp_compare(size_t const m, char const a[static restrict m],
         return -1;
     } // if
 
-    //fprintf(stderr, "%s vs %s\n", a, b);
-
     for (intmax_t i = -1; i <= delta; ++i)
     {
         fp[i + offset] = -1;
@@ -575,7 +573,7 @@ allele_main(int argc, char* argv[static argc])
     //GVA_Variant var = {0, ref.len, gva_string_init(gva_std_allocator, 10)};
 
 
-    GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {11, "AGGCGTCGAAA"});
+    GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {10, "AGGCGTCGAA"});
     GVA_Variant var = {0, ref.len, {10, "GTGTGTGCGG"}};
 
     LCS_Alignment lcs = lcs_align(gva_std_allocator, ref.len, ref.str, var.sequence.len, var.sequence.str, 0);
@@ -593,6 +591,8 @@ allele_main(int argc, char* argv[static argc])
 
     lcs.index = gva_std_allocator.allocate(gva_std_allocator.context, lcs.index, lcs.length * sizeof(*lcs.index), 0);
     lcs.nodes = ARRAY_DESTROY(gva_std_allocator, lcs.nodes);
+
+    size_t const distance = edit_distance(ref.len, ref.str, var.sequence.len, var.sequence.str);
 
 //    while (true)
     {
@@ -616,9 +616,10 @@ allele_main(int argc, char* argv[static argc])
         } // if
 
         gva_lcs_graph_destroy(gva_std_allocator, g, true);
-    } // for
+    } // while
+  
 
-    gva_string_destroy(gva_std_allocator, var.sequence);
+    // gva_string_destroy(gva_std_allocator, var.sequence);
     gva_string_destroy(gva_std_allocator, ref);
 
     return EXIT_SUCCESS;
@@ -691,9 +692,6 @@ allele_main(int argc, char* argv[static argc])
 
     gva_string_destroy(gva_std_allocator, observed);
 
-
-
-
 /*
     GVA_LCS_Graph graph = gva_lcs_graph_from_allele(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
@@ -706,7 +704,6 @@ allele_main(int argc, char* argv[static argc])
     fprintf(stderr, "#edges: %zu\n", array_length(graph.edges));
 
     gva_lcs_graph_destroy(gva_std_allocator, graph, true);
-*/
 
     if (variants != NULL)
     {
@@ -716,10 +713,12 @@ allele_main(int argc, char* argv[static argc])
         } // for
         variants = ARRAY_DESTROY(gva_std_allocator, variants);
     } // if
+*/
 
     gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
+
 } // allele_main
 
 
