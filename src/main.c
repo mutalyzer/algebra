@@ -417,6 +417,7 @@ static inline size_t
 onp_snake(size_t const m, char const a[static restrict m],
     size_t const n, char const b[static restrict n],
     intmax_t const k, intmax_t const lower, intmax_t const upper,
+    size_t const max_col,
     size_t const p, size_t len_lcs[static restrict 1])
 {
     size_t col = MAX(lower, upper);
@@ -424,9 +425,9 @@ onp_snake(size_t const m, char const a[static restrict m],
 
     size_t lcs_pos = (row + col - (n - m) - 2 * p + ABS((intmax_t) (m - row) - (intmax_t) (n - col))) / 2;
 
-    while (row < m && col < n && a[row] == b[col])
+    while (row < m && col < max_col && a[row] == b[col])
     {
-        //fprintf(stderr, "  M (%zu, %zu) @ %zu\n", row, col, lcs_pos);
+        fprintf(stderr, "  M (%zu, %zu) @ %zu\n", row, col, lcs_pos);
         row += 1;
         col += 1;
         lcs_pos += 1;
@@ -440,6 +441,7 @@ static inline size_t
 onp_snake_p(size_t const m, char const a[static restrict m],
     size_t const n, char const b[static restrict n],
     intmax_t const k, intmax_t const lower, intmax_t const upper,
+    size_t const max_col,
     size_t const p, size_t len_lcs[static restrict 1])
 {
     size_t col = MAX(lower, upper);
@@ -447,9 +449,9 @@ onp_snake_p(size_t const m, char const a[static restrict m],
 
     size_t lcs_pos = (row + col - (n - m) - 2 * p + ABS((intmax_t) (m - row) - (intmax_t) (n - col))) / 2;
 
-    while (row < m && col < n && a[m - row - 1] == b[n - col - 1])
+    while (row < m && col < max_col && a[m - row - 1] == b[n - col - 1])
     {
-        //fprintf(stderr, "  MP (%zu, %zu) @ %zu\n", m - row - 1, n - col - 1, lcs_pos);
+        fprintf(stderr, "  MP (%zu, %zu) @ %zu\n", m - row - 1, n - col - 1, lcs_pos);
         row += 1;
         col += 1;
         lcs_pos += 1;
@@ -484,36 +486,40 @@ onp_compare(size_t const m, char const a[static restrict m],
     size_t len_lcs = 0;
     size_t len_lcs_p = 0;
 
+    size_t forward = 0;
+    size_t backward = 0;
+
     size_t p = 0;
     while (fp[delta + offset] <= (intmax_t) n - fpp[delta + offset] - 1)
     {
-        //fprintf(stderr, "p: %zu\n", p);
+        fprintf(stderr, "p: %zu\n", p);
+        
         fp[-p - 1 + offset] = -1;
         for (intmax_t k = -p; k <= delta - 1; ++k)
         {
-            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], p, &len_lcs);
+            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], n - backward, p, &len_lcs);
         } // for
         fp[delta + p + 1 + offset] = -1;
         for (intmax_t k = delta + p; k >= delta + 1; --k)
         {
-            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], p, &len_lcs);
+            fp[k + offset] = onp_snake(m, a, n, b, k, fp[k - 1 + offset] + 1, fp[k + 1 + offset], n - backward, p, &len_lcs);
         } // for
-        fp[delta + offset] = onp_snake(m, a, n, b, delta, fp[delta - 1 + offset] + 1, fp[delta + 1 + offset], p, &len_lcs);
+        forward = fp[delta + offset] = onp_snake(m, a, n, b, delta, fp[delta - 1 + offset] + 1, fp[delta + 1 + offset], n - backward, p, &len_lcs);
 
 
         fpp[-p - 1 + offset] = -1;
         for (intmax_t k = -p; k <= delta - 1; ++k)
         {
-            fpp[k + offset] = onp_snake_p(m, a, n, b, k, fpp[k - 1 + offset] + 1, fpp[k + 1 + offset], p, &len_lcs_p);
+            fpp[k + offset] = onp_snake_p(m, a, n, b, k, fpp[k - 1 + offset] + 1, fpp[k + 1 + offset], n - forward, p, &len_lcs_p);
         } // for
         fpp[delta + p + 1 + offset] = - 1;
         for (intmax_t k = delta + p; k >= delta + 1; --k)
         {
-            fpp[k + offset] = onp_snake_p(m, a, n, b, k, fpp[k - 1 + offset] + 1, fpp[k + 1 + offset], p, &len_lcs_p);
+            fpp[k + offset] = onp_snake_p(m, a, n, b, k, fpp[k - 1 + offset] + 1, fpp[k + 1 + offset], n - forward, p, &len_lcs_p);
         } // for
-        fpp[delta + offset] = onp_snake_p(m, a, n, b, delta, fpp[delta - 1 + offset] + 1, fpp[delta + 1 + offset], p, &len_lcs_p);
+        backward = fpp[delta + offset] = onp_snake_p(m, a, n, b, delta, fpp[delta - 1 + offset] + 1, fpp[delta + 1 + offset], n - forward, p, &len_lcs_p);
 
-/*
+
         for (intmax_t k = -p; k <= delta - 1; ++k)
         {
             fprintf(stderr, "%ld ", fp[k + offset]);
@@ -535,15 +541,13 @@ onp_compare(size_t const m, char const a[static restrict m],
             fprintf(stderr, "%ld ", fpp[k + offset]);
         } // for
         fprintf(stderr, ": %zu\n", len_lcs_p);
-*/
+
         p += 1;
     } // while
 
-    //fprintf(stderr, "%ld vs %ld\n", fp[delta + offset], (intmax_t) n - fpp[delta + offset] - 1);
-
     free(fpp);
     free(fp);
-    return p;
+    return len_lcs + len_lcs_p;
 } // onp_compare
 
 
@@ -560,7 +564,7 @@ edit_distance(size_t const len_ref, char const reference[static restrict len_ref
 int
 allele_main(int argc, char* argv[static argc])
 {
-/*
+
     if (argc < 2)
     {
         fprintf(stderr, "usage: %s seed\n", argv[0]);
@@ -573,9 +577,14 @@ allele_main(int argc, char* argv[static argc])
     //GVA_Variant var = {0, ref.len, gva_string_init(gva_std_allocator, 10)};
 
 
-    GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {10, "AGGCGTCGAA"});
-    GVA_Variant var = {0, ref.len, {10, "GTGTGTGCGG"}};
+    //GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {10, "AGGCGTCGAA"});
+    //GVA_Variant var = {0, ref.len, {10, "GTGTGTGCGG"}};
 
+    GVA_String ref = gva_string_dup(gva_std_allocator, (GVA_String) {10, "CTATATGGAT"});
+    GVA_Variant var = {0, ref.len, {10, "TCTTCAGTGG"}};
+
+
+/*
     LCS_Alignment lcs = lcs_align(gva_std_allocator, ref.len, ref.str, var.sequence.len, var.sequence.str, 0);
 
     fprintf(stderr, "%zu\n", lcs.length);
@@ -593,37 +602,34 @@ allele_main(int argc, char* argv[static argc])
     lcs.nodes = ARRAY_DESTROY(gva_std_allocator, lcs.nodes);
 
     size_t const distance = edit_distance(ref.len, ref.str, var.sequence.len, var.sequence.str);
+    fprintf(stderr, "lcs = %zu\n", distance);
 
-//    while (true)
+    return EXIT_SUCCESS;
+*/
+    //while (true)
     {
         //random_string(ref.len, (char*) ref.str);
         //random_string(var.sequence.len, (char*) var.sequence.str);
 
-        //base = 0;
-        //recurse = 0;
-        //multi = 0;
-        GVA_LCS_Graph g = gva_lcs_graph_from_allele(gva_std_allocator, ref.len, ref.str, 1, &var);
+        size_t const len_lcs = edit_distance(ref.len, ref.str, var.sequence.len, var.sequence.str);
+        size_t const distance = gva_edit_distance(gva_std_allocator, ref.len, ref.str, var.sequence.len, var.sequence.str);
 
-        if (base > 1 && recurse > 2 && multi)
+        if (ref.len + var.sequence.len - 2 * len_lcs != distance)
         {
+            fprintf(stderr, "len_lcs: %zu\n", len_lcs);
+            fprintf(stderr, "distance: %zu\n", distance);
+            fprintf(stderr, "true lcs: %zu\n", (ref.len + var.sequence.len - distance) / 2);
             fprintf(stderr, GVA_STRING_FMT " vs " GVA_STRING_FMT "\n", GVA_STRING_PRINT(ref), GVA_STRING_PRINT(var.sequence));
-            //fprintf(stderr, GVA_STRING_FMT ":" GVA_VARIANT_FMT "\n", GVA_STRING_PRINT(ref), GVA_VARIANT_PRINT(gva_lcs_graph_supremal(g)));
-            for (size_t i = 0; i < array_length(g.dom_nodes) - 1; ++i)
-            {
-                fprintf(stderr, "  " GVA_VARIANT_FMT "\n", GVA_VARIANT_PRINT(gva_lcs_graph_local_supremal(g, i, i + 1)));
-            } // for
-            fprintf(stderr, "\n");
+            //break;
         } // if
 
-        gva_lcs_graph_destroy(gva_std_allocator, g, true);
     } // while
-  
 
-    // gva_string_destroy(gva_std_allocator, var.sequence);
+    gva_string_destroy(gva_std_allocator, var.sequence);
     gva_string_destroy(gva_std_allocator, ref);
 
     return EXIT_SUCCESS;
-*/
+/*
 
     if (argc < 3)
     {
@@ -691,7 +697,7 @@ allele_main(int argc, char* argv[static argc])
     fprintf(stderr, "distance: %zu\n", distance);
 
     gva_string_destroy(gva_std_allocator, observed);
-
+*/
 /*
     GVA_LCS_Graph graph = gva_lcs_graph_from_allele(gva_std_allocator, reference.len, reference.str, array_length(variants), variants);
     for (size_t i = 0; i < array_length(graph.dom_nodes) - 1; ++i)
@@ -715,7 +721,7 @@ allele_main(int argc, char* argv[static argc])
     } // if
 */
 
-    gva_string_destroy(gva_std_allocator, reference);
+    //gva_string_destroy(gva_std_allocator, reference);
 
     return EXIT_SUCCESS;
 
