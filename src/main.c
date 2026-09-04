@@ -771,9 +771,30 @@ hgvs_main(int argc, char* argv[static argc])
 
 
 int
+pair_main(int argc, char* argv[static argc])
+{
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage: %s reference observed\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, strlen(argv[1]), argv[1], strlen(argv[2]), argv[2], 0);
+
+    gva_lcs_graph_dot(stdout, graph);
+
+    gva_lcs_graph_destroy(gva_std_allocator, graph, false);
+
+    return EXIT_SUCCESS;
+} // hgvs_main
+
+
+
+int
 main(int argc, char* argv[static argc])
 {
-    return allele_main(argc, argv);
+    return pair_main(argc, argv);
+    // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return overlap_main(argc, argv);
     // return all_main(argc, argv);
