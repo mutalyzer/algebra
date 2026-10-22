@@ -14,6 +14,9 @@
 #include "common.h"     // GVA_NULL, MAX, MIN, gva_uint
 
 
+#include <stdio.h>      // FIXME: DEBUG
+
+
 static void
 concat(GVA_Allocator const allocator,
     GVA_LCS_Graph lhs[static 1], GVA_LCS_Graph const rhs,
@@ -162,6 +165,16 @@ gva_lcs_graph_init(GVA_Allocator const allocator,
 {
     LCS_Alignment lcs = lcs_align(allocator, len_ref, reference, len_obs, observed, offset);
     size_t const distance = len_ref + len_obs - 2 * lcs.length;
+
+    for (size_t i = 0; i < lcs.length; ++i)
+    {
+        fprintf(stderr, "%zu: ", i);
+        for (gva_uint j = lcs.index[i].head; j != GVA_NULL; j = lcs.nodes[j].next)
+        {
+            fprintf(stderr, "(%u, %u, %u), ", lcs.nodes[j].match.row, lcs.nodes[j].match.col, lcs.nodes[j].match.length);
+        } // for
+        fprintf(stderr, "\n");
+    } // for
 
     GVA_LCS_Graph graph =
     {

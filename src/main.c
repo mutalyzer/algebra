@@ -819,7 +819,7 @@ varda_main(int argc, char* argv[static argc])
         GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
 
         fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
-            GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI("NC_000001.11", gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
+            GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
 
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
@@ -834,9 +834,29 @@ varda_main(int argc, char* argv[static argc])
 
 
 int
+pair_main(int argc, char* argv[static argc])
+{
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage: %s reference observed\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_LCS_Graph graph = gva_lcs_graph_init(gva_std_allocator, strlen(argv[1]), argv[1], strlen(argv[2]), argv[2], 0);
+
+    gva_lcs_graph_dot(stdout, graph);
+
+    gva_lcs_graph_destroy(gva_std_allocator, graph, false);
+
+    return EXIT_SUCCESS;
+} // pair_main
+
+
+int
 main(int argc, char* argv[static argc])
 {
     return varda_main(argc, argv);
+    // return pair_main(argc, argv);
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return overlap_main(argc, argv);
