@@ -773,10 +773,9 @@ hgvs_main(int argc, char* argv[static argc])
 int
 varda_main(int argc, char* argv[static argc])
 {
-    // awk '{ if ($1 == "NC_000001.11") { printf "%s_%d %s:%d:%d:", substr(FILENAME, 0, 32), FNR, $1, $2, $3-$2, $7; if ($7 != ".") print $7; else printf "\n" } }'
-    if (argc < 2)
+    if (argc < 3)
     {
-        fprintf(stderr, "usage %s reference.blob data\n", argv[0]);
+        fprintf(stderr, "usage %s reference.blob sample_id\n", argv[0]);
         return EXIT_FAILURE;
     } // if
 
@@ -798,21 +797,34 @@ varda_main(int argc, char* argv[static argc])
     static char line[LINE_SIZE] = {0};
     while (fgets(line, sizeof(line), stdin) != NULL)
     {
-        line_count += 1;
-        GVA_String id = {0};
-        GVA_Variant variant = {0};
-        size_t distance = 0;
-        if (!parse_line(line, &id, &variant, &distance))
+        if (strncmp(REFERENCE_ID, line, sizeof(REFERENCE_ID) - 1) == 0)
         {
-            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
-            continue;
+            size_t len = strcspn(line, "\t ") + 1;  // ignore ref ID
+            size_t const start = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const end = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const allele_count = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const phase = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const inserted_len = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+
+            (void) allele_count;  // unused
+            (void) phase;
+
+            GVA_Variant const variant = {start, end, {inserted_len, line + len}};
+
+            GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+
+            fprintf(stdout, "%s_%zu " GVA_VARIANT_FMT_SPDI " %zu\n",
+                argv[2], line_count, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
+
+            gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+
+            line_count += 1;
         } // if
-        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
-
-        fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
-            GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
-
-        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
 
     fprintf(stderr, "#lines: %zu\n", line_count);
