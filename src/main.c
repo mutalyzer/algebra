@@ -771,9 +771,73 @@ hgvs_main(int argc, char* argv[static argc])
 
 
 int
+varda_main(int argc, char* argv[static argc])
+{
+    // awk '{ if ($1 == "NC_000001.11") { printf "%s_%d %s:%d:%d:", substr(FILENAME, 0, 32), FNR, $1, $2, $3-$2, $7; if ($7 != ".") print $7; else printf "\n" } }'
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage %s reference.blob data\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        perror("fopen()");
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0};
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    errno = 0;
+    stream = fopen(argv[2], "r");
+    if (stream == NULL)
+    {
+        perror("fopen()");
+        gva_string_destroy(gva_std_allocator, reference);
+        return EXIT_FAILURE;
+    } // if
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stream) != NULL)
+    {
+        line_count += 1;
+        GVA_String id = {0};
+        GVA_Variant variant = {0};
+        size_t distance = 0;
+        if (!parse_line(line, &id, &variant, &distance))
+        {
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
+            continue;
+        } // if
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+
+        fprintf(stdout, GVA_STRING_FMT " " GVA_VARIANT_FMT_SPDI " %zu\n",
+            GVA_STRING_PRINT(id), GVA_VARIANT_PRINT_SPDI("NC_000001.11", gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
+
+        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+    } // while
+    fclose(stream);
+
+    fprintf(stderr, "#lines: %zu\n", line_count);
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+} // varda_main
+
+
+int
 main(int argc, char* argv[static argc])
 {
-    return allele_main(argc, argv);
+    return varda_main(argc, argv);
+    // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return overlap_main(argc, argv);
     // return all_main(argc, argv);
