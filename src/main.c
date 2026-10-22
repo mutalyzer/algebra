@@ -794,18 +794,9 @@ varda_main(int argc, char* argv[static argc])
 
     fprintf(stderr, "reference length: %zu\n", reference.len);
 
-    errno = 0;
-    stream = fopen(argv[2], "r");
-    if (stream == NULL)
-    {
-        perror("fopen()");
-        gva_string_destroy(gva_std_allocator, reference);
-        return EXIT_FAILURE;
-    } // if
-
     size_t line_count = 0;
     static char line[LINE_SIZE] = {0};
-    while (fgets(line, sizeof(line), stream) != NULL)
+    while (fgets(line, sizeof(line), stdin) != NULL)
     {
         line_count += 1;
         GVA_String id = {0};
@@ -823,7 +814,6 @@ varda_main(int argc, char* argv[static argc])
 
         gva_lcs_graph_destroy(gva_std_allocator, graph, true);
     } // while
-    fclose(stream);
 
     fprintf(stderr, "#lines: %zu\n", line_count);
 
