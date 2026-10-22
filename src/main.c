@@ -774,7 +774,7 @@ int
 varda_main(int argc, char* argv[static argc])
 {
     // awk '{ if ($1 == "NC_000001.11") { printf "%s_%d %s:%d:%d:", substr(FILENAME, 0, 32), FNR, $1, $2, $3-$2, $7; if ($7 != ".") print $7; else printf "\n" } }'
-    if (argc < 3)
+    if (argc < 2)
     {
         fprintf(stderr, "usage %s reference.blob data\n", argv[0]);
         return EXIT_FAILURE;
