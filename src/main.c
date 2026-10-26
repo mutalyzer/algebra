@@ -19,7 +19,6 @@
 #include "../include/string.h"      // GVA_String, gva_string_destroy
 #include "../include/utils.h"       // gva_fasta_sequence*
 #include "../include/variant.h"     // GVA_VARIANT_*, GVA_Variant, gva_patch, gva_variant_*
-#include "align.h"
 #include "array.h"          // ARRAY_*, array_length
 #include "common.h"         // MAX, MIN
 #include "dfa.h"            // dfa_*
@@ -783,16 +782,85 @@ pair_main(int argc, char* argv[static argc])
 
     gva_lcs_graph_dot(stdout, graph);
 
+    uint8_t* dfas = dfa_from_lcs_graph(gva_std_allocator, NULL, graph, 0, 1);
+
+    dfa_svg(stdout, strlen(argv[1]), argv[1], gva_lcs_graph_local_supremal(graph, 0, 1), dfas);
+
+
+    ARRAY_DESTROY(gva_std_allocator, dfas);
+
     gva_lcs_graph_destroy(gva_std_allocator, graph, false);
 
     return EXIT_SUCCESS;
-} // hgvs_main
+} // pair_main
 
+
+int
+supremal_main(int argc, char* argv[static argc])
+{
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage %s reference.blob data\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        perror("fopen()");
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0};
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    errno = 0;
+    stream = fopen(argv[2], "r");
+    if (stream == NULL)
+    {
+        perror("fopen()");
+        gva_string_destroy(gva_std_allocator, reference);
+        return EXIT_FAILURE;
+    } // if
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stream) != NULL)
+    {
+        line_count += 1;
+        GVA_String id = {0};
+        GVA_Variant variant = {0};
+        size_t distance = 0;
+        if (!parse_line(line, &id, &variant, &distance))
+        {
+            fprintf(stderr, "parsing failed at line %zu: %s", line_count, line);
+            continue;
+        } // if
+        GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+        size_t lambdas = 0;
+        for (size_t i = 0; i < array_length(graph.nodes); ++i)
+        {
+            lambdas += graph.nodes[i].lambda != GVA_NULL;
+        } // for
+        fprintf(stdout, GVA_STRING_FMT " %zu %zu %zu\n", GVA_STRING_PRINT(id), array_length(graph.nodes), array_length(graph.edges), lambdas);
+        gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+    } // while
+    fclose(stream);
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+} // supremal_main
 
 
 int
 main(int argc, char* argv[static argc])
 {
+    // return supremal_main(argc, argv);
     return pair_main(argc, argv);
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
