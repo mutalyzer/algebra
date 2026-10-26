@@ -45,6 +45,7 @@ typedef struct
     gva_uint ids_root;
 } Meta;
 
+
 struct GVA_Index
 {
     GVA_Index_Allocators allocators;

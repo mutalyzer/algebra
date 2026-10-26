@@ -770,6 +770,71 @@ hgvs_main(int argc, char* argv[static argc])
 
 
 int
+varda_main(int argc, char* argv[static argc])
+{
+    if (argc < 3)
+    {
+        fprintf(stderr, "usage %s reference.blob sample_id\n", argv[0]);
+        return EXIT_FAILURE;
+    } // if
+
+    errno = 0;
+    FILE* stream = fopen(argv[1], "r");
+    if (stream == NULL)
+    {
+        perror("fopen()");
+        return EXIT_FAILURE;
+    } // if
+
+    GVA_String reference = {0};
+    reference = gva_fasta_sequence_blob(gva_std_allocator, stream);
+    fclose(stream);
+
+    fprintf(stderr, "reference length: %zu\n", reference.len);
+
+    size_t line_count = 0;
+    static char line[LINE_SIZE] = {0};
+    while (fgets(line, sizeof(line), stdin) != NULL)
+    {
+        if (strncmp(REFERENCE_ID, line, sizeof(REFERENCE_ID) - 1) == 0)
+        {
+            size_t len = strcspn(line, "\t ") + 1;  // ignore ref ID
+            size_t const start = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const end = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const allele_count = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const phase = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+            size_t const inserted_len = atoll(line + len);
+            len += strcspn(line + len, "\t ") + 1;
+
+            (void) allele_count;  // unused
+            (void) phase;
+
+            GVA_Variant const variant = {start, end, {inserted_len, line + len}};
+
+            GVA_LCS_Graph graph = gva_lcs_graph_from_variants(gva_std_allocator, reference.len, reference.str, 1, &variant);
+
+            fprintf(stdout, "%s_%zu " GVA_VARIANT_FMT_SPDI " %zu\n",
+                argv[2], line_count, GVA_VARIANT_PRINT_SPDI(REFERENCE_ID, gva_lcs_graph_supremal(graph)), gva_lcs_graph_distance(graph));
+
+            gva_lcs_graph_destroy(gva_std_allocator, graph, true);
+
+            line_count += 1;
+        } // if
+    } // while
+
+    fprintf(stderr, "#lines: %zu\n", line_count);
+
+    gva_string_destroy(gva_std_allocator, reference);
+
+    return EXIT_SUCCESS;
+} // varda_main
+
+
+int
 pair_main(int argc, char* argv[static argc])
 {
     if (argc < 3)
@@ -862,6 +927,8 @@ main(int argc, char* argv[static argc])
 {
     // return supremal_main(argc, argv);
     return pair_main(argc, argv);
+    // return varda_main(argc, argv);
+    // return pair_main(argc, argv);
     // return allele_main(argc, argv);
     // return index_main(argc, argv);
     // return overlap_main(argc, argv);
